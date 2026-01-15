@@ -277,3 +277,13 @@ La API estará disponible en:
 ## 📄 Licencia
 
 Proyecto educativo desarrollado para el ciclo formativo de **Desarrollo de Aplicaciones Multiplataforma (DAM)**.
+
+## Mimebros del Grupo
+
+  Christian Ballesteros
+  Gonzalo Bravo
+  Natalia Chuquillanqui
+  Carolina de la Losa
+  Esteban Garcés
+  Jorge Llanes
+
