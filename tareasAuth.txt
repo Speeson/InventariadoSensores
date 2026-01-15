@@ -1,0 +1,212 @@
+1) Hash de contraseñas (BCrypt/Argon2)
+
+Objetivo: nunca guardar contraseñas en claro.
+
+Qué hacer:
+
+Elegir librería:
+
+Opción típica: passlib[bcrypt] (BCrypt)
+
+Alternativa: Argon2 (también vale si usáis argon2-cffi)
+
+Crear utilidades:
+
+hash_password(plain) -> hashed
+
+verify_password(plain, hashed) -> bool
+
+Probar con un test simple: hashear y verificar.
+
+Entregable: módulo security/passwords.py (o similar).
+
+2) Endpoint de registro (POST /auth/register)
+
+Objetivo: crear usuarios.
+
+Qué hacer:
+
+Definir esquema Pydantic UserCreate: email, password, (role opcional: por defecto User)
+
+Validar:
+
+email único
+
+password mínimo (longitud)
+
+Hashear password
+
+Guardar en BD: email, password_hash, role, created_at
+
+Responder sin devolver hash (obvio).
+
+Entregable: endpoint en routers/auth.py y método de servicio create_user.
+
+3) Endpoint de login (POST /auth/login)
+
+Objetivo: autenticar usuario y emitir JWT.
+
+Qué hacer:
+
+Aceptar credenciales:
+
+típico OAuth2: OAuth2PasswordRequestForm (username/password)
+
+o JSON propio (más cómodo para Android). Cualquiera vale si lo documentáis.
+
+Buscar usuario por email
+
+Verificar password contra hash
+
+Si ok → crear JWT (access token) con expiración
+
+Responder:
+
+access_token
+
+token_type: "bearer"
+
+(opcional) role, user_id para que Android no tenga que pedirlo
+
+Entregable: endpoint login + helper authenticate_user.
+
+4) Generación de JWT con expiración
+
+Objetivo: firmar tokens, incluir claims útiles y caducidad.
+
+Qué hacer:
+
+Elegir lib: python-jose o PyJWT (muy común python-jose)
+
+Definir config:
+
+JWT_SECRET, JWT_ALGORITHM (HS256), ACCESS_TOKEN_EXPIRE_MINUTES
+
+Crear función create_access_token(data, expires_delta)
+
+En data mete: sub (user_id o email), role
+
+Añadir exp (expiración)
+
+Crear función decode_token(token) con manejo de errores:
+
+token inválido → 401
+
+token expirado → 401
+
+Entregable: security/jwt.py.
+
+5) Middleware/Depends por rol (autorización)
+
+Objetivo: proteger endpoints por rol.
+
+Qué hacer:
+
+Implementar dependencia get_current_user:
+
+Extrae token Authorization: Bearer ...
+
+Decodifica JWT
+
+Saca sub (id/email) y busca usuario en BD
+
+Implementar require_roles(["Admin", "Manager"]):
+
+Comprueba current_user.role contra lista
+
+Si no cumple → 403
+
+Uso típico:
+
+@router.post("/products", dependencies=[Depends(require_roles(["Manager","Admin"]))])
+
+Entregable: deps/auth.py con get_current_user y require_roles.
+
+6) Endpoint /auth/me
+
+Objetivo: que Android obtenga el usuario actual fácil.
+
+Qué hacer:
+
+Endpoint protegido con Depends(get_current_user)
+
+Devuelve id, email, role (y lo que queráis del perfil)
+
+Entregable: GET /auth/me.
+
+7) Configurar CORS
+
+Objetivo: que Android pueda llamar a la API y no abrir CORS a lo loco.
+
+Qué hacer:
+
+Añadir CORSMiddleware en main.py
+
+Config:
+
+allow_origins=[...] (en dev puedes permitir *, pero ideal es poner el origen real o un listado)
+
+allow_methods=["*"]
+
+allow_headers=["*"]
+
+allow_credentials=True (solo si lo necesitáis)
+
+En Android nativo normalmente CORS no suele bloquear como en navegador, pero el PDF lo pide, y también sirve para si luego hay una web. 
+
+Propuestas de proyectos 2DAM
+
+Entregable: CORS configurado y documentado.
+
+8) Documentación en Swagger (OpenAPI)
+
+Objetivo: que quede “pro” y evaluable.
+
+Qué hacer:
+
+En FastAPI ya sale automático, pero tú debes:
+
+Describir modelos de request/response con Pydantic
+
+Añadir ejemplos (example=) y mensajes de error comunes
+
+Asegurar que el esquema de seguridad “Bearer” aparece en Swagger (FastAPI lo hace con OAuth2PasswordBearer)
+
+Documentar:
+
+cómo registrarse
+
+cómo loguearse
+
+cómo usar el token en Authorization
+
+Entregable: Swagger limpio y entendible.
+
+Extra que te recomiendo (muy útil para el equipo)
+9) Convención de errores (401 vs 403)
+
+401 → no autenticado / token inválido
+
+403 → autenticado pero sin permisos
+
+Esto evita caos cuando Android integra.
+
+Orden de implementación recomendado (para no bloquear a otros)
+
+Hash/verify password
+
+Register
+
+Login + JWT
+
+get_current_user
+
+require_roles
+
+/auth/me
+
+CORS
+
+Swagger + ejemplos
+
+Con eso, Carolina y Christian ya pueden proteger endpoints desde el primer día.
