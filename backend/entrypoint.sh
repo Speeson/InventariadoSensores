@@ -1,14 +1,16 @@
 #!/bin/sh
 # entrypoint.sh
 
-# Espera a que la base de datos esté disponible
 echo "Esperando a que la base de datos esté lista..."
-while ! pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER"; do
-  sleep 1
+while ! nc -z $DB_HOST 5432; do
+  sleep 0.1
 done
+echo "Base de datos lista!"
 
-# Corre migraciones
+# Ejecuta migraciones automáticamente
+echo "Ejecutando migraciones Alembic..."
 alembic upgrade head
 
 # Arranca la API
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+# echo "Iniciando Uvicorn..."
+# exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
