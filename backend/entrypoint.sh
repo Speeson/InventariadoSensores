@@ -12,5 +12,5 @@ echo "Ejecutando migraciones Alembic..."
 alembic upgrade head
 
 # Arranca la API
-# echo "Iniciando Uvicorn..."
-# exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+echo "Iniciando Uvicorn..."
+exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
