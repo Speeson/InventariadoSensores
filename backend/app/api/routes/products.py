@@ -1,0 +1,112 @@
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from app.api.deps import get_current_user, require_roles
+from app.db.deps import get_db
+from app.models.enums import UserRole
+from app.repositories import product_repo
+from app.schemas.product import ProductCreate, ProductUpdate, ProductResponse
+
+
+class ProductListResponse(BaseModel):
+    items: list[ProductResponse]
+    total: int
+    limit: int
+    offset: int
+
+
+router = APIRouter(prefix="/products", tags=["products"])
+
+
+@router.get("/", response_model=ProductListResponse, dependencies=[Depends(get_current_user)])
+def list_products(
+    db: Session = Depends(get_db),
+    sku: str | None = Query(None),
+    name: str | None = Query(None),
+    barcode: str | None = Query(None),
+    category_id: int | None = Query(None),
+    active: bool | None = Query(None),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+):
+    items, total = product_repo.list_products(
+        db,
+        sku=sku,
+        name=name,
+        barcode=barcode,
+        category_id=category_id,
+        active=active,
+        limit=limit,
+        offset=offset,
+    )
+    return ProductListResponse(items=items, total=total, limit=limit, offset=offset)
+
+
+@router.get("/{product_id}", response_model=ProductResponse, dependencies=[Depends(get_current_user)])
+def get_product(product_id: int, db: Session = Depends(get_db)):
+    product = product_repo.get(db, product_id)
+    if not product:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
+    return product
+
+
+@router.post(
+    "/",
+    response_model=ProductResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value))],
+)
+def create_product(payload: ProductCreate, db: Session = Depends(get_db)):
+    if product_repo.get_by_sku(db, payload.sku):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="SKU ya existe")
+    if payload.barcode and product_repo.get_by_barcode(db, payload.barcode):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Barcode ya existe")
+    product = product_repo.create_product(
+        db,
+        sku=payload.sku,
+        name=payload.name,
+        barcode=payload.barcode,
+        category_id=payload.category_id,
+        active=payload.active if payload.active is not None else True,
+    )
+    return product
+
+
+@router.patch(
+    "/{product_id}",
+    response_model=ProductResponse,
+    dependencies=[Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value))],
+)
+def update_product(product_id: int, payload: ProductUpdate, db: Session = Depends(get_db)):
+    product = product_repo.get(db, product_id)
+    if not product:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
+
+    if payload.barcode:
+        existing_barcode = product_repo.get_by_barcode(db, payload.barcode)
+        if existing_barcode and existing_barcode.id != product_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Barcode ya existe")
+    if payload.name is not None or payload.barcode is not None or payload.category_id is not None or payload.active is not None:
+        product = product_repo.update_product(
+            db,
+            product,
+            name=payload.name,
+            barcode=payload.barcode,
+            category_id=payload.category_id,
+            active=payload.active,
+        )
+    return product
+
+
+@router.delete(
+    "/{product_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value))],
+)
+def delete_product(product_id: int, db: Session = Depends(get_db)):
+    product = product_repo.get(db, product_id)
+    if not product:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
+    product_repo.delete_product(db, product)
+    return None
