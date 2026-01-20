@@ -10,7 +10,7 @@ app = FastAPI(title="Sistema Inventariado Sensores")
 cors_origins_env = os.getenv("CORS_ORIGINS", "")
 allowed_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()] or [
     "http://localhost:3000",
-    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3000", # Modificar si es necesario
     "http://10.0.2.2:3000",  # Android emulator
 ]
 
