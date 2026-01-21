@@ -1,16 +1,23 @@
-from pydantic import BaseModel, Field
-from typing import Literal, Optional
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.models.enums import EventType
+
 
 class EventCreate(BaseModel):
-    type: Literal["IN", "OUT"]
+    event_type: EventType
     product_id: int
-    delta: int = Field(gt=0)
-    source: Optional[str] = "sensor_simulado"
+    delta: int = Field(..., gt=0)
+    source: str = "sensor_simulado"
 
-class EventOut(BaseModel):
+
+class EventResponse(BaseModel):
     id: int
-    type: Literal["IN", "OUT"]
+    event_type: EventType
     product_id: int
     delta: int
     source: str
-    created_at: str
+    processed: bool
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
