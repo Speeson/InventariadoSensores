@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, require_roles
 from app.db.deps import get_db
 from app.models.enums import UserRole
-from app.repositories import stock_repo
+from app.repositories import stock_repo, product_repo
 from app.schemas.stock import StockResponse, StockUpdate, StockCreate
 
 
@@ -52,6 +52,10 @@ def get_stock(stock_id: int, db: Session = Depends(get_db)):
     dependencies=[Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value))],
 )
 def create_stock(payload: StockCreate, db: Session = Depends(get_db)):
+    product = product_repo.get(db, payload.product_id)
+    if not product:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Producto no existe")
+
     existing = stock_repo.get_by_product_and_location(db, payload.product_id, payload.location)
     if existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ya existe stock para esta ubicación")

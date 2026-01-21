@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.api.deps import require_roles
+from app.api.deps import get_current_user, require_roles
 from app.db.deps import get_db
 from app.models.enums import MovementSource, MovementType, UserRole
 from app.schemas.movement import MovementResponse
@@ -55,6 +55,9 @@ def list_movements(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
+    if date_from and date_to and date_from > date_to:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="date_from no puede ser mayor que date_to")
+
     items, total = movement_repo.list_movements(
         db,
         product_id=product_id,

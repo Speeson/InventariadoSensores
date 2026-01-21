@@ -94,6 +94,10 @@ def adjust_stock(
     _get_product_or_fail(db, product_id)
     stock = _get_or_create_stock(db, product_id, location)
 
+    new_qty = stock.quantity + quantity
+    if new_qty < 0:
+        raise InventoryError("Stock resultante no puede ser negativo")
+
     updated_stock = stock_repo.adjust_stock_quantity(db, stock, delta=quantity)
     movement_type = MovementType.ADJUST
     movement = movement_repo.create_movement(

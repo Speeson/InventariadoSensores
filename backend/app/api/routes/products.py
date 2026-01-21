@@ -7,6 +7,7 @@ from app.db.deps import get_db
 from app.models.enums import UserRole
 from app.repositories import product_repo
 from app.schemas.product import ProductCreate, ProductUpdate, ProductResponse
+from app.models.category import Category
 
 
 class ProductListResponse(BaseModel):
@@ -58,6 +59,10 @@ def get_product(product_id: int, db: Session = Depends(get_db)):
     dependencies=[Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value))],
 )
 def create_product(payload: ProductCreate, db: Session = Depends(get_db)):
+    category = db.get(Category, payload.category_id)
+    if not category:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Categoría no existe")
+
     if product_repo.get_by_sku(db, payload.sku):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="SKU ya existe")
     if payload.barcode and product_repo.get_by_barcode(db, payload.barcode):
@@ -82,6 +87,11 @@ def update_product(product_id: int, payload: ProductUpdate, db: Session = Depend
     product = product_repo.get(db, product_id)
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
+
+    if payload.category_id is not None:
+        category = db.get(Category, payload.category_id)
+        if not category:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Categoría no existe")
 
     if payload.barcode:
         existing_barcode = product_repo.get_by_barcode(db, payload.barcode)
