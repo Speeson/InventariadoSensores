@@ -3,7 +3,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import auth, users, products, stocks, movements
+from app.api.routes import auth, users, products, stocks, movements, events
 
 app = FastAPI(title="Sistema Inventariado Sensores")
 
@@ -27,6 +27,7 @@ app.include_router(users.router)
 app.include_router(products.router)
 app.include_router(stocks.router)
 app.include_router(movements.router)
+app.include_router(events.router)
 
 
 @app.get("/health")

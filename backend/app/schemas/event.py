@@ -10,6 +10,7 @@ class EventCreate(BaseModel):
     product_id: int
     delta: int = Field(..., gt=0)
     source: str = "sensor_simulado"
+    location: str = Field("default", min_length=1, max_length=100)
 
 
 class EventResponse(BaseModel):
