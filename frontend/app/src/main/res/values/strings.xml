@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">Inventoryapp</string>
+    <string-array name="roles_register">
+        <item>(Sin rol)</item>
+        <item>USER</item>
+        <item>MANAGER</item>
+        <item>ADMIN</item>
+    </string-array>
 </resources>

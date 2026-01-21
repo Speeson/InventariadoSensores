@@ -14,4 +14,8 @@ class SessionManager(context: Context) {
     fun clear() {
         prefs.edit().clear().apply()
     }
+    fun clearToken() {
+        prefs.edit().remove("token").apply()
+    }
+
 }
