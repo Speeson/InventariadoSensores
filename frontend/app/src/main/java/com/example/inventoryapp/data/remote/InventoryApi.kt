@@ -16,7 +16,10 @@ import retrofit2.http.DELETE
 import retrofit2.http.PATCH
 import retrofit2.http.Path
 import retrofit2.http.Query
-import com.example.inventoryapp.data.remote.model.*
+import com.example.inventoryapp.data.remote.model.EventCreateDto
+import com.example.inventoryapp.data.remote.model.EventListResponseDto
+import com.example.inventoryapp.data.remote.model.EventResponseDto
+import com.example.inventoryapp.data.remote.model.EventTypeDto
 
 
 
@@ -110,6 +113,19 @@ interface InventoryApi {
         @Path("stock_id") stockId: Int,
         @Body body: StockUpdateDto
     ): Response<StockResponseDto>
+
+    @GET("events/")
+    suspend fun listEvents(
+        @Query("event_type") eventType: EventTypeDto? = null,
+        @Query("product_id") productId: Int? = null,
+        @Query("processed") processed: Boolean? = null,
+        @Query("limit") limit: Int = 50,
+        @Query("offset") offset: Int = 0
+    ): retrofit2.Response<EventListResponseDto>
+
+    @POST("events/")
+    suspend fun createEvent(@Body body: EventCreateDto): retrofit2.Response<EventResponseDto>
+
 
 
 }

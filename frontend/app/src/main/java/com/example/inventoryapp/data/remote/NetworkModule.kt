@@ -9,25 +9,37 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object NetworkModule {
 
-    private const val BASE_URL = "http://10.0.2.2:8000/" // emulador
-
-    private lateinit var session: SessionManager
-    lateinit var api: InventoryApi
-        private set
+    private const val BASE_URL = "http://10.0.2.2:8000/"
+    private lateinit var appContext: Context
 
     fun init(context: Context) {
-        session = SessionManager(context.applicationContext)
+        appContext = context.applicationContext
+    }
 
-        val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
-        }
+    private val loggingInterceptor = HttpLoggingInterceptor().apply {
+        level = HttpLoggingInterceptor.Level.BODY
+    }
 
-        val client = OkHttpClient.Builder()
-            .addInterceptor(AuthInterceptor(session))
-            .addInterceptor(logging)
+    private val client: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .addInterceptor(loggingInterceptor)
+            .addInterceptor { chain ->
+                val session = SessionManager(appContext)
+                val token = session.getToken()
+
+                val req = if (!token.isNullOrBlank()) {
+                    chain.request().newBuilder()
+                        .addHeader("Authorization", "Bearer $token")
+                        .build()
+                } else chain.request()
+
+                chain.proceed(req)
+            }
             .build()
+    }
 
-        api = Retrofit.Builder()
+    val api: InventoryApi by lazy {
+        Retrofit.Builder()
             .baseUrl(BASE_URL)
             .addConverterFactory(GsonConverterFactory.create())
             .client(client)

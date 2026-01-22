@@ -4,7 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.example.inventoryapp.data.repository.fake.FakeMovementRepository
+import com.example.inventoryapp.data.repository.remote.RemoteScanRepository
 import com.example.inventoryapp.databinding.ActivityConfirmMovementBinding
 import com.example.inventoryapp.domain.model.Movement
 import com.example.inventoryapp.domain.model.MovementType
@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
 class ConfirmMovementActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityConfirmMovementBinding
-    private val repo = FakeMovementRepository()
+    private val repo = RemoteScanRepository()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,7 +31,7 @@ class ConfirmMovementActivity : AppCompatActivity() {
             }
 
             val type = if (binding.rbIn.isChecked) MovementType.IN else MovementType.OUT
-            val location = binding.etLocation.text.toString().trim().ifEmpty { null }
+            val location = binding.etLocation.text.toString().trim().ifEmpty { "default" }
 
             val movement = Movement(
                 barcode = barcode,
@@ -40,17 +40,20 @@ class ConfirmMovementActivity : AppCompatActivity() {
                 location = location
             )
 
+            binding.btnConfirm.isEnabled = false
+
             lifecycleScope.launch {
-                val result = repo.sendMovement(movement)
+                val result = repo.sendFromBarcode(movement)
                 val i = Intent(this@ConfirmMovementActivity, ResultActivity::class.java)
                 if (result.isSuccess) {
                     i.putExtra("success", true)
-                    i.putExtra("msg", "Movimiento enviado (FAKE)")
+                    i.putExtra("msg", result.getOrNull() ?: "Movimiento/Evento OK")
                 } else {
                     i.putExtra("success", false)
                     i.putExtra("msg", result.exceptionOrNull()?.message ?: "Error")
                 }
                 startActivity(i)
+                binding.btnConfirm.isEnabled = true
             }
         }
     }

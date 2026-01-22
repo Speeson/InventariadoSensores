@@ -4,18 +4,21 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.example.inventoryapp.R
 import com.example.inventoryapp.data.local.SessionManager
+import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.databinding.ActivityHomeBinding
 import com.example.inventoryapp.ui.auth.LoginActivity
-import android.widget.Toast
-import androidx.lifecycle.lifecycleScope
+import com.example.inventoryapp.ui.events.EventsActivity
+import com.example.inventoryapp.ui.movements.MovimientosActivity
+import com.example.inventoryapp.ui.products.ProductListActivity
+import com.example.inventoryapp.ui.scan.ScanActivity
+import com.example.inventoryapp.ui.stock.StockActivity
 import kotlinx.coroutines.launch
-import com.example.inventoryapp.data.remote.NetworkModule
-
-
 
 class HomeActivity : AppCompatActivity() {
 
@@ -29,7 +32,7 @@ class HomeActivity : AppCompatActivity() {
 
         session = SessionManager(this)
 
-        // ✅ Si no hay token, fuera (evita entrar por back stack)
+        // Si no hay token, fuera
         if (session.getToken().isNullOrBlank()) {
             goToLogin()
             return
@@ -46,47 +49,50 @@ class HomeActivity : AppCompatActivity() {
                 .show()
         }
 
-        // TODO: cambia estas Activities por las tuyas reales
+        // ✅ NAVEGACIÓN BOTONES (sin duplicados y SIN comentarios)
         binding.btnScan.setOnClickListener {
-            // startActivity(Intent(this, ScanActivity::class.java))
+            startActivity(Intent(this, ScanActivity::class.java))
         }
 
         binding.btnProducts.setOnClickListener {
-            // startActivity(Intent(this, ProductActivity::class.java))
+            startActivity(Intent(this, ProductListActivity::class.java))
         }
 
         binding.btnStock.setOnClickListener {
-            // startActivity(Intent(this, StockActivity::class.java))
+            startActivity(Intent(this, StockActivity::class.java))
         }
 
         binding.btnMovements.setOnClickListener {
-            // startActivity(Intent(this, MovementsActivity::class.java))
+            startActivity(Intent(this, MovimientosActivity::class.java))
         }
 
-        // De momento los dejamos con Toast o los deshabilitas si quieres
+        // Si tu layout tiene btnEvents:
         binding.btnEvents.setOnClickListener {
-            // TODO implementar EventsActivity
+            startActivity(Intent(this, EventsActivity::class.java))
         }
-
-        binding.btnMovements.setOnClickListener {
-            startActivity(Intent(this, com.example.inventoryapp.ui.movements.MovimientosActivity::class.java))
-        }
-
-        binding.btnProducts.setOnClickListener {
-            startActivity(Intent(this, com.example.inventoryapp.ui.products.ProductListActivity::class.java))
-        }
-
-        binding.btnStock.setOnClickListener {
-            startActivity(Intent(this, com.example.inventoryapp.ui.stock.StockActivity::class.java))
-        }
-
-
-
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.home_menu, menu)
         return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_system_status -> {
+                showSystemStatus()
+                true
+            }
+            R.id.action_profile -> {
+                showProfile()
+                true
+            }
+            R.id.action_logout -> {
+                confirmLogout()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 
     private fun showSystemStatus() {
@@ -128,9 +134,8 @@ class HomeActivity : AppCompatActivity() {
                         .setPositiveButton("OK", null)
                         .show()
                 } else if (res.code() == 401) {
-                    // token inválido/expirado: limpiar sesión y volver a login
                     Toast.makeText(this@HomeActivity, "Sesión caducada. Inicia sesión de nuevo.", Toast.LENGTH_LONG).show()
-                    session.clearToken() // usa el método real que tengas
+                    session.clearToken()
                     goToLogin()
                 } else {
                     AlertDialog.Builder(this@HomeActivity)
@@ -149,42 +154,6 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_system_status -> {
-                showSystemStatus()
-                true
-            }
-            R.id.action_profile -> {
-                showProfile()
-                true
-            }
-            R.id.action_logout -> {
-                confirmLogout()
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
-
-    private fun showSystemStatusDialogPlaceholder() {
-        AlertDialog.Builder(this)
-            .setTitle("Estado del sistema")
-            .setMessage("Pendiente de implementar (endpoint /health).")
-            .setPositiveButton("OK", null)
-            .show()
-    }
-
-    private fun showProfileDialogPlaceholder() {
-        AlertDialog.Builder(this)
-            .setTitle("Mi perfil")
-            .setMessage("Pendiente de implementar (endpoint /users/me).")
-            .setPositiveButton("OK", null)
-            .show()
-    }
-
-
     private fun confirmLogout() {
         AlertDialog.Builder(this)
             .setTitle("Cerrar sesión")
@@ -195,7 +164,7 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun logout() {
-        session.clearToken() // ⚠️ si tu método se llama distinto, cámbialo aquí
+        session.clearToken()
         goToLogin()
     }
 
