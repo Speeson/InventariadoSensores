@@ -74,14 +74,28 @@ class HomeActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // ✅ Volcado automático de pendientes
+
         lifecycleScope.launch {
-            val sent = OfflineSyncer.flush(this@HomeActivity)
-            if (sent > 0) {
-                Toast.makeText(this@HomeActivity, "Reenviados $sent pendientes ✅", Toast.LENGTH_LONG).show()
+            val report = OfflineSyncer.flush(this@HomeActivity)
+
+            if (report.sent > 0) {
+                Toast.makeText(
+                    this@HomeActivity,
+                    "Reenviados ${report.sent} pendientes ✅",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+
+            if (report.movedToFailed > 0) {
+                Toast.makeText(
+                    this@HomeActivity,
+                    "${report.movedToFailed} pendientes con error ❗ Revisa 'Pendientes'",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
     }
+
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.home_menu, menu)
@@ -99,31 +113,48 @@ class HomeActivity : AppCompatActivity() {
 
     private fun showSystemStatus() {
         lifecycleScope.launch {
-            val pending = OfflineQueue(this@HomeActivity).size()
+            val q = OfflineQueue(this@HomeActivity)
+            val pending = q.size()
+            val failed = q.getFailed().size
+
             try {
                 val res = NetworkModule.api.health()
                 if (res.isSuccessful) {
                     AlertDialog.Builder(this@HomeActivity)
                         .setTitle("Estado del sistema")
-                        .setMessage("Backend OK ✅\nPendientes offline: $pending")
+                        .setMessage(
+                            "Backend OK ✅\n" +
+                                    "Pendientes offline: $pending\n" +
+                                    "Pendientes con error: $failed"
+                        )
                         .setPositiveButton("OK", null)
                         .show()
                 } else {
                     AlertDialog.Builder(this@HomeActivity)
                         .setTitle("Estado del sistema")
-                        .setMessage("Backend respondió ${res.code()} ❌\nPendientes offline: $pending")
+                        .setMessage(
+                            "Backend respondió ${res.code()} ❌\n" +
+                                    "Pendientes offline: $pending\n" +
+                                    "Pendientes con error: $failed"
+                        )
                         .setPositiveButton("OK", null)
                         .show()
                 }
             } catch (e: Exception) {
                 AlertDialog.Builder(this@HomeActivity)
                     .setTitle("Estado del sistema")
-                    .setMessage("No se pudo conectar ❌\n${e.message}\nPendientes offline: $pending")
+                    .setMessage(
+                        "No se pudo conectar ❌\n" +
+                                "${e.message}\n" +
+                                "Pendientes offline: $pending\n" +
+                                "Pendientes con error: $failed"
+                    )
                     .setPositiveButton("OK", null)
                     .show()
             }
         }
     }
+
 
     private fun showProfile() {
         lifecycleScope.launch {
