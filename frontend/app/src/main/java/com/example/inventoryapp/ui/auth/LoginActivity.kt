@@ -22,6 +22,7 @@ class LoginActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         session = SessionManager(this)
+        NetworkModule.init(applicationContext)
 
         // Si ya hay token, podrías saltar el login (opcional)
         // if (!session.getToken().isNullOrBlank()) { ... }

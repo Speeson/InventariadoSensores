@@ -12,13 +12,16 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.example.inventoryapp.databinding.ActivityScanBinding
+import com.example.inventoryapp.data.remote.NetworkModule
+import com.example.inventoryapp.data.remote.model.EventCreateRequest
 import com.example.inventoryapp.ui.movements.ConfirmMovementActivity
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.ExperimentalGetImage
-
+import kotlinx.coroutines.launch
 
 class ScanActivity : AppCompatActivity() {
 
@@ -43,9 +46,7 @@ class ScanActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            val i = Intent(this, ConfirmMovementActivity::class.java)
-            i.putExtra("barcode", codeToUse)
-            startActivity(i)
+            submitScan(codeToUse)
         }
 
         // Arrancar cámara (si hay permiso)
@@ -56,6 +57,61 @@ class ScanActivity : AppCompatActivity() {
         }
     }
 
+    private fun submitScan(barcode: String) {
+        lifecycleScope.launch {
+            try {
+                // 1) Buscar producto por barcode
+                val prodResp = NetworkModule.api.listProducts(
+                    barcode = barcode,
+                    limit = 1,
+                    offset = 0
+                )
+
+                if (!prodResp.isSuccessful || prodResp.body() == null || prodResp.body()!!.items.isEmpty()) {
+                    Toast.makeText(
+                        this@ScanActivity,
+                        "Producto no encontrado para barcode: $barcode",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return@launch
+                }
+
+                val productId = prodResp.body()!!.items.first().id
+
+                // 2) Crear evento
+                val eventReq = EventCreateRequest(
+                    event_type = "SENSOR_IN", // cambia a "SENSOR_OUT" si es salida
+                    product_id = productId,
+                    delta = 1,
+                    source = "SCAN",
+                    location = "default"
+                )
+
+                val eventResp = NetworkModule.api.createEvent(eventReq)
+
+                if (!eventResp.isSuccessful || eventResp.body() == null) {
+                    Toast.makeText(
+                        this@ScanActivity,
+                        "Error creando evento: ${eventResp.code()}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return@launch
+                }
+
+                Toast.makeText(this@ScanActivity, "Evento creado ✅", Toast.LENGTH_SHORT).show()
+
+                // 3) Navegar a confirmación
+                val i = Intent(this@ScanActivity, ConfirmMovementActivity::class.java)
+                i.putExtra("barcode", barcode)
+                i.putExtra("product_id", productId)
+                i.putExtra("event_id", eventResp.body()!!.id)
+                startActivity(i)
+
+            } catch (e: Exception) {
+                Toast.makeText(this@ScanActivity, "Fallo de red: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
     private fun hasCameraPermission(): Boolean {
         return ContextCompat.checkSelfPermission(
             this,
