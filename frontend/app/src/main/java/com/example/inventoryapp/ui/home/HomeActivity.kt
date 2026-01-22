@@ -68,6 +68,20 @@ class HomeActivity : AppCompatActivity() {
             // TODO implementar EventsActivity
         }
 
+        binding.btnMovements.setOnClickListener {
+            startActivity(Intent(this, com.example.inventoryapp.ui.movements.MovimientosActivity::class.java))
+        }
+
+        binding.btnProducts.setOnClickListener {
+            startActivity(Intent(this, com.example.inventoryapp.ui.products.ProductListActivity::class.java))
+        }
+
+        binding.btnStock.setOnClickListener {
+            startActivity(Intent(this, com.example.inventoryapp.ui.stock.StockActivity::class.java))
+        }
+
+
+
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {

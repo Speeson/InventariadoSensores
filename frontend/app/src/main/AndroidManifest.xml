@@ -32,7 +32,9 @@
         <activity android:name=".ui.products.ProductListActivity" />
         <activity android:name=".ui.products.ProductDetailActivity" />
         <activity android:name=".ui.scan.ScanActivity" />
+        <activity android:name=".ui.movements.MovimientosActivity" />
         <activity android:name=".ui.movements.ConfirmMovementActivity" />
+        <activity android:name=".ui.stock.StockActivity" />
         <activity android:name=".ui.movements.ResultActivity" />
         <activity android:name=".ui.home.HomeActivity" />
         <activity android:name=".MainActivity" />
