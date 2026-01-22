@@ -9,6 +9,8 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.inventoryapp.R
+import com.example.inventoryapp.data.local.OfflineQueue
+import com.example.inventoryapp.data.local.OfflineSyncer
 import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.databinding.ActivityHomeBinding
@@ -32,7 +34,7 @@ class HomeActivity : AppCompatActivity() {
 
         session = SessionManager(this)
 
-        // Si no hay token, fuera
+        // ✅ Si no hay token, fuera
         if (session.getToken().isNullOrBlank()) {
             goToLogin()
             return
@@ -49,7 +51,6 @@ class HomeActivity : AppCompatActivity() {
                 .show()
         }
 
-        // ✅ NAVEGACIÓN BOTONES (sin duplicados y SIN comentarios)
         binding.btnScan.setOnClickListener {
             startActivity(Intent(this, ScanActivity::class.java))
         }
@@ -66,9 +67,19 @@ class HomeActivity : AppCompatActivity() {
             startActivity(Intent(this, MovimientosActivity::class.java))
         }
 
-        // Si tu layout tiene btnEvents:
         binding.btnEvents.setOnClickListener {
             startActivity(Intent(this, EventsActivity::class.java))
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // ✅ Volcado automático de pendientes
+        lifecycleScope.launch {
+            val sent = OfflineSyncer.flush(this@HomeActivity)
+            if (sent > 0) {
+                Toast.makeText(this@HomeActivity, "Reenviados $sent pendientes ✅", Toast.LENGTH_LONG).show()
+            }
         }
     }
 
@@ -79,43 +90,35 @@ class HomeActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
-            R.id.action_system_status -> {
-                showSystemStatus()
-                true
-            }
-            R.id.action_profile -> {
-                showProfile()
-                true
-            }
-            R.id.action_logout -> {
-                confirmLogout()
-                true
-            }
+            R.id.action_system_status -> { showSystemStatus(); true }
+            R.id.action_profile -> { showProfile(); true }
+            R.id.action_logout -> { confirmLogout(); true }
             else -> super.onOptionsItemSelected(item)
         }
     }
 
     private fun showSystemStatus() {
         lifecycleScope.launch {
+            val pending = OfflineQueue(this@HomeActivity).size()
             try {
                 val res = NetworkModule.api.health()
                 if (res.isSuccessful) {
                     AlertDialog.Builder(this@HomeActivity)
                         .setTitle("Estado del sistema")
-                        .setMessage("Backend OK ✅")
+                        .setMessage("Backend OK ✅\nPendientes offline: $pending")
                         .setPositiveButton("OK", null)
                         .show()
                 } else {
                     AlertDialog.Builder(this@HomeActivity)
                         .setTitle("Estado del sistema")
-                        .setMessage("Backend respondió ${res.code()} ❌")
+                        .setMessage("Backend respondió ${res.code()} ❌\nPendientes offline: $pending")
                         .setPositiveButton("OK", null)
                         .show()
                 }
             } catch (e: Exception) {
                 AlertDialog.Builder(this@HomeActivity)
                     .setTitle("Estado del sistema")
-                    .setMessage("No se pudo conectar ❌\n${e.message}")
+                    .setMessage("No se pudo conectar ❌\n${e.message}\nPendientes offline: $pending")
                     .setPositiveButton("OK", null)
                     .show()
             }

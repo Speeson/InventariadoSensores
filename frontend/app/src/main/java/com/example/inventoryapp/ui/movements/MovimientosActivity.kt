@@ -4,29 +4,37 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.example.inventoryapp.data.local.OfflineQueue
+import com.example.inventoryapp.data.local.PendingType
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.model.MovementAdjustOperationRequest
 import com.example.inventoryapp.data.remote.model.MovementOperationRequest
 import com.example.inventoryapp.data.remote.model.MovementSourceDto
 import com.example.inventoryapp.databinding.ActivityMovimientosBinding
+import com.google.gson.Gson
 import kotlinx.coroutines.launch
+import java.io.IOException
 
 class MovimientosActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMovimientosBinding
+    private val gson = Gson()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMovimientosBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Toolbar + flecha
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        binding.toolbar.setNavigationOnClickListener { finish() }
 
-        binding.btnSendMovement.setOnClickListener {
-            sendMovement()
-        }
+        binding.btnSendMovement.setOnClickListener { sendMovement() }
+    }
+
+    override fun onSupportNavigateUp(): Boolean {
+        finish()
+        return true
     }
 
     private fun sendMovement() {
@@ -34,25 +42,14 @@ class MovimientosActivity : AppCompatActivity() {
         val productId = binding.etProductId.text.toString().trim().toIntOrNull()
         val quantity = binding.etQuantity.text.toString().trim().toIntOrNull()
         val delta = binding.etDelta.text.toString().trim().toIntOrNull()
-        val location = binding.etLocation.text.toString().trim()
+        val location = binding.etLocation.text.toString().trim().ifBlank { "default" }
         val sourceRaw = binding.etSource.text.toString().trim().uppercase()
 
-        if (productId == null) {
-            binding.etProductId.error = "Product ID requerido"
-            return
-        }
-        if (location.isBlank()) {
-            binding.etLocation.error = "Ubicación requerida"
-            return
-        }
-
+        if (productId == null) { binding.etProductId.error = "Product ID requerido"; return }
         val source = when (sourceRaw) {
             "SCAN" -> MovementSourceDto.SCAN
             "MANUAL" -> MovementSourceDto.MANUAL
-            else -> {
-                binding.etSource.error = "Usa SCAN o MANUAL"
-                return
-            }
+            else -> { binding.etSource.error = "Usa SCAN o MANUAL"; return }
         }
 
         binding.btnSendMovement.isEnabled = false
@@ -60,81 +57,72 @@ class MovimientosActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                val res = when (type) {
+                when (type) {
                     "IN" -> {
-                        if (quantity == null || quantity <= 0) {
-                            binding.etQuantity.error = "Cantidad > 0"
-                            binding.tvResult.text = ""
-                            binding.btnSendMovement.isEnabled = true
-                            return@launch
+                        if (quantity == null || quantity <= 0) { binding.etQuantity.error = "Cantidad > 0"; return@launch }
+                        val dto = MovementOperationRequest(productId, quantity, location, source)
+                        val res = NetworkModule.api.movementIn(dto)
+                        if (res.isSuccessful && res.body() != null) {
+                            val body = res.body()!!
+                            binding.tvResult.text = "✅ IN OK | stock=${body.stock.quantity} @ ${body.stock.location}"
+                        } else {
+                            binding.tvResult.text = "❌ Error ${res.code()}: ${res.errorBody()?.string()}"
                         }
-                        NetworkModule.api.movementIn(
-                            MovementOperationRequest(productId, quantity, location, source)
-                        )
                     }
 
                     "OUT" -> {
-                        if (quantity == null || quantity <= 0) {
-                            binding.etQuantity.error = "Cantidad > 0"
-                            binding.tvResult.text = ""
-                            binding.btnSendMovement.isEnabled = true
-                            return@launch
+                        if (quantity == null || quantity <= 0) { binding.etQuantity.error = "Cantidad > 0"; return@launch }
+                        val dto = MovementOperationRequest(productId, quantity, location, source)
+                        val res = NetworkModule.api.movementOut(dto)
+                        if (res.isSuccessful && res.body() != null) {
+                            val body = res.body()!!
+                            binding.tvResult.text = "✅ OUT OK | stock=${body.stock.quantity} @ ${body.stock.location}"
+                        } else {
+                            binding.tvResult.text = "❌ Error ${res.code()}: ${res.errorBody()?.string()}"
                         }
-                        NetworkModule.api.movementOut(
-                            MovementOperationRequest(productId, quantity, location, source)
-                        )
                     }
 
                     "ADJUST" -> {
-                        if (delta == null || delta == 0) {
-                            binding.etDelta.error = "Delta no puede ser 0"
-                            binding.tvResult.text = ""
-                            binding.btnSendMovement.isEnabled = true
-                            return@launch
+                        if (delta == null || delta == 0) { binding.etDelta.error = "Delta != 0"; return@launch }
+                        val dto = MovementAdjustOperationRequest(productId, delta, location, source)
+                        val res = NetworkModule.api.movementAdjust(dto)
+                        if (res.isSuccessful && res.body() != null) {
+                            val body = res.body()!!
+                            binding.tvResult.text = "✅ ADJUST OK | stock=${body.stock.quantity} @ ${body.stock.location}"
+                        } else {
+                            binding.tvResult.text = "❌ Error ${res.code()}: ${res.errorBody()?.string()}"
                         }
-                        NetworkModule.api.movementAdjust(
-                            MovementAdjustOperationRequest(productId, delta, location, source)
-                        )
                     }
 
                     else -> {
-                        binding.etMovementType.error = "Usa IN, OUT o ADJUST"
-                        binding.tvResult.text = ""
-                        binding.btnSendMovement.isEnabled = true
-                        return@launch
+                        binding.etMovementType.error = "Usa IN / OUT / ADJUST"
                     }
                 }
 
-                if (res.isSuccessful && res.body() != null) {
-                    val body = res.body()!!
-                    val msg = """
-                        ✅ OK
-                        Movement ID: ${body.movement.id}
-                        Tipo: ${body.movement.movementType}
-                        Producto: ${body.movement.productId}
-                        Cantidad: ${body.movement.quantity}
-                        Stock en ${body.stock.location}: ${body.stock.quantity}
-                    """.trimIndent()
-
-                    binding.tvResult.text = msg
-                    Toast.makeText(this@MovimientosActivity, "Movimiento registrado ✅", Toast.LENGTH_SHORT).show()
-                } else {
-                    val err = res.errorBody()?.string()
-                    binding.tvResult.text = "❌ Error ${res.code()}:\n${err ?: "sin detalle"}"
-                    Toast.makeText(this@MovimientosActivity, "Error ${res.code()}", Toast.LENGTH_LONG).show()
+            } catch (e: IOException) {
+                // Encolar según tipo
+                when (type) {
+                    "IN" -> {
+                        val dto = MovementOperationRequest(productId!!, quantity ?: 1, location, source)
+                        OfflineQueue(this@MovimientosActivity).enqueue(PendingType.MOVEMENT_IN, gson.toJson(dto))
+                    }
+                    "OUT" -> {
+                        val dto = MovementOperationRequest(productId!!, quantity ?: 1, location, source)
+                        OfflineQueue(this@MovimientosActivity).enqueue(PendingType.MOVEMENT_OUT, gson.toJson(dto))
+                    }
+                    "ADJUST" -> {
+                        val dto = MovementAdjustOperationRequest(productId!!, delta ?: 1, location, source)
+                        OfflineQueue(this@MovimientosActivity).enqueue(PendingType.MOVEMENT_ADJUST, gson.toJson(dto))
+                    }
                 }
+                binding.tvResult.text = "📦 Guardado offline para reenviar ✅"
+                Toast.makeText(this@MovimientosActivity, "Backend caído/sin red. Guardado offline ✅", Toast.LENGTH_LONG).show()
 
             } catch (e: Exception) {
-                binding.tvResult.text = "❌ Error de conexión:\n${e.message}"
-                Toast.makeText(this@MovimientosActivity, "Error de red: ${e.message}", Toast.LENGTH_LONG).show()
+                binding.tvResult.text = "❌ Error: ${e.message}"
             } finally {
                 binding.btnSendMovement.isEnabled = true
             }
         }
-    }
-
-    override fun onSupportNavigateUp(): Boolean {
-        finish()
-        return true
     }
 }
