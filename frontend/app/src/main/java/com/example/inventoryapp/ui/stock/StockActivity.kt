@@ -2,7 +2,6 @@ package com.example.inventoryapp.ui.stock
 
 import android.os.Bundle
 import android.widget.ArrayAdapter
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -14,6 +13,7 @@ import com.example.inventoryapp.data.remote.model.StockCreateDto
 import com.example.inventoryapp.data.remote.model.StockResponseDto
 import com.example.inventoryapp.data.remote.model.StockUpdateDto
 import com.example.inventoryapp.databinding.ActivityStockBinding
+import com.example.inventoryapp.ui.common.SendSnack
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -21,6 +21,8 @@ import java.io.IOException
 class StockActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityStockBinding
+    private lateinit var snack: SendSnack
+
     private val gson = Gson()
     private var items: List<StockResponseDto> = emptyList()
 
@@ -28,6 +30,8 @@ class StockActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityStockBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        snack = SendSnack(binding.root)
 
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -59,10 +63,10 @@ class StockActivity : AppCompatActivity() {
                     val text = items.map { "(${it.id}) prod=${it.productId} loc=${it.location} qty=${it.quantity}" }
                     binding.lvStocks.adapter = ArrayAdapter(this@StockActivity, android.R.layout.simple_list_item_1, text)
                 } else {
-                    Toast.makeText(this@StockActivity, "Error ${res.code()}", Toast.LENGTH_LONG).show()
+                    snack.showError("❌ Error ${res.code()}")
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@StockActivity, "Error de red: ${e.message}", Toast.LENGTH_LONG).show()
+                snack.showError("❌ Error de red: ${e.message}")
             }
         }
     }
@@ -79,24 +83,25 @@ class StockActivity : AppCompatActivity() {
         val dto = StockCreateDto(productId = productId, location = location, quantity = quantity)
 
         binding.btnCreate.isEnabled = false
+        snack.showSending("Enviando stock...")
 
         lifecycleScope.launch {
             try {
                 val res = NetworkModule.api.createStock(dto)
                 if (res.isSuccessful) {
-                    Toast.makeText(this@StockActivity, "Stock creado ✅", Toast.LENGTH_SHORT).show()
+                    snack.showSuccess("✅ Stock creado")
                     binding.etQuantity.setText("")
                     loadStocks()
                 } else {
-                    Toast.makeText(this@StockActivity, "Error ${res.code()}: ${res.errorBody()?.string()}", Toast.LENGTH_LONG).show()
+                    snack.showError("❌ Error ${res.code()}: ${res.errorBody()?.string()}")
                 }
 
             } catch (e: IOException) {
                 OfflineQueue(this@StockActivity).enqueue(PendingType.STOCK_CREATE, gson.toJson(dto))
-                Toast.makeText(this@StockActivity, "Sin red. Stock guardado offline ✅", Toast.LENGTH_LONG).show()
+                snack.showQueuedOffline("📦 Sin red. Stock guardado offline ✅")
 
             } catch (e: Exception) {
-                Toast.makeText(this@StockActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                snack.showError("❌ Error: ${e.message}")
             } finally {
                 binding.btnCreate.isEnabled = true
             }
@@ -118,7 +123,7 @@ class StockActivity : AppCompatActivity() {
             .setPositiveButton("Guardar") { _, _ ->
                 val newQty = inputQty.text.toString().toIntOrNull()
                 if (newQty == null || newQty < 0) {
-                    Toast.makeText(this, "Quantity inválida", Toast.LENGTH_LONG).show()
+                    snack.showError("❌ Quantity inválida")
                     return@setPositiveButton
                 }
                 updateStock(stock.id, StockUpdateDto(quantity = newQty))
@@ -127,23 +132,25 @@ class StockActivity : AppCompatActivity() {
     }
 
     private fun updateStock(stockId: Int, body: StockUpdateDto) {
+        snack.showSending("Enviando actualización de stock...")
+
         lifecycleScope.launch {
             try {
                 val res = NetworkModule.api.updateStock(stockId, body)
                 if (res.isSuccessful) {
-                    Toast.makeText(this@StockActivity, "Actualizado ✅", Toast.LENGTH_SHORT).show()
+                    snack.showSuccess("✅ Stock actualizado")
                     loadStocks()
                 } else {
-                    Toast.makeText(this@StockActivity, "Error ${res.code()}: ${res.errorBody()?.string()}", Toast.LENGTH_LONG).show()
+                    snack.showError("❌ Error ${res.code()}: ${res.errorBody()?.string()}")
                 }
 
             } catch (e: IOException) {
                 val payload = OfflineSyncer.StockUpdatePayload(stockId, body)
                 OfflineQueue(this@StockActivity).enqueue(PendingType.STOCK_UPDATE, gson.toJson(payload))
-                Toast.makeText(this@StockActivity, "Sin red. Update guardado offline ✅", Toast.LENGTH_LONG).show()
+                snack.showQueuedOffline("📦 Sin red. Update guardado offline ✅")
 
             } catch (e: Exception) {
-                Toast.makeText(this@StockActivity, "Error red: ${e.message}", Toast.LENGTH_LONG).show()
+                snack.showError("❌ Error red: ${e.message}")
             }
         }
     }

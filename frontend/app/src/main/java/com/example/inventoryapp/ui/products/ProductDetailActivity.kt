@@ -2,7 +2,6 @@ package com.example.inventoryapp.ui.products
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -15,6 +14,7 @@ import com.example.inventoryapp.data.remote.model.ProductCreateDto
 import com.example.inventoryapp.data.remote.model.ProductUpdateDto
 import com.example.inventoryapp.databinding.ActivityProductDetailBinding
 import com.example.inventoryapp.ui.auth.LoginActivity
+import com.example.inventoryapp.ui.common.SendSnack
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -23,6 +23,8 @@ class ProductDetailActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityProductDetailBinding
     private lateinit var session: SessionManager
+    private lateinit var snack: SendSnack
+
     private val gson = Gson()
     private var productId: Int? = null
 
@@ -31,6 +33,7 @@ class ProductDetailActivity : AppCompatActivity() {
         binding = ActivityProductDetailBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        snack = SendSnack(binding.root)
         session = SessionManager(this)
 
         setSupportActionBar(binding.toolbar)
@@ -69,10 +72,10 @@ class ProductDetailActivity : AppCompatActivity() {
                     binding.etCategoryId.setText(p.categoryId.toString())
                     binding.etSku.isEnabled = false
                 } else {
-                    Toast.makeText(this@ProductDetailActivity, "Error ${res.code()}", Toast.LENGTH_LONG).show()
+                    snack.showError("❌ Error ${res.code()}")
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@ProductDetailActivity, "Error red: ${e.message}", Toast.LENGTH_LONG).show()
+                snack.showError("❌ Error red: ${e.message}")
             }
         }
     }
@@ -88,6 +91,7 @@ class ProductDetailActivity : AppCompatActivity() {
         if (categoryId == null) { binding.etCategoryId.error = "Category ID requerido"; return }
 
         binding.btnSave.isEnabled = false
+        snack.showSending(if (productId == null) "Enviando producto..." else "Enviando actualización...")
 
         lifecycleScope.launch {
             try {
@@ -99,12 +103,12 @@ class ProductDetailActivity : AppCompatActivity() {
 
                     if (res.isSuccessful && res.body() != null) {
                         val p = res.body()!!
-                        Toast.makeText(this@ProductDetailActivity, "Creado ✅", Toast.LENGTH_SHORT).show()
+                        snack.showSuccess("✅ Producto creado")
                         productId = p.id
                         binding.btnDelete.isEnabled = true
                         binding.etSku.isEnabled = false
                     } else {
-                        Toast.makeText(this@ProductDetailActivity, "Error ${res.code()}: ${res.errorBody()?.string()}", Toast.LENGTH_LONG).show()
+                        snack.showError("❌ Error ${res.code()}: ${res.errorBody()?.string()}")
                     }
 
                 } else {
@@ -114,9 +118,9 @@ class ProductDetailActivity : AppCompatActivity() {
                     if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
 
                     if (res.isSuccessful) {
-                        Toast.makeText(this@ProductDetailActivity, "Actualizado ✅", Toast.LENGTH_SHORT).show()
+                        snack.showSuccess("✅ Producto actualizado")
                     } else {
-                        Toast.makeText(this@ProductDetailActivity, "Error ${res.code()}: ${res.errorBody()?.string()}", Toast.LENGTH_LONG).show()
+                        snack.showError("❌ Error ${res.code()}: ${res.errorBody()?.string()}")
                     }
                 }
 
@@ -125,15 +129,15 @@ class ProductDetailActivity : AppCompatActivity() {
                 if (productId == null) {
                     val dto = ProductCreateDto(sku = sku, name = name, barcode = barcode, categoryId = categoryId, active = true)
                     OfflineQueue(this@ProductDetailActivity).enqueue(PendingType.PRODUCT_CREATE, gson.toJson(dto))
-                    Toast.makeText(this@ProductDetailActivity, "Sin red. Producto guardado offline ✅", Toast.LENGTH_LONG).show()
+                    snack.showQueuedOffline("📦 Sin red. Producto guardado offline ✅")
                 } else {
                     val payload = OfflineSyncer.ProductUpdatePayload(productId!!, ProductUpdateDto(name, barcode, categoryId))
                     OfflineQueue(this@ProductDetailActivity).enqueue(PendingType.PRODUCT_UPDATE, gson.toJson(payload))
-                    Toast.makeText(this@ProductDetailActivity, "Sin red. Update guardado offline ✅", Toast.LENGTH_LONG).show()
+                    snack.showQueuedOffline("📦 Sin red. Actualización guardada offline ✅")
                 }
 
             } catch (e: Exception) {
-                Toast.makeText(this@ProductDetailActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                snack.showError("❌ Error: ${e.message}")
             } finally {
                 binding.btnSave.isEnabled = true
             }
@@ -151,6 +155,9 @@ class ProductDetailActivity : AppCompatActivity() {
     }
 
     private fun deleteProduct(id: Int) {
+        binding.btnDelete.isEnabled = false
+        snack.showSending("Eliminando producto...")
+
         lifecycleScope.launch {
             try {
                 val res = NetworkModule.api.deleteProduct(id)
@@ -158,20 +165,22 @@ class ProductDetailActivity : AppCompatActivity() {
                 if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
 
                 if (res.isSuccessful) {
-                    Toast.makeText(this@ProductDetailActivity, "Eliminado ✅", Toast.LENGTH_SHORT).show()
+                    snack.showSuccess("✅ Producto eliminado")
                     finish()
                 } else {
-                    Toast.makeText(this@ProductDetailActivity, "Error ${res.code()}: ${res.errorBody()?.string()}", Toast.LENGTH_LONG).show()
+                    snack.showError("❌ Error ${res.code()}: ${res.errorBody()?.string()}")
+                    binding.btnDelete.isEnabled = true
                 }
 
             } catch (e: IOException) {
                 val payload = OfflineSyncer.ProductDeletePayload(id)
                 OfflineQueue(this@ProductDetailActivity).enqueue(PendingType.PRODUCT_DELETE, gson.toJson(payload))
-                Toast.makeText(this@ProductDetailActivity, "Sin red. Delete guardado offline ✅", Toast.LENGTH_LONG).show()
+                snack.showQueuedOffline("📦 Sin red. Delete guardado offline ✅")
                 finish()
 
             } catch (e: Exception) {
-                Toast.makeText(this@ProductDetailActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                snack.showError("❌ Error: ${e.message}")
+                binding.btnDelete.isEnabled = true
             }
         }
     }
