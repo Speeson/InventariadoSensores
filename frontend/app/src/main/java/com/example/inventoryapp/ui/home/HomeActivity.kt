@@ -21,6 +21,8 @@ import com.example.inventoryapp.ui.products.ProductListActivity
 import com.example.inventoryapp.ui.scan.ScanActivity
 import com.example.inventoryapp.ui.stock.StockActivity
 import kotlinx.coroutines.launch
+import com.example.inventoryapp.ui.offline.OfflineErrorsActivity
+
 
 class HomeActivity : AppCompatActivity() {
 
@@ -70,6 +72,11 @@ class HomeActivity : AppCompatActivity() {
         binding.btnEvents.setOnClickListener {
             startActivity(Intent(this, EventsActivity::class.java))
         }
+
+        binding.btnOfflineErrors.setOnClickListener {
+            startActivity(Intent(this, OfflineErrorsActivity::class.java))
+        }
+
     }
 
     override fun onResume() {

@@ -77,6 +77,29 @@ class OfflineQueue(context: Context) {
         prefs.edit().remove(failedKey).apply()
     }
 
+    fun failedSize(): Int = getFailed().size
+
+    fun removeFailedAt(index: Int) {
+        val all = getFailed().toMutableList()
+        if (index !in all.indices) return
+        all.removeAt(index)
+        saveFailed(all)
+    }
+
+    fun moveFailedBackToPending(index: Int) {
+        val all = getFailed().toMutableList()
+        if (index !in all.indices) return
+        val item = all[index]
+
+        // Re-enqueue el request original
+        enqueue(item.original.type, item.original.payloadJson)
+
+        // Lo quitamos de failed
+        all.removeAt(index)
+        saveFailed(all)
+    }
+
+
     private fun savePending(items: List<PendingRequest>) {
         prefs.edit().putString(pendingKey, gson.toJson(items)).apply()
     }

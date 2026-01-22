@@ -61,6 +61,13 @@
                 android:text="Eventos (sensores)"
                 android:layout_marginBottom="12dp" />
 
+            <Button
+                android:id="@+id/btnOfflineErrors"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Errores offline"
+                android:layout_marginTop="200dp"/>
+
         </LinearLayout>
     </ScrollView>
 
