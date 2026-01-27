@@ -1,51 +1,57 @@
-# 📦 Sistema de Gestión de Inventario con Sensores Simulados
+# 📦 IoTrack - Sistema de Gestión de Inventario con Sensores IoT (simulados)
 
-Proyecto transversal – **2º Desarrollo de Aplicaciones Multiplataforma (2ª Evaluación)**  
-
-Módulos implicados:
-- Programación de Servicios y Procesos  
-- Acceso a Datos  
-- Programación Multimedia y Dispositivos Móviles  
+Proyecto transversal — **2º Desarrollo de Aplicaciones Multiplataforma (2ª Evaluación)**  
+**Actividad 4:** *Inventario con sensores IoT simulados*.
 
 ---
 
-## 🧩 Descripción del proyecto
+## 🧩 Descripción
 
-Este proyecto consiste en el desarrollo de un **Sistema de Gestión de Inventario** que permite controlar productos y stock mediante **eventos simulados de sensores IoT** y **escaneo móvil desde una aplicación Android**.
+Sistema para **gestionar inventario y stock** de productos, registrando movimientos por:
+- **Escaneo de códigos de barras** desde la app Android (cámara).
+- **Eventos de sensores IoT simulados** (entradas/salidas automáticas).
+- **Movimientos manuales** (entrada/salida/ajuste) desde la API.
 
-El sistema sigue el patrón **Modelo–Vista–Controlador (MVC)** y está diseñado para ser escalable, seguro y multiplataforma, utilizando una **API REST** como núcleo del sistema.
+El objetivo es entregar una solución **segura, documentada y desplegable en contenedores**, con una base preparada para extender:
+- consumidor de eventos en background,
+- alertas de stock bajo,
+- reportes,
+- importación CSV,
+- auditoría de cambios.
 
 ---
 
-## 🏗️ Arquitectura general
+## 🏗️ Arquitectura general (MVC)
 
-- **Vista (Frontend)**: Aplicación Android  
-- **Controlador (Backend)**: API REST en Python  
-- **Modelo (Datos)**: Base de datos PostgreSQL  
+- **Vista (Frontend):** Android (Kotlin)
+- **Controlador (Backend):** API REST (FastAPI)
+- **Modelo (Datos):** PostgreSQL + SQLAlchemy (migraciones Alembic)
 
-La comunicación entre capas se realiza mediante **JSON sobre HTTP**, siguiendo principios REST.
+Comunicación: **JSON sobre HTTP** y autenticación **JWT Bearer**.
 
 ---
 
 ## 🛠️ Stack tecnológico
 
 ### Backend (Python)
-- FastAPI (ASGI)
-- SQLAlchemy 2.0 + Alembic
+- FastAPI (ASGI) — Sistema Inventariado Sensores
+- SQLAlchemy + Alembic
 - PostgreSQL
-- JWT (OAuth2)
-- Redis + Celery (eventos y procesos en background)
-- Docker + docker-compose
-- pytest
+- JWT (OAuth2PasswordRequestForm) + hash de contraseñas
+- Docker + Docker Compose
+
 
 ### Android
-- Kotlin
-- Arquitectura MVVM
+- Kotlin + AndroidX
 - Retrofit + OkHttp
-- Room (base de datos local)
-- ML Kit (escaneo de códigos de barras / QR)
-- WorkManager (sincronización básica)
-- Firebase Cloud Messaging (opcional)
+- CameraX + ML Kit (barcode scanning)
+- Sesión persistente (token)
+
+**SDK (según Gradle detectado):**
+- compileSdk: 34
+- minSdk: 24
+- targetSdk: 34
+- applicationId: com.example.inventoryapp
 
 ---
 
@@ -62,228 +68,457 @@ La comunicación entre capas se realiza mediante **JSON sobre HTTP**, siguiendo 
 
 ---
 
-## 🔐 Requisitos funcionales
+## ✅ Funcionalidades implementadas (estado actual)
 
-- Autenticación con JWT y roles (User, Manager, Admin)
-- CRUD de productos y stock
-- Escaneo de códigos de barras desde Android
-- Simulación de sensores IoT (eventos de entrada/salida)
-- Procesamiento de eventos y actualización automática del stock
-- Historial de movimientos
-- Auditoría de cambios
-- Búsqueda por SKU, nombre y categoría
-- Importación de catálogo (CSV)
-- Reportes de consumo y rotación
-- Alertas por stock bajo (email/push)
+### Seguridad / Auth
+- Registro y login con JWT:
+  - `POST /auth/register`
+  - `POST /auth/login`
+- Roles: `USER`, `MANAGER`, `ADMIN`
+- Endpoints protegidos con `Authorization: Bearer <token>`
 
----
+### Inventario
+- **Productos** (con filtros y paginación):
+  - `GET /products?sku&name&barcode&category_id&active&limit&offset`
+  - `POST /products` (MANAGER/ADMIN)
+  - `PATCH /products/{id}` (MANAGER/ADMIN)
+  - `DELETE /products/{id}` (MANAGER/ADMIN)
+- **Stock** (por ubicación):
+  - `GET /stocks?product_id&location&limit&offset`
+  - `POST /stocks` (MANAGER/ADMIN)
+  - `PATCH /stocks/{id}` (MANAGER/ADMIN)
+- **Movimientos** (histórico + operaciones):
+  - `GET /movements` (filtros por fechas, tipo, usuario, etc.)
+  - `POST /movements/in` (MANAGER/ADMIN)
+  - `POST /movements/out` (MANAGER/ADMIN)
+  - `POST /movements/adjust` (MANAGER/ADMIN)
 
-## ⚙️ Requisitos transversales
+### Eventos (sensores simulados)
+- `GET /events?event_type&product_id&processed&limit&offset`
+- `POST /events` (requiere token)
 
-- Hash de contraseñas (BCrypt / Argon2)
-- JWT con expiración
-- Control de roles y permisos
-- Configuración CORS segura
-- Paginación y filtros en listados
-- Logs y auditoría
-- Tests:
-  - Unitarios
-  - Integración
-  - Contrato (OpenAPI)
-- CI/CD con GitHub Actions
-- Contenedores Docker
-- Documentación de la API (Swagger / OpenAPI)
-
----
-
-## 🗂️ Estructura del proyecto
-
-```
-sistemaInventariadoSensores/
-├─ README.md
-├─ .gitignore
-├─ .env.example
-├─ docker-compose.yml
-├─ docs/
-│  ├─ api/
-│  │  ├─ openapi_notes.md
-│  │  └─ postman_collection.json (opcional)
-│  ├─ arquitectura/
-│  │  ├─ decisiones-adr.md
-│  │  └─ diagrama-mvc.md
-│  └─ entregas/
-│     ├─ sprint1.md
-│     ├─ sprint2.md
-│     └─ sprint3.md
-├─ infra/
-│  ├─ nginx/ (opcional si hacéis reverse proxy)
-│  ├─ postgres/
-│  │  └─ init.sql (opcional)
-│  └─ scripts/
-│     ├─ seed_db.sh
-│     └─ reset_env.sh
-├─ backend/
-│  ├─ pyproject.toml (o requirements.txt)
-│  ├─ Dockerfile
-│  ├─ alembic.ini
-│  ├─ alembic/
-│  │  ├─ env.py
-│  │  └─ versions/
-│  ├─ app/
-│  │  ├─ main.py
-│  │  ├─ core/
-│  │  │  ├─ config.py          # env vars, settings
-│  │  │  ├─ logging.py         # configuración logs
-│  │  │  └─ security.py        # JWT, password hashing helpers
-│  │  ├─ api/
-│  │  │  ├─ deps.py            # get_current_user, require_roles
-│  │  │  └─ routers/
-│  │  │     ├─ auth.py
-│  │  │     ├─ products.py
-│  │  │     ├─ stocks.py
-│  │  │     ├─ movements.py
-│  │  │     ├─ events.py
-│  │  │     ├─ reports.py
-│  │  │     └─ health.py
-│  │  ├─ models/               # SQLAlchemy models
-│  │  │  ├─ user.py
-│  │  │  ├─ product.py
-│  │  │  ├─ stock.py
-│  │  │  ├─ movement.py
-│  │  │  └─ event.py
-│  │  ├─ schemas/              # Pydantic schemas
-│  │  │  ├─ auth.py
-│  │  │  ├─ user.py
-│  │  │  ├─ product.py
-│  │  │  ├─ stock.py
-│  │  │  ├─ movement.py
-│  │  │  └─ event.py
-│  │  ├─ services/             # lógica de negocio
-│  │  │  ├─ auth_service.py
-│  │  │  ├─ inventory_service.py
-│  │  │  ├─ event_service.py
-│  │  │  ├─ report_service.py
-│  │  │  └─ notification_service.py (S2)
-│  │  ├─ repositories/         # acceso a datos (CRUD DB)
-│  │  │  ├─ user_repo.py
-│  │  │  ├─ product_repo.py
-│  │  │  ├─ stock_repo.py
-│  │  │  ├─ movement_repo.py
-│  │  │  └─ event_repo.py
-│  │  ├─ db/
-│  │  │  ├─ session.py          # engine/sessionmaker
-│  │  │  └─ base.py             # Base declarative
-│  │  ├─ workers/
-│  │  │  ├─ celery_app.py
-│  │  │  ├─ tasks_events.py     # consumidor eventos (S2)
-│  │  │  ├─ tasks_alerts.py     # alertas (S2)
-│  │  │  └─ tasks_reports.py    # reportes programados (S2/S3)
-│  │  ├─ integrations/
-│  │  │  └─ redis_client.py
-│  │  └─ utils/
-│  │     ├─ pagination.py
-│  │     └─ errors.py
-│  ├─ tests/
-│  │  ├─ unit/
-│  │  ├─ integration/
-│  │  └─ conftest.py
-│  └─ scripts/
-│     ├─ sensor_simulator.py    # generador de eventos (S1 simple, S2 Redis)
-│     └─ seed_data.py
-├─ android/
-│  ├─ build.gradle
-│  ├─ settings.gradle
-│  └─ app/
-│     ├─ build.gradle
-│     └─ src/main/
-│        ├─ AndroidManifest.xml
-│        ├─ java/.../ui/
-│        ├─ java/.../data/
-│        ├─ java/.../domain/
-│        └─ res/
-└─ .github/
-   └─ workflows/
-      ├─ backend_ci.yml
-      ├─ android_ci.yml (opcional)
-      └─ docker_build.yml
-
-```
+### Android
+- Login/registro contra la API
+- Listado y detalle de productos
+- Escaneo con cámara (ML Kit)
+- Registro de movimiento desde barcode y ubicación
+- Pantallas de stocks/eventos (según implementación)
 
 ---
 
-## 🧪 Metodología de trabajo
+## 📌 Requisitos del enunciado (Actividad 4) — estado
 
-Se utiliza la metodología **Scrum**, gestionando el proyecto con **Jira**:
-- Epics
-- Historias de usuario
-- Subtareas
-- Story Points
-- Sprints
+| Requisito | Estado | Comentario |
+|---|---:|---|
+| Auth con JWT + roles | ✅ | Implementado en backend |
+| CRUD productos/stocks | ✅ | Incluye filtros + paginación |
+| Escaneo móvil | ✅ | Android con ML Kit |
+| Simulación de sensores | ✅ | Endpoints de eventos |
+| Procesamiento de eventos | ⚠️ | En este sprint el evento impacta stock al instante (sin cola) |
+| Historial de movimientos | ✅ | Endpoint + filtros |
+| Auditoría de cambios | ⏳ | Planificado (S3) |
+| Alertas stock bajo | ⏳ | Planificado (S2) |
+| Importación CSV | ⏳ | Planificado (S3) |
+| Reportes | ⏳ | Planificado (S2–S3) |
+| Tests/CI | ⏳ | Planificado / base preparada |
 
-Cada sprint cuenta con un **Definition of Done** común para todo el equipo.
-
----
-
-## 🏃‍♂️ Planificación por sprints
-
-### 🟢 Sprint 1 – Base funcional
-- Autenticación y roles
-- CRUD de productos y stock
-- Escaneo móvil
-- Eventos básicos simulados
-- Sincronización básica
-- Entorno Docker
-- CI inicial
-
-### 🟡 Sprint 2 – Procesamiento y análisis
-- Consumidor de eventos (Redis + Celery)
-- Alertas por stock bajo
-- Reportes y estadísticas
-- Adjuntos (opcional)
-
-### 🔵 Sprint 3 – Calidad y cierre
-- Importación / exportación (CSV)
-- Auditoría avanzada
-- Accesibilidad Android
-- Pruebas finales
-- Hardening de seguridad
+Leyenda: ✅ hecho · ⚠️ parcial · ⏳ planificado
 
 ---
 
-## ✅ Definition of Done (resumen)
+## 🚀 Puesta en marcha
 
-Una historia se considera terminada cuando:
-- La funcionalidad está implementada y demostrable
-- El código compila y funciona correctamente
-- Cumple los requisitos de seguridad
-- Está documentada
-- Pasa las pruebas básicas
-- Está integrada con el resto del sistema
+### Backend + PostgreSQL (Docker)
 
----
+**Requisitos:**
+- Docker + Docker Compose
 
-## 🚀 Puesta en marcha (backend)
-
+**Arranque:**
 ```bash
-docker-compose up --build
+cd backend
+docker compose up --build
 ```
 
-La API estará disponible en:
-- http://localhost:8000
-- Documentación Swagger: http://localhost:8000/docs
+**Servicios detectados (según docker-compose):**
+```json
+[
+  {
+    "path": "InventariadoSensores-offline/backend/docker-compose.yml",
+    "services_guess": [
+      "db",
+      "api",
+      "postgres_data"
+    ],
+    "ports": [
+      "5432:5432",
+      "8000:8000"
+    ]
+  }
+]
+```
+
+**Swagger/OpenAPI:**
+- `http://localhost:8000/docs`
+
+**Reset de entorno (borra datos y volúmenes):**
+```bash
+cd backend
+docker compose down -v
+docker compose up --build
+```
+
+---
+
+## 🔐 Ejemplos rápidos (curl)
+
+**Register (JSON):**
+```bash
+curl -X POST http://localhost:8000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@demo.com","password":"admin123","role":"ADMIN"}'
+```
+
+**Login (form-urlencoded):**
+```bash
+curl -X POST http://localhost:8000/auth/login \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "username=admin@demo.com&password=admin123"
+```
+
+**Me:**
+```bash
+curl http://localhost:8000/users/me \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+---
+
+## 📱 Android (Android Studio)
+
+**Requisitos:**
+- Android Studio
+- Emulador o dispositivo físico
+
+**URL de la API:**
+- Emulador → `http://10.0.2.2:8000/`
+- Dispositivo físico → IP local del PC en la LAN (ej. `http://192.168.1.50:8000/`)
+
+Detectado en el repo:
+- BASE_URL: `http://10.0.2.2:8000/`
+
+**Pasos:**
+1. Abrir carpeta `android/` en Android Studio
+2. Sync Gradle
+3. Ejecutar en emulador/dispositivo
+4. Probar: login → productos → escaneo → movimiento → stocks/eventos
+
+---
+
+## 🧠 Nota técnica (evitar duplicación de stock)
+
+Si en el flujo de escaneo se registra **evento** y luego **movimiento** para la misma acción, el stock puede actualizarse 2 veces.
+
+✅ Recomendación para Sprint 2:
+- Opción A: `/events` solo registra y un consumidor procesa/actualiza.
+- Opción B: Android solo llama a `/movements` y el backend crea el evento internamente (una sola fuente de verdad).
+
+---
+
+## 🧪 Metodología de trabajo (Scrum)
+
+Trabajo gestionado con Scrum:
+- Epics / Historias de usuario / subtareas
+- Sprints con entregables
+- Definition of Done común
+
+### ✅ Definition of Done (resumen)
+Una historia se considera terminada cuando:
+- Funcionalidad demostrable
+- Pasa pruebas mínimas y no rompe otras pantallas/endpoints
+- Cumple seguridad básica (auth/roles)
+- Está documentada (README / Swagger)
+- Integrada en rama principal (merge sin conflictos)
+
+---
+
+## 🗓️ Planificación por sprints
+
+- **Sprint 1:** productos/stocks CRUD, escaneo móvil, eventos básicos.
+- **Sprint 2:** consumidor de eventos, alertas, reportes.
+- **Sprint 3:** importación CSV, auditoría, optimizaciones.
+
+---
+
+## 👥 Equipo (2º DAM)
+
+- Christian Ballesteros  
+- Gonzalo Bravo  
+- Natalia Chuquillanqui  
+- Carolina de la Losa  
+- Esteban Garcés  
+- Jorge Llanes  
+
+---
+
+## 🗂️ Estructura completa del proyecto (todas las carpetas y archivos)
+
+```text
+
+InventariadoSensores/
+├── backend/
+│   ├── alembic/
+│   │   ├── versions/
+│   │   │   └── dcc886ba14d3_initial_schema.py
+│   │   ├── env.py
+│   │   ├── README
+│   │   └── script.py.mako
+│   ├── app/
+│   │   ├── __pycache__/
+│   │   │   └── main.cpython-313.pyc
+│   │   ├── api/
+│   │   │   ├── routers/
+│   │   │   │   └── __pycache__/
+│   │   │   │       └── events.cpython-313.pyc
+│   │   │   ├── routes/
+│   │   │   │   ├── auth.py
+│   │   │   │   ├── events.py
+│   │   │   │   ├── movements.py
+│   │   │   │   ├── products.py
+│   │   │   │   ├── stocks.py
+│   │   │   │   └── users.py
+│   │   │   ├── deps.py
+│   │   │   └── security.py
+│   │   ├── core/
+│   │   │   ├── __init__.py
+│   │   │   ├── config.py
+│   │   │   └── security.py
+│   │   ├── db/
+│   │   │   ├── __init__.py
+│   │   │   ├── base.py
+│   │   │   ├── deps.py
+│   │   │   └── session.py
+│   │   ├── models/
+│   │   │   ├── __init__.py
+│   │   │   ├── audit_log.py
+│   │   │   ├── category.py
+│   │   │   ├── entity.py
+│   │   │   ├── enums.py
+│   │   │   ├── event.py
+│   │   │   ├── movement.py
+│   │   │   ├── product.py
+│   │   │   ├── stock.py
+│   │   │   └── user.py
+│   │   ├── repositories/
+│   │   │   ├── __pycache__/
+│   │   │   │   └── memory_repo.cpython-313.pyc
+│   │   │   ├── event_repo.py
+│   │   │   ├── memory_repo.py
+│   │   │   ├── movement_repo.py
+│   │   │   ├── product_repo.py
+│   │   │   ├── stock_repo.py
+│   │   │   └── user_repo.py
+│   │   ├── schemas/
+│   │   │   ├── __pycache__/
+│   │   │   │   └── event.cpython-313.pyc
+│   │   │   ├── __init__.py
+│   │   │   ├── auth.py
+│   │   │   ├── event.py
+│   │   │   ├── movement.py
+│   │   │   ├── product.py
+│   │   │   ├── stock.py
+│   │   │   └── user.py
+│   │   ├── services/
+│   │   │   ├── __pycache__/
+│   │   │   │   └── event_service.cpython-313.pyc
+│   │   │   ├── auth_service.py
+│   │   │   ├── event_service.py
+│   │   │   └── inventory_service.py
+│   │   ├── __init__.py
+│   │   └── main.py
+│   ├── scripts/
+│   │   ├── __init__.py
+│   │   ├── seed3_db.py
+│   │   ├── seed_db.py
+│   │   ├── simulate_events.py
+│   │   └── test_db.py
+│   ├── tests/
+│   │   ├── conftest.py
+│   │   ├── test_auth.py
+│   │   ├── test_events.py
+│   │   ├── test_health.py
+│   │   ├── test_products.py
+│   │   └── test_stock_movements.py
+│   ├── .dockerignore
+│   ├── .env
+│   ├── .env.example
+│   ├── alembic.ini
+│   ├── docker-compose.yml
+│   ├── Dockerfile
+│   ├── entrypoint.sh
+│   └── requirements.txt
+├── android/
+│   ├── .idea/
+│   │   ├── codeStyles/
+│   │   │   ├── codeStyleConfig.xml
+│   │   │   └── Project.xml
+│   │   ├── .gitignore
+│   │   ├── .name
+│   │   ├── AndroidProjectSystem.xml
+│   │   ├── appInsightsSettings.xml
+│   │   ├── compiler.xml
+│   │   ├── deploymentTargetSelector.xml
+│   │   ├── deviceManager.xml
+│   │   ├── gradle.xml
+│   │   ├── markdown.xml
+│   │   ├── migrations.xml
+│   │   ├── misc.xml
+│   │   ├── runConfigurations.xml
+│   │   ├── studiobot.xml
+│   │   └── vcs.xml
+│   ├── app/
+│   │   ├── src/
+│   │   │   ├── androidTest/
+│   │   │   │   └── java/
+│   │   │   │       └── com/
+│   │   │   │           └── example/
+│   │   │   │               └── inventoryapp/
+│   │   │   │                   └── ExampleInstrumentedTest.kt
+│   │   │   ├── main/
+│   │   │   │   ├── java/
+│   │   │   │   │   └── com/
+│   │   │   │   │       └── example/
+│   │   │   │   │           └── inventoryapp/
+│   │   │   │   │               ├── data/
+│   │   │   │   │               │   ├── local/
+│   │   │   │   │               │   │   ├── OfflineQueue.kt
+│   │   │   │   │               │   │   ├── OfflineSyncer.kt
+│   │   │   │   │               │   │   └── SessionManager.kt
+│   │   │   │   │               │   ├── remote/
+│   │   │   │   │               │   │   ├── model/
+│   │   │   │   │               │   │   │   ├── EventDtos.kt
+│   │   │   │   │               │   │   │   ├── MovementDtos.kt
+│   │   │   │   │               │   │   │   ├── ProductDtos.kt
+│   │   │   │   │               │   │   │   ├── StockDtos.kt
+│   │   │   │   │               │   │   │   └── TokenResponse.kt
+│   │   │   │   │               │   │   ├── AuthInterceptor.kt
+│   │   │   │   │               │   │   ├── InventoryApi.kt
+│   │   │   │   │               │   │   └── NetworkModule.kt
+│   │   │   │   │               │   └── repository/
+│   │   │   │   │               │       ├── remote/
+│   │   │   │   │               │       │   └── RemoteScanRepository.kt
+│   │   │   │   │               │       └── MovementRepository.kt
+│   │   │   │   │               ├── domain/
+│   │   │   │   │               │   └── model/
+│   │   │   │   │               │       ├── Movement.kt
+│   │   │   │   │               │       ├── MovementType.kt
+│   │   │   │   │               │       └── Product.kt
+│   │   │   │   │               ├── ui/
+│   │   │   │   │               │   ├── auth/
+│   │   │   │   │               │   │   └── LoginActivity.kt
+│   │   │   │   │               │   ├── events/
+│   │   │   │   │               │   │   └── EventsActivity.kt
+│   │   │   │   │               │   ├── home/
+│   │   │   │   │               │   │   └── HomeActivity.kt
+│   │   │   │   │               │   ├── movements/
+│   │   │   │   │               │   │   ├── ConfirmMovementActivity.kt
+│   │   │   │   │               │   │   ├── MovimientosActivity.kt
+│   │   │   │   │               │   │   └── ResultActivity.kt
+│   │   │   │   │               │   ├── products/
+│   │   │   │   │               │   │   ├── ProductAdapter.kt
+│   │   │   │   │               │   │   ├── ProductDetailActivity.kt
+│   │   │   │   │               │   │   └── ProductListActivity.kt
+│   │   │   │   │               │   ├── stock/
+│   │   │   │   │               │   │   └── StockActivity.kt
+│   │   │   │   │               │   └── ScanActivity.kt
+│   │   │   │   │               ├── InventoryApp.kt
+│   │   │   │   │               └── MainActivity.kt
+│   │   │   │   ├── res/
+│   │   │   │   │   ├── drawable/
+│   │   │   │   │   │   ├── baseline_account_circle_24.xml
+│   │   │   │   │   │   ├── ic_company_logo.png
+│   │   │   │   │   │   ├── ic_launcher_background.xml
+│   │   │   │   │   │   ├── ic_launcher_foreground.xml
+│   │   │   │   │   │   ├── ic_profile.xml
+│   │   │   │   │   │   └── ic_status.xml
+│   │   │   │   │   ├── layout/
+│   │   │   │   │   │   ├── activity_confirm_movement.xml
+│   │   │   │   │   │   ├── activity_events.xml
+│   │   │   │   │   │   ├── activity_home.xml
+│   │   │   │   │   │   ├── activity_login.xml
+│   │   │   │   │   │   ├── activity_main.xml
+│   │   │   │   │   │   ├── activity_movimientos.xml
+│   │   │   │   │   │   ├── activity_product_detail.xml
+│   │   │   │   │   │   ├── activity_product_list.xml
+│   │   │   │   │   │   ├── activity_result.xml
+│   │   │   │   │   │   ├── activity_scan.xml
+│   │   │   │   │   │   ├── activity_stock.xml
+│   │   │   │   │   │   ├── dialog_register.xml
+│   │   │   │   │   │   └── item_product.xml
+│   │   │   │   │   ├── menu/
+│   │   │   │   │   │   └── home_menu.xml
+│   │   │   │   │   ├── mipmap-anydpi-v26/
+│   │   │   │   │   │   ├── ic_launcher.xml
+│   │   │   │   │   │   └── ic_launcher_round.xml
+│   │   │   │   │   ├── mipmap-hdpi/
+│   │   │   │   │   │   ├── ic_launcher.webp
+│   │   │   │   │   │   ├── ic_launcher_foreground.webp
+│   │   │   │   │   │   └── ic_launcher_round.webp
+│   │   │   │   │   ├── mipmap-mdpi/
+│   │   │   │   │   │   ├── ic_launcher.webp
+│   │   │   │   │   │   ├── ic_launcher_foreground.webp
+│   │   │   │   │   │   └── ic_launcher_round.webp
+│   │   │   │   │   ├── mipmap-xhdpi/
+│   │   │   │   │   │   ├── ic_launcher.webp
+│   │   │   │   │   │   ├── ic_launcher_foreground.webp
+│   │   │   │   │   │   └── ic_launcher_round.webp
+│   │   │   │   │   ├── mipmap-xxhdpi/
+│   │   │   │   │   │   ├── ic_launcher.webp
+│   │   │   │   │   │   ├── ic_launcher_foreground.webp
+│   │   │   │   │   │   └── ic_launcher_round.webp
+│   │   │   │   │   ├── mipmap-xxxhdpi/
+│   │   │   │   │   │   ├── ic_launcher.webp
+│   │   │   │   │   │   ├── ic_launcher_foreground.webp
+│   │   │   │   │   │   └── ic_launcher_round.webp
+│   │   │   │   │   ├── values/
+│   │   │   │   │   │   ├── colors.xml
+│   │   │   │   │   │   ├── strings.xml
+│   │   │   │   │   │   └── themes.xml
+│   │   │   │   │   ├── values-night/
+│   │   │   │   │   │   └── themes.xml
+│   │   │   │   │   └── xml/
+│   │   │   │   │       ├── backup_rules.xml
+│   │   │   │   │       └── data_extraction_rules.xml
+│   │   │   │   ├── AndroidManifest.xml
+│   │   │   │   └── ic_launcher-playstore.png
+│   │   │   └── test/
+│   │   │       └── java/
+│   │   │           └── com/
+│   │   │               └── example/
+│   │   │                   └── inventoryapp/
+│   │   │                       └── ExampleUnitTest.kt
+│   │   ├── .gitignore
+│   │   ├── build.gradle.kts
+│   │   └── proguard-rules.pro
+│   ├── gradle/
+│   │   ├── wrapper/
+│   │   │   ├── gradle-wrapper.jar
+│   │   │   └── gradle-wrapper.properties
+│   │   └── libs.versions.toml
+│   ├── .gitignore
+│   ├── build.gradle.kts
+│   ├── Documentacion.md
+│   ├── DocumentacionFront.md
+│   ├── gradle.properties
+│   ├── gradlew
+│   ├── gradlew.bat
+│   └── settings.gradle.kts
+├── .gitattributes
+├── .gitignore
+└── README.md
+```
 
 ---
 
 ## 📄 Licencia
 
-Proyecto educativo desarrollado para el ciclo formativo de **Desarrollo de Aplicaciones Multiplataforma (DAM)**.
-
-## Mimebros del Grupo
-
-  Christian Ballesteros
-  Gonzalo Bravo
-  Natalia Chuquillanqui
-  Carolina de la Losa
-  Esteban Garcés
-  Jorge Llanes
-
+Proyecto educativo (uso académico).

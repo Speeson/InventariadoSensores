@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/colorPrimary"
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+        app:title="Menú"
+        app:titleTextColor="@android:color/white"
+        app:popupTheme="@style/ThemeOverlay.AppCompat.Dark"/>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnScan"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Escanear producto"
+                android:layout_marginBottom="12dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnProducts"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Productos"
+                android:layout_marginBottom="12dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnStock"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Stock"
+                android:layout_marginBottom="12dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnMovements"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Movimientos"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Dejo estos botones preparados para cuando los implementemos -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnEvents"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Eventos (sensores)"
+                android:layout_marginBottom="12dp" />
+
+            <Button
+                android:id="@+id/btnOfflineErrors"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Errores offline"
+                android:layout_marginTop="200dp"/>
+
+        </LinearLayout>
+    </ScrollView>
+
+</LinearLayout>
