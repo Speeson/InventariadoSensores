@@ -5,7 +5,7 @@ from app.models.audit_log import ActionType, AuditLog
 from app.models.category import Category
 from app.models.entity import Entity
 from app.models.event import Event, EventType
-from app.models.movement import Movement, MovementSource, MovementType
+from app.models.movement import Movement, Source, MovementType
 from app.models.product import Product
 from app.models.stock import Stock
 from app.models.user import User
@@ -101,14 +101,14 @@ def run_seed():
                     quantity=10,
                     user_id=manager_user.id,
                     movement_type=MovementType.IN,
-                    movement_source=MovementSource.SCAN,
+                    movement_source=Source.SCAN,
                 ),
                 Movement(
                     product_id=products[1].id,
                     quantity=5,
                     user_id=normal_user.id,
                     movement_type=MovementType.OUT,
-                    movement_source=MovementSource.MANUAL,
+                    movement_source=Source.MANUAL,
                 ),
             ]
             db.add_all(movements)

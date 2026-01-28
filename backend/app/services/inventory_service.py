@@ -2,7 +2,7 @@ from typing import Tuple
 
 from sqlalchemy.orm import Session
 
-from app.models.enums import MovementSource, MovementType
+from app.models.enums import Source, MovementType
 from app.models.product import Product
 from app.models.stock import Stock
 from app.models.movement import Movement
@@ -35,7 +35,7 @@ def increase_stock(
     quantity: int,
     user_id: int,
     location: str,
-    source: MovementSource,
+    source: Source,
 ) -> Tuple[Stock, Movement]:
     _get_product_or_fail(db, product_id)
     stock = _get_or_create_stock(db, product_id, location)
@@ -59,7 +59,7 @@ def decrease_stock(
     quantity: int,
     user_id: int,
     location: str,
-    source: MovementSource,
+    source: Source,
 ) -> Tuple[Stock, Movement]:
     _get_product_or_fail(db, product_id)
     stock = _get_or_create_stock(db, product_id, location)
@@ -86,7 +86,7 @@ def adjust_stock(
     quantity: int,
     user_id: int,
     location: str,
-    source: MovementSource,
+    source: Source,
 ) -> Tuple[Stock, Movement]:
     """
     Ajuste directo de stock (positivo o negativo). Úsalo para correcciones manuales.

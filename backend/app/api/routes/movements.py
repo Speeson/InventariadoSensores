@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_roles
 from app.db.deps import get_db
-from app.models.enums import MovementSource, MovementType, UserRole
+from app.models.enums import Source, MovementType, UserRole
 from app.schemas.movement import MovementResponse
 from app.schemas.stock import StockResponse
 from app.services import inventory_service
@@ -25,14 +25,14 @@ class MovementOperation(BaseModel):
     product_id: int
     quantity: int = Field(..., gt=0)
     location: str = Field(..., min_length=1, max_length=100)
-    movement_source: MovementSource
+    movement_source: Source
 
 
 class MovementAdjustOperation(BaseModel):
     product_id: int
     delta: int = Field(..., ne=0)
     location: str = Field(..., min_length=1, max_length=100)
-    movement_source: MovementSource
+    movement_source: Source
 
 
 class MovementWithStockResponse(BaseModel):
@@ -48,7 +48,7 @@ def list_movements(
     db: Session = Depends(get_db),
     product_id: int | None = Query(None),
     movement_type: MovementType | None = Query(None),
-    movement_source: MovementSource | None = Query(None),
+    movement_source: Source | None = Query(None),
     user_id: int | None = Query(None),
     date_from: datetime | None = Query(None),
     date_to: datetime | None = Query(None),

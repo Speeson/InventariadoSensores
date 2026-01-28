@@ -1,234 +1,242 @@
-# backend/scripts/seed2_db.py
-
 from app.db.session import SessionLocal
-from app.models.audit_log import ActionType, AuditLog
+from app.core.security import hash_password
+from app.models.audit_log import AuditLog
 from app.models.category import Category
-from app.models.entity import Entity
-from app.models.event import Event, EventType
-from app.models.movement import Movement, MovementSource, MovementType
+from app.models.event import Event
+from app.models.movement import Movement
 from app.models.product import Product
 from app.models.stock import Stock
+from app.models.stock_threshold import StockThreshold
 from app.models.user import User
+from app.models.enums import (
+    ActionType,
+    Entity,
+    EventStatus,
+    EventType,
+    MovementType,
+    Source,
+    UserRole,
+)
 
 
 def run_seed():
     db = SessionLocal()
 
     try:
-        categories = [
-            Category(name="Sensores IoT"),
-            Category(name="Gateways"),
-            Category(name="Actuadores"),
-            Category(name="Energia"),
-            Category(name="Accesorios"),
-            Category(name="Redes"),
-            Category(name="Controladores"),
-            Category(name="Monitoreo"),
-            Category(name="Mantenimiento"),
-            Category(name="Calibracion"),
-            Category(name="Seguridad"),
-            Category(name="Climatizacion"),
-            Category(name="Iluminacion"),
-            Category(name="Agua y Caudal"),
-            Category(name="Vibracion"),
-            Category(name="GPS y Localizacion"),
-            Category(name="Baterias"),
-            Category(name="Antenas"),
-            Category(name="Montaje"),
-            Category(name="Herramientas"),
-        ]
-        db.add_all(categories)
+        def get_or_create(model, defaults=None, **kwargs):
+            instance = db.query(model).filter_by(**kwargs).first()
+            if instance:
+                return instance, False
+            params = dict(kwargs)
+            if defaults:
+                params.update(defaults)
+            instance = model(**params)
+            db.add(instance)
+            return instance, True
+
+        categories = []
+        for name in [
+            "Sensores IoT",
+            "Gateways",
+            "Actuadores",
+            "Energia",
+            "Accesorios",
+            "Redes",
+            "Controladores",
+            "Monitoreo",
+            "Mantenimiento",
+            "Calibracion",
+            "Seguridad",
+            "Climatizacion",
+            "Iluminacion",
+            "Agua y Caudal",
+            "Vibracion",
+            "GPS y Localizacion",
+            "Baterias",
+            "Antenas",
+            "Montaje",
+            "Herramientas",
+        ]:
+            category, _ = get_or_create(Category, name=name)
+            categories.append(category)
         db.commit()
 
-        entities = [
-            Entity(name="Oficina Central"),
-            Entity(name="Planta Norte"),
-            Entity(name="Planta Sur"),
-            Entity(name="Laboratorio I+D"),
-            Entity(name="Cliente Demo"),
-        ]
-        db.add_all(entities)
+        users = []
+        for username, email, role in [
+            ("admin", "admin@demo.local", UserRole.ADMIN),
+            ("manager", "manager@demo.local", UserRole.MANAGER),
+            ("user", "user@demo.local", UserRole.USER),
+        ]:
+            user, _ = get_or_create(
+                User,
+                email=email,
+                defaults={
+                    "username": username,
+                    "password_hash": hash_password("ChangeMe123"),
+                    "role": role,
+                },
+            )
+            users.append(user)
         db.commit()
 
-        products = [
-            Product(
-                sku="S-TH-100",
-                name="Sensor temp/humedad LoRa",
-                barcode="100001",
-                category_id=categories[0].id,
-                active=True,
-            ),
-            Product(
-                sku="S-CO2-200",
-                name="Sensor CO2 Zigbee",
-                barcode="100002",
-                category_id=categories[0].id,
-                active=True,
-            ),
-            Product(
-                sku="GW-LORA-01",
-                name="Gateway LoRaWAN",
-                barcode="200001",
-                category_id=categories[1].id,
-                active=True,
-            ),
-            Product(
-                sku="ACT-RELE-01",
-                name="Actuador rele DIN",
-                barcode="300001",
-                category_id=categories[2].id,
-                active=True,
-            ),
-            Product(
-                sku="PWR-UPS-01",
-                name="UPS 12V para nodo IoT",
-                barcode="400001",
-                category_id=categories[3].id,
-                active=True,
-            ),
-        ]
-        db.add_all(products)
+        category_by_name = {category.name: category for category in categories}
+        products = []
+        for sku, name, barcode, category_name in [
+            ("S-TH-100", "Sensor temp/humedad LoRa", "100001", "Sensores IoT"),
+            ("S-CO2-200", "Sensor CO2 Zigbee", "100002", "Sensores IoT"),
+            ("GW-LORA-01", "Gateway LoRaWAN", "200001", "Gateways"),
+            ("ACT-RELE-01", "Actuador rele DIN", "300001", "Actuadores"),
+            ("PWR-UPS-01", "UPS 12V para nodo IoT", "400001", "Energia"),
+        ]:
+            product, _ = get_or_create(
+                Product,
+                sku=sku,
+                defaults={
+                    "name": name,
+                    "barcode": barcode,
+                    "category_id": category_by_name[category_name].id,
+                    "active": True,
+                },
+            )
+            products.append(product)
         db.commit()
 
-        stocks = [
-            Stock(product_id=products[0].id, quantity=120, location="Oficina Central"),
-            Stock(product_id=products[1].id, quantity=80, location="Planta Norte"),
-            Stock(product_id=products[2].id, quantity=15, location="Planta Sur"),
-            Stock(product_id=products[3].id, quantity=40, location="Laboratorio I+D"),
-            Stock(product_id=products[4].id, quantity=25, location="Cliente Demo"),
-        ]
-        db.add_all(stocks)
+        for product, quantity, location in [
+            (products[0], 120, "Oficina Central"),
+            (products[1], 80, "Planta Norte"),
+            (products[2], 15, "Planta Sur"),
+            (products[3], 40, "Laboratorio I+D"),
+            (products[4], 25, "Cliente Demo"),
+        ]:
+            get_or_create(
+                Stock,
+                product_id=product.id,
+                location=location,
+                defaults={"quantity": quantity},
+            )
         db.commit()
 
-        events = [
-            Event(
-                event_type=EventType.SENSOR_IN,
-                product_id=products[0].id,
-                delta=12,
-                source="SIMULADOR",
-                processed=True,
-            ),
-            Event(
-                event_type=EventType.SENSOR_IN,
-                product_id=products[1].id,
-                delta=8,
-                source="SIMULADOR",
-                processed=True,
-            ),
-            Event(
-                event_type=EventType.SENSOR_OUT,
-                product_id=products[2].id,
-                delta=-2,
-                source="APP",
-                processed=True,
-            ),
-            Event(
-                event_type=EventType.SENSOR_IN,
-                product_id=products[3].id,
-                delta=5,
-                source="INGESTOR",
-                processed=True,
-            ),
-            Event(
-                event_type=EventType.SENSOR_OUT,
-                product_id=products[4].id,
-                delta=-1,
-                source="APP",
-                processed=True,
-            ),
-        ]
-        db.add_all(events)
+        for product, location, min_qty in [
+            (products[0], "Oficina Central", 20),
+            (products[1], "Planta Norte", 15),
+            (products[2], "Planta Sur", 5),
+        ]:
+            get_or_create(
+                StockThreshold,
+                product_id=product.id,
+                location=location,
+                defaults={"min_quantity": min_qty},
+            )
         db.commit()
 
-        users = db.query(User).order_by(User.id).all()
-        if users:
-            user_ids = [user.id for user in users]
+        for event_type, product, delta, source, key in [
+            (EventType.SENSOR_IN, products[0], 12, Source.SCAN, "evt-1001"),
+            (EventType.SENSOR_IN, products[1], 8, Source.SCAN, "evt-1002"),
+            (EventType.SENSOR_OUT, products[2], -2, Source.MANUAL, "evt-1003"),
+            (EventType.SENSOR_IN, products[3], 5, Source.MANUAL, "evt-1004"),
+            (EventType.SENSOR_OUT, products[4], -1, Source.SCAN, "evt-1005"),
+        ]:
+            get_or_create(
+                Event,
+                idempotency_key=key,
+                defaults={
+                    "event_type": event_type,
+                    "product_id": product.id,
+                    "delta": delta,
+                    "source": source,
+                    "event_status": EventStatus.PROCESSED,
+                    "retry_count": 0,
+                },
+            )
+        db.commit()
 
-            def pick_user(index: int) -> int:
-                return user_ids[index % len(user_ids)]
+        user_ids = [user.id for user in users]
 
-            movements = [
-                Movement(
-                    product_id=products[0].id,
-                    quantity=6,
-                    user_id=pick_user(0),
-                    movement_type=MovementType.IN,
-                    movement_source=MovementSource.SCAN,
-                ),
-                Movement(
-                    product_id=products[1].id,
-                    quantity=3,
-                    user_id=pick_user(1),
-                    movement_type=MovementType.IN,
-                    movement_source=MovementSource.MANUAL,
-                ),
-                Movement(
-                    product_id=products[2].id,
-                    quantity=1,
-                    user_id=pick_user(2),
-                    movement_type=MovementType.OUT,
-                    movement_source=MovementSource.MANUAL,
-                ),
-                Movement(
-                    product_id=products[3].id,
-                    quantity=2,
-                    user_id=pick_user(3),
-                    movement_type=MovementType.ADJUST,
-                    movement_source=MovementSource.SCAN,
-                ),
-                Movement(
-                    product_id=products[4].id,
-                    quantity=1,
-                    user_id=pick_user(4),
-                    movement_type=MovementType.OUT,
-                    movement_source=MovementSource.SCAN,
-                ),
-            ]
-            db.add_all(movements)
-            db.commit()
+        def pick_user(index: int) -> int:
+            return user_ids[index % len(user_ids)]
 
-            audit_logs = [
-                AuditLog(
-                    entity_id=entities[0].id,
-                    action=ActionType.CREATE,
-                    user_id=pick_user(0),
-                    details="Alta de sensor IoT",
-                ),
-                AuditLog(
-                    entity_id=entities[1].id,
-                    action=ActionType.UPDATE,
-                    user_id=pick_user(1),
-                    details="Ajuste de stock por calibracion",
-                ),
-                AuditLog(
-                    entity_id=entities[2].id,
-                    action=ActionType.UPDATE,
-                    user_id=pick_user(2),
-                    details="Movimiento por mantenimiento",
-                ),
-                AuditLog(
-                    entity_id=entities[3].id,
-                    action=ActionType.CREATE,
-                    user_id=pick_user(3),
-                    details="Registro de gateway",
-                ),
-                AuditLog(
-                    entity_id=entities[4].id,
-                    action=ActionType.DELETE,
-                    user_id=pick_user(4),
-                    details="Baja de accesorio defectuoso",
-                ),
-            ]
-            db.add_all(audit_logs)
-            db.commit()
-        else:
-            print("Sin usuarios existentes, se omiten movimientos y auditoria")
+        movements = [
+            {
+                "product_id": products[0].id,
+                "quantity": 6,
+                "user_id": pick_user(0),
+                "movement_type": MovementType.IN,
+                "movement_source": Source.SCAN,
+            },
+            {
+                "product_id": products[1].id,
+                "quantity": 3,
+                "user_id": pick_user(1),
+                "movement_type": MovementType.IN,
+                "movement_source": Source.MANUAL,
+            },
+            {
+                "product_id": products[2].id,
+                "quantity": 1,
+                "user_id": pick_user(2),
+                "movement_type": MovementType.OUT,
+                "movement_source": Source.MANUAL,
+            },
+            {
+                "product_id": products[3].id,
+                "quantity": 2,
+                "user_id": pick_user(0),
+                "movement_type": MovementType.ADJUST,
+                "movement_source": Source.SCAN,
+            },
+            {
+                "product_id": products[4].id,
+                "quantity": 1,
+                "user_id": pick_user(1),
+                "movement_type": MovementType.OUT,
+                "movement_source": Source.SCAN,
+            },
+        ]
+        for movement in movements:
+            get_or_create(Movement, **movement)
+        db.commit()
 
-        print("Seed2 ejecutado correctamente")
+        audit_logs = [
+            {
+                "entity": Entity.PRODUCT,
+                "action": ActionType.CREATE,
+                "user_id": pick_user(0),
+                "details": "Alta de sensor IoT",
+            },
+            {
+                "entity": Entity.STOCK,
+                "action": ActionType.UPDATE,
+                "user_id": pick_user(1),
+                "details": "Ajuste de stock por calibracion",
+            },
+            {
+                "entity": Entity.MOVEMENT,
+                "action": ActionType.UPDATE,
+                "user_id": pick_user(2),
+                "details": "Movimiento por mantenimiento",
+            },
+            {
+                "entity": Entity.PRODUCT,
+                "action": ActionType.CREATE,
+                "user_id": pick_user(0),
+                "details": "Registro de gateway",
+            },
+            {
+                "entity": Entity.PRODUCT,
+                "action": ActionType.DELETE,
+                "user_id": pick_user(1),
+                "details": "Baja de accesorio defectuoso",
+            },
+        ]
+        for audit_log in audit_logs:
+            get_or_create(AuditLog, **audit_log)
+        db.commit()
+
+        print("Seed ejecutado correctamente")
 
     except Exception as e:
         db.rollback()
-        print("Error en seed2:", e)
+        print("Error en seed:", e)
 
     finally:
         db.close()

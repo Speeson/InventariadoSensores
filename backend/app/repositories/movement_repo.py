@@ -4,7 +4,7 @@ from typing import Iterable, Tuple
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models.enums import MovementSource, MovementType
+from app.models.enums import Source, MovementType
 from app.models.movement import Movement
 
 
@@ -17,7 +17,7 @@ def list_movements(
     *,
     product_id: int | None = None,
     movement_type: MovementType | None = None,
-    movement_source: MovementSource | None = None,
+    movement_source: Source | None = None,
     user_id: int | None = None,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
@@ -51,7 +51,7 @@ def create_movement(
     quantity: int,
     user_id: int,
     movement_type: MovementType,
-    movement_source: MovementSource,
+    movement_source: Source,
 ) -> Movement:
     movement = Movement(
         product_id=product_id,

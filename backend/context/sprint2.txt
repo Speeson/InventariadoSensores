@@ -1,0 +1,285 @@
+EPIC S2-EP1 — Procesamiento asíncrono de eventos (IoT simulado)
+Story S2-US1 — Publicar eventos y procesarlos con un worker
+
+Como responsable de inventario,
+quiero que los eventos de sensores se procesen en segundo plano,
+para que el stock se actualice de forma robusta y escalable.
+
+Criterios de aceptación
+
+POST /events registra el evento y lo deja en estado PENDING.
+
+Un worker procesa eventos y actualiza stock en transacción.
+
+El evento termina en PROCESSED o FAILED con error guardado.
+
+El sistema es idempotente (no aplica dos veces el mismo evento).
+
+Subtareas
+
+Backend
+
+S2-T1: Añadir Redis + Celery (worker) al proyecto y configuración por variables de entorno.
+
+S2-T2: Modificar POST /events para que solo cree evento y lo encole.
+
+S2-T3: Implementar tarea process_event(event_id):
+
+validar evento (producto, ubicación, tipo, cantidad)
+
+aplicar delta a stock en transacción
+
+marcar status/timestamps
+
+S2-T4: Gestión de reintentos (retry_count + last_error) y estado FAILED.
+
+S2-T5: Idempotencia (por event_id o idempotency_key).
+
+Base de datos
+
+S2-T6: Migración Alembic para añadir campos a events:
+
+status, processed_at, retry_count, last_error, idempotency_key (opcional unique).
+
+S2-T7: Índices recomendados (events(status, created_at)).
+
+Frontend (Android)
+
+S2-T8: (si usáis flujo por eventos) mostrar estado “pendiente/procesado/error” cuando el movimiento venga de evento.
+
+Story S2-US2 — Evitar doble actualización de stock (evento + movimiento)
+
+Como usuario de la app,
+quiero que cada escaneo actualice el stock una sola vez,
+para evitar duplicados.
+
+Criterios de aceptación
+
+El flujo de escaneo usa un solo endpoint (o eventos o movimientos).
+
+No hay casos donde una operación de escaneo incremente/disminuya stock dos veces.
+
+Queda documentado en README / docs internos qué endpoint es “fuente de verdad”.
+
+Subtareas
+
+Backend
+
+S2-T9: Definir la estrategia:
+
+Opción A: Android → /events y el worker crea movement internamente
+
+Opción B: Android → /movements/* y el backend genera evento interno
+
+S2-T10: Implementar la estrategia elegida (ajustar services).
+
+Frontend (Android)
+
+S2-T11: Modificar RemoteScanRepository/flujo de escaneo para llamar solo a 1 endpoint.
+
+S2-T12: Ajustar UI de confirmación y mensajes de éxito/error.
+
+Base de datos
+
+S2-T13: (si aplica) constraint/clave idempotente para no duplicar operaciones.
+
+EPIC S2-EP2 — Alertas por stock bajo
+Story S2-US3 — Definir umbrales de stock por producto/ubicación
+
+Como manager,
+quiero definir umbrales de stock mínimo,
+para disparar alertas cuando el stock sea bajo.
+
+Criterios de aceptación
+
+Existe una entidad/tabla de umbrales.
+
+Se puede crear/editar/borrar umbrales (solo MANAGER/ADMIN).
+
+Validaciones (min_quantity >= 0, ubicación opcional).
+
+Subtareas
+
+Base de datos
+
+S2-T14: Crear tabla stock_thresholds (product_id, location opcional, min_quantity, timestamps).
+
+S2-T15: Índices (product_id, location).
+
+Backend
+
+S2-T16: CRUD endpoints para thresholds:
+
+GET /thresholds
+
+POST /thresholds
+
+PATCH /thresholds/{id}
+
+DELETE /thresholds/{id}
+
+S2-T17: Permisos por rol + validación.
+
+Frontend (Android) (opcional si lo veis en S2)
+
+S2-T18: Pantalla básica de umbrales (lista + alta/edición) para roles autorizados.
+
+Story S2-US4 — Generar alertas automáticamente cuando el stock baja del umbral
+
+Como responsable de almacén,
+quiero recibir alertas cuando el stock sea bajo,
+para reponer a tiempo.
+
+Criterios de aceptación
+
+Se generan alertas OPEN si stock < umbral.
+
+No se generan duplicados para el mismo producto/ubicación si ya existe OPEN.
+
+Se pueden marcar como ACK (revisadas).
+
+Subtareas
+
+Base de datos
+
+S2-T19: Crear tabla alerts (stock_id/product_id, quantity, min_quantity, status, created_at, ack_at, ack_user_id).
+
+S2-T20: Índices (alerts(status), alerts(product_id, status)).
+
+Backend
+
+S2-T21: Job programado (Celery Beat) scan_low_stock():
+
+consulta stocks + thresholds
+
+crea alertas OPEN sin duplicar
+
+S2-T22: Endpoints:
+
+GET /alerts?status&product_id&location&date_from&date_to&limit&offset
+
+POST /alerts/{id}/ack
+
+S2-T23: Permisos: ver para usuarios autenticados, ack para MANAGER/ADMIN (decidid política).
+
+Frontend (Android)
+
+S2-T24: Pantalla “Alertas” (lista, filtros básicos, botón “Marcar revisada”).
+
+Story S2-US5 — Notificación de alertas (email o push)
+
+Como manager,
+quiero recibir notificación cuando se crea una alerta,
+para enterarme sin entrar en la app.
+
+Criterios de aceptación
+
+Al crear una alerta OPEN, se envía notificación por un canal.
+
+Si falla el envío, queda registrado en logs (no rompe el sistema).
+
+Subtareas
+
+Backend
+
+S2-T25: Integración de email (SMTP de pruebas/Mailtrap) o push (FCM) – elegir 1.
+
+S2-T26: Envío desde el job o desde evento de creación de alerta (según diseño).
+
+S2-T27: Logging y manejo de fallos.
+
+Base de datos (opcional)
+
+S2-T28: Guardar estado de notificación (sent_at, channel, last_error).
+
+EPIC S2-EP3 — Reportes de inventario
+Story S2-US6 — Reporte “Top consumidos” por rango de fechas
+
+Como manager,
+quiero ver los productos más consumidos,
+para optimizar reposición y compras.
+
+Criterios de aceptación
+
+Endpoint devuelve ranking por cantidad OUT (y/o neto).
+
+Filtros: fecha desde/hasta, ubicación opcional.
+
+Paginación o limit.
+
+Subtareas
+
+Backend
+
+S2-T29: Endpoint GET /reports/top-consumed?date_from&date_to&location&limit
+
+S2-T30: Query agregada sobre movements OUT.
+
+Base de datos
+
+S2-T31: Índices movements(product_id, created_at) para rendimiento.
+
+Frontend (Android)
+
+S2-T32: Pantalla “Reportes” sección Top consumidos (lista + selector fechas).
+
+Story S2-US7 — Reporte de rotación de inventario
+
+Como manager,
+quiero ver rotación de inventario,
+para detectar productos con mucha/poca salida.
+
+Criterios de aceptación
+
+Endpoint devuelve métrica de rotación por producto (definir fórmula).
+
+Filtros por fechas y ubicación.
+
+Documentación de la fórmula utilizada.
+
+Subtareas
+
+Backend
+
+S2-T33: Endpoint GET /reports/turnover?date_from&date_to&location&limit
+
+S2-T34: Implementar cálculo (ej: salidas / stock medio estimado).
+
+Base de datos
+
+S2-T35: Índices si hace falta (stocks + movements).
+
+Frontend (Android)
+
+S2-T36: UI rotación (tabla simple; gráfico opcional).
+
+EPIC S2-EP4 — Endurecimiento técnico y calidad de Sprint 2
+Story S2-US8 — Observabilidad y robustez del procesamiento
+
+Como equipo,
+quiero logs claros y métricas básicas,
+para depurar fallos y validar el sistema.
+
+Criterios de aceptación
+
+Logs por evento procesado (ok/fail) con IDs.
+
+Endpoint de health indica estado de API (y si usáis worker, health de worker).
+
+Subtareas
+
+Backend
+
+S2-T37: Logging estructurado en process_event y scan_low_stock.
+
+S2-T38: Healthchecks (API + redis/celery si lo exponéis).
+
+DevOps
+
+S2-T39: Ajustar docker-compose para incluir redis + worker + beat.
+
+Tests (si llegáis)
+
+S2-T40: Tests de integración mínimos:
+
+crear evento → queda PENDING → worker lo procesa → stock cambia.
