@@ -25,9 +25,9 @@ import com.example.inventoryapp.data.remote.model.EventTypeDto
 
 
 data class RegisterRequest(
+    val username: String,
     val email: String,
-    val password: String,
-    val role: String? = null
+    val password: String
 )
 
 data class UserMeResponse(
@@ -44,7 +44,7 @@ interface InventoryApi {
     @FormUrlEncoded
     @POST("auth/login")
     suspend fun login(
-        @Field("username") username: String,
+        @Field("email") email: String,
         @Field("password") password: String
     ): Response<TokenResponse>
 

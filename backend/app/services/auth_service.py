@@ -2,19 +2,30 @@ from sqlalchemy.orm import Session
 
 from app.core.security import hash_password, verify_password, create_access_token
 from app.models.enums import UserRole
-from app.repositories.user_repo import get_by_email, create_user
+from app.repositories.user_repo import get_by_email, get_by_username, create_user
 
 class AuthError(Exception):
     pass
 
-def register(db: Session, email: str, password: str, role: str | None = None) -> str:
+def register(db: Session, email: str, password: str, role: str | None = None, username: str | None = None) -> str:
     existing = get_by_email(db, email)
     if existing:
         raise AuthError("Email already registered")
+    if not username:
+        raise AuthError("Username is required")
+    if get_by_username(db, username):
+        raise AuthError("Username already registered")
 
-    role_to_set = role or UserRole.USER.value
+    # For safety, always register as USER. Higher roles must be assigned by admins.
+    role_to_set = UserRole.USER.value
     try:
-        user = create_user(db, email=email, password_hash=hash_password(password), role=role_to_set)
+        user = create_user(
+            db,
+            email=email,
+            username=username or email,
+            password_hash=hash_password(password),
+            role=role_to_set,
+        )
     except ValueError:
         raise AuthError("Invalid role")
     return create_access_token(subject=user.email, role=user.role.value)

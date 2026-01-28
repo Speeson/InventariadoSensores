@@ -1,0 +1,54 @@
+Permisos por rol (actuales)
+
+Todos los usuarios autenticados (USER, MANAGER, ADMIN)
+- GET /products
+- GET /products/{id}
+- GET /stocks
+- GET /stocks/{id}
+- GET /events
+- POST /events
+- GET /movements
+- GET /users/me
+
+Solo MANAGER o ADMIN
+- POST /products
+- PATCH /products/{id}
+- DELETE /products/{id}
+- POST /stocks
+- PATCH /stocks/{id}
+- POST /movements/in
+- POST /movements/out
+- POST /movements/adjust
+
+Solo ADMIN
+- GET /users/admin-only
+
+Notas importantes de permisos
+- /auth/register ignora el role enviado y fuerza USER (evita registros con rol alto).
+- Para roles altos, asignar manualmente en DB o crear endpoint admin si se quiere.
+
+Validaciones destacadas
+
+Auth
+- RegisterRequest.password minimo 8 caracteres.
+- El role enviado en register se ignora.
+
+Products
+- POST /products: categoria debe existir, sku unico, barcode unico si se envia.
+
+Stocks
+- POST /stocks: producto debe existir, no duplicar (product_id, location).
+- PATCH /stocks/{id}: evita duplicar (product_id, location) si cambia ubicacion.
+
+Movements
+- MovementOperation.quantity > 0
+- MovementAdjustOperation.delta != 0
+- location longitud 1..100
+
+Events
+- EventCreate.delta > 0
+- location por defecto "default"
+- POST /events ahora mismo actualiza stock directamente (antes del worker), usando Source.MANUAL.
+
+Pendiente (Sprint 2)
+- Thresholds: CRUD solo MANAGER/ADMIN + validaciones (min_quantity >= 0, location opcional).

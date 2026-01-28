@@ -77,6 +77,23 @@ Comunicación: **JSON sobre HTTP** y autenticación **JWT Bearer**.
 - Roles: `USER`, `MANAGER`, `ADMIN`
 - Endpoints protegidos con `Authorization: Bearer <token>`
 
+### Roles y permisos (resumen)
+| Endpoint | USER | MANAGER | ADMIN |
+|---|:---:|:---:|:---:|
+| `GET /products`, `GET /products/{id}` | ✅ | ✅ | ✅ |
+| `POST /products`, `PATCH /products/{id}`, `DELETE /products/{id}` | ❌ | ✅ | ✅ |
+| `GET /stocks`, `GET /stocks/{id}` | ✅ | ✅ | ✅ |
+| `POST /stocks`, `PATCH /stocks/{id}` | ❌ | ✅ | ✅ |
+| `GET /movements` | ✅ | ✅ | ✅ |
+| `POST /movements/in`, `/out`, `/adjust` | ❌ | ✅ | ✅ |
+| `GET /events`, `POST /events` | ✅ | ✅ | ✅ |
+| `GET /users/me` | ✅ | ✅ | ✅ |
+| `GET /users/admin-only` | ❌ | ❌ | ✅ |
+| `GET/POST/PATCH/DELETE /thresholds` (planificado) | ❌ | ✅ | ✅ |
+
+Notas:
+- El registro fuerza el rol `USER`. Roles altos se asignan manualmente.
+
 ### Inventario
 - **Productos** (con filtros y paginación):
   - `GET /products?sku&name&barcode&category_id&active&limit&offset`
@@ -160,6 +177,20 @@ docker compose up --build
 **Swagger/OpenAPI:**
 - `http://localhost:8000/docs`
 
+**Healthcheck:**
+- `GET /health` devuelve estado de API + DB + Redis + Celery
+- Si falla algo, responde 503 con detalles en `checks`
+
+**Servicios de background (Celery):**
+- `worker`: procesa tareas en segundo plano.
+- `beat`: dispara tareas programadas.
+
+**Variables de entorno clave:**
+- `REDIS_URL` / `CELERY_BROKER_URL` / `CELERY_RESULT_BACKEND`
+- `APP_ROLE` = `api` | `worker` | `beat`
+- `CELERY_WORKER_CONCURRENCY`
+
+
 **Reset de entorno (borra datos y volúmenes):**
 ```bash
 cd backend
@@ -175,7 +206,7 @@ docker compose up --build
 ```bash
 curl -X POST http://localhost:8000/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@demo.com","password":"admin123","role":"ADMIN"}'
+  -d '{"username":"admin","email":"admin@demo.com","password":"admin123"}'
 ```
 
 **Login (form-urlencoded):**

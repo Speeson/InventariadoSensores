@@ -13,8 +13,6 @@ import com.example.inventoryapp.data.remote.RegisterRequest
 import com.example.inventoryapp.databinding.ActivityLoginBinding
 import com.example.inventoryapp.ui.home.HomeActivity
 import kotlinx.coroutines.launch
-import android.widget.Spinner
-import android.widget.ArrayAdapter
 import com.example.inventoryapp.R
 
 class LoginActivity : AppCompatActivity() {
@@ -95,19 +93,9 @@ class LoginActivity : AppCompatActivity() {
 
     private fun showRegisterDialog() {
         val dialogView = layoutInflater.inflate(R.layout.dialog_register, null)
+        val etUsername = dialogView.findViewById<EditText>(R.id.etRegUsername)
         val etEmail = dialogView.findViewById<EditText>(R.id.etRegEmail)
         val etPass = dialogView.findViewById<EditText>(R.id.etRegPassword)
-        val spRole = dialogView.findViewById<Spinner>(R.id.spRole)
-
-        // Cargar opciones de rol en el spinner
-        ArrayAdapter.createFromResource(
-            this,
-            R.array.roles_register,
-            android.R.layout.simple_spinner_item
-        ).also { adapter ->
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-            spRole.adapter = adapter
-        }
 
         val dialog = AlertDialog.Builder(this)
             .setView(dialogView)
@@ -118,34 +106,34 @@ class LoginActivity : AppCompatActivity() {
         dialog.setOnShowListener {
             val btnCreate = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             btnCreate.setOnClickListener {
+                val username = etUsername.text.toString().trim()
                 val email = etEmail.text.toString().trim()
                 val pass = etPass.text.toString()
 
+                if (username.isBlank()) { etUsername.error = "Username requerido"; return@setOnClickListener }
+                if (username.length < 3) { etUsername.error = "Minimo 3 caracteres"; return@setOnClickListener }
                 if (email.isBlank()) { etEmail.error = "Email requerido"; return@setOnClickListener }
-                if (pass.length < 8) { etPass.error = "Mínimo 8 caracteres"; return@setOnClickListener }
+                if (pass.length < 8) { etPass.error = "Minimo 8 caracteres"; return@setOnClickListener }
 
-                val roleSelected = spRole.selectedItem?.toString() ?: "(Sin rol)"
-                val role: String? = if (roleSelected == "(Sin rol)") null else roleSelected
-
-                registerWithApi(email, pass, role, dialog)
+                registerWithApi(username, email, pass, dialog)
             }
         }
 
         dialog.show()
     }
 
-    private fun registerWithApi(email: String, pass: String, role: String?, dialog: AlertDialog) {
+    private fun registerWithApi(username: String, email: String, pass: String, dialog: AlertDialog) {
         setUiEnabled(false)
 
         lifecycleScope.launch {
             try {
-                val response = NetworkModule.api.register(RegisterRequest(email, pass, role))
+                val response = NetworkModule.api.register(RegisterRequest(username, email, pass))
 
                 if (response.isSuccessful && response.body() != null) {
                     val token = response.body()!!.accessToken
                     session.saveToken(token)
 
-                    Toast.makeText(this@LoginActivity, "Cuenta creada ✅", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@LoginActivity, "Cuenta creada", Toast.LENGTH_SHORT).show()
                     dialog.dismiss()
 
                     // Ir a Home y pasar email para mostrar bienvenida
@@ -156,13 +144,13 @@ class LoginActivity : AppCompatActivity() {
                 } else {
                     val msg = when (response.code()) {
                         409 -> "Ese email ya existe"
-                        422 -> "Datos inválidos (revisa email/contraseña)"
+                        422 -> "Datos invalidos (revisa username/email/contrasena)"
                         else -> "Error (${response.code()}): ${response.errorBody()?.string() ?: "sin detalle"}"
                     }
                     Toast.makeText(this@LoginActivity, msg, Toast.LENGTH_LONG).show()
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@LoginActivity, "Error de conexión: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@LoginActivity, "Error de conexion: ${e.message}", Toast.LENGTH_LONG).show()
             } finally {
                 setUiEnabled(true)
             }

@@ -72,7 +72,7 @@ def run_seed():
                 email=email,
                 defaults={
                     "username": username,
-                    "password_hash": hash_password("ChangeMe123"),
+                    "password_hash": hash_password("Pass123!"),
                     "role": role,
                 },
             )

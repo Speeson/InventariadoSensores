@@ -14,9 +14,17 @@
         android:paddingBottom="12dp"/>
 
     <EditText
+        android:id="@+id/etRegUsername"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Username"
+        android:inputType="textPersonName" />
+
+    <EditText
         android:id="@+id/etRegEmail"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
         android:hint="Email"
         android:inputType="textEmailAddress" />
 
@@ -26,11 +34,6 @@
         android:layout_height="wrap_content"
         android:hint="Contraseña"
         android:inputType="textPassword"
-        android:layout_marginTop="10dp" />
-    <Spinner
-        android:id="@+id/spRole"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
         android:layout_marginTop="10dp" />
 
 </LinearLayout>
