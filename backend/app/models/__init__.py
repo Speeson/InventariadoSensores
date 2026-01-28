@@ -5,4 +5,5 @@ from .event import Event
 from .movement import Movement
 from .category import Category
 from .audit_log import AuditLog
-from .entity import Entity
+from .alert import Alert
+from .stock_threshold import StockThreshold

@@ -1,8 +1,8 @@
-"""initial schema
+"""add stock_thresholds and alerts, add events attributes
 
-Revision ID: dcc886ba14d3
+Revision ID: 9e75fa04121a
 Revises: 
-Create Date: 2026-01-20 13:50:28.747768
+Create Date: 2026-01-28 12:19:54.353557
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'dcc886ba14d3'
+revision: str = '9e75fa04121a'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -25,15 +25,7 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=50), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('name')
-    )
-    op.create_table('entities',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(length=100), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name')
     )
@@ -44,19 +36,18 @@ def upgrade() -> None:
     sa.Column('password_hash', sa.String(length=255), nullable=False),
     sa.Column('role', sa.Enum('USER', 'MANAGER', 'ADMIN', name='userrole'), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email'),
     sa.UniqueConstraint('username')
     )
     op.create_table('audit_log',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('entity_id', sa.Integer(), nullable=False),
+    sa.Column('entity', sa.Enum('PRODUCT', 'CATEGORY', 'USER', 'STOCK', 'MOVEMENT', 'EVENT', 'STOCK_THRESHOLD', 'ALERT', name='entity'), nullable=False),
     sa.Column('action', sa.Enum('CREATE', 'UPDATE', 'DELETE', name='actiontype'), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('details', sa.String(length=255), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['entity_id'], ['entities.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -68,7 +59,7 @@ def upgrade() -> None:
     sa.Column('category_id', sa.Integer(), nullable=False),
     sa.Column('active', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.ForeignKeyConstraint(['category_id'], ['categories.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('barcode'),
@@ -79,32 +70,60 @@ def upgrade() -> None:
     sa.Column('event_type', sa.Enum('SENSOR_IN', 'SENSOR_OUT', name='eventtype'), nullable=False),
     sa.Column('product_id', sa.Integer(), nullable=False),
     sa.Column('delta', sa.Integer(), nullable=False),
-    sa.Column('source', sa.String(), nullable=False),
-    sa.Column('processed', sa.Boolean(), nullable=False),
+    sa.Column('source', sa.Enum('SCAN', 'MANUAL', name='source'), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('event_status', sa.Enum('PROCESSED', 'PENDING', 'ERROR', name='eventstatus'), nullable=False),
+    sa.Column('processed_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('retry_count', sa.Integer(), nullable=False),
+    sa.Column('last_error', sa.String(length=255), nullable=True),
+    sa.Column('idempotency_key', sa.String(length=100), nullable=False),
     sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('idempotency_key')
     )
     op.create_table('movements',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('product_id', sa.Integer(), nullable=False),
     sa.Column('quantity', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=True),
     sa.Column('movement_type', sa.Enum('IN', 'OUT', 'ADJUST', name='movementtype'), nullable=False),
-    sa.Column('movement_source', sa.Enum('SCAN', 'MANUAL', name='movementsource'), nullable=False),
+    sa.Column('movement_source', sa.Enum('SCAN', 'MANUAL', name='source'), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('stock_thresholds',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('product_id', sa.Integer(), nullable=False),
+    sa.Column('location', sa.String(length=100), nullable=True),
+    sa.Column('min_quantity', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('stocks',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('product_id', sa.Integer(), nullable=False),
     sa.Column('quantity', sa.Integer(), nullable=False),
-    sa.Column('location', sa.String(), nullable=False),
+    sa.Column('location', sa.String(length=100), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('alerts',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('stock_id', sa.Integer(), nullable=False),
+    sa.Column('quantity', sa.Integer(), nullable=False),
+    sa.Column('min_quantity', sa.Integer(), nullable=False),
+    sa.Column('alert_status', sa.Enum('RESOLVED', 'ACK', 'PENDING', name='alertstatus'), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('ack_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('ack_user_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['ack_user_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['stock_id'], ['stocks.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     # ### end Alembic commands ###
@@ -113,12 +132,13 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_table('alerts')
     op.drop_table('stocks')
+    op.drop_table('stock_thresholds')
     op.drop_table('movements')
     op.drop_table('events')
     op.drop_table('products')
     op.drop_table('audit_log')
     op.drop_table('users')
-    op.drop_table('entities')
     op.drop_table('categories')
     # ### end Alembic commands ###

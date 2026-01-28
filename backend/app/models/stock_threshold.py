@@ -1,13 +1,15 @@
-from sqlalchemy import Integer, String, DateTime, func
+from sqlalchemy import Integer, String, DateTime, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 from datetime import datetime
 
-class Category(Base):
-    __tablename__ = "categories"
+class StockThreshold(Base):
+    __tablename__ = "stock_thresholds"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False)
+    location: Mapped[str] = mapped_column(String(100), nullable=True)
+    min_quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -19,3 +21,4 @@ class Category(Base):
         onupdate=func.now(),
         nullable=True
     )
+    

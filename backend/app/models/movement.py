@@ -1,19 +1,18 @@
-from sqlalchemy import ForeignKey, DateTime, func
+from sqlalchemy import Integer, DateTime, Enum, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 from datetime import datetime
-from app.models.enums import MovementType, MovementSource
-
+from app.models.enums import Source, MovementType
 
 class Movement(Base):
     __tablename__ = "movements"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False)
-    quantity: Mapped[int] = mapped_column(nullable=False)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    movement_type: Mapped[MovementType] = mapped_column(nullable=False)
-    movement_source: Mapped[MovementSource] = mapped_column(nullable=False)
+    quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=True)
+    movement_type: Mapped[MovementType] = mapped_column(Enum(MovementType), nullable=False)
+    movement_source: Mapped[Source] = mapped_column(Enum(Source), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
