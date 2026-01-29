@@ -37,3 +37,7 @@ class Event(Base):
         Index("ix_events_created", "created_at"),
         Index("ix_events_idempotency", "idempotency_key"),
     )
+
+    @property
+    def processed(self) -> bool:
+        return self.event_status == EventStatus.PROCESSED

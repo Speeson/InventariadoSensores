@@ -17,6 +17,7 @@ from app.models.enums import (
     Source,
     UserRole,
 )
+from app.repositories import location_repo
 
 
 def run_seed():
@@ -108,10 +109,11 @@ def run_seed():
             (products[3], 40, "Laboratorio I+D"),
             (products[4], 25, "Cliente Demo"),
         ]:
+            location_obj = location_repo.get_or_create(db, location)
             get_or_create(
                 Stock,
                 product_id=product.id,
-                location=location,
+                location_id=location_obj.id,
                 defaults={"quantity": quantity},
             )
         db.commit()

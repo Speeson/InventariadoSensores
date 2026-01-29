@@ -11,6 +11,7 @@ class EventCreate(BaseModel):
     delta: int = Field(..., gt=0)
     source: str = "sensor_simulado"
     location: str = Field("default", min_length=1, max_length=100)
+    idempotency_key: str | None = None
 
 
 class EventResponse(BaseModel):

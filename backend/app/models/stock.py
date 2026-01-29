@@ -1,5 +1,5 @@
 from sqlalchemy import Integer, String, DateTime, ForeignKey, func, Index
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 from datetime import datetime
 
@@ -10,6 +10,7 @@ class Stock(Base):
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     location_id: Mapped[int] = mapped_column(ForeignKey("locations.id"), nullable=False)
+    location_rel = relationship("Location")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -26,4 +27,8 @@ class Stock(Base):
         Index("ix_stocks_product", "product_id"),
         Index("ix_stocks_location", "location_id"),
     )
+
+    @property
+    def location(self) -> str | None:
+        return self.location_rel.code if self.location_rel else None
 

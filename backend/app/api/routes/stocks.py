@@ -86,9 +86,8 @@ def update_stock(stock_id: int, payload: StockUpdate, db: Session = Depends(get_
         if duplicate and duplicate.id != stock.id:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ya existe stock para esta ubicación")
 
-    stock.location = new_location
-    stock.quantity = new_quantity
-    db.add(stock)
-    db.commit()
-    db.refresh(stock)
+    if payload.location and new_location != stock.location:
+        stock = stock_repo.update_stock_location(db, stock, new_location)
+    if payload.quantity is not None:
+        stock = stock_repo.update_stock_quantity(db, stock, new_quantity)
     return stock

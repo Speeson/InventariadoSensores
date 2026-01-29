@@ -22,4 +22,9 @@ class Alert(Base):
         nullable=True
     )
     ack_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=True)
+
+    notification_sent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    notification_sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    notification_channel: Mapped[str] = mapped_column(String(50), nullable=True)
+    last_error: Mapped[str] = mapped_column(String(255), nullable=True)
     

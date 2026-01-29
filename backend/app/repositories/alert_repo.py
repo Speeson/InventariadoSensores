@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.models.alert import Alert
 from app.models.enums import AlertStatus
 from app.models.stock import Stock
+from app.models.location import Location
 
 
 def get(db: Session, alert_id: int) -> Alert | None:
@@ -35,7 +36,8 @@ def list_alerts(
     if product_id is not None:
         filters.append(Stock.product_id == product_id)
     if location is not None:
-        filters.append(Stock.location == location)
+        stmt = stmt.join(Location, Stock.location_id == Location.id)
+        filters.append(Location.code == location)
     if date_from is not None:
         filters.append(Alert.created_at >= date_from)
     if date_to is not None:

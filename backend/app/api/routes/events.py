@@ -6,7 +6,7 @@ from app.api.deps import get_current_user
 from app.db.deps import get_db
 from app.models.enums import EventType, Source
 from app.models.user import User
-from app.repositories import event_repo, product_repo
+from app.repositories import event_repo, product_repo, location_repo
 from app.schemas.event import EventCreate, EventResponse
 from app.services import inventory_service
 
@@ -56,6 +56,7 @@ def create_event(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
 
     try:
+        location_obj = location_repo.get_or_create(db, payload.location)
         if payload.event_type == EventType.SENSOR_IN:
             inventory_service.increase_stock(
                 db,
@@ -83,6 +84,8 @@ def create_event(
         product_id=payload.product_id,
         delta=payload.delta,
         source=payload.source,
+        location_id=location_obj.id,
         processed=True,
+        idempotency_key=getattr(payload, "idempotency_key", None),
     )
     return event

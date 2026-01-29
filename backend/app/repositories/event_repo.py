@@ -4,7 +4,8 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.event import Event
-from app.models.enums import EventType
+from app.models.enums import EventType, EventStatus, Source
+import uuid
 
 
 def create_event(
@@ -13,15 +14,24 @@ def create_event(
     event_type: EventType,
     product_id: int,
     delta: int,
-    source: str,
+    source: Source | str,
+    location_id: int | None = None,
     processed: bool = False,
+    idempotency_key: str | None = None,
 ) -> Event:
+    try:
+        normalized_source = source if isinstance(source, Source) else Source(source)
+    except ValueError:
+        normalized_source = Source.MANUAL
+    status = EventStatus.PROCESSED if processed else EventStatus.PENDING
     event = Event(
         event_type=event_type,
         product_id=product_id,
         delta=delta,
-        source=source,
-        processed=processed,
+        source=normalized_source,
+        location_id=location_id,
+        event_status=status,
+        idempotency_key=idempotency_key or str(uuid.uuid4()),
     )
     db.add(event)
     db.commit()
@@ -44,7 +54,8 @@ def list_events(
     if product_id is not None:
         filters.append(Event.product_id == product_id)
     if processed is not None:
-        filters.append(Event.processed == processed)
+        status = EventStatus.PROCESSED if processed else EventStatus.PENDING
+        filters.append(Event.event_status == status)
 
     stmt = select(Event).where(*filters).order_by(Event.created_at.desc())
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0

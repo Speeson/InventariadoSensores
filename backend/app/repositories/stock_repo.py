@@ -4,17 +4,27 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.stock import Stock
+from app.models.location import Location
+from app.repositories import location_repo
 
 
 def get(db: Session, stock_id: int) -> Stock | None:
     return db.get(Stock, stock_id)
 
 
+def _get_location_id(db: Session, location_code: str) -> int | None:
+    location = location_repo.get_by_code(db, location_code)
+    return location.id if location else None
+
+
 def get_by_product_and_location(db: Session, product_id: int, location: str) -> Stock | None:
+    location_id = _get_location_id(db, location)
+    if location_id is None:
+        return None
     return db.scalar(
         select(Stock).where(
             Stock.product_id == product_id,
-            Stock.location == location,
+            Stock.location_id == location_id,
         )
     )
 
@@ -27,13 +37,15 @@ def list_stocks(
     limit: int = 50,
     offset: int = 0,
 ) -> Tuple[Iterable[Stock], int]:
+    stmt = select(Stock)
     filters = []
     if product_id is not None:
         filters.append(Stock.product_id == product_id)
     if location:
-        filters.append(Stock.location.ilike(f"%{location}%"))
+        stmt = stmt.join(Location, Stock.location_id == Location.id)
+        filters.append(Location.code.ilike(f"%{location}%"))
 
-    stmt = select(Stock).where(*filters).order_by(Stock.updated_at.desc())
+    stmt = stmt.where(*filters).order_by(Stock.updated_at.desc())
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
     items = db.scalars(stmt.offset(offset).limit(limit)).all()
     return items, total
@@ -46,11 +58,21 @@ def create_stock(
     location: str,
     quantity: int,
 ) -> Stock:
+    location_obj = location_repo.get_or_create(db, location)
     stock = Stock(
         product_id=product_id,
-        location=location,
+        location_id=location_obj.id,
         quantity=quantity,
     )
+    db.add(stock)
+    db.commit()
+    db.refresh(stock)
+    return stock
+
+
+def update_stock_location(db: Session, stock: Stock, location: str) -> Stock:
+    location_obj = location_repo.get_or_create(db, location)
+    stock.location_id = location_obj.id
     db.add(stock)
     db.commit()
     db.refresh(stock)

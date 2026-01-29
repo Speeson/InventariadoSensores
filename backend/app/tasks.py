@@ -4,6 +4,7 @@ from app.celery_app import celery_app
 from app.db.session import SessionLocal
 from app.models.alert import Alert
 from app.models.enums import AlertStatus
+from app.models.location import Location
 from app.models.stock import Stock
 from app.models.stock_threshold import StockThreshold
 
@@ -20,9 +21,9 @@ def scan_low_stock() -> dict:
         for threshold in thresholds:
             threshold_map[(threshold.product_id, threshold.location)] = threshold
 
-        stocks = db.scalars(select(Stock)).all()
-        for stock in stocks:
-            threshold = threshold_map.get((stock.product_id, stock.location)) or threshold_map.get(
+        stocks = db.execute(select(Stock, Location).join(Location, Stock.location_id == Location.id)).all()
+        for stock, location in stocks:
+            threshold = threshold_map.get((stock.product_id, location.code)) or threshold_map.get(
                 (stock.product_id, None)
             )
             if not threshold:
