@@ -19,8 +19,6 @@ class Alert(Base):
     )
     ack_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
         nullable=True
     )
     ack_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=True)

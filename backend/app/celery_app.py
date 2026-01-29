@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 
 from celery import Celery
 
@@ -22,6 +23,12 @@ celery_app.conf.update(
     accept_content=["json"],
     task_track_started=True,
     broker_connection_retry_on_startup=True,
+    beat_schedule={
+        "scan-low-stock": {
+            "task": "app.tasks.scan_low_stock",
+            "schedule": timedelta(minutes=int(_get_env("LOW_STOCK_SCAN_MINUTES", "5"))),
+        }
+    },
 )
 
 celery_app.autodiscover_tasks(["app"])

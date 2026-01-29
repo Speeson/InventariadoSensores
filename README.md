@@ -114,6 +114,11 @@ Notas:
 - `GET /events?event_type&product_id&processed&limit&offset`
 - `POST /events` (requiere token)
 
+### Alertas de stock bajo
+- Job programado (Celery Beat): `scan_low_stock()` cada `LOW_STOCK_SCAN_MINUTES` (default 5).
+- `GET /alerts?status&product_id&location&date_from&date_to&limit&offset` (usuarios autenticados)
+- `POST /alerts/{id}/ack` (MANAGER/ADMIN)
+
 ### Android
 - Login/registro contra la API
 - Listado y detalle de productos

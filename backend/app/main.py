@@ -8,7 +8,7 @@ import redis
 
 from app.db.session import SessionLocal
 
-from app.api.routes import auth, users, products, stocks, movements, events
+from app.api.routes import auth, users, products, stocks, movements, events, alerts
 
 app = FastAPI(title="Sistema Inventariado Sensores")
 
@@ -33,6 +33,7 @@ app.include_router(products.router)
 app.include_router(stocks.router)
 app.include_router(movements.router)
 app.include_router(events.router)
+app.include_router(alerts.router)
 
 
 @app.get("/health")
