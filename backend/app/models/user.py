@@ -1,3 +1,4 @@
+import sqlalchemy as sa
 from sqlalchemy import Integer, String, DateTime, Enum, func
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
@@ -22,4 +23,10 @@ class User(Base):
         server_default=func.now(),
         onupdate=func.now(),
         nullable=True
+    )
+    
+    __table_args__ = (
+        sa.Index("ix_users_username", "username"),
+        sa.Index("ix_users_email", "email"),
+        sa.Index("ix_users_role", "role"),
     )

@@ -1,3 +1,4 @@
+import sqlalchemy as sa
 from sqlalchemy import Integer, String, DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
@@ -18,4 +19,8 @@ class Category(Base):
         server_default=func.now(),
         onupdate=func.now(),
         nullable=True
+    )
+    
+    __table_args__ = (
+        sa.Index("ix_categories_name", "name"),
     )

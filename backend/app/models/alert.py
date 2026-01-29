@@ -1,3 +1,4 @@
+import sqlalchemy as sa
 from sqlalchemy import Integer, DateTime, Enum, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
@@ -25,3 +26,8 @@ class Alert(Base):
     )
     ack_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=True)
     
+    __table_args__ = (
+        sa.Index("ix_alerts_stock", "stock_id"),
+        sa.Index("ix_alerts_status", "alert_status"),
+        sa.Index("ix_alerts_created", "created_at"),
+    )

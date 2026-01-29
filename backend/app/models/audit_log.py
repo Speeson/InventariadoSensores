@@ -1,3 +1,4 @@
+import sqlalchemy as sa
 from sqlalchemy import Integer, String, DateTime, Enum, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
@@ -16,4 +17,11 @@ class AuditLog(Base):
         DateTime(timezone=True),
         server_default=func.now(),
         nullable=False
+    )
+    
+    __table_args__ = (
+        sa.Index("ix_audit_entity", "entity"),
+        sa.Index("ix_audit_action", "action"),
+        sa.Index("ix_audit_user", "user_id"),
+        sa.Index("ix_audit_created", "created_at"),
     )

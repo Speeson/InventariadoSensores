@@ -1,3 +1,4 @@
+import sqlalchemy as sa
 from sqlalchemy import Integer, String, DateTime, Enum, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
@@ -27,3 +28,11 @@ class Event(Base):
     retry_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     last_error: Mapped[str] = mapped_column(String(255), nullable=True)
     idempotency_key: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    
+    __table_args__ = (
+        sa.Index("ix_events_product", "product_id"),
+        sa.Index("ix_events_type", "event_type"),
+        sa.Index("ix_events_status", "event_status"),
+        sa.Index("ix_events_created", "created_at"),
+        sa.Index("ix_events_idempotency", "idempotency_key"),
+    )
