@@ -1,5 +1,4 @@
-import sqlalchemy as sa
-from sqlalchemy import Integer, String, DateTime, func
+from sqlalchemy import Integer, String, DateTime, func, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 from datetime import datetime
@@ -22,5 +21,5 @@ class Category(Base):
     )
     
     __table_args__ = (
-        sa.Index("ix_categories_name", "name"),
+        Index("ix_categories_name", "name"),
     )

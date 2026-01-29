@@ -1,5 +1,4 @@
-import sqlalchemy as sa
-from sqlalchemy import Integer, DateTime, Enum, ForeignKey, func
+from sqlalchemy import Integer, DateTime, Enum, ForeignKey, func, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 from datetime import datetime
@@ -21,9 +20,9 @@ class Movement(Base):
     )
     
     __table_args__ = (
-        sa.Index("ix_movements_product", "product_id"),
-        sa.Index("ix_movements_user", "user_id"),
-        sa.Index("ix_movements_type", "movement_type"),
-        sa.Index("ix_movements_created", "created_at"),
+        Index("ix_movements_product", "product_id"),
+        Index("ix_movements_user", "user_id"),
+        Index("ix_movements_type", "movement_type"),
+        Index("ix_movements_created", "created_at"),
     )
 

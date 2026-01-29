@@ -1,5 +1,4 @@
-import sqlalchemy as sa
-from sqlalchemy import Integer, String, DateTime, Enum, ForeignKey, func
+from sqlalchemy import Integer, String, DateTime, Enum, ForeignKey, func, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 from datetime import datetime
@@ -30,9 +29,9 @@ class Event(Base):
     idempotency_key: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     
     __table_args__ = (
-        sa.Index("ix_events_product", "product_id"),
-        sa.Index("ix_events_type", "event_type"),
-        sa.Index("ix_events_status", "event_status"),
-        sa.Index("ix_events_created", "created_at"),
-        sa.Index("ix_events_idempotency", "idempotency_key"),
+        Index("ix_events_product", "product_id"),
+        Index("ix_events_type", "event_type"),
+        Index("ix_events_status", "event_status"),
+        Index("ix_events_created", "created_at"),
+        Index("ix_events_idempotency", "idempotency_key"),
     )

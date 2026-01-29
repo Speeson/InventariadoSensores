@@ -1,5 +1,4 @@
-import sqlalchemy as sa
-from sqlalchemy import Integer, String, DateTime, Enum, func
+from sqlalchemy import Integer, String, DateTime, Enum, func, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 from datetime import datetime
@@ -26,7 +25,7 @@ class User(Base):
     )
     
     __table_args__ = (
-        sa.Index("ix_users_username", "username"),
-        sa.Index("ix_users_email", "email"),
-        sa.Index("ix_users_role", "role"),
+        Index("ix_users_username", "username"),
+        Index("ix_users_email", "email"),
+        Index("ix_users_role", "role"),
     )

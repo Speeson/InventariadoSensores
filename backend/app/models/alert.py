@@ -1,5 +1,4 @@
-import sqlalchemy as sa
-from sqlalchemy import Integer, DateTime, Enum, ForeignKey, func
+from sqlalchemy import Integer, String, Boolean, DateTime, Enum, ForeignKey, func, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 from datetime import datetime
@@ -25,9 +24,16 @@ class Alert(Base):
         nullable=True
     )
     ack_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=True)
+    notification_sent: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    notification_sent_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    notification_channel: Mapped[str] = mapped_column(String(50), nullable=True)
+    last_error: Mapped[str] = mapped_column(String(255), nullable=True)
     
     __table_args__ = (
-        sa.Index("ix_alerts_stock", "stock_id"),
-        sa.Index("ix_alerts_status", "alert_status"),
-        sa.Index("ix_alerts_created", "created_at"),
+        Index("ix_alerts_stock", "stock_id"),
+        Index("ix_alerts_status", "alert_status"),
+        Index("ix_alerts_created", "created_at"),
     )

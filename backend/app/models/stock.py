@@ -1,5 +1,4 @@
-import sqlalchemy as sa
-from sqlalchemy import Integer, String, DateTime, ForeignKey, func
+from sqlalchemy import Integer, String, DateTime, ForeignKey, func, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 from datetime import datetime
@@ -24,7 +23,7 @@ class Stock(Base):
     )
 
     __table_args__ = (
-        sa.Index("ix_stocks_product", "product_id"),
-        sa.Index("ix_stocks_location", "location"),
+        Index("ix_stocks_product", "product_id"),
+        Index("ix_stocks_location", "location"),
     )
 
