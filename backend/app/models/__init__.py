@@ -7,3 +7,4 @@ from .category import Category
 from .audit_log import AuditLog
 from .alert import Alert
 from .stock_threshold import StockThreshold
+from .location import Location
