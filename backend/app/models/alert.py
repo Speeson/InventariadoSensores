@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, DateTime, Enum, ForeignKey, func
+from sqlalchemy import Integer, String, Boolean, DateTime, Enum, ForeignKey, func, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 from datetime import datetime

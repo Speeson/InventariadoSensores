@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, String, Boolean, DateTime, ForeignKey, func
+from sqlalchemy import Integer, String, Boolean, DateTime, ForeignKey, func, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 from datetime import datetime
@@ -24,3 +24,9 @@ class Product(Base):
         nullable=True
     )
     
+    __table_args__ = (
+        Index("ix_products_sku", "sku"),
+        Index("ix_products_barcode", "barcode"),
+        Index("ix_products_category", "category_id"),
+        Index("ix_products_active", "active"),
+    )

@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, String, DateTime, ForeignKey, func
+from sqlalchemy import Integer, String, DateTime, ForeignKey, func, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 from datetime import datetime
@@ -22,3 +22,7 @@ class StockThreshold(Base):
         nullable=True
     )
     
+    __table_args__ = (
+        Index("ix_thresholds_product", "product_id"),
+        Index("ix_thresholds_location", "location"),
+    )

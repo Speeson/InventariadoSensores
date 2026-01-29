@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, String, DateTime, Enum, func
+from sqlalchemy import Integer, String, DateTime, Enum, func, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 from datetime import datetime
@@ -22,4 +22,10 @@ class User(Base):
         server_default=func.now(),
         onupdate=func.now(),
         nullable=True
+    )
+    
+    __table_args__ = (
+        Index("ix_users_username", "username"),
+        Index("ix_users_email", "email"),
+        Index("ix_users_role", "role"),
     )
