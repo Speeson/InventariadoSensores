@@ -1,13 +1,19 @@
 from sqlalchemy import select
-
+from datetime import datetime, timezone
 from app.celery_app import celery_app
 from app.db.session import SessionLocal
+from app.models.enums import EventStatus, MovementType
+from app.models.event import Event
+from app.models.product import Product
+from app.models.movement import Movement
 from app.models.alert import Alert
 from app.models.enums import AlertStatus
 from app.models.location import Location
 from app.models.stock import Stock
 from app.models.stock_threshold import StockThreshold
 
+# Numero maximo de intentos para reintentar una tarea en caso de error retryable
+MAX_RETRIES = 3
 
 @celery_app.task(name="app.tasks.scan_low_stock")
 def scan_low_stock() -> dict:
@@ -54,3 +60,166 @@ def scan_low_stock() -> dict:
             db.commit()
 
     return {"created": created}
+
+# Permite justificar fácilmente en la memoria del proyecto
+def is_retryable_error(exc: Exception) -> bool:
+    msg = str(exc).lower()
+    return any(
+        keyword in msg
+        for keyword in [
+            "deadlock",
+            "lock",
+            "timeout",
+            "could not serialize",
+            "stock insuficiente",
+        ]
+    )
+
+
+@celery_app.task(name="app.tasks.process_event")
+def process_event(event_id: int) -> dict:
+    with SessionLocal() as db:
+        event = db.get(Event, event_id)
+
+        # 1) Validaciones básicas del evento
+        if not event:
+            return {"ok": False, "reason": "event_not_found", "event_id": event_id}
+
+        if event.event_status != EventStatus.PENDING:
+            # idempotencia: si ya está PROCESSED/ERROR no lo reproceses
+            return {"ok": True, "reason": "already_processed", "status": event.event_status.value}
+
+        if event.delta <= 0:
+            event.event_status = EventStatus.ERROR
+            event.last_error = "Delta inválido (debe ser > 0)"
+            event.retry_count += 1
+            event.processed_at = datetime.now(timezone.utc)
+            db.commit()
+            return {"ok": False, "reason": "invalid_delta"}
+
+        # Validar producto
+        product = db.get(Product, event.product_id)
+        if not product:
+            event.event_status = EventStatus.ERROR
+            event.last_error = "Producto no encontrado"
+            event.retry_count += 1
+            event.processed_at = datetime.now(timezone.utc)
+            db.commit()
+            return {"ok": False, "reason": "product_not_found"}
+
+        # Validar ubicación
+        if not event.location_id:
+            event.event_status = EventStatus.ERROR
+            event.last_error = "Ubicación no informada"
+            event.retry_count += 1
+            event.processed_at = datetime.now(timezone.utc)
+            db.commit()
+            return {"ok": False, "reason": "location_missing"}
+
+        location = db.get(Location, event.location_id)
+        if not location:
+            event.event_status = EventStatus.ERROR
+            event.last_error = "Ubicación no encontrada"
+            event.retry_count += 1
+            event.processed_at = datetime.now(timezone.utc)
+            db.commit()
+            return {"ok": False, "reason": "location_not_found"}
+
+        # 2) Resolver tipo de movimiento y delta a aplicar
+        if event.event_type.value == "SENSOR_IN":
+            movement_type = MovementType.IN
+            stock_delta = event.delta
+        elif event.event_type.value == "SENSOR_OUT":
+            movement_type = MovementType.OUT
+            stock_delta = -event.delta
+        else:
+            event.event_status = EventStatus.ERROR
+            event.last_error = f"Tipo de evento no soportado: {event.event_type}"
+            event.retry_count += 1
+            event.processed_at = datetime.now(timezone.utc)
+            db.commit()
+            return {"ok": False, "reason": "invalid_event_type"}
+
+        # 3) Transacción: ajustar stock + crear movement + marcar evento PROCESSED
+        try:
+            with db.begin():
+                # >>> CAMBIO AÑADIDO: lock del evento para idempotencia real
+                event = db.scalar(
+                    select(Event).where(Event.id == event_id).with_for_update()
+                )
+
+                if not event:
+                    return {"ok": False, "reason": "event_not_found", "event_id": event_id}
+
+                if event.event_status != EventStatus.PENDING:
+                    return {"ok": True, "reason": "already_processed", "status": event.event_status.value}
+                # <<< FIN CAMBIO AÑADIDO
+
+                # Lock del stock para evitar carreras
+                stock = db.scalar(
+                    select(Stock)
+                    .where(
+                        Stock.product_id == event.product_id,
+                        Stock.location_id == event.location_id,
+                    )
+                    .with_for_update()
+                )
+
+                if not stock:
+                    # crear stock 0 dentro de la transacción
+                    stock = Stock(product_id=event.product_id, location_id=event.location_id, quantity=0)
+                    db.add(stock)
+                    db.flush()
+
+                new_qty = stock.quantity + stock_delta
+                if new_qty < 0:
+                    raise ValueError("Stock insuficiente para aplicar SENSOR_OUT")
+
+                stock.quantity = new_qty
+                db.add(stock)
+
+                # movement (user_id puede ser None en eventos de sensor)
+                movement = Movement(
+                    product_id=event.product_id,
+                    quantity=event.delta,
+                    user_id=None,
+                    movement_type=movement_type,
+                    movement_source=event.source,
+                )
+                db.add(movement)
+
+                # marcar evento como procesado
+                event.event_status = EventStatus.PROCESSED
+                event.last_error = None
+                event.processed_at = datetime.now(timezone.utc)
+                db.add(event)
+
+            return {"ok": True, "event_id": event.id, "status": event.event_status.value}
+
+        except Exception as exc:
+            db.rollback()
+
+            event.retry_count += 1
+            event.last_error = str(exc)[:255]
+
+            if is_retryable_error(exc) and event.retry_count < MAX_RETRIES:
+                # Se reintentará
+                event.event_status = EventStatus.PENDING
+            else:
+                # Error definitivo (equivale a FAILED en Jira)
+                event.event_status = EventStatus.ERROR
+
+            event.processed_at = datetime.now(timezone.utc)
+            db.commit()
+
+            # Si sigue siendo PENDING, reencolamos
+            if event.event_status == EventStatus.PENDING:
+                process_event.delay(event.id)
+
+            return {
+                "ok": False,
+                "event_id": event.id,
+                "status": event.event_status.value,
+                "retry_count": event.retry_count,
+                "error": event.last_error,
+            }

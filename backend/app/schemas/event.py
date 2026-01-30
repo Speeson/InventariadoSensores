@@ -21,5 +21,6 @@ class EventResponse(BaseModel):
     delta: int
     source: str
     processed: bool
+    event_status: str
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)

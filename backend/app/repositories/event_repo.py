@@ -1,8 +1,6 @@
 from typing import Iterable, Tuple
-
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
-
 from app.models.event import Event
 from app.models.enums import EventType, EventStatus, Source
 import uuid
@@ -61,3 +59,7 @@ def list_events(
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
     items = db.scalars(stmt.offset(offset).limit(limit)).all()
     return items, total
+
+#Esto te permite “si ya existe, devuelvo el mismo”.
+def get_by_idempotency_key(db: Session, key: str) -> Event | None:
+    return db.scalar(select(Event).where(Event.idempotency_key == key))

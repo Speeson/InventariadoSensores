@@ -57,6 +57,7 @@ def create_stock(
     product_id: int,
     location: str,
     quantity: int,
+    commit: bool = True,
 ) -> Stock:
     location_obj = location_repo.get_or_create(db, location)
     stock = Stock(
@@ -65,8 +66,13 @@ def create_stock(
         quantity=quantity,
     )
     db.add(stock)
-    db.commit()
-    db.refresh(stock)
+
+    if commit:
+        db.commit()
+        db.refresh(stock)
+    else:
+        db.flush()  # deja el id listo dentro de la transacción
+
     return stock
 
 
@@ -87,9 +93,14 @@ def update_stock_quantity(db: Session, stock: Stock, quantity: int) -> Stock:
     return stock
 
 
-def adjust_stock_quantity(db: Session, stock: Stock, delta: int) -> Stock:
+def adjust_stock_quantity(db: Session, stock: Stock, delta: int, commit: bool = True) -> Stock:
     stock.quantity = stock.quantity + delta
     db.add(stock)
-    db.commit()
-    db.refresh(stock)
+
+    if commit:
+        db.commit()
+        db.refresh(stock)
+    else:
+        db.flush()
+
     return stock
