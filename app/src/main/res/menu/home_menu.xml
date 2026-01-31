@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_system_status"
+        android:title="Estado del sistema"
+        android:icon="@drawable/ic_status"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_profile"
+        android:title="Mi perfil"
+        android:icon="@drawable/ic_profile"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_logout"
+        android:title="Cerrar sesión"
+        android:icon="@android:drawable/ic_lock_power_off"
+        app:showAsAction="ifRoom" />
+</menu>
