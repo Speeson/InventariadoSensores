@@ -8,7 +8,7 @@ import redis
 
 from app.db.session import SessionLocal
 
-from app.api.routes import auth, users, products, stocks, movements, events, alerts, categories
+from app.api.routes import auth, users, products, stocks, movements, events, alerts, categories, thresholds
 
 app = FastAPI(title="Sistema Inventariado Sensores")
 
@@ -45,6 +45,7 @@ app.include_router(movements.router)
 app.include_router(events.router)
 app.include_router(alerts.router)
 app.include_router(categories.router)
+app.include_router(thresholds.router)
 
 
 
