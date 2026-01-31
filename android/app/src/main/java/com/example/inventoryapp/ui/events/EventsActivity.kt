@@ -8,7 +8,6 @@ import androidx.lifecycle.lifecycleScope
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.PendingType
 import com.example.inventoryapp.data.local.SessionManager
-import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.model.EventCreateDto
 import com.example.inventoryapp.data.remote.model.EventResponseDto
 import com.example.inventoryapp.data.remote.model.EventTypeDto
@@ -40,12 +39,8 @@ class EventsActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         binding.toolbar.setNavigationOnClickListener { finish() }
 
-        // Crear evento
         binding.btnCreateEvent.setOnClickListener { createEvent() }
-
-        // Refrescar eventos
         binding.btnRefresh.setOnClickListener { loadEvents(withSnack = true) }
-
     }
 
     override fun onResume() {
@@ -97,7 +92,6 @@ class EventsActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                val res = NetworkModule.api.createEvent(dto)
 
                 if (res.code() == 401) {
                     session.clearToken()
@@ -107,21 +101,10 @@ class EventsActivity : AppCompatActivity() {
 
                 if (res.isSuccessful) {
                     snack.showSuccess("✅ Evento creado")
-                    binding.etDelta.setText("")
-                    loadEvents(withSnack = false)
                 } else {
-                    snack.showError(
-                        "❌ Error ${res.code()}: ${res.errorBody()?.string() ?: "sin detalle"}"
-                    )
                 }
 
             } catch (e: IOException) {
-                OfflineQueue(this@EventsActivity)
-                    .enqueue(PendingType.EVENT_CREATE, gson.toJson(dto))
-
-                snack.showQueuedOffline(
-                    "📦 Sin red/backend caído. Evento guardado offline ✅"
-                )
 
             } catch (e: Exception) {
                 snack.showError("❌ Error: ${e.message}")
@@ -137,7 +120,6 @@ class EventsActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                val res = NetworkModule.api.listEvents(limit = 50, offset = 0)
 
                 if (res.code() == 401) {
                     session.clearToken()
@@ -152,18 +134,10 @@ class EventsActivity : AppCompatActivity() {
                         "#${it.id} ${it.eventType} prod=${it.productId} Δ=${it.delta} proc=${it.processed}"
                     }
 
-                    binding.lvEvents.adapter = ArrayAdapter(
-                        this@EventsActivity,
-                        android.R.layout.simple_list_item_1,
-                        lines
-                    )
 
                     if (withSnack) snack.showSuccess("✅ Eventos cargados")
                 } else {
                     if (withSnack) {
-                        snack.showError(
-                            "❌ Error ${res.code()}: ${res.errorBody()?.string() ?: "sin detalle"}"
-                        )
                     }
                 }
 

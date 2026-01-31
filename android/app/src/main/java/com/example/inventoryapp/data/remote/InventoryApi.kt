@@ -59,17 +59,6 @@ interface InventoryApi {
     @GET("health")
     suspend fun health(): Response<Unit>
 
-    @GET("alerts")
-    suspend fun listAlerts(
-        @Query("limit") limit: Int = 50,
-        @Query("offset") offset: Int = 0
-    ): Response<AlertListResponseDto>
-
-    @POST("alerts/{id}/ack")
-    suspend fun ackAlert(
-        @Path("id") alertId: Int
-    ): Response<Unit>
-
     @POST("movements/in")
     suspend fun movementIn(@Body body: MovementOperationRequest): retrofit2.Response<MovementWithStockResponseDto>
 
@@ -95,8 +84,6 @@ interface InventoryApi {
 
     @GET("products/{product_id}")
     suspend fun getProduct(@Path("product_id") productId: Int): Response<ProductResponseDto>
-    @GET("thresholds")
-    suspend fun listLowStocks(): Response<List<LowStockDto>>
 
     @PATCH("products/{product_id}")
     suspend fun updateProduct(

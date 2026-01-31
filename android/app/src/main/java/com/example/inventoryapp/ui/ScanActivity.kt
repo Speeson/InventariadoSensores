@@ -1,4 +1,4 @@
-package com.example.inventoryapp.ui.scan
+package com.example.inventoryapp.ui
 
 import android.Manifest
 import android.content.Intent
@@ -43,9 +43,14 @@ class ScanActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            val i = Intent(this, ConfirmMovementActivity::class.java)
+            // Abrimos la pantalla de confirmación y le pasamos el barcode correcto
+            val i = Intent(this, com.example.inventoryapp.ui.movements.ConfirmMovementActivity::class.java)
             i.putExtra("barcode", codeToUse)
             startActivity(i)
+
+
+
+
         }
 
         // Arrancar cámara (si hay permiso)

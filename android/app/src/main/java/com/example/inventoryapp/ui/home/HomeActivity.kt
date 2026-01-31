@@ -14,16 +14,13 @@ import com.example.inventoryapp.data.local.OfflineSyncer
 import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.databinding.ActivityHomeBinding
-import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.auth.LoginActivity
 import com.example.inventoryapp.ui.events.EventsActivity
 import com.example.inventoryapp.ui.movements.MovimientosActivity
 import com.example.inventoryapp.ui.products.ProductListActivity
-import com.example.inventoryapp.ui.scan.ScanActivity
 import com.example.inventoryapp.ui.stock.StockActivity
 import kotlinx.coroutines.launch
 import com.example.inventoryapp.ui.offline.OfflineErrorsActivity
-import com.example.inventoryapp.ui.thresholds.ThresholdsActivity
 
 
 class HomeActivity : AppCompatActivity() {
@@ -47,9 +44,6 @@ class HomeActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
 
         // Pop-up bienvenida si venías de registro
-        intent.getStringExtra("welcome_email")
-            ?.takeIf { it.isNotBlank() }
-            ?.let { email ->
                 AlertDialog.Builder(this)
                     .setTitle("Bienvenido")
                     .setMessage("¡Bienvenido, $email!")
@@ -57,13 +51,9 @@ class HomeActivity : AppCompatActivity() {
                     .show()
             }
 
-        // ───── Navegación principal ─────
 
         binding.btnScan.setOnClickListener {
             startActivity(Intent(this, ScanActivity::class.java))
-        }
-        binding.btnThresholds.setOnClickListener {
-            startActivity(Intent(this, ThresholdsActivity::class.java))
         }
 
         binding.btnProducts.setOnClickListener {
@@ -80,11 +70,6 @@ class HomeActivity : AppCompatActivity() {
 
         binding.btnEvents.setOnClickListener {
             startActivity(Intent(this, EventsActivity::class.java))
-        }
-
-        // 🆕 ALERTAS
-        binding.btnAlerts.setOnClickListener {
-            startActivity(Intent(this, AlertsActivity::class.java))
         }
 
         binding.btnOfflineErrors.setOnClickListener {
@@ -130,13 +115,9 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
-    // ───── resto del código SIN CAMBIOS ─────
 
-    private fun showSystemStatus() { /* igual que antes */ }
 
-    private fun showProfile() { /* igual que antes */ }
 
-    private fun confirmLogout() { /* igual que antes */ }
 
     private fun logout() {
         session.clearToken()

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="8dp">
+
+    <!-- Columna 1: ID -->
+    <TextView
+        android:id="@+id/tvId"
+        android:layout_width="55dp"
+        android:layout_height="wrap_content"
+        android:text="#1" />
+
+    <!-- Columna 2: Tipo (SENSOR_IN / SENSOR_OUT) -->
+    <TextView
+        android:id="@+id/tvType"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="SENSOR_IN" />
+
+    <!-- Columna 3: ProductId -->
+    <TextView
+        android:id="@+id/tvProduct"
+        android:layout_width="70dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="3" />
+
+    <!-- Columna 4: Delta -->
+    <TextView
+        android:id="@+id/tvDelta"
+        android:layout_width="60dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="10" />
+
+    <!-- Columna 5: Procesado -->
+    <TextView
+        android:id="@+id/tvProcessed"
+        android:layout_width="50dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="✅" />
+
+    <!-- Columna 6: Info extra (source + fecha corta) -->
+    <TextView
+        android:id="@+id/tvInfo"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="SCAN / 2026-01-31" />
+</LinearLayout>

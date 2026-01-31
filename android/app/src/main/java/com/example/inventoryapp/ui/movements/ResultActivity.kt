@@ -4,7 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.example.inventoryapp.databinding.ActivityResultBinding
-import com.example.inventoryapp.ui.scan.ScanActivity
+import com.example.inventoryapp.ui.ScanActivity
 
 class ResultActivity : AppCompatActivity() {
 

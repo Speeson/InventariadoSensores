@@ -1,6 +1,5 @@
 package com.example.inventoryapp.ui.stock
 
-import android.content.Intent
 import android.os.Bundle
 import android.widget.ArrayAdapter
 import androidx.appcompat.app.AlertDialog
@@ -14,8 +13,6 @@ import com.example.inventoryapp.data.remote.model.StockCreateDto
 import com.example.inventoryapp.data.remote.model.StockResponseDto
 import com.example.inventoryapp.data.remote.model.StockUpdateDto
 import com.example.inventoryapp.databinding.ActivityStockBinding
-import com.example.inventoryapp.ui.auth.LoginActivity
-import com.example.inventoryapp.ui.common.ApiResultMapper
 import com.example.inventoryapp.ui.common.SendSnack
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
@@ -66,9 +63,6 @@ class StockActivity : AppCompatActivity() {
                     val text = items.map { "(${it.id}) prod=${it.productId} loc=${it.location} qty=${it.quantity}" }
                     binding.lvStocks.adapter = ArrayAdapter(this@StockActivity, android.R.layout.simple_list_item_1, text)
                 } else {
-                    snack.show(ApiResultMapper.fromResponse(res)) {
-                        goToLogin()
-                    }
                 }
             } catch (e: Exception) {
                 snack.showError("❌ Error de red: ${e.message}")
@@ -157,13 +151,6 @@ class StockActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 snack.showError("❌ Error red: ${e.message}")
             }
-
         }
-    }
-    private fun goToLogin() {
-        val i = Intent(this, LoginActivity::class.java)
-        i.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(i)
-        finish()
     }
 }
