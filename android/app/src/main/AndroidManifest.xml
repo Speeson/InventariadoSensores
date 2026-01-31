@@ -40,6 +40,7 @@
         <activity android:name=".ui.movements.ResultActivity" />
         <activity android:name=".ui.home.HomeActivity" />
         <activity android:name=".MainActivity" />
+        <activity android:name=".ui.alerts.AlertsActivity" android:exported="false" />
 
     </application>
 

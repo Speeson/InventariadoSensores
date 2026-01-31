@@ -8,6 +8,8 @@ import com.example.inventoryapp.data.repository.remote.RemoteScanRepository
 import com.example.inventoryapp.databinding.ActivityConfirmMovementBinding
 import com.example.inventoryapp.domain.model.Movement
 import com.example.inventoryapp.domain.model.MovementType
+import com.example.inventoryapp.ui.common.ApiResultMapper
+import com.example.inventoryapp.ui.common.UiResult
 import kotlinx.coroutines.launch
 
 class ConfirmMovementActivity : AppCompatActivity() {
@@ -44,14 +46,20 @@ class ConfirmMovementActivity : AppCompatActivity() {
 
             lifecycleScope.launch {
                 val result = repo.sendFromBarcode(movement)
-                val i = Intent(this@ConfirmMovementActivity, ResultActivity::class.java)
-                if (result.isSuccess) {
-                    i.putExtra("success", true)
-                    i.putExtra("msg", result.getOrNull() ?: "Movimiento/Evento OK")
+
+                val ui = if (result.isSuccess) {
+                    UiResult.Success(result.getOrNull()!!)
                 } else {
-                    i.putExtra("success", false)
-                    i.putExtra("msg", result.exceptionOrNull()?.message ?: "Error")
+                    ApiResultMapper.fromException(result.exceptionOrNull()!!)
                 }
+
+                val i = Intent(this@ConfirmMovementActivity, ResultActivity::class.java)
+                i.putExtra("success", ui is UiResult.Success)
+                i.putExtra("msg", when (ui) {
+                    is UiResult.Success -> ui.msg
+                    is UiResult.Error -> ui.msg
+                    else -> "Sesión caducada"
+                })
                 startActivity(i)
                 binding.btnConfirm.isEnabled = true
             }

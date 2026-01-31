@@ -25,4 +25,11 @@ class SendSnack(private val root: View) {
         sending?.dismiss()
         Snackbar.make(root, msg, Snackbar.LENGTH_LONG).show()
     }
+    fun show(result: UiResult, onSessionExpired: (() -> Unit)? = null) {
+        when (result) {
+            is UiResult.Success -> showSuccess(result.msg)
+            is UiResult.Error -> showError(result.msg)
+            UiResult.SessionExpired -> onSessionExpired?.invoke()
+        }
+    }
 }

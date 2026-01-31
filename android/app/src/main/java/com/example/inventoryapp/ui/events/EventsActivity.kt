@@ -40,8 +40,12 @@ class EventsActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         binding.toolbar.setNavigationOnClickListener { finish() }
 
+        // Crear evento
         binding.btnCreateEvent.setOnClickListener { createEvent() }
+
+        // Refrescar eventos
         binding.btnRefresh.setOnClickListener { loadEvents(withSnack = true) }
+
     }
 
     override fun onResume() {
@@ -64,11 +68,21 @@ class EventsActivity : AppCompatActivity() {
         val eventType = when (typeRaw) {
             "SENSOR_IN" -> EventTypeDto.SENSOR_IN
             "SENSOR_OUT" -> EventTypeDto.SENSOR_OUT
-            else -> { binding.etEventType.error = "Usa SENSOR_IN o SENSOR_OUT"; return }
+            else -> {
+                binding.etEventType.error = "Usa SENSOR_IN o SENSOR_OUT"
+                return
+            }
         }
 
-        if (productId == null) { binding.etProductId.error = "Product ID requerido"; return }
-        if (delta == null || delta <= 0) { binding.etDelta.error = "Delta debe ser > 0"; return }
+        if (productId == null) {
+            binding.etProductId.error = "Product ID requerido"
+            return
+        }
+
+        if (delta == null || delta <= 0) {
+            binding.etDelta.error = "Delta debe ser > 0"
+            return
+        }
 
         val dto = EventCreateDto(
             eventType = eventType,
@@ -96,12 +110,18 @@ class EventsActivity : AppCompatActivity() {
                     binding.etDelta.setText("")
                     loadEvents(withSnack = false)
                 } else {
-                    snack.showError("❌ Error ${res.code()}: ${res.errorBody()?.string() ?: "sin detalle"}")
+                    snack.showError(
+                        "❌ Error ${res.code()}: ${res.errorBody()?.string() ?: "sin detalle"}"
+                    )
                 }
 
             } catch (e: IOException) {
-                OfflineQueue(this@EventsActivity).enqueue(PendingType.EVENT_CREATE, gson.toJson(dto))
-                snack.showQueuedOffline("📦 Sin red/backend caído. Evento guardado offline ✅")
+                OfflineQueue(this@EventsActivity)
+                    .enqueue(PendingType.EVENT_CREATE, gson.toJson(dto))
+
+                snack.showQueuedOffline(
+                    "📦 Sin red/backend caído. Evento guardado offline ✅"
+                )
 
             } catch (e: Exception) {
                 snack.showError("❌ Error: ${e.message}")
@@ -127,11 +147,24 @@ class EventsActivity : AppCompatActivity() {
 
                 if (res.isSuccessful && res.body() != null) {
                     items = res.body()!!.items
-                    val lines = items.map { "#${it.id} ${it.eventType} prod=${it.productId} Δ=${it.delta} proc=${it.processed}" }
-                    binding.lvEvents.adapter = ArrayAdapter(this@EventsActivity, android.R.layout.simple_list_item_1, lines)
+
+                    val lines = items.map {
+                        "#${it.id} ${it.eventType} prod=${it.productId} Δ=${it.delta} proc=${it.processed}"
+                    }
+
+                    binding.lvEvents.adapter = ArrayAdapter(
+                        this@EventsActivity,
+                        android.R.layout.simple_list_item_1,
+                        lines
+                    )
+
                     if (withSnack) snack.showSuccess("✅ Eventos cargados")
                 } else {
-                    if (withSnack) snack.showError("❌ Error ${res.code()}: ${res.errorBody()?.string() ?: "sin detalle"}")
+                    if (withSnack) {
+                        snack.showError(
+                            "❌ Error ${res.code()}: ${res.errorBody()?.string() ?: "sin detalle"}"
+                        )
+                    }
                 }
 
             } catch (e: Exception) {
