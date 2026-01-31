@@ -1,0 +1,90 @@
+# Proyecto Android – Resumen de trabajo realizado
+
+## Contexto
+Aplicación Android conectada a un backend con autenticación por roles (`USER`, `MANAGER`, `ADMIN`).  
+Trabajo centrado en el **frontend (Android Studio)**, ampliando funcionalidades existentes y mejorando UX.
+
+---
+
+## Cambios y funcionalidades implementadas
+
+### 1. Mejora de mensajes y confirmaciones
+- Ajuste de mensajes de éxito, error y estado usando `SendSnack`
+- Manejo consistente de:
+  - Errores de red
+  - Backend caído
+  - Sesión expirada (401 → logout)
+- Pantalla `ResultActivity` para confirmaciones explícitas tras acciones críticas
+
+---
+
+### 2. Gestión de eventos
+- Creación y listado de eventos desde `EventsActivity`
+- Adaptación al cambio de backend:
+  - Eliminado `processed`
+  - Uso de `event_status = pending | processed`
+- Manejo de cola offline para creación de eventos
+
+---
+
+### 3. Pantalla de Alertas
+- Nueva `AlertsActivity`
+- Las **alertas se definen como eventos con `event_status = pending`**
+- Funcionalidades:
+  - Listado de alertas
+  - Filtros: todas / pendientes / procesadas
+  - Acción “Marcar revisada” (ack)
+- Restricción por rol:
+  - Solo `MANAGER` y `ADMIN` pueden marcar alertas
+- Integración completa con backend (`listAlerts`, `ackAlert`)
+
+---
+
+### 4. Sistema de roles en frontend
+- Ampliación de `SessionManager`:
+  - Guardado del token
+  - Guardado y lectura del rol del usuario
+  - Helper `isManagerOrAdmin()`
+- El rol se guarda tras login usando `/users/me`
+- Usado para:
+  - Mostrar/ocultar acciones
+  - Proteger pantallas (alertas, umbrales)
+
+---
+
+### 5. Nueva pantalla de Umbrales (stock bajo)
+- Accesible solo para `ADMIN` y `MANAGER`
+- Funcionalidades:
+  - Lista de productos con stock por debajo del umbral
+  - Edición del umbral para que deje de considerarse bajo
+- Flujo completamente basado en backend
+- Nueva `ThresholdsActivity`
+- Nuevo botón en `HomeActivity`
+
+---
+
+### 6. Navegación
+- Añadidos botones en `HomeActivity` para:
+  - Alertas
+  - Umbrales
+- Verificación y corrección de ViewBinding (`btnX` unsolved references)
+- Acceso centralizado desde Home
+
+---
+
+## Backend assumptions
+- Las alertas **no son genéricas**, son objetos del dominio:
+  - Eventos con estado `pending`
+- El backend:
+  - Decide qué es alerta
+  - Controla permisos
+  - Cambia estados (`ack`)
+- El frontend **solo consume y representa**
+
+---
+
+## Estado actual
+- App funcional end-to-end
+- Roles correctamente gestionados en frontend
+- Pantallas nuevas integradas
+- Lista para testing manual con credenciales del backend
