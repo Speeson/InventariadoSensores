@@ -95,6 +95,8 @@ interface InventoryApi {
 
     @GET("products/{product_id}")
     suspend fun getProduct(@Path("product_id") productId: Int): Response<ProductResponseDto>
+    @GET("thresholds")
+    suspend fun listLowStocks(): Response<List<LowStockDto>>
 
     @PATCH("products/{product_id}")
     suspend fun updateProduct(

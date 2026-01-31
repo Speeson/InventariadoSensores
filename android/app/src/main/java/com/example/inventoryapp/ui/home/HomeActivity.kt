@@ -23,6 +23,7 @@ import com.example.inventoryapp.ui.scan.ScanActivity
 import com.example.inventoryapp.ui.stock.StockActivity
 import kotlinx.coroutines.launch
 import com.example.inventoryapp.ui.offline.OfflineErrorsActivity
+import com.example.inventoryapp.ui.thresholds.ThresholdsActivity
 
 
 class HomeActivity : AppCompatActivity() {
@@ -60,6 +61,9 @@ class HomeActivity : AppCompatActivity() {
 
         binding.btnScan.setOnClickListener {
             startActivity(Intent(this, ScanActivity::class.java))
+        }
+        binding.btnThresholds.setOnClickListener {
+            startActivity(Intent(this, ThresholdsActivity::class.java))
         }
 
         binding.btnProducts.setOnClickListener {

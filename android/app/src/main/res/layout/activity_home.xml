@@ -64,14 +64,20 @@
                 android:id="@+id/btnAlerts"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Alertas" />
+                android:text="Alertas"
+                android:layout_marginBottom="12dp" />/>
+            <Button
+                android:id="@+id/btnThresholds"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Stock bajo" />/>
 
             <Button
                 android:id="@+id/btnOfflineErrors"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Errores offline"
-                android:layout_marginTop="200dp"/>
+                android:layout_marginTop="180dp"
+                android:text="Errores offline" />
 
 
         </LinearLayout>
