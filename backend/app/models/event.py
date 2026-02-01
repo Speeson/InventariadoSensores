@@ -21,7 +21,6 @@ class Event(Base):
     event_status: Mapped[EventStatus] = mapped_column(Enum(EventStatus), nullable=False, default=EventStatus.PENDING)
     processed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        server_default=func.now(),
         onupdate=func.now(),
         nullable=True
     )
