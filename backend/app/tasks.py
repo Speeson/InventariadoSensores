@@ -9,6 +9,7 @@ from app.models.movement import Movement
 from app.models.alert import Alert
 from app.models.enums import AlertStatus
 from app.models.location import Location
+from app.services.notification_service import send_low_stock_email
 from app.models.stock import Stock
 from app.models.stock_threshold import StockThreshold
 
@@ -18,6 +19,7 @@ MAX_RETRIES = 3
 @celery_app.task(name="app.tasks.scan_low_stock")
 def scan_low_stock() -> dict:
     created = 0
+    to_notify: list[tuple[int, str, int, int]] = []
     with SessionLocal() as db:
         thresholds = db.scalars(select(StockThreshold)).all()
         if not thresholds:
@@ -55,9 +57,21 @@ def scan_low_stock() -> dict:
             )
             db.add(alert)
             created += 1
+            to_notify.append(
+                (stock.product_id, location.code, stock.quantity, threshold.min_quantity)
+            )
 
         if created:
             db.commit()
+
+    if to_notify:
+        for product_id, location_code, quantity, min_quantity in to_notify:
+            send_low_stock_email(
+                product_id=product_id,
+                location=location_code,
+                quantity=quantity,
+                min_quantity=min_quantity,
+            )
 
     return {"created": created}
 

@@ -1,0 +1,57 @@
+import os
+import smtplib
+from email.message import EmailMessage
+
+
+def _get_env(name: str, default: str = "") -> str:
+    value = os.getenv(name)
+    return value if value is not None else default
+
+
+def _smtp_configured() -> bool:
+    return bool(_get_env("SMTP_HOST") and _get_env("SMTP_TO") and _get_env("SMTP_FROM"))
+
+
+def send_low_stock_email(
+    *,
+    product_id: int,
+    location: str,
+    quantity: int,
+    min_quantity: int,
+) -> None:
+    if not _smtp_configured():
+        return
+
+    host = _get_env("SMTP_HOST")
+    port = int(_get_env("SMTP_PORT", "587"))
+    user = _get_env("SMTP_USER")
+    password = _get_env("SMTP_PASSWORD")
+    from_addr = _get_env("SMTP_FROM")
+    to_addr = _get_env("SMTP_TO")
+    use_tls = _get_env("SMTP_USE_TLS", "true").lower() in ("1", "true", "yes")
+
+    subject = f"Alerta de stock bajo: producto {product_id}"
+    body = (
+        "Se ha detectado stock bajo.\n\n"
+        f"Producto ID: {product_id}\n"
+        f"Ubicacion: {location}\n"
+        f"Cantidad actual: {quantity}\n"
+        f"Minimo configurado: {min_quantity}\n"
+    )
+
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = from_addr
+    msg["To"] = to_addr
+    msg.set_content(body)
+
+    try:
+        with smtplib.SMTP(host, port, timeout=10) as smtp:
+            if use_tls:
+                smtp.starttls()
+            if user and password:
+                smtp.login(user, password)
+            smtp.send_message(msg)
+    except Exception as exc:
+        # Evita romper el job por problemas de email
+        print(f"[notifications] Email error: {exc}")
