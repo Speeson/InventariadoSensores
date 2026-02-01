@@ -22,3 +22,15 @@ def get_or_create(db: Session, code: str, description: str | None = None) -> Loc
     db.commit()
     db.refresh(location)
     return location
+
+
+def list_locations(
+    db: Session,
+    *,
+    limit: int = 50,
+    offset: int = 0,
+) -> tuple[list[Location], int]:
+    stmt = select(Location).order_by(Location.code.asc())
+    total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
+    items = db.scalars(stmt.offset(offset).limit(limit)).all()
+    return items, total
