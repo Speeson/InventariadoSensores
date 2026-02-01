@@ -183,6 +183,7 @@ def process_event(event_id: int) -> dict:
                 user_id=None,
                 movement_type=movement_type,
                 movement_source=event.source,
+                location_id=event.location_id,
             )
             db.add(movement)
 

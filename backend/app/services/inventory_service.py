@@ -6,7 +6,7 @@ from app.models.enums import Source, MovementType
 from app.models.product import Product
 from app.models.stock import Stock
 from app.models.movement import Movement
-from app.repositories import product_repo, stock_repo, movement_repo
+from app.repositories import product_repo, stock_repo, movement_repo, location_repo
 
 
 class InventoryError(Exception):
@@ -19,6 +19,11 @@ def _get_product_or_fail(db: Session, product_id: int) -> Product:
     if not product:
         raise InventoryError("Producto no encontrado")
     return product
+
+
+def _resolve_location_id(db: Session, location: str) -> int:
+    loc = location_repo.get_or_create(db, location)
+    return loc.id
 
 
 def _get_or_create_stock(db: Session, product_id: int, location: str) -> Stock:
@@ -39,6 +44,7 @@ def increase_stock(
 ) -> Tuple[Stock, Movement]:
     _get_product_or_fail(db, product_id)
     stock = _get_or_create_stock(db, product_id, location)
+    location_id = _resolve_location_id(db, location)
 
     updated_stock = stock_repo.adjust_stock_quantity(db, stock, delta=quantity)
     movement = movement_repo.create_movement(
@@ -48,6 +54,7 @@ def increase_stock(
         user_id=user_id,
         movement_type=MovementType.IN,
         movement_source=source,
+        location_id=location_id,
     )
     return updated_stock, movement
 
@@ -63,6 +70,7 @@ def decrease_stock(
 ) -> Tuple[Stock, Movement]:
     _get_product_or_fail(db, product_id)
     stock = _get_or_create_stock(db, product_id, location)
+    location_id = _resolve_location_id(db, location)
 
     if stock.quantity < quantity:
         raise InventoryError("Stock insuficiente para la salida")
@@ -75,6 +83,7 @@ def decrease_stock(
         user_id=user_id,
         movement_type=MovementType.OUT,
         movement_source=source,
+        location_id=location_id,
     )
     return updated_stock, movement
 
@@ -89,23 +98,24 @@ def adjust_stock(
     source: Source,
 ) -> Tuple[Stock, Movement]:
     """
-    Ajuste directo de stock (positivo o negativo). Úsalo para correcciones manuales.
+    Ajuste directo de stock (positivo o negativo).
     """
     _get_product_or_fail(db, product_id)
     stock = _get_or_create_stock(db, product_id, location)
+    location_id = _resolve_location_id(db, location)
 
     new_qty = stock.quantity + quantity
     if new_qty < 0:
         raise InventoryError("Stock resultante no puede ser negativo")
 
     updated_stock = stock_repo.adjust_stock_quantity(db, stock, delta=quantity)
-    movement_type = MovementType.ADJUST
     movement = movement_repo.create_movement(
         db,
         product_id=product_id,
         quantity=abs(quantity),
         user_id=user_id,
-        movement_type=movement_type,
+        movement_type=MovementType.ADJUST,
         movement_source=source,
+        location_id=location_id,
     )
     return updated_stock, movement

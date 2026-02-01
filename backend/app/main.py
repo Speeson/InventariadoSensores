@@ -8,9 +8,10 @@ import redis
 
 from app.db.session import SessionLocal
 
-from app.api.routes import auth, users, products, stocks, movements, events, alerts
+from app.api.routes import auth, users, products, stocks, movements, events, alerts, categories, thresholds, reports
 
 app = FastAPI(title="Sistema Inventariado Sensores")
+
 
 cors_origins_env = os.getenv("CORS_ORIGINS", "")
 allowed_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()] or [
@@ -34,6 +35,10 @@ app.include_router(stocks.router)
 app.include_router(movements.router)
 app.include_router(events.router)
 app.include_router(alerts.router)
+app.include_router(categories.router)
+app.include_router(thresholds.router)
+app.include_router(reports.router)
+
 
 
 @app.get("/health")
