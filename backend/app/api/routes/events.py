@@ -1,14 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-
+from app.tasks import process_event
 from app.api.deps import get_current_user
 from app.db.deps import get_db
-from app.models.enums import EventType, Source
+from app.models.enums import EventType
 from app.models.user import User
 from app.repositories import event_repo, product_repo, location_repo
 from app.schemas.event import EventCreate, EventResponse
-from app.services import inventory_service
+from sqlalchemy.exc import IntegrityError
 
 
 class EventListResponse(BaseModel):
@@ -48,44 +48,59 @@ def list_events(
 )
 def create_event(
     payload: EventCreate,
+    response: Response,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    # 0) Validar producto
     product = product_repo.get(db, payload.product_id)
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
 
-    try:
-        location_obj = location_repo.get_or_create(db, payload.location)
-        if payload.event_type == EventType.SENSOR_IN:
-            inventory_service.increase_stock(
-                db,
-                product_id=payload.product_id,
-                quantity=payload.delta,
-                user_id=user.id,
-                location=payload.location,
-                source=Source.MANUAL,
-            )
-        else:
-            inventory_service.decrease_stock(
-                db,
-                product_id=payload.product_id,
-                quantity=payload.delta,
-                user_id=user.id,
-                location=payload.location,
-                source=Source.MANUAL,
-            )
-    except inventory_service.InventoryError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    # 1) Validar location si en vuestro flujo es obligatorio
+    if not payload.location:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="location es obligatorio")
 
-    event = event_repo.create_event(
-        db,
-        event_type=payload.event_type,
-        product_id=payload.product_id,
-        delta=payload.delta,
-        source=payload.source,
-        location_id=location_obj.id,
-        processed=True,
-        idempotency_key=getattr(payload, "idempotency_key", None),
-    )
+    # 2) Idempotencia "rápida": si ya existe esa key, devolver el mismo evento
+    # (Esto evita duplicados cuando el cliente reintenta el POST)
+    existing = event_repo.get_by_idempotency_key(db, payload.idempotency_key)
+    if existing:
+        response.status_code = status.HTTP_200_OK
+        return existing
+
+    # 3) Asegurar location (crear si no existe)
+    location_obj = location_repo.get_or_create(db, payload.location)
+
+    # 4) Crear evento PENDING y manejar carrera por key duplicada
+    try:
+        event = event_repo.create_event(
+            db,
+            event_type=payload.event_type,
+            product_id=payload.product_id,
+            delta=payload.delta,
+            source=payload.source,
+            location_id=location_obj.id,
+            processed=False,
+            idempotency_key=payload.idempotency_key,
+        )
+    except IntegrityError:
+        # Si entraron dos peticiones a la vez con la misma key,
+        # una puede fallar por unique constraint. Recuperamos el existente.
+        db.rollback()
+        existing = event_repo.get_by_idempotency_key(db, payload.idempotency_key)
+        if existing:
+            response.status_code = status.HTTP_200_OK
+            return existing
+        raise
+
+    # 5) Encolar para que lo procese el worker (S2)
+    try:
+        process_event.delay(event.id)
+    except Exception as exc:
+        # El evento queda PENDING. El enqueue falló (infra).
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"No se pudo encolar el evento: {exc}",
+        )
+
     return event

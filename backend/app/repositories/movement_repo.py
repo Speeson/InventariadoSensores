@@ -49,9 +49,10 @@ def create_movement(
     *,
     product_id: int,
     quantity: int,
-    user_id: int,
+    user_id: int | None,
     movement_type: MovementType,
     movement_source: Source,
+    commit: bool = True,
 ) -> Movement:
     movement = Movement(
         product_id=product_id,
@@ -61,6 +62,11 @@ def create_movement(
         movement_source=movement_source,
     )
     db.add(movement)
-    db.commit()
-    db.refresh(movement)
+
+    if commit:
+        db.commit()
+        db.refresh(movement)
+    else:
+        db.flush()
+
     return movement
