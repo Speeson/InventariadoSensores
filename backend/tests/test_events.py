@@ -14,11 +14,12 @@ def _auth_header(token: str) -> dict[str, str]:
 
 
 def _register_user(client) -> str:
-    email = f"user_{uuid4().hex}@test.local"
+    email = f"user_{uuid4().hex}@example.com"
+    username = f"user_{uuid4().hex[:8]}"
     password = "Password123!"
     response = client.post(
         "/auth/register",
-        json={"email": email, "password": password},
+        json={"email": email, "password": password, "username": username},
     )
     assert response.status_code == 200
     return response.json()["access_token"]
@@ -150,6 +151,7 @@ def test_process_event_creates_stock_and_movement(db):
     result = process_event(event.id)
     assert result["ok"] is True
 
+    db.expire_all()
     event_db = db.get(Event, event.id)
     assert event_db is not None
     assert event_db.event_status.value == "PROCESSED"
