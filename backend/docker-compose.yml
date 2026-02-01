@@ -32,7 +32,7 @@ services:
       DATABASE_URL: postgresql+psycopg://inventory_user:inventory_pass@db:5432/inventory_db
       JWT_SECRET: change_me_super_secret
       JWT_ALGORITHM: HS256
-      ACCESS_TOKEN_EXPIRE_MINUTES: 200
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
       APP_ROLE: api
       RUN_SEED: 1
       REDIS_HOST: redis
@@ -41,7 +41,6 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       CELERY_TIMEZONE: UTC
-      DISABLE_AUTH_FOR_SWAGGER: true
     ports:
       - "8000:8000"
 
