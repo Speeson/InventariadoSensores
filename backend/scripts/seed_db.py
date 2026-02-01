@@ -37,26 +37,10 @@ def run_seed():
 
         categories = []
         for name in [
-            "Sensores IoT",
-            "Gateways",
-            "Actuadores",
-            "Energia",
-            "Accesorios",
-            "Redes",
-            "Controladores",
-            "Monitoreo",
-            "Mantenimiento",
-            "Calibracion",
-            "Seguridad",
-            "Climatizacion",
-            "Iluminacion",
-            "Agua y Caudal",
-            "Vibracion",
-            "GPS y Localizacion",
-            "Baterias",
-            "Antenas",
-            "Montaje",
-            "Herramientas",
+            "Sensores IoT", "Gateways", "Actuadores", "Energia", "Accesorios",
+            "Redes", "Controladores", "Monitoreo", "Mantenimiento", "Calibracion",
+            "Seguridad", "Climatizacion", "Iluminacion", "Agua y Caudal", "Vibracion",
+            "GPS y Localizacion", "Baterias", "Antenas", "Montaje", "Herramientas",
         ]:
             category, _ = get_or_create(Category, name=name)
             categories.append(category)
@@ -78,6 +62,17 @@ def run_seed():
                 },
             )
             users.append(user)
+        db.commit()
+
+        # Locations
+        loc_codes = [
+            "Oficina Central",
+            "Planta Norte",
+            "Planta Sur",
+            "Laboratorio I+D",
+            "Cliente Demo",
+        ]
+        locations = {code: location_repo.get_or_create(db, code) for code in loc_codes}
         db.commit()
 
         category_by_name = {category.name: category for category in categories}
@@ -109,7 +104,7 @@ def run_seed():
             (products[3], 40, "Laboratorio I+D"),
             (products[4], 25, "Cliente Demo"),
         ]:
-            location_obj = location_repo.get_or_create(db, location)
+            location_obj = locations[location]
             get_or_create(
                 Stock,
                 product_id=product.id,
@@ -123,21 +118,23 @@ def run_seed():
             (products[1], "Planta Norte", 15),
             (products[2], "Planta Sur", 5),
         ]:
+            loc_obj = locations[location]
             get_or_create(
                 StockThreshold,
                 product_id=product.id,
-                location=location,
+                location_id=loc_obj.id,
                 defaults={"min_quantity": min_qty},
             )
         db.commit()
 
-        for event_type, product, delta, source, key in [
-            (EventType.SENSOR_IN, products[0], 12, Source.SCAN, "evt-1001"),
-            (EventType.SENSOR_IN, products[1], 8, Source.SCAN, "evt-1002"),
-            (EventType.SENSOR_OUT, products[2], -2, Source.MANUAL, "evt-1003"),
-            (EventType.SENSOR_IN, products[3], 5, Source.MANUAL, "evt-1004"),
-            (EventType.SENSOR_OUT, products[4], -1, Source.SCAN, "evt-1005"),
+        for event_type, product, delta, source, key, loc in [
+            (EventType.SENSOR_IN, products[0], 12, Source.SCAN, "evt-1001", "Oficina Central"),
+            (EventType.SENSOR_IN, products[1], 8, Source.SCAN, "evt-1002", "Planta Norte"),
+            (EventType.SENSOR_OUT, products[2], -2, Source.MANUAL, "evt-1003", "Planta Sur"),
+            (EventType.SENSOR_IN, products[3], 5, Source.MANUAL, "evt-1004", "Laboratorio I+D"),
+            (EventType.SENSOR_OUT, products[4], -1, Source.SCAN, "evt-1005", "Cliente Demo"),
         ]:
+            loc_obj = locations[loc]
             get_or_create(
                 Event,
                 idempotency_key=key,
@@ -148,6 +145,7 @@ def run_seed():
                     "source": source,
                     "event_status": EventStatus.PROCESSED,
                     "retry_count": 0,
+                    "location_id": loc_obj.id,
                 },
             )
         db.commit()
@@ -164,6 +162,7 @@ def run_seed():
                 "user_id": pick_user(0),
                 "movement_type": MovementType.IN,
                 "movement_source": Source.SCAN,
+                "location_id": locations["Oficina Central"].id,
             },
             {
                 "product_id": products[1].id,
@@ -171,6 +170,7 @@ def run_seed():
                 "user_id": pick_user(1),
                 "movement_type": MovementType.IN,
                 "movement_source": Source.MANUAL,
+                "location_id": locations["Planta Norte"].id,
             },
             {
                 "product_id": products[2].id,
@@ -178,6 +178,7 @@ def run_seed():
                 "user_id": pick_user(2),
                 "movement_type": MovementType.OUT,
                 "movement_source": Source.MANUAL,
+                "location_id": locations["Planta Sur"].id,
             },
             {
                 "product_id": products[3].id,
@@ -185,6 +186,7 @@ def run_seed():
                 "user_id": pick_user(0),
                 "movement_type": MovementType.ADJUST,
                 "movement_source": Source.SCAN,
+                "location_id": locations["Laboratorio I+D"].id,
             },
             {
                 "product_id": products[4].id,
@@ -192,6 +194,7 @@ def run_seed():
                 "user_id": pick_user(1),
                 "movement_type": MovementType.OUT,
                 "movement_source": Source.SCAN,
+                "location_id": locations["Cliente Demo"].id,
             },
         ]
         for movement in movements:

@@ -12,15 +12,6 @@ from app.api.routes import auth, users, products, stocks, movements, events, ale
 
 app = FastAPI(title="Sistema Inventariado Sensores")
 
-from app.api import deps
-from app.models.enums import UserRole
-from app.models.user import User
-
-if os.getenv("DISABLE_AUTH_FOR_SWAGGER") == "true":
-    dummy_user = User(id=1, username="dev", email="dev@example.com", password_hash="", role=UserRole.ADMIN)
-    app.dependency_overrides[deps.get_current_user] = lambda: dummy_user
-    app.dependency_overrides[deps.require_roles] = lambda *args, **kwargs: (lambda: dummy_user)
-
 
 cors_origins_env = os.getenv("CORS_ORIGINS", "")
 allowed_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()] or [

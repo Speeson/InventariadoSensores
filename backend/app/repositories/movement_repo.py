@@ -19,6 +19,7 @@ def list_movements(
     movement_type: MovementType | None = None,
     movement_source: Source | None = None,
     user_id: int | None = None,
+    location_id: int | None = None,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
     limit: int = 50,
@@ -33,6 +34,8 @@ def list_movements(
         filters.append(Movement.movement_source == movement_source)
     if user_id is not None:
         filters.append(Movement.user_id == user_id)
+    if location_id is not None:
+        filters.append(Movement.location_id == location_id)
     if date_from is not None:
         filters.append(Movement.created_at >= date_from)
     if date_to is not None:
@@ -49,9 +52,10 @@ def create_movement(
     *,
     product_id: int,
     quantity: int,
-    user_id: int,
+    user_id: int | None,
     movement_type: MovementType,
     movement_source: Source,
+    location_id: int | None,
 ) -> Movement:
     movement = Movement(
         product_id=product_id,
@@ -59,6 +63,7 @@ def create_movement(
         user_id=user_id,
         movement_type=movement_type,
         movement_source=movement_source,
+        location_id=location_id,
     )
     db.add(movement)
     db.commit()

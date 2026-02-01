@@ -18,6 +18,8 @@ class MovementResponse(BaseModel):
     quantity: int
     movement_type: MovementType
     movement_source: Source
-    user_id: int
+    user_id: int | None
+    location_id: int | None
+    location: str | None  # devuelto a partir de la relación Location
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)

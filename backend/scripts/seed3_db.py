@@ -1,14 +1,20 @@
-# backend/scripts/seed_db.py
-
 from app.db.session import SessionLocal
-from app.models.audit_log import ActionType, AuditLog
+from app.repositories import location_repo
+from app.models.audit_log import AuditLog
 from app.models.category import Category
-from app.models.entity import Entity
-from app.models.event import Event, EventType
-from app.models.movement import Movement, Source, MovementType
+from app.models.event import Event
+from app.models.movement import Movement
 from app.models.product import Product
 from app.models.stock import Stock
 from app.models.user import User
+from app.models.enums import (
+    ActionType,
+    Entity,
+    EventType,
+    EventStatus,
+    MovementType,
+    Source,
+)
 
 
 def run_seed():
@@ -24,12 +30,9 @@ def run_seed():
         db.add_all(categories)
         db.commit()
 
-        # Entities
-        entities = [
-            Entity(name="Almacen Central"),
-            Entity(name="Planta Produccion"),
-        ]
-        db.add_all(entities)
+        # Locations
+        loc_codes = ["Almacen Central", "Planta Produccion"]
+        locations = {code: location_repo.get_or_create(db, code) for code in loc_codes}
         db.commit()
 
         # Products
@@ -57,12 +60,12 @@ def run_seed():
             Stock(
                 product_id=products[0].id,
                 quantity=100,
-                location="Almacen Central",
+                location_id=locations["Almacen Central"].id,
             ),
             Stock(
                 product_id=products[1].id,
                 quantity=50,
-                location="Planta Produccion",
+                location_id=locations["Planta Produccion"].id,
             ),
         ]
         db.add_all(stocks)
@@ -74,15 +77,21 @@ def run_seed():
                 event_type=EventType.SENSOR_IN,
                 product_id=products[0].id,
                 delta=10,
-                source="SENSOR",
-                processed=True,
+                source=Source.SCAN,
+                event_status=EventStatus.PROCESSED,
+                retry_count=0,
+                idempotency_key="evt-2001",
+                location_id=locations["Almacen Central"].id,
             ),
             Event(
                 event_type=EventType.SENSOR_OUT,
                 product_id=products[1].id,
                 delta=-5,
-                source="MANUAL",
-                processed=True,
+                source=Source.MANUAL,
+                event_status=EventStatus.PROCESSED,
+                retry_count=0,
+                idempotency_key="evt-2002",
+                location_id=locations["Planta Produccion"].id,
             ),
         ]
         db.add_all(events)
@@ -102,6 +111,7 @@ def run_seed():
                     user_id=manager_user.id,
                     movement_type=MovementType.IN,
                     movement_source=Source.SCAN,
+                    location_id=locations["Almacen Central"].id,
                 ),
                 Movement(
                     product_id=products[1].id,
@@ -109,6 +119,7 @@ def run_seed():
                     user_id=normal_user.id,
                     movement_type=MovementType.OUT,
                     movement_source=Source.MANUAL,
+                    location_id=locations["Planta Produccion"].id,
                 ),
             ]
             db.add_all(movements)
@@ -116,13 +127,13 @@ def run_seed():
 
             audit_logs = [
                 AuditLog(
-                    entity_id=entities[0].id,
+                    entity=Entity.PRODUCT,
                     action=ActionType.CREATE,
                     user_id=admin_user.id,
                     details="Creacion de producto",
                 ),
                 AuditLog(
-                    entity_id=entities[1].id,
+                    entity=Entity.STOCK,
                     action=ActionType.UPDATE,
                     user_id=manager_user.id,
                     details="Actualizacion de stock",
