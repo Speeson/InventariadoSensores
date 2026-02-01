@@ -12,3 +12,20 @@ class TopConsumedResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+class TurnoverItem(BaseModel):
+    product_id: int
+    sku: str
+    name: str
+    turnover: float | None
+    outs: int
+    stock_initial: float
+    stock_final: float
+    stock_average: float
+    location: str | None = None
+
+class TurnoverResponse(BaseModel):
+    items: list[TurnoverItem]
+    total: int
+    limit: int
+    offset: int
