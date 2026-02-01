@@ -1,5 +1,5 @@
 from sqlalchemy import select
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from app.celery_app import celery_app
 from app.db.session import SessionLocal
 from app.models.enums import EventStatus, MovementType
@@ -71,8 +71,7 @@ def is_retryable_error(exc: Exception) -> bool:
             "lock",
             "timeout",
             "could not serialize",
-            "stock insuficiente",
-        ]
+                    ]
     )
 
 
@@ -223,3 +222,25 @@ def process_event(event_id: int) -> dict:
                 "retry_count": event.retry_count,
                 "error": event.last_error,
             }
+
+
+@celery_app.task(name="app.tasks.requeue_pending_events")
+def requeue_pending_events() -> dict:
+    requeued = 0
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=2)
+    with SessionLocal() as db:
+        events = db.scalars(
+            select(Event)
+            .where(
+                Event.event_status == EventStatus.PENDING,
+                Event.retry_count < MAX_RETRIES,
+                (Event.processed_at.is_(None)) | (Event.processed_at < cutoff),
+            )
+            .limit(100)
+        ).all()
+
+        for event in events:
+            process_event.delay(event.id)
+            requeued += 1
+
+    return {"requeued": requeued}

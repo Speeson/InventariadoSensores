@@ -61,7 +61,7 @@ def create_event(
     if not payload.location:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="location es obligatorio")
 
-    # 2) Idempotencia "rápida": si ya existe esa key, devolver el mismo evento
+    # 2) Idempotencia "rapida": si ya existe esa key, devolver el mismo evento
     # (Esto evita duplicados cuando el cliente reintenta el POST)
     existing = event_repo.get_by_idempotency_key(db, payload.idempotency_key)
     if existing:
@@ -97,7 +97,7 @@ def create_event(
     try:
         process_event.delay(event.id)
     except Exception as exc:
-        # El evento queda PENDING. El enqueue falló (infra).
+        # El evento queda PENDING. El enqueue fallo (infra).
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"No se pudo encolar el evento: {exc}",

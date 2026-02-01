@@ -60,6 +60,7 @@ def list_events(
     items = db.scalars(stmt.offset(offset).limit(limit)).all()
     return items, total
 
-#Esto te permite “si ya existe, devuelvo el mismo”.
+#Esto te permite "si ya existe, devuelvo el mismo".
 def get_by_idempotency_key(db: Session, key: str) -> Event | None:
     return db.scalar(select(Event).where(Event.idempotency_key == key))
+

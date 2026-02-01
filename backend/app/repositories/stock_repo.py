@@ -71,7 +71,7 @@ def create_stock(
         db.commit()
         db.refresh(stock)
     else:
-        db.flush()  # deja el id listo dentro de la transacción
+        db.flush()  # deja el id listo dentro de la transaccion
 
     return stock
 

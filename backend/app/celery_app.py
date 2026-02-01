@@ -27,7 +27,11 @@ celery_app.conf.update(
         "scan-low-stock": {
             "task": "app.tasks.scan_low_stock",
             "schedule": timedelta(minutes=int(_get_env("LOW_STOCK_SCAN_MINUTES", "5"))),
-        }
+        },
+        "requeue-pending-events": {
+            "task": "app.tasks.requeue_pending_events",
+            "schedule": timedelta(minutes=int(_get_env("PENDING_EVENTS_REQUEUE_MINUTES", "2"))),
+        },
     },
 )
 
