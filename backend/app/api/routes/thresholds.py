@@ -38,7 +38,7 @@ def get_threshold(threshold_id: int, db: Session = Depends(get_db)):
 def create_threshold(payload: ThresholdCreate, db: Session = Depends(get_db)):
     if not product_repo.get(db, payload.product_id):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Producto no existe")
-    dup = threshold_repo.get_by_product_location(db, payload.product_id, payload.location)
+    dup =  threshold_repo.get_by_product_and_location(db, payload.product_id, payload.location)
     if dup:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ya existe un threshold para esa ubicación")
     return threshold_repo.create_threshold(db, product_id=payload.product_id, location=payload.location, min_quantity=payload.min_quantity)
@@ -49,7 +49,7 @@ def update_threshold(threshold_id: int, payload: ThresholdUpdate, db: Session = 
     if not threshold:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Threshold no encontrado")
     if payload.location is not None:
-        dup = threshold_repo.get_by_product_location(db, threshold.product_id, payload.location)
+        dup =  threshold_repo.get_by_product_and_location(db, threshold.product_id, payload.location)
         if dup and dup.id != threshold.id:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ya existe un threshold para esa ubicación")
     return threshold_repo.update_threshold(db, threshold, location=payload.location, min_quantity=payload.min_quantity)

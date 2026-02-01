@@ -28,7 +28,7 @@ class Movement(Base):
         Index("ix_movements_location", "location_id"),
         Index("ix_movements_created", "created_at"),
     )
-
-@property
-def location(self) -> str | None:
+    
+    @property
+    def location(self) -> str | None:
         return self.location_rel.code if self.location_rel else None
