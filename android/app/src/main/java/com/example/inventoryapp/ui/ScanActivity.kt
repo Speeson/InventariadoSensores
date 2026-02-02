@@ -12,13 +12,10 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.camera.core.ImageProxy
 import com.example.inventoryapp.databinding.ActivityScanBinding
-import com.example.inventoryapp.ui.movements.ConfirmMovementActivity
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
-import androidx.camera.core.ImageProxy
-import androidx.camera.core.ExperimentalGetImage
-
 
 class ScanActivity : AppCompatActivity() {
 
@@ -33,26 +30,35 @@ class ScanActivity : AppCompatActivity() {
         binding = ActivityScanBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Botón continuar: usa el manual, o el último detectado
+        setSupportActionBar(binding.toolbar)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        binding.toolbar.setNavigationOnClickListener { finish() }
+
+        binding.previewView.visibility = android.view.View.GONE
+
+        binding.btnActivateScanner.setOnClickListener {
+            binding.btnActivateScanner.visibility = android.view.View.GONE
+            binding.previewView.visibility = android.view.View.VISIBLE
+
+            if (hasCameraPermission()) {
+                startCamera()
+            } else {
+                requestCameraPermission()
+            }
+        }
+
         binding.btnContinue.setOnClickListener {
             val manual = binding.etBarcode.text.toString().trim()
             val codeToUse = if (manual.isNotEmpty()) manual else (lastScannedCode ?: "")
 
             if (codeToUse.isEmpty()) {
-                binding.etBarcode.error = "Código requerido"
+                binding.etBarcode.error = "Codigo requerido"
                 return@setOnClickListener
             }
 
-            val i = Intent(this, ConfirmMovementActivity::class.java)
+            val i = Intent(this, ConfirmScanActivity::class.java)
             i.putExtra("barcode", codeToUse)
             startActivity(i)
-        }
-
-        // Arrancar cámara (si hay permiso)
-        if (hasCameraPermission()) {
-            startCamera()
-        } else {
-            requestCameraPermission()
         }
     }
 
@@ -82,7 +88,7 @@ class ScanActivity : AppCompatActivity() {
             if (granted) {
                 startCamera()
             } else {
-                Toast.makeText(this, "Permiso de cámara denegado", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Permiso de camara denegado", Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -111,7 +117,7 @@ class ScanActivity : AppCompatActivity() {
                 cameraProvider.unbindAll()
                 cameraProvider.bindToLifecycle(this, cameraSelector, preview, analysis)
             } catch (e: Exception) {
-                Toast.makeText(this, "Error al iniciar cámara: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Error al iniciar camara: ${e.message}", Toast.LENGTH_LONG).show()
             }
 
         }, ContextCompat.getMainExecutor(this))
@@ -140,15 +146,12 @@ class ScanActivity : AppCompatActivity() {
                 val code = barcodes.firstOrNull()?.rawValue
                 if (!code.isNullOrBlank() && code != lastScannedCode) {
                     lastScannedCode = code
-
-                    // Rellenar el campo manual para que el usuario lo vea
                     binding.etBarcode.setText(code)
-
                     Toast.makeText(this, "Detectado: $code", Toast.LENGTH_SHORT).show()
                 }
             }
             .addOnFailureListener {
-                // Silencioso por ahora (para Sprint 1)
+                // silencio
             }
             .addOnCompleteListener {
                 isProcessing = false
