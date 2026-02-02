@@ -2,22 +2,23 @@ package com.example.inventoryapp.ui.events
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.ArrayAdapter
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.PendingType
 import com.example.inventoryapp.data.local.SessionManager
-import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.model.EventCreateDto
 import com.example.inventoryapp.data.remote.model.EventResponseDto
 import com.example.inventoryapp.data.remote.model.EventTypeDto
+import com.example.inventoryapp.data.repository.remote.EventRepository
 import com.example.inventoryapp.databinding.ActivityEventsBinding
 import com.example.inventoryapp.ui.auth.LoginActivity
 import com.example.inventoryapp.ui.common.SendSnack
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.io.IOException
+import java.util.UUID
 
 class EventsActivity : AppCompatActivity() {
 
@@ -26,7 +27,9 @@ class EventsActivity : AppCompatActivity() {
     private lateinit var snack: SendSnack
 
     private val gson = Gson()
+    private val repo = EventRepository()
     private var items: List<EventResponseDto> = emptyList()
+    private lateinit var adapter: EventAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,6 +45,10 @@ class EventsActivity : AppCompatActivity() {
 
         binding.btnCreateEvent.setOnClickListener { createEvent() }
         binding.btnRefresh.setOnClickListener { loadEvents(withSnack = true) }
+
+        adapter = EventAdapter(emptyList())
+        binding.rvEvents.layoutManager = LinearLayoutManager(this)
+        binding.rvEvents.adapter = adapter
     }
 
     override fun onResume() {
@@ -75,7 +82,8 @@ class EventsActivity : AppCompatActivity() {
             productId = productId,
             delta = delta,
             source = source,
-            location = location
+            location = location,
+            idempotencyKey = UUID.randomUUID().toString()
         )
 
         binding.btnCreateEvent.isEnabled = false
@@ -83,29 +91,19 @@ class EventsActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                val res = NetworkModule.api.createEvent(dto)
-
-                if (res.code() == 401) {
-                    session.clearToken()
-                    goToLogin()
-                    return@launch
-                }
-
-                if (res.isSuccessful) {
-                    snack.showSuccess("✅ Evento creado")
+                val res = repo.createEvent(dto)
+                if (res.isSuccess) {
+                    snack.showSuccess("OK: Evento creado")
                     binding.etDelta.setText("")
                     loadEvents(withSnack = false)
                 } else {
-                    snack.showError("❌ Error ${res.code()}: ${res.errorBody()?.string() ?: "sin detalle"}")
+                    snack.showError("Error: ${res.exceptionOrNull()?.message ?: "sin detalle"}")
                 }
-
             } catch (e: IOException) {
                 OfflineQueue(this@EventsActivity).enqueue(PendingType.EVENT_CREATE, gson.toJson(dto))
-                snack.showQueuedOffline("📦 Sin red/backend caído. Evento guardado offline ✅")
-
+                snack.showQueuedOffline("Sin red/backend. Evento guardado offline")
             } catch (e: Exception) {
-                snack.showError("❌ Error: ${e.message}")
-
+                snack.showError("Error: ${e.message}")
             } finally {
                 binding.btnCreateEvent.isEnabled = true
             }
@@ -117,25 +115,16 @@ class EventsActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                val res = NetworkModule.api.listEvents(limit = 50, offset = 0)
-
-                if (res.code() == 401) {
-                    session.clearToken()
-                    goToLogin()
-                    return@launch
-                }
-
-                if (res.isSuccessful && res.body() != null) {
-                    items = res.body()!!.items
-                    val lines = items.map { "#${it.id} ${it.eventType} prod=${it.productId} Δ=${it.delta} proc=${it.processed}" }
-                    binding.lvEvents.adapter = ArrayAdapter(this@EventsActivity, android.R.layout.simple_list_item_1, lines)
-                    if (withSnack) snack.showSuccess("✅ Eventos cargados")
+                val res = repo.listEvents(limit = 50, offset = 0)
+                if (res.isSuccess) {
+                    items = res.getOrNull()!!.items
+                    adapter.submit(items)
+                    if (withSnack) snack.showSuccess("OK: Eventos cargados")
                 } else {
-                    if (withSnack) snack.showError("❌ Error ${res.code()}: ${res.errorBody()?.string() ?: "sin detalle"}")
+                    if (withSnack) snack.showError("Error: ${res.exceptionOrNull()?.message ?: "sin detalle"}")
                 }
-
             } catch (e: Exception) {
-                if (withSnack) snack.showError("❌ Error de red: ${e.message}")
+                if (withSnack) snack.showError("Error de red: ${e.message}")
             }
         }
     }

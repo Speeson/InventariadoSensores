@@ -68,6 +68,18 @@ interface InventoryApi {
     @POST("movements/adjust")
     suspend fun movementAdjust(@Body body: MovementAdjustOperationRequest): retrofit2.Response<MovementWithStockResponseDto>
 
+    @GET("movements/")
+    suspend fun listMovements(
+        @Query("product_id") productId: Int? = null,
+        @Query("movement_type") movementType: MovementTypeDto? = null,
+        @Query("movement_source") movementSource: MovementSourceDto? = null,
+        @Query("user_id") userId: Int? = null,
+        @Query("date_from") dateFrom: String? = null,
+        @Query("date_to") dateTo: String? = null,
+        @Query("limit") limit: Int = 200,
+        @Query("offset") offset: Int = 0
+    ): retrofit2.Response<MovementListResponseDto>
+
     @GET("products/")
     suspend fun listProducts(
         @Query("sku") sku: String? = null,

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <TextView
+        android:id="@+id/tvEventTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Evento #1"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tvEventMeta"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="SENSOR_IN | prod=1 | Δ=2" />
+
+    <TextView
+        android:id="@+id/tvEventStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="PENDING"
+        android:textStyle="bold"
+        android:layout_marginTop="4dp" />
+
+    <TextView
+        android:id="@+id/tvEventDate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="2026-02-01T12:00:00Z"
+        android:layout_marginTop="2dp" />
+
+</LinearLayout>

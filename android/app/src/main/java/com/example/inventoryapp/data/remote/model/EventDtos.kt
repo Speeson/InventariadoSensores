@@ -9,7 +9,8 @@ data class EventCreateDto(
     @SerializedName("product_id") val productId: Int,
     val delta: Int, // > 0
     val source: String = "sensor_simulado",
-    val location: String = "default"
+    val location: String = "default",
+    @SerializedName("idempotency_key") val idempotencyKey: String
 )
 
 data class EventResponseDto(
@@ -19,6 +20,7 @@ data class EventResponseDto(
     val delta: Int,
     val source: String,
     val processed: Boolean,
+    @SerializedName("event_status") val eventStatus: String? = null,
     @SerializedName("created_at") val createdAt: String
 )
 

@@ -20,6 +20,7 @@ import com.example.inventoryapp.ui.movements.MovimientosActivity
 import com.example.inventoryapp.ui.products.ProductListActivity
 import com.example.inventoryapp.ui.scan.ScanActivity
 import com.example.inventoryapp.ui.stock.StockActivity
+import com.example.inventoryapp.ui.rotation.RotationActivity
 import kotlinx.coroutines.launch
 import com.example.inventoryapp.ui.offline.OfflineErrorsActivity
 
@@ -71,6 +72,10 @@ class HomeActivity : AppCompatActivity() {
 
         binding.btnEvents.setOnClickListener {
             startActivity(Intent(this, EventsActivity::class.java))
+        }
+
+        binding.btnRotation.setOnClickListener {
+            startActivity(Intent(this, RotationActivity::class.java))
         }
 
         binding.btnOfflineErrors.setOnClickListener {

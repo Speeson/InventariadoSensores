@@ -25,11 +25,20 @@ data class MovementResponseDto(
     val quantity: Int,
     @SerializedName("movement_type") val movementType: MovementTypeDto,
     @SerializedName("movement_source") val movementSource: MovementSourceDto,
-    @SerializedName("user_id") val userId: Int,
+    @SerializedName("user_id") val userId: Int?,
+    @SerializedName("location_id") val locationId: Int? = null,
+    val location: String? = null,
     @SerializedName("created_at") val createdAt: String
 )
 
 data class MovementWithStockResponseDto(
     val stock: StockResponseDto,
     val movement: MovementResponseDto
+)
+
+data class MovementListResponseDto(
+    val items: List<MovementResponseDto>,
+    val total: Int,
+    val limit: Int,
+    val offset: Int
 )
