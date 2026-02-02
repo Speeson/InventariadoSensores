@@ -2,12 +2,14 @@ package com.example.inventoryapp.ui.events
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.ArrayAdapter
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.PendingType
 import com.example.inventoryapp.data.local.SessionManager
+import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.model.EventCreateDto
 import com.example.inventoryapp.data.remote.model.EventResponseDto
 import com.example.inventoryapp.data.remote.model.EventTypeDto
@@ -51,6 +53,8 @@ class EventsActivity : AppCompatActivity() {
         }
         binding.rvEvents.layoutManager = LinearLayoutManager(this)
         binding.rvEvents.adapter = adapter
+
+        setupLocationDropdown()
     }
 
     override fun onResume() {
@@ -116,6 +120,26 @@ class EventsActivity : AppCompatActivity() {
                 snack.showError("Error: ${e.message}")
             } finally {
                 binding.btnCreateEvent.isEnabled = true
+            }
+        }
+    }
+
+    private fun setupLocationDropdown() {
+        lifecycleScope.launch {
+            try {
+                val res = NetworkModule.api.listLocations(limit = 200, offset = 0)
+                if (res.isSuccessful && res.body() != null) {
+                    val codes = res.body()!!.items.map { it.code }.distinct().sorted()
+                    val values = if (codes.contains("default")) codes else listOf("default") + codes
+                    val adapter = ArrayAdapter(this@EventsActivity, android.R.layout.simple_list_item_1, values)
+                    binding.etLocation.setAdapter(adapter)
+                    binding.etLocation.setOnClickListener { binding.etLocation.showDropDown() }
+                    binding.etLocation.setOnFocusChangeListener { _, hasFocus ->
+                        if (hasFocus) binding.etLocation.showDropDown()
+                    }
+                }
+            } catch (_: Exception) {
+                // Silent fallback to manual input.
             }
         }
     }

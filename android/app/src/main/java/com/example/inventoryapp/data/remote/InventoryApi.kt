@@ -140,6 +140,12 @@ interface InventoryApi {
 
 
 
+
+    @GET("locations/")
+    suspend fun listLocations(
+        @Query("limit") limit: Int = 200,
+        @Query("offset") offset: Int = 0
+    ): Response<LocationListResponseDto>
 }
 
 

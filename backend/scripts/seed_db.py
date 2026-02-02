@@ -48,9 +48,9 @@ def run_seed():
 
         users = []
         for username, email, role in [
-            ("admin", "admin@demo.local", UserRole.ADMIN),
-            ("manager", "manager@demo.local", UserRole.MANAGER),
-            ("user", "user@demo.local", UserRole.USER),
+            ("admin", "admin@example.com", UserRole.ADMIN),
+            ("manager", "manager@example.com", UserRole.MANAGER),
+            ("user", "user@example.com", UserRole.USER),
         ]:
             user, _ = get_or_create(
                 User,

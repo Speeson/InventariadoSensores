@@ -2,6 +2,7 @@ package com.example.inventoryapp.ui.scan
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.ArrayAdapter
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
@@ -37,6 +38,8 @@ class ConfirmScanActivity : AppCompatActivity() {
         applyTypeSelection(MovementType.OUT)
         binding.btnTypeIn.setOnClickListener { applyTypeSelection(MovementType.IN) }
         binding.btnTypeOut.setOnClickListener { applyTypeSelection(MovementType.OUT) }
+
+        setupLocationDropdown()
 
         lifecycleScope.launch {
             val res = NetworkModule.api.listProducts(barcode = barcode, limit = 1, offset = 0)
@@ -87,6 +90,26 @@ class ConfirmScanActivity : AppCompatActivity() {
                 }
                 startActivity(i)
                 binding.btnConfirm.isEnabled = true
+            }
+        }
+    }
+
+    private fun setupLocationDropdown() {
+        lifecycleScope.launch {
+            try {
+                val res = NetworkModule.api.listLocations(limit = 200, offset = 0)
+                if (res.isSuccessful && res.body() != null) {
+                    val codes = res.body()!!.items.map { it.code }.distinct().sorted()
+                    val values = if (codes.contains("default")) codes else listOf("default") + codes
+                    val adapter = ArrayAdapter(this@ConfirmScanActivity, android.R.layout.simple_list_item_1, values)
+                    binding.etLocation.setAdapter(adapter)
+                    binding.etLocation.setOnClickListener { binding.etLocation.showDropDown() }
+                    binding.etLocation.setOnFocusChangeListener { _, hasFocus ->
+                        if (hasFocus) binding.etLocation.showDropDown()
+                    }
+                }
+            } catch (_: Exception) {
+                // Silent fallback to manual input.
             }
         }
     }

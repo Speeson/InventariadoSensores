@@ -39,6 +39,8 @@ class StockActivity : AppCompatActivity() {
 
         binding.btnCreate.setOnClickListener { createStock() }
 
+        setupLocationDropdown()
+
         binding.lvStocks.setOnItemClickListener { _, _, position, _ ->
             showEditDialog(items[position])
         }
@@ -151,6 +153,26 @@ class StockActivity : AppCompatActivity() {
 
             } catch (e: Exception) {
                 snack.showError("❌ Error red: ${e.message}")
+            }
+        }
+    }
+
+    private fun setupLocationDropdown() {
+        lifecycleScope.launch {
+            try {
+                val res = NetworkModule.api.listLocations(limit = 200, offset = 0)
+                if (res.isSuccessful && res.body() != null) {
+                    val codes = res.body()!!.items.map { it.code }.distinct().sorted()
+                    val values = if (codes.contains("default")) codes else listOf("default") + codes
+                    val adapter = ArrayAdapter(this@StockActivity, android.R.layout.simple_list_item_1, values)
+                    binding.etLocation.setAdapter(adapter)
+                    binding.etLocation.setOnClickListener { binding.etLocation.showDropDown() }
+                    binding.etLocation.setOnFocusChangeListener { _, hasFocus ->
+                        if (hasFocus) binding.etLocation.showDropDown()
+                    }
+                }
+            } catch (_: Exception) {
+                // Silent fallback to manual input.
             }
         }
     }

@@ -1,4 +1,4 @@
-package com.example.inventoryapp.ui.home
+﻿package com.example.inventoryapp.ui.home
 
 import android.content.Intent
 import android.os.Bundle
@@ -144,6 +144,8 @@ class HomeActivity : AppCompatActivity() {
                         .setPositiveButton("OK", null)
                         .show()
                 } else {
+                    val detail = try { res.errorBody()?.string()?.take(200) } catch (_: Exception) { null }
+                    val detailMsg = if (!detail.isNullOrBlank()) "\n$detail" else ""
                     AlertDialog.Builder(this@HomeActivity)
                         .setTitle("Estado del sistema")
                         .setMessage(
@@ -206,7 +208,7 @@ class HomeActivity : AppCompatActivity() {
     private suspend fun ensureValidSession() {
         try {
             val res = NetworkModule.api.me()
-            if (res.code() == 401 || res.code() == 500) {
+            if (res.code() == 401) {
                 Toast.makeText(
                     this@HomeActivity,
                     "Sesion caducada. Inicia sesion de nuevo.",
@@ -214,6 +216,12 @@ class HomeActivity : AppCompatActivity() {
                 ).show()
                 session.clearToken()
                 goToLogin()
+            } else if (res.code() >= 500) {
+                Toast.makeText(
+                    this@HomeActivity,
+                    "Error del servidor (${res.code()}).",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         } catch (_: Exception) {
             // Si no hay red, no forzamos logout
@@ -241,3 +249,4 @@ private fun confirmLogout() {
         finish()
     }
 }
+

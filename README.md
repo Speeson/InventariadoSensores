@@ -113,11 +113,26 @@ Notas:
 ### Eventos (sensores simulados)
 - `GET /events?event_type&product_id&processed&limit&offset`
 - `POST /events` (requiere token)
+  - En Sprint 2, `POST /events` solo registra y encola; el worker procesa y genera el movimiento.
 
 ### Alertas de stock bajo
 - Job programado (Celery Beat): `scan_low_stock()` cada `LOW_STOCK_SCAN_MINUTES` (default 5).
 - `GET /alerts?status&product_id&location&date_from&date_to&limit&offset` (usuarios autenticados)
 - `POST /alerts/{id}/ack` (MANAGER/ADMIN)
+- Notificación por email (Mailtrap) al disparar alerta.
+
+### Umbrales de stock (thresholds)
+- CRUD completo:
+  - `GET /thresholds`
+  - `POST /thresholds`
+  - `PATCH /thresholds/{id}`
+  - `DELETE /thresholds/{id}`
+
+### Locations
+- `GET /locations` (lista de ubicaciones disponibles).
+
+### Reportes
+- Endpoints de reporte para top consumidos y turnover (por fecha/ubicación/límite).
 
 ### Android
 - Login/registro contra la API
@@ -125,6 +140,9 @@ Notas:
 - Escaneo con cámara (ML Kit)
 - Registro de movimiento desde barcode y ubicación
 - Pantallas de stocks/eventos (según implementación)
+- Pantalla de eventos con estado y cola offline
+- Pantalla de confirmación de escaneo (IN/OUT + cantidad/ubicación)
+- Pantalla de rotación con agregados por producto
 
 ---
 
@@ -282,6 +300,24 @@ Una historia se considera terminada cuando:
 - **Sprint 1:** productos/stocks CRUD, escaneo móvil, eventos básicos.
 - **Sprint 2:** consumidor de eventos, alertas, reportes.
 - **Sprint 3:** importación CSV, auditoría, optimizaciones.
+
+### Sprint 2 (implementado)
+
+Backend:
+- Procesamiento asíncrono de eventos con Redis + Celery (worker/beat).
+- Endpoint de eventos desacoplado: crea evento + cola, worker genera movimientos.
+- Estados de evento (PENDING/PROCESSED/FAILED), reintentos y last_error.
+- Idempotencia por idempotency_key / event_id.
+- Nuevos endpoints: locations, thresholds, alerts, reports.
+- Alertas de stock bajo con job periódico (Celery Beat) y notificación por email (Mailtrap).
+- Tests y ajustes de migraciones para nuevos modelos.
+
+Android:
+- Pantalla de eventos con estado, offline queue y reintentos.
+- Flujo de escaneo actualizado con pantalla de confirmación.
+- Pantalla de rotación (IN/OUT/stock agregados por producto).
+- Dropdown de locations en formularios (events/scan/movements/stock).
+- Mejoras de sesión (validación y feedback de errores).
 
 ---
 

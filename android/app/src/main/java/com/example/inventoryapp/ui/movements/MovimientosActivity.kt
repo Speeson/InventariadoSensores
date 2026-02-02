@@ -1,6 +1,7 @@
 package com.example.inventoryapp.ui.movements
 
 import android.os.Bundle
+import android.widget.ArrayAdapter
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.inventoryapp.data.local.OfflineQueue
@@ -36,6 +37,8 @@ class MovimientosActivity : AppCompatActivity() {
         binding.tvResult.text = ""
 
         binding.btnSendMovement.setOnClickListener { sendMovement() }
+
+        setupLocationDropdown()
     }
 
     override fun onSupportNavigateUp(): Boolean {
@@ -134,6 +137,26 @@ class MovimientosActivity : AppCompatActivity() {
                 snack.showError("❌ Error: ${e.message}")
             } finally {
                 binding.btnSendMovement.isEnabled = true
+            }
+        }
+    }
+
+    private fun setupLocationDropdown() {
+        lifecycleScope.launch {
+            try {
+                val res = NetworkModule.api.listLocations(limit = 200, offset = 0)
+                if (res.isSuccessful && res.body() != null) {
+                    val codes = res.body()!!.items.map { it.code }.distinct().sorted()
+                    val values = if (codes.contains("default")) codes else listOf("default") + codes
+                    val adapter = ArrayAdapter(this@MovimientosActivity, android.R.layout.simple_list_item_1, values)
+                    binding.etLocation.setAdapter(adapter)
+                    binding.etLocation.setOnClickListener { binding.etLocation.showDropDown() }
+                    binding.etLocation.setOnFocusChangeListener { _, hasFocus ->
+                        if (hasFocus) binding.etLocation.showDropDown()
+                    }
+                }
+            } catch (_: Exception) {
+                // Silent fallback to manual input.
             }
         }
     }
