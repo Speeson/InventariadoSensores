@@ -71,7 +71,7 @@ class EventsActivity : AppCompatActivity() {
         val typeRaw = binding.etEventType.text.toString().trim().uppercase()
         val productId = binding.etProductId.text.toString().trim().toIntOrNull()
         val delta = binding.etDelta.text.toString().trim().toIntOrNull()
-        val location = binding.etLocation.text.toString().trim().ifBlank { "default" }
+        val location = normalizeLocationInput(binding.etLocation.text.toString().trim()).ifBlank { "default" }
         val source = binding.etSource.text.toString().trim().ifBlank { "sensor_simulado" }
 
         val eventType = when (typeRaw) {
@@ -129,9 +129,10 @@ class EventsActivity : AppCompatActivity() {
             try {
                 val res = NetworkModule.api.listLocations(limit = 200, offset = 0)
                 if (res.isSuccessful && res.body() != null) {
-                    val codes = res.body()!!.items.map { it.code }.distinct().sorted()
-                    val values = if (codes.contains("default")) codes else listOf("default") + codes
-                    val adapter = ArrayAdapter(this@EventsActivity, android.R.layout.simple_list_item_1, values)
+                    val items = res.body()!!.items
+                    val values = items.map { "(${it.id}) ${it.code}" }.distinct().sorted()
+                    val allValues = if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
+                    val adapter = ArrayAdapter(this@EventsActivity, android.R.layout.simple_list_item_1, allValues)
                     binding.etLocation.setAdapter(adapter)
                     binding.etLocation.setOnClickListener { binding.etLocation.showDropDown() }
                     binding.etLocation.setOnFocusChangeListener { _, hasFocus ->
@@ -142,6 +143,14 @@ class EventsActivity : AppCompatActivity() {
                 // Silent fallback to manual input.
             }
         }
+    }
+
+    private fun normalizeLocationInput(raw: String): String {
+        val trimmed = raw.trim()
+        if (trimmed.startsWith("(") && trimmed.contains(") ")) {
+            return trimmed.substringAfter(") ").trim()
+        }
+        return trimmed
     }
 
     private fun loadEvents(withSnack: Boolean) {
