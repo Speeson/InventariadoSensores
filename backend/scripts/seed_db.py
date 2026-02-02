@@ -196,6 +196,46 @@ def run_seed():
                 "movement_source": Source.SCAN,
                 "location_id": locations["Cliente Demo"].id,
             },
+            {
+                "product_id": products[0].id,
+                "quantity": 12,
+                "user_id": pick_user(1),
+                "movement_type": MovementType.OUT,
+                "movement_source": Source.MANUAL,
+                "location_id": locations["Oficina Central"].id,
+            },
+            {
+                "product_id": products[1].id,
+                "quantity": 9,
+                "user_id": pick_user(2),
+                "movement_type": MovementType.OUT,
+                "movement_source": Source.SCAN,
+                "location_id": locations["Planta Norte"].id,
+            },
+            {
+                "product_id": products[2].id,
+                "quantity": 5,
+                "user_id": pick_user(0),
+                "movement_type": MovementType.IN,
+                "movement_source": Source.MANUAL,
+                "location_id": locations["Planta Sur"].id,
+            },
+            {
+                "product_id": products[3].id,
+                "quantity": 4,
+                "user_id": pick_user(1),
+                "movement_type": MovementType.OUT,
+                "movement_source": Source.SCAN,
+                "location_id": locations["Laboratorio I+D"].id,
+            },
+            {
+                "product_id": products[4].id,
+                "quantity": 2,
+                "user_id": pick_user(2),
+                "movement_type": MovementType.IN,
+                "movement_source": Source.SCAN,
+                "location_id": locations["Cliente Demo"].id,
+            },
         ]
         for movement in movements:
             get_or_create(Movement, **movement)
