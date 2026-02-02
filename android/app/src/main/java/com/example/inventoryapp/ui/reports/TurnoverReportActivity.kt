@@ -10,8 +10,8 @@ import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.databinding.ActivityTurnoverReportBinding
 import com.example.inventoryapp.ui.auth.LoginActivity
 import com.example.inventoryapp.ui.common.SendSnack
-import com.example.inventoryapp.ui.rotation.RotationAdapter
-import com.example.inventoryapp.ui.rotation.RotationRow
+import com.example.inventoryapp.ui.reports.TurnoverAdapter
+import com.example.inventoryapp.ui.reports.TurnoverRow
 import kotlinx.coroutines.launch
 
 class TurnoverReportActivity : AppCompatActivity() {
@@ -19,7 +19,7 @@ class TurnoverReportActivity : AppCompatActivity() {
     private lateinit var binding: ActivityTurnoverReportBinding
     private lateinit var session: SessionManager
     private lateinit var snack: SendSnack
-    private lateinit var adapter: RotationAdapter
+    private lateinit var adapter: TurnoverAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,7 +33,7 @@ class TurnoverReportActivity : AppCompatActivity() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         binding.toolbar.setNavigationOnClickListener { finish() }
 
-        adapter = RotationAdapter(emptyList())
+        adapter = TurnoverAdapter(emptyList())
         binding.rvTurnover.layoutManager = LinearLayoutManager(this)
         binding.rvTurnover.adapter = adapter
 
@@ -78,7 +78,7 @@ class TurnoverReportActivity : AppCompatActivity() {
                 }
 
                 val rows = res.body()!!.items.map { item ->
-                    RotationRow(
+                    TurnoverRow(
                         productId = item.productId,
                         sku = item.sku,
                         name = item.name,

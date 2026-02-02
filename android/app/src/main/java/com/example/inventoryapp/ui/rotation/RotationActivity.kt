@@ -7,6 +7,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.remote.NetworkModule
+import com.example.inventoryapp.data.remote.model.MovementTypeDto
 import com.example.inventoryapp.databinding.ActivityRotationBinding
 import com.example.inventoryapp.ui.auth.LoginActivity
 import com.example.inventoryapp.ui.common.SendSnack
@@ -76,36 +77,53 @@ class RotationActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                val reportRes = NetworkModule.api.getTurnoverReport(limit = 100, offset = 0)
+                val movRes = NetworkModule.api.listMovements(limit = 100, offset = 0)
+                val prodRes = NetworkModule.api.listProducts(limit = 100, offset = 0)
 
-                if (reportRes.code() == 401) {
+                if (movRes.code() == 401 || prodRes.code() == 401) {
                     session.clearToken()
                     goToLogin()
                     return@launch
                 }
 
-                if (reportRes.code() == 403) {
+                if (movRes.code() == 403 || prodRes.code() == 403) {
                     snack.showError("Permiso denegado. Permisos insuficientes.")
                     return@launch
                 }
 
-                if (!reportRes.isSuccessful || reportRes.body() == null) {
-                    snack.showError("Error reporte rotacion: HTTP ${reportRes.code()}")
+                if (!movRes.isSuccessful || movRes.body() == null) {
+                    snack.showError("Error movimientos: HTTP ${movRes.code()}")
+                    return@launch
+                }
+                if (!prodRes.isSuccessful || prodRes.body() == null) {
+                    snack.showError("Error productos: HTTP ${prodRes.code()}")
                     return@launch
                 }
 
-                val rows = reportRes.body()!!.items.map { item ->
+                val products = prodRes.body()!!.items.associateBy { it.id }
+                val movements = movRes.body()!!.items
+
+                // Agrupar por transfer_id (solo transferencias)
+                val grouped = movements
+                    .filter { !it.transferId.isNullOrBlank() }
+                    .groupBy { it.transferId!! }
+
+                val rows = grouped.values.mapNotNull { group ->
+                    val outMov = group.firstOrNull { it.movementType == MovementTypeDto.OUT }
+                    val inMov = group.firstOrNull { it.movementType == MovementTypeDto.IN }
+                    val base = outMov ?: inMov ?: return@mapNotNull null
+                    val product = products[base.productId]
+
                     RotationRow(
-                        productId = item.productId,
-                        sku = item.sku,
-                        name = item.name,
-                        outs = item.outs,
-                        stockInitial = item.stockInitial,
-                        stockFinal = item.stockFinal,
-                        stockAverage = item.stockAverage,
-                        turnover = item.turnover
+                        productId = base.productId,
+                        sku = product?.sku ?: "SKU-${base.productId}",
+                        name = product?.name ?: "Producto ${base.productId}",
+                        quantity = outMov?.quantity ?: inMov?.quantity ?: base.quantity,
+                        fromLocation = outMov?.location ?: "N/A",
+                        toLocation = inMov?.location ?: "N/A",
+                        createdAt = base.createdAt
                     )
-                }.sortedByDescending { it.turnover ?: -1.0 }
+                }.sortedByDescending { it.createdAt }
 
                 adapter.submit(rows)
                 if (withSnack) snack.showSuccess("OK: Rotacion cargada")

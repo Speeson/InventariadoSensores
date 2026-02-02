@@ -56,6 +56,7 @@ def create_movement(
     movement_type: MovementType,
     movement_source: Source,
     location_id: int | None = None,
+    transfer_id: str | None = None,
     commit: bool = True,
 ) -> Movement:
     movement = Movement(
@@ -65,6 +66,7 @@ def create_movement(
         movement_type=movement_type,
         movement_source=movement_source,
         location_id=location_id,
+        transfer_id=transfer_id,
     )
     db.add(movement)
 

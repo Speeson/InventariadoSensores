@@ -1,4 +1,5 @@
 from typing import Tuple
+import uuid
 
 from sqlalchemy.orm import Session
 
@@ -157,6 +158,8 @@ def transfer_stock(
     stock_repo.adjust_stock_quantity(db, from_stock, delta=-quantity, commit=False)
     stock_repo.adjust_stock_quantity(db, to_stock, delta=quantity, commit=False)
 
+    transfer_id = str(uuid.uuid4())
+
     out_movement = movement_repo.create_movement(
         db,
         product_id=product_id,
@@ -165,6 +168,7 @@ def transfer_stock(
         movement_type=MovementType.OUT,
         movement_source=source,
         location_id=from_location_id,
+        transfer_id=transfer_id,
         commit=False,
     )
     in_movement = movement_repo.create_movement(
@@ -175,6 +179,7 @@ def transfer_stock(
         movement_type=MovementType.IN,
         movement_source=source,
         location_id=to_location_id,
+        transfer_id=transfer_id,
         commit=False,
     )
 

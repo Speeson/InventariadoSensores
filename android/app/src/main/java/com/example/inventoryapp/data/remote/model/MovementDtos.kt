@@ -33,6 +33,7 @@ data class MovementResponseDto(
     val quantity: Int,
     @SerializedName("movement_type") val movementType: MovementTypeDto,
     @SerializedName("movement_source") val movementSource: MovementSourceDto,
+    @SerializedName("transfer_id") val transferId: String? = null,
     @SerializedName("user_id") val userId: Int?,
     @SerializedName("location_id") val locationId: Int? = null,
     val location: String? = null,

@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, DateTime, Enum, ForeignKey, func, Index
+from sqlalchemy import Integer, DateTime, Enum, ForeignKey, func, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 from datetime import datetime
@@ -15,6 +15,7 @@ class Movement(Base):
     location_rel = relationship("Location")
     movement_type: Mapped[MovementType] = mapped_column(Enum(MovementType), nullable=False)
     movement_source: Mapped[Source] = mapped_column(Enum(Source), nullable=False)
+    transfer_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -26,6 +27,7 @@ class Movement(Base):
         Index("ix_movements_user", "user_id"),
         Index("ix_movements_type", "movement_type"),
         Index("ix_movements_location", "location_id"),
+        Index("ix_movements_transfer", "transfer_id"),
         Index("ix_movements_created", "created_at"),
     )
     

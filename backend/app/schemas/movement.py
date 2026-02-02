@@ -18,6 +18,7 @@ class MovementResponse(BaseModel):
     quantity: int
     movement_type: MovementType
     movement_source: Source
+    transfer_id: str | None = None
     user_id: int | None
     location_id: int | None
     location: str | None  # devuelto a partir de la relación Location
