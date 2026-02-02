@@ -6,6 +6,7 @@ import com.google.gson.reflect.TypeToken
 
 enum class PendingType {
     EVENT_CREATE,
+    SCAN_EVENT,
     MOVEMENT_IN,
     MOVEMENT_OUT,
     MOVEMENT_ADJUST,

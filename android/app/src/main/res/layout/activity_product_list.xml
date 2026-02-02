@@ -56,10 +56,12 @@
             android:text="Nuevo producto"
             android:layout_marginBottom="12dp"/>
 
-        <ListView
-            android:id="@+id/lvProducts"
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvProducts"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingBottom="8dp" />
 
     </LinearLayout>
 

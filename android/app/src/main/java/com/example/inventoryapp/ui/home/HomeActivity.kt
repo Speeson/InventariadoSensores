@@ -16,7 +16,7 @@ import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.databinding.ActivityHomeBinding
 import com.example.inventoryapp.ui.auth.LoginActivity
 import com.example.inventoryapp.ui.events.EventsActivity
-import com.example.inventoryapp.ui.movements.MovimientosActivity
+import com.example.inventoryapp.ui.movements.MovementsMenuActivity
 import com.example.inventoryapp.ui.products.ProductListActivity
 import com.example.inventoryapp.ui.scan.ScanActivity
 import com.example.inventoryapp.ui.stock.StockActivity
@@ -68,7 +68,7 @@ class HomeActivity : AppCompatActivity() {
         }
 
         binding.btnMovements.setOnClickListener {
-            startActivity(Intent(this, MovimientosActivity::class.java))
+            startActivity(Intent(this, MovementsMenuActivity::class.java))
         }
 
         binding.btnEvents.setOnClickListener {

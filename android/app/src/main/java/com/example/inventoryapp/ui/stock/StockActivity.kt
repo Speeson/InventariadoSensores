@@ -5,6 +5,7 @@ import android.widget.ArrayAdapter
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.OfflineSyncer
 import com.example.inventoryapp.data.local.PendingType
@@ -25,6 +26,7 @@ class StockActivity : AppCompatActivity() {
 
     private val gson = Gson()
     private var items: List<StockResponseDto> = emptyList()
+    private lateinit var adapter: StockListAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,9 +43,9 @@ class StockActivity : AppCompatActivity() {
 
         setupLocationDropdown()
 
-        binding.lvStocks.setOnItemClickListener { _, _, position, _ ->
-            showEditDialog(items[position])
-        }
+        adapter = StockListAdapter { stock -> showEditDialog(stock) }
+        binding.rvStocks.layoutManager = LinearLayoutManager(this)
+        binding.rvStocks.adapter = adapter
     }
 
     override fun onResume() {
@@ -62,8 +64,7 @@ class StockActivity : AppCompatActivity() {
                 val res = NetworkModule.api.listStocks()
                 if (res.isSuccessful && res.body() != null) {
                     items = res.body()!!.items
-                    val text = items.map { "(${it.id}) prod=${it.productId} loc=${it.location} qty=${it.quantity}" }
-                    binding.lvStocks.adapter = ArrayAdapter(this@StockActivity, android.R.layout.simple_list_item_1, text)
+                    adapter.submit(items)
                 } else {
                     snack.showError("❌ Error ${res.code()}")
                 }

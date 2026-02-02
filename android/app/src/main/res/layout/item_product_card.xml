@@ -29,50 +29,33 @@
             android:layout_weight="1"
             android:orientation="vertical">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/tvEventTitle"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Evento #1"
-                    android:textStyle="bold" />
-
-                <ImageView
-                    android:id="@+id/ivEventPending"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:contentDescription="Pendiente"
-                    android:src="@android:drawable/ic_dialog_alert"
-                    android:tint="@android:color/holo_red_dark"
-                    android:visibility="gone" />
-            </LinearLayout>
-
             <TextView
-                android:id="@+id/tvEventMeta"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="SENSOR_IN | prod=1 | delta=2" />
-
-            <TextView
-                android:id="@+id/tvEventStatus"
+                android:id="@+id/tvName"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="PENDING"
                 android:textStyle="bold"
-                android:layout_marginTop="4dp" />
+                android:textSize="16sp" />
 
             <TextView
-                android:id="@+id/tvEventDate"
-                android:layout_width="match_parent"
+                android:id="@+id/tvSku"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="2026-02-01T12:00:00Z"
-                android:layout_marginTop="2dp" />
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/tvBarcode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/tvMeta"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="@android:color/white" />
         </LinearLayout>
+
     </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>

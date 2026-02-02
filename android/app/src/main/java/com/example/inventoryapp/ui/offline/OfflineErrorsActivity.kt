@@ -2,18 +2,20 @@ package com.example.inventoryapp.ui.offline
 
 import android.os.Bundle
 import android.text.format.DateFormat
-import android.widget.ArrayAdapter
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.FailedRequest
 import com.example.inventoryapp.databinding.ActivityOfflineErrorsBinding
+
 
 class OfflineErrorsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityOfflineErrorsBinding
     private lateinit var q: OfflineQueue
     private var failed: List<FailedRequest> = emptyList()
+    private lateinit var adapter: OfflineErrorsAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -21,6 +23,14 @@ class OfflineErrorsActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         q = OfflineQueue(this)
+
+        setSupportActionBar(binding.toolbar)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        binding.toolbar.setNavigationOnClickListener { finish() }
+
+        adapter = OfflineErrorsAdapter { index -> showFailedActions(index) }
+        binding.rvFailed.layoutManager = LinearLayoutManager(this)
+        binding.rvFailed.adapter = adapter
 
         binding.btnClearAll.setOnClickListener {
             val count = q.getFailed().size
@@ -37,9 +47,6 @@ class OfflineErrorsActivity : AppCompatActivity() {
                 .show()
         }
 
-        binding.lvFailed.setOnItemClickListener { _, _, position, _ ->
-            showFailedActions(position)
-        }
     }
 
     override fun onResume() {
@@ -50,14 +57,7 @@ class OfflineErrorsActivity : AppCompatActivity() {
     private fun refresh() {
         failed = q.getFailed()
         binding.tvCount.text = "${failed.size} errores"
-
-        val lines = failed.map { f ->
-            val whenStr = DateFormat.format("dd/MM HH:mm", f.failedAt).toString()
-            val codeStr = f.httpCode?.toString() ?: "-"
-            "[$whenStr] ${f.original.type} (HTTP $codeStr)\n${f.errorMessage}"
-        }
-
-        binding.lvFailed.adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, lines)
+        adapter.submit(failed)
     }
 
     private fun showFailedActions(index: Int) {

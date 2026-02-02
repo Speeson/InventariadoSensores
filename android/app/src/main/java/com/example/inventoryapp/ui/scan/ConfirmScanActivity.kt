@@ -6,6 +6,9 @@ import android.widget.ArrayAdapter
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.example.inventoryapp.data.local.OfflineQueue
+import com.example.inventoryapp.data.local.OfflineSyncer
+import com.example.inventoryapp.data.local.PendingType
 import com.example.inventoryapp.databinding.ActivityConfirmScanBinding
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.domain.model.Movement
@@ -13,6 +16,7 @@ import com.example.inventoryapp.domain.model.MovementType
 import com.example.inventoryapp.data.repository.remote.RemoteScanRepository
 import com.example.inventoryapp.ui.movements.ResultActivity
 import com.example.inventoryapp.ui.common.SendSnack
+import com.google.gson.Gson
 import kotlinx.coroutines.launch
 
 class ConfirmScanActivity : AppCompatActivity() {
@@ -21,6 +25,8 @@ class ConfirmScanActivity : AppCompatActivity() {
     private val repo = RemoteScanRepository()
     private var selectedType: MovementType = MovementType.OUT
     private var productExists: Boolean = true
+    private var isOfflineMode: Boolean = false
+    private val gson = Gson()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,6 +39,7 @@ class ConfirmScanActivity : AppCompatActivity() {
 
         val snack = SendSnack(binding.root)
         val barcode = intent.getStringExtra("barcode").orEmpty()
+        isOfflineMode = intent.getBooleanExtra("offline", false)
         binding.tvBarcode.text = "Barcode: $barcode"
 
         applyTypeSelection(MovementType.OUT)
@@ -41,24 +48,42 @@ class ConfirmScanActivity : AppCompatActivity() {
 
         setupLocationDropdown()
 
-        lifecycleScope.launch {
-            val res = NetworkModule.api.listProducts(barcode = barcode, limit = 1, offset = 0)
-            if (res.isSuccessful && res.body() != null && res.body()!!.items.isNotEmpty()) {
-                val p = res.body()!!.items.first()
-                binding.tvProductName.text = "${p.name} (SKU ${p.sku})"
-                productExists = true
-            } else {
-                binding.tvProductName.text = "Producto no encontrado"
-                binding.tvProductName.setTextColor(
-                    ContextCompat.getColor(this@ConfirmScanActivity, android.R.color.holo_red_dark)
-                )
-                productExists = false
-                snack.showError("Producto no encontrado")
+        if (isOfflineMode) {
+            binding.tvProductName.text = "Sin conexion: validacion pendiente"
+            binding.tvProductName.setTextColor(
+                ContextCompat.getColor(this@ConfirmScanActivity, android.R.color.holo_orange_dark)
+            )
+            productExists = true
+        } else {
+            lifecycleScope.launch {
+                try {
+                    val res = NetworkModule.api.listProducts(barcode = barcode, limit = 1, offset = 0)
+                    if (res.isSuccessful && res.body() != null && res.body()!!.items.isNotEmpty()) {
+                        val p = res.body()!!.items.first()
+                        binding.tvProductName.text = "${p.name} (SKU ${p.sku})"
+                        productExists = true
+                    } else {
+                        binding.tvProductName.text = "Producto no encontrado"
+                        binding.tvProductName.setTextColor(
+                            ContextCompat.getColor(this@ConfirmScanActivity, android.R.color.holo_red_dark)
+                        )
+                        productExists = false
+                        snack.showError("Producto no encontrado")
+                    }
+                } catch (_: Exception) {
+                    isOfflineMode = true
+                    binding.tvProductName.text = "Sin conexion: validacion pendiente"
+                    binding.tvProductName.setTextColor(
+                        ContextCompat.getColor(this@ConfirmScanActivity, android.R.color.holo_orange_dark)
+                    )
+                    productExists = true
+                    snack.showError("Sin conexion. Se enviara cuando vuelvas a estar online")
+                }
             }
         }
 
         binding.btnConfirm.setOnClickListener {
-            if (!productExists) {
+            if (!productExists && !isOfflineMode) {
                 snack.showError("Producto no encontrado")
                 return@setOnClickListener
             }
@@ -79,19 +104,61 @@ class ConfirmScanActivity : AppCompatActivity() {
 
             binding.btnConfirm.isEnabled = false
             lifecycleScope.launch {
-                val result = repo.sendFromBarcode(movement)
-                val i = Intent(this@ConfirmScanActivity, ResultActivity::class.java)
-                if (result.isSuccess) {
-                    i.putExtra("success", true)
-                    i.putExtra("msg", result.getOrNull() ?: "Evento OK")
-                } else {
-                    i.putExtra("success", false)
-                    i.putExtra("msg", result.exceptionOrNull()?.message ?: "Error")
+                try {
+                    if (isOfflineMode) {
+                        enqueueOffline(movement)
+                        val i = Intent(this@ConfirmScanActivity, ResultActivity::class.java)
+                        i.putExtra("success", true)
+                        i.putExtra("msg", "Guardado offline. Se enviara al reconectar")
+                        startActivity(i)
+                    } else {
+                        val result = repo.sendFromBarcode(movement)
+                        val i = Intent(this@ConfirmScanActivity, ResultActivity::class.java)
+                        if (result.isSuccess) {
+                            i.putExtra("success", true)
+                            i.putExtra("msg", result.getOrNull() ?: "Evento OK")
+                        } else {
+                            val error = result.exceptionOrNull()
+                            if (error is java.io.IOException) {
+                                enqueueOffline(movement)
+                                i.putExtra("success", true)
+                                i.putExtra("msg", "Guardado offline. Se enviara al reconectar")
+                            } else {
+                                i.putExtra("success", false)
+                                i.putExtra("msg", error?.message ?: "Error")
+                            }
+                        }
+                        startActivity(i)
+                    }
+                } catch (e: Exception) {
+                    if (e is java.io.IOException) {
+                        enqueueOffline(movement)
+                        val i = Intent(this@ConfirmScanActivity, ResultActivity::class.java)
+                        i.putExtra("success", true)
+                        i.putExtra("msg", "Guardado offline. Se enviara al reconectar")
+                        startActivity(i)
+                    } else {
+                        val i = Intent(this@ConfirmScanActivity, ResultActivity::class.java)
+                        i.putExtra("success", false)
+                        i.putExtra("msg", e.message ?: "Error")
+                        startActivity(i)
+                    }
+                } finally {
+                    binding.btnConfirm.isEnabled = true
                 }
-                startActivity(i)
-                binding.btnConfirm.isEnabled = true
             }
         }
+    }
+
+    private fun enqueueOffline(movement: Movement) {
+        val payload = OfflineSyncer.ScanEventPayload(
+            barcode = movement.barcode,
+            type = movement.type,
+            quantity = movement.quantity,
+            location = movement.location?.ifBlank { "default" } ?: "default",
+            source = "SCAN"
+        )
+        OfflineQueue(this).enqueue(PendingType.SCAN_EVENT, gson.toJson(payload))
     }
 
     private fun setupLocationDropdown() {

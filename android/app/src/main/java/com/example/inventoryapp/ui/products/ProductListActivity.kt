@@ -3,10 +3,10 @@ package com.example.inventoryapp.ui.products
 import android.content.Intent
 import android.os.Bundle
 import android.view.inputmethod.EditorInfo
-import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.model.ProductResponseDto
@@ -19,6 +19,7 @@ class ProductListActivity : AppCompatActivity() {
     private lateinit var binding: ActivityProductListBinding
     private lateinit var session: SessionManager
     private var products: List<ProductResponseDto> = emptyList()
+    private lateinit var adapter: ProductListAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,12 +36,13 @@ class ProductListActivity : AppCompatActivity() {
             startActivity(Intent(this, ProductDetailActivity::class.java))
         }
 
-        binding.lvProducts.setOnItemClickListener { _, _, position, _ ->
-            val p = products[position]
+        adapter = ProductListAdapter { p ->
             val i = Intent(this, ProductDetailActivity::class.java)
             i.putExtra("product_id", p.id)
             startActivity(i)
         }
+        binding.rvProducts.layoutManager = LinearLayoutManager(this)
+        binding.rvProducts.adapter = adapter
 
         binding.btnSearch.setOnClickListener { search() }
 
@@ -74,13 +76,14 @@ class ProductListActivity : AppCompatActivity() {
             return
         }
 
-        val maybeBarcode = q.all { it.isDigit() } && q.length >= 8
+        val isBarcode = q.all { it.isDigit() } && q.length >= 8
+        val looksLikeSku = !isBarcode && (q.contains("-") || (q.any { it.isLetter() } && q.any { it.isDigit() } && !q.contains(" ")))
 
-        loadProducts(
-            sku = if (!maybeBarcode) q else null,
-            name = q,
-            barcode = if (maybeBarcode) q else null
-        )
+        when {
+            isBarcode -> loadProducts(barcode = q)
+            looksLikeSku -> loadProducts(sku = q)
+            else -> loadProducts(name = q)
+        }
     }
 
     private fun loadProducts(
@@ -107,13 +110,7 @@ class ProductListActivity : AppCompatActivity() {
 
                 if (res.isSuccessful && res.body() != null) {
                     products = res.body()!!.items
-
-                    val itemsText = products.map { "(${it.id}) ${it.sku} - ${it.name}" }
-                    binding.lvProducts.adapter = ArrayAdapter(
-                        this@ProductListActivity,
-                        android.R.layout.simple_list_item_1,
-                        itemsText
-                    )
+                    adapter.submit(products)
 
                     if (products.isEmpty()) {
                         Toast.makeText(this@ProductListActivity, "Sin resultados", Toast.LENGTH_SHORT).show()

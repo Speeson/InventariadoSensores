@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
@@ -12,34 +11,27 @@
         android:layout_height="wrap_content"
         android:background="?attr/colorPrimary"
         android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
-        app:title="Errores offline"
-        app:titleTextColor="@android:color/white"
-        app:navigationIconTint="@android:color/white" />
+        app:title="Movimientos"
+        app:titleTextColor="@android:color/white" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="12dp">
-
-        <TextView
-            android:id="@+id/tvCount"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="0 errores"
-            android:paddingBottom="8dp" />
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvFailed"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
+        android:padding="20dp">
 
         <Button
-            android:id="@+id/btnClearAll"
+            android:id="@+id/btnGoList"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Borrar todos los errores"
-            android:layout_marginTop="10dp"/>
+            android:text="Ver listado de movimientos" />
+
+        <Button
+            android:id="@+id/btnGoCreate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Crear movimiento"
+            android:layout_marginTop="12dp" />
     </LinearLayout>
+
 </LinearLayout>

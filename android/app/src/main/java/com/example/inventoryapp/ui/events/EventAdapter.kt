@@ -27,7 +27,7 @@ class EventAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
         holder.tvTitle.text = "Evento #${item.id}"
-        holder.tvMeta.text = "${item.eventType} | prod=${item.productId} | Δ=${item.delta}"
+        holder.tvMeta.text = "${item.eventType} | prod=${item.productId} | delta=${item.delta}"
         val status = item.status
         holder.tvStatus.text = status
 
@@ -37,7 +37,9 @@ class EventAdapter(
             "ERROR" -> android.R.color.holo_red_dark
             else -> android.R.color.darker_gray
         }
-        holder.tvStatus.setTextColor(ContextCompat.getColor(holder.itemView.context, colorRes))
+        val color = ContextCompat.getColor(holder.itemView.context, colorRes)
+        holder.tvStatus.setTextColor(color)
+        holder.ivIcon.setColorFilter(color)
 
         holder.tvDate.text = item.createdAt
         holder.ivPending.visibility = if (item.isPending) View.VISIBLE else View.GONE
@@ -54,5 +56,6 @@ class EventAdapter(
         val tvStatus: TextView = view.findViewById(R.id.tvEventStatus)
         val tvDate: TextView = view.findViewById(R.id.tvEventDate)
         val ivPending: ImageView = view.findViewById(R.id.ivEventPending)
+        val ivIcon: ImageView = view.findViewById(R.id.ivIcon)
     }
 }

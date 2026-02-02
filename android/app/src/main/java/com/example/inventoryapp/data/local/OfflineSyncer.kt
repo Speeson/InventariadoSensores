@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.model.*
+import com.example.inventoryapp.domain.model.MovementType
 import com.google.gson.Gson
 import retrofit2.Response
 import java.io.IOException
@@ -120,6 +121,29 @@ object OfflineSyncer {
                 val dto = gson.fromJson(req.payloadJson, EventCreateDto::class.java)
                 NetworkModule.api.createEvent(dto)
             }
+            PendingType.SCAN_EVENT -> {
+                val payload = gson.fromJson(req.payloadJson, ScanEventPayload::class.java)
+                val prodRes = NetworkModule.api.listProducts(barcode = payload.barcode, limit = 1, offset = 0)
+                if (!prodRes.isSuccessful || prodRes.body() == null) {
+                    return SendResult.TransientFailure(prodRes.code(), prodRes.safeError())
+                }
+
+                val product = prodRes.body()!!.items.firstOrNull()
+                    ?: return SendResult.PermanentFailure(404, "Producto no existe: ${payload.barcode}")
+
+                val eventType = if (payload.type == MovementType.IN) EventTypeDto.SENSOR_IN else EventTypeDto.SENSOR_OUT
+                val eventRes = NetworkModule.api.createEvent(
+                    EventCreateDto(
+                        eventType = eventType,
+                        productId = product.id,
+                        delta = payload.quantity,
+                        source = payload.source,
+                        location = payload.location,
+                        idempotencyKey = payload.idempotencyKey
+                    )
+                )
+                eventRes
+            }
             PendingType.MOVEMENT_IN -> {
                 val dto = gson.fromJson(req.payloadJson, MovementOperationRequest::class.java)
                 NetworkModule.api.movementIn(dto)
@@ -185,4 +209,12 @@ object OfflineSyncer {
     data class ProductUpdatePayload(val productId: Int, val body: ProductUpdateDto)
     data class ProductDeletePayload(val productId: Int)
     data class StockUpdatePayload(val stockId: Int, val body: StockUpdateDto)
+    data class ScanEventPayload(
+        val barcode: String,
+        val type: MovementType,
+        val quantity: Int,
+        val location: String,
+        val source: String = "SCAN",
+        val idempotencyKey: String = java.util.UUID.randomUUID().toString()
+    )
 }

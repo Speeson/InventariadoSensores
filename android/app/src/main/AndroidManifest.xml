@@ -33,6 +33,8 @@
         <activity android:name=".ui.products.ProductDetailActivity" />
         <activity android:name=".ui.scan.ScanActivity" />
         <activity android:name=".ui.movements.MovimientosActivity" />
+        <activity android:name=".ui.movements.MovementsMenuActivity" />
+        <activity android:name=".ui.movements.MovementsListActivity" />
         <activity android:name=".ui.scan.ConfirmScanActivity" />
         <activity android:name=".ui.events.EventsActivity" />
         <activity android:name=".ui.rotation.RotationActivity" />

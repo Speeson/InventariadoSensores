@@ -191,23 +191,25 @@ class ScanActivity : AppCompatActivity() {
                 val found = res.isSuccessful && res.body() != null && res.body()!!.items.isNotEmpty()
                 if (found) {
                     hasNavigated = true
-                    openConfirm(barcode)
+                    openConfirm(barcode, false)
                 } else {
                     lastScannedCode = null
                     Toast.makeText(this@ScanActivity, "Producto no encontrado", Toast.LENGTH_LONG).show()
                 }
             } catch (_: Exception) {
                 lastScannedCode = null
-                Toast.makeText(this@ScanActivity, "No se pudo validar el producto", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@ScanActivity, "Sin conexion. Se enviara al reconectar", Toast.LENGTH_LONG).show()
+                openConfirm(barcode, true)
             } finally {
                 isValidating = false
             }
         }
     }
 
-    private fun openConfirm(barcode: String) {
+    private fun openConfirm(barcode: String, offline: Boolean) {
         val i = Intent(this, ConfirmScanActivity::class.java)
         i.putExtra("barcode", barcode)
+        i.putExtra("offline", offline)
         startActivity(i)
     }
 }
