@@ -150,6 +150,15 @@ interface InventoryApi {
         @Query("offset") offset: Int = 0
     ): Response<TurnoverResponseDto>
 
+    @GET("reports/top-consumed")
+    suspend fun getTopConsumedReport(
+        @Query("date_from") dateFrom: String? = null,
+        @Query("date_to") dateTo: String? = null,
+        @Query("location") location: String? = null,
+        @Query("limit") limit: Int = 10,
+        @Query("offset") offset: Int = 0
+    ): Response<TopConsumedResponseDto>
+
 
 
 

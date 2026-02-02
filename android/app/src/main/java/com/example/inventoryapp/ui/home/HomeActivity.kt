@@ -21,6 +21,7 @@ import com.example.inventoryapp.ui.products.ProductListActivity
 import com.example.inventoryapp.ui.scan.ScanActivity
 import com.example.inventoryapp.ui.stock.StockActivity
 import com.example.inventoryapp.ui.rotation.RotationActivity
+import com.example.inventoryapp.ui.reports.ReportsActivity
 import kotlinx.coroutines.launch
 import com.example.inventoryapp.ui.offline.OfflineErrorsActivity
 
@@ -114,6 +115,10 @@ class HomeActivity : AppCompatActivity() {
                     ).show()
                 }
             }
+        }
+
+        binding.btnReports.setOnClickListener {
+            startActivity(Intent(this, ReportsActivity::class.java))
         }
 
         binding.btnOfflineErrors.setOnClickListener {

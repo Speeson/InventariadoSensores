@@ -20,3 +20,17 @@ data class TurnoverResponseDto(
     val limit: Int,
     val offset: Int
 )
+
+data class TopConsumedItemDto(
+    @SerializedName("product_id") val productId: Int,
+    val sku: String,
+    val name: String,
+    @SerializedName("total_out") val totalOut: Int
+)
+
+data class TopConsumedResponseDto(
+    val items: List<TopConsumedItemDto>,
+    val total: Int,
+    val limit: Int,
+    val offset: Int
+)
