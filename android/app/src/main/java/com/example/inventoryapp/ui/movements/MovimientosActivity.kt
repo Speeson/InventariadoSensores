@@ -1,6 +1,7 @@
 package com.example.inventoryapp.ui.movements
 
 import android.os.Bundle
+import android.text.InputType
 import android.widget.ArrayAdapter
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -23,6 +24,7 @@ class MovimientosActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMovimientosBinding
     private lateinit var snack: SendSnack
     private val gson = Gson()
+    private var quantityHint: String = "Cantidad"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,6 +45,7 @@ class MovimientosActivity : AppCompatActivity() {
         setupMovementTypeDropdown()
         setupSourceDropdown()
         setupLocationDropdown()
+        setupQuantityFocusHint()
     }
 
     override fun onSupportNavigateUp(): Boolean {
@@ -54,9 +57,8 @@ class MovimientosActivity : AppCompatActivity() {
         val type = binding.etMovementType.text.toString().trim().uppercase()
         val productId = binding.etProductId.text.toString().trim().toIntOrNull()
         val quantity = binding.etQuantity.text.toString().trim().toIntOrNull()
-        val delta = binding.etDelta.text.toString().trim().toIntOrNull()
-        val location = binding.etLocation.text.toString().trim().ifBlank { "default" }
-        val toLocation = binding.etToLocation.text.toString().trim()
+        val location = normalizeLocationInput(binding.etLocation.text.toString().trim()).ifBlank { "default" }
+        val toLocation = normalizeLocationInput(binding.etToLocation.text.toString().trim())
         val sourceRaw = binding.etSource.text.toString().trim().uppercase()
 
         if (productId == null) { binding.etProductId.error = "Product ID requerido"; return }
@@ -72,7 +74,7 @@ class MovimientosActivity : AppCompatActivity() {
                 if (quantity == null || quantity <= 0) { binding.etQuantity.error = "Cantidad > 0"; return }
             }
             "ADJUST" -> {
-                if (delta == null || delta == 0) { binding.etDelta.error = "Delta != 0"; return }
+                if (quantity == null || quantity == 0) { binding.etQuantity.error = "Delta != 0"; return }
             }
             "TRANSFER" -> {
                 if (quantity == null || quantity <= 0) { binding.etQuantity.error = "Cantidad > 0"; return }
@@ -117,7 +119,7 @@ class MovimientosActivity : AppCompatActivity() {
                     }
 
                     "ADJUST" -> {
-                        val dto = MovementAdjustOperationRequest(productId, delta!!, location, source)
+                        val dto = MovementAdjustOperationRequest(productId, quantity!!, location, source)
                         val res = NetworkModule.api.movementAdjust(dto)
                         if (res.isSuccessful && res.body() != null) {
                             val body = res.body()!!
@@ -154,7 +156,7 @@ class MovimientosActivity : AppCompatActivity() {
                         OfflineQueue(this@MovimientosActivity).enqueue(PendingType.MOVEMENT_OUT, gson.toJson(dto))
                     }
                     "ADJUST" -> {
-                        val dto = MovementAdjustOperationRequest(productId, delta ?: 1, location, source)
+                        val dto = MovementAdjustOperationRequest(productId, quantity ?: 1, location, source)
                         OfflineQueue(this@MovimientosActivity).enqueue(PendingType.MOVEMENT_ADJUST, gson.toJson(dto))
                     }
                     "TRANSFER" -> {
@@ -179,17 +181,25 @@ class MovimientosActivity : AppCompatActivity() {
     }
 
     private fun setupMovementTypeDropdown() {
-        val values = listOf("IN", "OUT", "ADJUST", "TRANSFER")
+        val values = listOf("", "IN", "OUT", "ADJUST", "TRANSFER")
         val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, values)
         binding.etMovementType.setAdapter(adapter)
         updateTransferVisibility("")
+        updateQuantityForType("")
 
+        binding.etMovementType.setOnItemClickListener { _, _, position, _ ->
+            if (values[position].isBlank()) {
+                binding.etMovementType.setText("", false)
+            }
+        }
         binding.etMovementType.setOnClickListener { binding.etMovementType.showDropDown() }
         binding.etMovementType.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) binding.etMovementType.showDropDown()
         }
         binding.etMovementType.addTextChangedListener { text ->
-            updateTransferVisibility(text?.toString()?.trim()?.uppercase() ?: "")
+            val type = text?.toString()?.trim()?.uppercase() ?: ""
+            updateTransferVisibility(type)
+            updateQuantityForType(type)
         }
     }
 
@@ -198,11 +208,38 @@ class MovimientosActivity : AppCompatActivity() {
             if (type == "TRANSFER") android.view.View.VISIBLE else android.view.View.GONE
     }
 
+    private fun updateQuantityForType(type: String) {
+        if (type == "ADJUST") {
+            quantityHint = "Delta"
+            binding.etQuantity.hint = quantityHint
+            binding.etQuantity.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED
+        } else {
+            quantityHint = "Cantidad"
+            binding.etQuantity.hint = quantityHint
+            binding.etQuantity.inputType = InputType.TYPE_CLASS_NUMBER
+        }
+    }
+
+    private fun setupQuantityFocusHint() {
+        binding.etQuantity.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                binding.etQuantity.hint = ""
+            } else if (binding.etQuantity.text.isNullOrBlank()) {
+                binding.etQuantity.hint = quantityHint
+            }
+        }
+    }
+
     private fun setupSourceDropdown() {
-        val values = listOf("MANUAL", "SCAN")
+        val values = listOf("", "MANUAL", "SCAN")
         val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, values)
         binding.etSource.setAdapter(adapter)
 
+        binding.etSource.setOnItemClickListener { _, _, position, _ ->
+            if (values[position].isBlank()) {
+                binding.etSource.setText("", false)
+            }
+        }
         binding.etSource.setOnClickListener { binding.etSource.showDropDown() }
         binding.etSource.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) binding.etSource.showDropDown()
@@ -214,9 +251,10 @@ class MovimientosActivity : AppCompatActivity() {
             try {
                 val res = NetworkModule.api.listLocations(limit = 200, offset = 0)
                 if (res.isSuccessful && res.body() != null) {
-                    val codes = res.body()!!.items.map { it.code }.distinct().sorted()
-                    val values = if (codes.contains("default")) codes else listOf("default") + codes
-                    val adapter = ArrayAdapter(this@MovimientosActivity, android.R.layout.simple_list_item_1, values)
+                    val items = res.body()!!.items
+                    val values = items.map { "(${it.id}) ${it.code}" }.distinct().sorted()
+                    val allValues = if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
+                    val adapter = ArrayAdapter(this@MovimientosActivity, android.R.layout.simple_list_item_1, allValues)
                     binding.etLocation.setAdapter(adapter)
                     binding.etToLocation.setAdapter(adapter)
                     binding.etLocation.setOnClickListener { binding.etLocation.showDropDown() }
@@ -232,5 +270,13 @@ class MovimientosActivity : AppCompatActivity() {
                 // Silent fallback to manual input.
             }
         }
+    }
+
+    private fun normalizeLocationInput(raw: String): String {
+        val trimmed = raw.trim()
+        if (trimmed.startsWith("(") && trimmed.contains(") ")) {
+            return trimmed.substringAfter(") ").trim()
+        }
+        return trimmed
     }
 }
