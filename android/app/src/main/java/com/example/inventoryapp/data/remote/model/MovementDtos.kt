@@ -19,6 +19,14 @@ data class MovementAdjustOperationRequest(
     @SerializedName("movement_source") val movementSource: MovementSourceDto
 )
 
+data class MovementTransferOperationRequest(
+    @SerializedName("product_id") val productId: Int,
+    val quantity: Int,
+    @SerializedName("from_location") val fromLocation: String,
+    @SerializedName("to_location") val toLocation: String,
+    @SerializedName("movement_source") val movementSource: MovementSourceDto
+)
+
 data class MovementResponseDto(
     val id: Int,
     @SerializedName("product_id") val productId: Int,
@@ -34,6 +42,13 @@ data class MovementResponseDto(
 data class MovementWithStockResponseDto(
     val stock: StockResponseDto,
     val movement: MovementResponseDto
+)
+
+data class MovementTransferResponseDto(
+    @SerializedName("from_stock") val fromStock: StockResponseDto,
+    @SerializedName("to_stock") val toStock: StockResponseDto,
+    @SerializedName("out_movement") val outMovement: MovementResponseDto,
+    @SerializedName("in_movement") val inMovement: MovementResponseDto
 )
 
 data class MovementListResponseDto(

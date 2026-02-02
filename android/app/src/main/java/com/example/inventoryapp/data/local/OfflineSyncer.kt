@@ -132,6 +132,10 @@ object OfflineSyncer {
                 val dto = gson.fromJson(req.payloadJson, MovementAdjustOperationRequest::class.java)
                 NetworkModule.api.movementAdjust(dto)
             }
+            PendingType.MOVEMENT_TRANSFER -> {
+                val dto = gson.fromJson(req.payloadJson, MovementTransferOperationRequest::class.java)
+                NetworkModule.api.movementTransfer(dto)
+            }
             PendingType.PRODUCT_CREATE -> {
                 val dto = gson.fromJson(req.payloadJson, ProductCreateDto::class.java)
                 NetworkModule.api.createProduct(dto)

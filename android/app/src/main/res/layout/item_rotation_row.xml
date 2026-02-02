@@ -16,13 +16,13 @@
         android:id="@+id/tvRotationMeta"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="IN=0 | OUT=0 | STOCK=0" />
+        android:text="OUT=0 | AVG=0.00 | TURN=0.00" />
 
     <TextView
         android:id="@+id/tvRotationId"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="ID 1"
+        android:text="ID 1 | INIT=0.00 | FINAL=0.00"
         android:layout_marginTop="2dp" />
 
 </LinearLayout>

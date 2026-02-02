@@ -75,7 +75,45 @@ class HomeActivity : AppCompatActivity() {
         }
 
         binding.btnRotation.setOnClickListener {
-            startActivity(Intent(this, RotationActivity::class.java))
+            lifecycleScope.launch {
+                try {
+                    val res = NetworkModule.api.me()
+                    if (res.code() == 401) {
+                        Toast.makeText(
+                            this@HomeActivity,
+                            "Sesion caducada. Inicia sesion de nuevo.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        session.clearToken()
+                        goToLogin()
+                        return@launch
+                    }
+                    if (res.isSuccessful && res.body() != null) {
+                        val role = res.body()!!.role
+                        if (role == "MANAGER" || role == "ADMIN") {
+                            startActivity(Intent(this@HomeActivity, RotationActivity::class.java))
+                        } else {
+                            Toast.makeText(
+                                this@HomeActivity,
+                                "Permiso denegado. Permisos insuficientes.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    } else {
+                        Toast.makeText(
+                            this@HomeActivity,
+                            "No se pudo validar permisos (${res.code()}).",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(
+                        this@HomeActivity,
+                        "Error de conexión: ${e.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
         }
 
         binding.btnOfflineErrors.setOnClickListener {

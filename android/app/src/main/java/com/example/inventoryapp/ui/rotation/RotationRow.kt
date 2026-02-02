@@ -4,7 +4,9 @@ data class RotationRow(
     val productId: Int,
     val sku: String,
     val name: String,
-    val totalIn: Int,
-    val totalOut: Int,
-    val stock: Int
+    val outs: Int,
+    val stockInitial: Double,
+    val stockFinal: Double,
+    val stockAverage: Double,
+    val turnover: Double?
 )

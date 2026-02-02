@@ -68,6 +68,9 @@ interface InventoryApi {
     @POST("movements/adjust")
     suspend fun movementAdjust(@Body body: MovementAdjustOperationRequest): retrofit2.Response<MovementWithStockResponseDto>
 
+    @POST("movements/transfer")
+    suspend fun movementTransfer(@Body body: MovementTransferOperationRequest): retrofit2.Response<MovementTransferResponseDto>
+
     @GET("movements/")
     suspend fun listMovements(
         @Query("product_id") productId: Int? = null,
@@ -137,6 +140,15 @@ interface InventoryApi {
 
     @POST("events/")
     suspend fun createEvent(@Body body: EventCreateDto): retrofit2.Response<EventResponseDto>
+
+    @GET("reports/turnover")
+    suspend fun getTurnoverReport(
+        @Query("date_from") dateFrom: String? = null,
+        @Query("date_to") dateTo: String? = null,
+        @Query("location") location: String? = null,
+        @Query("limit") limit: Int = 100,
+        @Query("offset") offset: Int = 0
+    ): Response<TurnoverResponseDto>
 
 
 

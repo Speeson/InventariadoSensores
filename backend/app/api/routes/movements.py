@@ -35,9 +35,24 @@ class MovementAdjustOperation(BaseModel):
     movement_source: Source
 
 
+class MovementTransferOperation(BaseModel):
+    product_id: int
+    quantity: int = Field(..., gt=0)
+    from_location: str = Field(..., min_length=1, max_length=100)
+    to_location: str = Field(..., min_length=1, max_length=100)
+    movement_source: Source
+
+
 class MovementWithStockResponse(BaseModel):
     stock: StockResponse
     movement: MovementResponse
+
+
+class MovementTransferResponse(BaseModel):
+    from_stock: StockResponse
+    to_stock: StockResponse
+    out_movement: MovementResponse
+    in_movement: MovementResponse
 
 
 router = APIRouter(prefix="/movements", tags=["movements"])
@@ -140,5 +155,35 @@ def movement_adjust(
             source=payload.movement_source,
         )
         return MovementWithStockResponse(stock=stock, movement=movement)
+    except inventory_service.InventoryError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post(
+    "/transfer",
+    response_model=MovementTransferResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def movement_transfer(
+    payload: MovementTransferOperation,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value)),
+):
+    try:
+        from_stock, to_stock, out_movement, in_movement = inventory_service.transfer_stock(
+            db,
+            product_id=payload.product_id,
+            quantity=payload.quantity,
+            user_id=user.id,
+            from_location=payload.from_location,
+            to_location=payload.to_location,
+            source=payload.movement_source,
+        )
+        return MovementTransferResponse(
+            from_stock=from_stock,
+            to_stock=to_stock,
+            out_movement=out_movement,
+            in_movement=in_movement,
+        )
     except inventory_service.InventoryError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

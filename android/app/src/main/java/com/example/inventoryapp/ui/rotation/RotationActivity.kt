@@ -7,7 +7,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.remote.NetworkModule
-import com.example.inventoryapp.data.remote.model.MovementTypeDto
 import com.example.inventoryapp.databinding.ActivityRotationBinding
 import com.example.inventoryapp.ui.auth.LoginActivity
 import com.example.inventoryapp.ui.common.SendSnack
@@ -41,7 +40,35 @@ class RotationActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        loadRotation(withSnack = false)
+        ensureRotationAccessThenLoad()
+    }
+
+    private fun ensureRotationAccessThenLoad() {
+        lifecycleScope.launch {
+            try {
+                val res = NetworkModule.api.me()
+                if (res.code() == 401) {
+                    session.clearToken()
+                    goToLogin()
+                    return@launch
+                }
+                if (res.isSuccessful && res.body() != null) {
+                    val role = res.body()!!.role
+                    if (role == "MANAGER" || role == "ADMIN") {
+                        loadRotation(withSnack = false)
+                    } else {
+                        snack.showError("Permiso denegado. Permisos insuficientes.")
+                        finish()
+                    }
+                } else {
+                    snack.showError("No se pudo validar permisos (${res.code()}).")
+                    finish()
+                }
+            } catch (e: Exception) {
+                snack.showError("Error de conexión: ${e.message}")
+                finish()
+            }
+        }
     }
 
     private fun loadRotation(withSnack: Boolean) {
@@ -49,67 +76,36 @@ class RotationActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                val movRes = NetworkModule.api.listMovements(limit = 200, offset = 0)
-                val prodRes = NetworkModule.api.listProducts(limit = 200, offset = 0)
-                val stockRes = NetworkModule.api.listStocks(limit = 200, offset = 0)
+                val reportRes = NetworkModule.api.getTurnoverReport(limit = 100, offset = 0)
 
-                if (movRes.code() == 401 || prodRes.code() == 401 || stockRes.code() == 401) {
+                if (reportRes.code() == 401) {
                     session.clearToken()
                     goToLogin()
                     return@launch
                 }
 
-                if (!movRes.isSuccessful || movRes.body() == null) {
-                    snack.showError("Error movimientos: HTTP ${movRes.code()}")
-                    return@launch
-                }
-                if (!prodRes.isSuccessful || prodRes.body() == null) {
-                    snack.showError("Error productos: HTTP ${prodRes.code()}")
-                    return@launch
-                }
-                if (!stockRes.isSuccessful || stockRes.body() == null) {
-                    snack.showError("Error stock: HTTP ${stockRes.code()}")
+                if (reportRes.code() == 403) {
+                    snack.showError("Permiso denegado. Permisos insuficientes.")
                     return@launch
                 }
 
-                val products = prodRes.body()!!.items.associateBy { it.id }
-                val movements = movRes.body()!!.items
-                val stocks = stockRes.body()!!.items
-
-                val inMap = mutableMapOf<Int, Int>()
-                val outMap = mutableMapOf<Int, Int>()
-                for (m in movements) {
-                    val current = if (m.movementType == MovementTypeDto.IN) {
-                        inMap.getOrDefault(m.productId, 0) + m.quantity
-                    } else if (m.movementType == MovementTypeDto.OUT) {
-                        outMap.getOrDefault(m.productId, 0) + m.quantity
-                    } else {
-                        continue
-                    }
-                    if (m.movementType == MovementTypeDto.IN) {
-                        inMap[m.productId] = current
-                    } else if (m.movementType == MovementTypeDto.OUT) {
-                        outMap[m.productId] = current
-                    }
+                if (!reportRes.isSuccessful || reportRes.body() == null) {
+                    snack.showError("Error reporte rotacion: HTTP ${reportRes.code()}")
+                    return@launch
                 }
 
-                val stockMap = mutableMapOf<Int, Int>()
-                for (s in stocks) {
-                    stockMap[s.productId] = stockMap.getOrDefault(s.productId, 0) + s.quantity
-                }
-
-                val productIds = (inMap.keys + outMap.keys + stockMap.keys).toSet()
-                val rows = productIds.map { id ->
-                    val p = products[id]
+                val rows = reportRes.body()!!.items.map { item ->
                     RotationRow(
-                        productId = id,
-                        sku = p?.sku ?: "SKU-$id",
-                        name = p?.name ?: "Producto $id",
-                        totalIn = inMap.getOrDefault(id, 0),
-                        totalOut = outMap.getOrDefault(id, 0),
-                        stock = stockMap.getOrDefault(id, 0)
+                        productId = item.productId,
+                        sku = item.sku,
+                        name = item.name,
+                        outs = item.outs,
+                        stockInitial = item.stockInitial,
+                        stockFinal = item.stockFinal,
+                        stockAverage = item.stockAverage,
+                        turnover = item.turnover
                     )
-                }.sortedByDescending { it.totalOut }
+                }.sortedByDescending { it.turnover ?: -1.0 }
 
                 adapter.submit(rows)
                 if (withSnack) snack.showSuccess("OK: Rotacion cargada")

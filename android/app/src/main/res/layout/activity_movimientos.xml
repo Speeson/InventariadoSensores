@@ -32,14 +32,35 @@
                 android:layout_marginBottom="12dp"
                 app:boxBackgroundMode="outline">
 
-                <com.google.android.material.textfield.TextInputEditText
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/etMovementType"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Tipo (IN / OUT / ADJUST)"
+                    android:hint="Tipo"
                     android:textColorHint="?attr/colorOnSurface"
                     android:inputType="text"
-                    android:text="IN" />
+                    android:minHeight="56dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Source -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:boxBackgroundMode="outline">
+
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/etSource"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Source"
+                    android:textColorHint="?attr/colorOnSurface"
+                    android:inputType="text"
+                    android:minHeight="56dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <!-- Product ID -->
@@ -55,10 +76,12 @@
                     android:layout_height="wrap_content"
                     android:hint="Product ID"
                     android:textColorHint="?attr/colorOnSurface"
-                    android:inputType="number" />
+                    android:inputType="number"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Cantidad (para IN/OUT) -->
+            <!-- Cantidad (para IN/OUT/TRANSFER) -->
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -69,9 +92,11 @@
                     android:id="@+id/etQuantity"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Cantidad (para IN/OUT)"
+                    android:hint="Cantidad"
                     android:textColorHint="?attr/colorOnSurface"
-                    android:inputType="number" />
+                    android:inputType="number"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <!-- Delta (para ADJUST) -->
@@ -87,7 +112,9 @@
                     android:layout_height="wrap_content"
                     android:hint="Delta (para ADJUST, puede ser negativo)"
                     android:textColorHint="?attr/colorOnSurface"
-                    android:inputType="numberSigned" />
+                    android:inputType="numberSigned"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <!-- Location -->
@@ -101,27 +128,33 @@
                     android:id="@+id/etLocation"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="   Ubicación"
+                    android:hint="Ubicacion"
                     android:textColorHint="?attr/colorOnSurface"
                     android:inputType="text"
-                    android:minHeight="56dp" />
+                    android:minHeight="56dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Source -->
+            <!-- Location destino (TRANSFER) -->
             <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilToLocation"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
+                android:layout_marginBottom="12dp"
+                android:visibility="gone"
                 app:boxBackgroundMode="outline">
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etSource"
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/etToLocation"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Source (SCAN / MANUAL)"
+                    android:hint="Ubicacion destino"
                     android:textColorHint="?attr/colorOnSurface"
                     android:inputType="text"
-                    android:text="MANUAL" />
+                    android:minHeight="56dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <Button
