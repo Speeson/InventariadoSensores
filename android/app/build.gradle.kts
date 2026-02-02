@@ -15,6 +15,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Local dev host for physical devices (Wi-Fi/LAN)
+        buildConfigField("String", "LOCAL_DEV_HOST", "\"192.168.1.51\"")
     }
 
     buildTypes {
@@ -29,6 +32,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8

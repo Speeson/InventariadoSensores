@@ -23,7 +23,7 @@ data class ProductListResponseDto(
 data class ProductCreateDto(
     val sku: String,
     val name: String,
-    val barcode: String?,
+    val barcode: String,
     @SerializedName("category_id") val categoryId: Int,
     val active: Boolean? = true
 )

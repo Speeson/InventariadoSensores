@@ -37,10 +37,10 @@ def run_seed():
 
         categories = []
         for name in [
-            "Sensores IoT", "Gateways", "Actuadores", "Energia", "Accesorios",
-            "Redes", "Controladores", "Monitoreo", "Mantenimiento", "Calibracion",
-            "Seguridad", "Climatizacion", "Iluminacion", "Agua y Caudal", "Vibracion",
-            "GPS y Localizacion", "Baterias", "Antenas", "Montaje", "Herramientas",
+            "Procesadores", "Placas base", "Memoria RAM", "Almacenamiento", "Tarjetas graficas",
+            "Fuentes de alimentacion", "Cajas y chasis", "Refrigeracion", "Perifericos", "Redes",
+            "Audio", "Monitores", "Cables y adaptadores", "Sistemas operativos", "Software",
+            "Herramientas", "Componentes portatiles", "Servidores", "Accesorios", "Limpieza y mantenimiento",
         ]:
             category, _ = get_or_create(Category, name=name)
             categories.append(category)
@@ -70,7 +70,12 @@ def run_seed():
             "Planta Norte",
             "Planta Sur",
             "Laboratorio I+D",
-            "Cliente Demo",
+            "Almacen A",
+            "Almacen B",
+            "Almacen C",
+            "Sala Pruebas",
+            "Taller",
+            "Recepcion",
         ]
         locations = {code: location_repo.get_or_create(db, code) for code in loc_codes}
         db.commit()
@@ -78,11 +83,26 @@ def run_seed():
         category_by_name = {category.name: category for category in categories}
         products = []
         for sku, name, barcode, category_name in [
-            ("S-TH-100", "Sensor temp/humedad LoRa", "100001", "Sensores IoT"),
-            ("S-CO2-200", "Sensor CO2 Zigbee", "100002", "Sensores IoT"),
-            ("GW-LORA-01", "Gateway LoRaWAN", "200001", "Gateways"),
-            ("ACT-RELE-01", "Actuador rele DIN", "300001", "Actuadores"),
-            ("PWR-UPS-01", "UPS 12V para nodo IoT", "400001", "Energia"),
+            ("CPU-R5-5600", "Procesador AMD Ryzen 5 5600", "8403951724081", "Procesadores"),
+            ("CPU-I5-12400", "Procesador Intel Core i5-12400", "8406179042356", "Procesadores"),
+            ("MB-B550-ATX", "Placa base B550 ATX", "8402819467532", "Placas base"),
+            ("MB-B760-MATX", "Placa base B760 mATX", "8407395281460", "Placas base"),
+            ("RAM-16-3200", "Memoria RAM 16GB DDR4 3200", "8404928571634", "Memoria RAM"),
+            ("RAM-32-3600", "Memoria RAM 32GB DDR4 3600", "8401659078423", "Memoria RAM"),
+            ("SSD-1TB-NVME", "SSD NVMe 1TB", "8408735204197", "Almacenamiento"),
+            ("HDD-2TB-7200", "HDD 2TB 7200rpm", "8402589043618", "Almacenamiento"),
+            ("GPU-RTX-4060", "Tarjeta grafica RTX 4060", "8406903175249", "Tarjetas graficas"),
+            ("GPU-RX-7600", "Tarjeta grafica RX 7600", "8403146892057", "Tarjetas graficas"),
+            ("PSU-650W-80P", "Fuente alimentacion 650W 80Plus", "8409051736428", "Fuentes de alimentacion"),
+            ("CASE-MID-ATX", "Caja ATX mid tower", "8404716298053", "Cajas y chasis"),
+            ("COOL-AIR-120", "Ventilador 120mm PWM", "8401275948306", "Refrigeracion"),
+            ("COOL-AIO-240", "Refrigeracion liquida 240mm", "8405620817941", "Refrigeracion"),
+            ("KBD-MECH-01", "Teclado mecanico USB", "8403987612540", "Perifericos"),
+            ("MSE-ERG-01", "Raton ergonomico", "8407462158039", "Perifericos"),
+            ("NIC-PCI-1G", "Tarjeta red PCIe 1Gb", "8402349075162", "Redes"),
+            ("MON-27-IPS", "Monitor 27\" IPS 144Hz", "8408196734255", "Monitores"),
+            ("CAB-USB-C", "Cable USB-C 1m", "8405063218974", "Cables y adaptadores"),
+            ("TOOL-PS-SET", "Kit destornilladores precision", "8406739502186", "Herramientas"),
         ]:
             product, _ = get_or_create(
                 Product,
@@ -102,7 +122,12 @@ def run_seed():
             (products[1], 80, "Planta Norte"),
             (products[2], 15, "Planta Sur"),
             (products[3], 40, "Laboratorio I+D"),
-            (products[4], 25, "Cliente Demo"),
+            (products[4], 25, "Almacen A"),
+            (products[5], 18, "Almacen B"),
+            (products[6], 22, "Almacen C"),
+            (products[7], 12, "Sala Pruebas"),
+            (products[8], 30, "Taller"),
+            (products[9], 9, "Recepcion"),
         ]:
             location_obj = locations[location]
             get_or_create(
@@ -132,7 +157,7 @@ def run_seed():
             (EventType.SENSOR_IN, products[1], 8, Source.SCAN, "evt-1002", "Planta Norte"),
             (EventType.SENSOR_OUT, products[2], 2, Source.MANUAL, "evt-1003", "Planta Sur"),
             (EventType.SENSOR_IN, products[3], 5, Source.MANUAL, "evt-1004", "Laboratorio I+D"),
-            (EventType.SENSOR_OUT, products[4], 1, Source.SCAN, "evt-1005", "Cliente Demo"),
+            (EventType.SENSOR_OUT, products[4], 1, Source.SCAN, "evt-1005", "Almacen A"),
         ]:
             loc_obj = locations[loc]
             get_or_create(
@@ -194,7 +219,7 @@ def run_seed():
                 "user_id": pick_user(1),
                 "movement_type": MovementType.OUT,
                 "movement_source": Source.SCAN,
-                "location_id": locations["Cliente Demo"].id,
+                "location_id": locations["Almacen A"].id,
             },
             {
                 "product_id": products[0].id,
@@ -234,7 +259,7 @@ def run_seed():
                 "user_id": pick_user(2),
                 "movement_type": MovementType.IN,
                 "movement_source": Source.SCAN,
-                "location_id": locations["Cliente Demo"].id,
+                "location_id": locations["Almacen A"].id,
             },
             {
                 "product_id": products[0].id,

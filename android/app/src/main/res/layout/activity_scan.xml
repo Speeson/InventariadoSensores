@@ -39,6 +39,14 @@
                 android:text="Activar escaner"
                 android:layout_marginBottom="8dp" />
 
+            <Button
+                android:id="@+id/btnCloseScanner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Cerrar escaner"
+                android:visibility="gone"
+                android:layout_marginBottom="8dp" />
+
             <androidx.camera.view.PreviewView
                 android:id="@+id/previewView"
                 android:layout_width="match_parent"

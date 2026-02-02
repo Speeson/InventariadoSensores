@@ -83,11 +83,17 @@ class ProductDetailActivity : AppCompatActivity() {
     private fun save() {
         val sku = binding.etSku.text.toString().trim()
         val name = binding.etName.text.toString().trim()
-        val barcode = binding.etBarcode.text.toString().trim().ifBlank { null }
+        val rawBarcode = binding.etBarcode.text.toString().trim()
+        val barcode = rawBarcode.ifBlank { null }
         val categoryId = binding.etCategoryId.text.toString().trim().toIntOrNull()
 
         if (productId == null && sku.isBlank()) { binding.etSku.error = "SKU requerido"; return }
         if (name.isBlank()) { binding.etName.error = "Nombre requerido"; return }
+        if (productId == null && rawBarcode.isBlank()) { binding.etBarcode.error = "Barcode requerido"; return }
+        if (rawBarcode.isNotBlank() && !rawBarcode.matches(Regex("^\\d{13}$"))) {
+            binding.etBarcode.error = "Barcode debe tener 13 digitos"
+            return
+        }
         if (categoryId == null) { binding.etCategoryId.error = "Category ID requerido"; return }
 
         binding.btnSave.isEnabled = false
@@ -96,7 +102,7 @@ class ProductDetailActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 if (productId == null) {
-                    val dto = ProductCreateDto(sku = sku, name = name, barcode = barcode, categoryId = categoryId, active = true)
+                    val dto = ProductCreateDto(sku = sku, name = name, barcode = rawBarcode, categoryId = categoryId, active = true)
                     val res = NetworkModule.api.createProduct(dto)
 
                     if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
@@ -127,7 +133,7 @@ class ProductDetailActivity : AppCompatActivity() {
             } catch (e: IOException) {
                 // Encolar create o update
                 if (productId == null) {
-                    val dto = ProductCreateDto(sku = sku, name = name, barcode = barcode, categoryId = categoryId, active = true)
+                    val dto = ProductCreateDto(sku = sku, name = name, barcode = rawBarcode, categoryId = categoryId, active = true)
                     OfflineQueue(this@ProductDetailActivity).enqueue(PendingType.PRODUCT_CREATE, gson.toJson(dto))
                     snack.showQueuedOffline("📦 Sin red. Producto guardado offline ✅")
                 } else {

@@ -9,11 +9,11 @@ class ProductBase(BaseModel):
     active: bool | None = True  # opcional en create, en update puedes sobrescribir
 
 class ProductCreate(ProductBase):
-    pass
+    barcode: str = Field(..., min_length=13, max_length=13, pattern=r"^\d{13}$")
 
 class ProductUpdate(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=100)
-    barcode: str | None = Field(None, min_length=1, max_length=100)
+    barcode: str | None = Field(None, min_length=13, max_length=13, pattern=r"^\d{13}$")
     category_id: int | None = None
     active: bool | None = None
 
