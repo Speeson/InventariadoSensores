@@ -3,17 +3,18 @@ package com.example.inventoryapp.ui.events
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.example.inventoryapp.R
-import com.example.inventoryapp.data.remote.model.EventResponseDto
 
 class EventAdapter(
-    private var items: List<EventResponseDto>
+    private var items: List<EventRowUi>,
+    private val onPendingClick: (EventRowUi) -> Unit
 ) : RecyclerView.Adapter<EventAdapter.ViewHolder>() {
 
-    fun submit(list: List<EventResponseDto>) {
+    fun submit(list: List<EventRowUi>) {
         items = list
         notifyDataSetChanged()
     }
@@ -27,8 +28,7 @@ class EventAdapter(
         val item = items[position]
         holder.tvTitle.text = "Evento #${item.id}"
         holder.tvMeta.text = "${item.eventType} | prod=${item.productId} | Δ=${item.delta}"
-
-        val status = item.eventStatus ?: if (item.processed) "PROCESSED" else "PENDING"
+        val status = item.status
         holder.tvStatus.text = status
 
         val colorRes = when (status.uppercase()) {
@@ -40,6 +40,10 @@ class EventAdapter(
         holder.tvStatus.setTextColor(ContextCompat.getColor(holder.itemView.context, colorRes))
 
         holder.tvDate.text = item.createdAt
+        holder.ivPending.visibility = if (item.isPending) View.VISIBLE else View.GONE
+        holder.ivPending.setOnClickListener {
+            if (item.isPending) onPendingClick(item)
+        }
     }
 
     override fun getItemCount(): Int = items.size
@@ -49,5 +53,6 @@ class EventAdapter(
         val tvMeta: TextView = view.findViewById(R.id.tvEventMeta)
         val tvStatus: TextView = view.findViewById(R.id.tvEventStatus)
         val tvDate: TextView = view.findViewById(R.id.tvEventDate)
+        val ivPending: ImageView = view.findViewById(R.id.ivEventPending)
     }
 }

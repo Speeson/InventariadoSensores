@@ -5,12 +5,28 @@
     android:orientation="vertical"
     android:padding="12dp">
 
-    <TextView
-        android:id="@+id/tvEventTitle"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Evento #1"
-        android:textStyle="bold" />
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/tvEventTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Evento #1"
+            android:textStyle="bold" />
+
+        <ImageView
+            android:id="@+id/ivEventPending"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:contentDescription="Pendiente"
+            android:src="@android:drawable/ic_dialog_alert"
+            android:tint="@android:color/holo_red_dark"
+            android:visibility="gone" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/tvEventMeta"

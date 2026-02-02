@@ -88,6 +88,8 @@ class HomeActivity : AppCompatActivity() {
         super.onResume()
 
         lifecycleScope.launch {
+            ensureValidSession()
+
             val report = OfflineSyncer.flush(this@HomeActivity)
 
             if (report.sent > 0) {
@@ -200,7 +202,25 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
-    private fun confirmLogout() {
+    
+    private suspend fun ensureValidSession() {
+        try {
+            val res = NetworkModule.api.me()
+            if (res.code() == 401 || res.code() == 500) {
+                Toast.makeText(
+                    this@HomeActivity,
+                    "Sesion caducada. Inicia sesion de nuevo.",
+                    Toast.LENGTH_LONG
+                ).show()
+                session.clearToken()
+                goToLogin()
+            }
+        } catch (_: Exception) {
+            // Si no hay red, no forzamos logout
+        }
+    }
+
+private fun confirmLogout() {
         AlertDialog.Builder(this)
             .setTitle("Cerrar sesión")
             .setMessage("¿Seguro que quieres cerrar sesión?")

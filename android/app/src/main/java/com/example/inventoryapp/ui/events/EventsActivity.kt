@@ -28,7 +28,7 @@ class EventsActivity : AppCompatActivity() {
 
     private val gson = Gson()
     private val repo = EventRepository()
-    private var items: List<EventResponseDto> = emptyList()
+    private var items: List<EventRowUi> = emptyList()
     private lateinit var adapter: EventAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,7 +46,9 @@ class EventsActivity : AppCompatActivity() {
         binding.btnCreateEvent.setOnClickListener { createEvent() }
         binding.btnRefresh.setOnClickListener { loadEvents(withSnack = true) }
 
-        adapter = EventAdapter(emptyList())
+        adapter = EventAdapter(emptyList()) { row ->
+            snack.showError(row.pendingMessage ?: "Guardado en modo offline")
+        }
         binding.rvEvents.layoutManager = LinearLayoutManager(this)
         binding.rvEvents.adapter = adapter
     }
@@ -97,11 +99,19 @@ class EventsActivity : AppCompatActivity() {
                     binding.etDelta.setText("")
                     loadEvents(withSnack = false)
                 } else {
-                    snack.showError("Error: ${res.exceptionOrNull()?.message ?: "sin detalle"}")
+                    val ex = res.exceptionOrNull()
+                    if (ex is IOException) {
+                        OfflineQueue(this@EventsActivity).enqueue(PendingType.EVENT_CREATE, gson.toJson(dto))
+                        snack.showQueuedOffline("Guardado en modo offline")
+                        loadEvents(withSnack = false)
+                    } else {
+                        snack.showError("Error: ${ex?.message ?: "sin detalle"}")
+                    }
                 }
             } catch (e: IOException) {
                 OfflineQueue(this@EventsActivity).enqueue(PendingType.EVENT_CREATE, gson.toJson(dto))
-                snack.showQueuedOffline("Sin red/backend. Evento guardado offline")
+                snack.showQueuedOffline("Guardado en modo offline")
+                loadEvents(withSnack = false)
             } catch (e: Exception) {
                 snack.showError("Error: ${e.message}")
             } finally {
@@ -117,16 +127,69 @@ class EventsActivity : AppCompatActivity() {
             try {
                 val res = repo.listEvents(limit = 50, offset = 0)
                 if (res.isSuccess) {
-                    items = res.getOrNull()!!.items
+                    val remoteItems = res.getOrNull()!!.items.map { it.toRowUi() }
+                    val pendingItems = buildPendingRows()
+                    items = pendingItems + remoteItems
                     adapter.submit(items)
                     if (withSnack) snack.showSuccess("OK: Eventos cargados")
                 } else {
                     if (withSnack) snack.showError("Error: ${res.exceptionOrNull()?.message ?: "sin detalle"}")
+                    val pendingItems = buildPendingRows()
+                    items = pendingItems
+                    adapter.submit(items)
                 }
             } catch (e: Exception) {
                 if (withSnack) snack.showError("Error de red: ${e.message}")
+                val pendingItems = buildPendingRows()
+                items = pendingItems
+                adapter.submit(items)
             }
         }
+    }
+
+    private fun buildPendingRows(): List<EventRowUi> {
+        val queue = OfflineQueue(this)
+        val pending = queue.getAll().filter { it.type == PendingType.EVENT_CREATE }
+        return pending.mapIndexed { index, p ->
+            val dto = runCatching { gson.fromJson(p.payloadJson, EventCreateDto::class.java) }.getOrNull()
+            if (dto == null) {
+                EventRowUi(
+                    id = -1 - index,
+                    eventType = EventTypeDto.SENSOR_IN,
+                    productId = 0,
+                    delta = 0,
+                    createdAt = "offline",
+                    status = "PENDING",
+                    isPending = true,
+                    pendingMessage = "Guardado en modo offline, pendiente de sincronizacion"
+                )
+            } else {
+                EventRowUi(
+                    id = -1 - index,
+                    eventType = dto.eventType,
+                    productId = dto.productId,
+                    delta = dto.delta,
+                    createdAt = "offline",
+                    status = "PENDING",
+                    isPending = true,
+                    pendingMessage = "Guardado en modo offline, pendiente de sincronizacion"
+                )
+            }
+        }
+    }
+
+    private fun EventResponseDto.toRowUi(): EventRowUi {
+        val status = eventStatus ?: if (processed) "PROCESSED" else "PENDING"
+        return EventRowUi(
+            id = id,
+            eventType = eventType,
+            productId = productId,
+            delta = delta,
+            createdAt = createdAt,
+            status = status,
+            isPending = false,
+            pendingMessage = null
+        )
     }
 
     private fun goToLogin() {
