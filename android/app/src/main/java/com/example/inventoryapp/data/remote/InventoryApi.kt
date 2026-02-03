@@ -24,6 +24,10 @@ import com.example.inventoryapp.data.remote.model.CategoryCreateDto
 import com.example.inventoryapp.data.remote.model.CategoryListResponseDto
 import com.example.inventoryapp.data.remote.model.CategoryResponseDto
 import com.example.inventoryapp.data.remote.model.CategoryUpdateDto
+import com.example.inventoryapp.data.remote.model.ThresholdCreateDto
+import com.example.inventoryapp.data.remote.model.ThresholdListResponseDto
+import com.example.inventoryapp.data.remote.model.ThresholdResponseDto
+import com.example.inventoryapp.data.remote.model.ThresholdUpdateDto
 
 
 
@@ -194,6 +198,29 @@ interface InventoryApi {
 
     @DELETE("categories/{category_id}")
     suspend fun deleteCategory(@Path("category_id") categoryId: Int): Response<Unit>
+
+    @GET("thresholds/")
+    suspend fun listThresholds(
+        @Query("product_id") productId: Int? = null,
+        @Query("location") location: String? = null,
+        @Query("limit") limit: Int = 50,
+        @Query("offset") offset: Int = 0
+    ): Response<ThresholdListResponseDto>
+
+    @GET("thresholds/{threshold_id}")
+    suspend fun getThreshold(@Path("threshold_id") thresholdId: Int): Response<ThresholdResponseDto>
+
+    @POST("thresholds/")
+    suspend fun createThreshold(@Body body: ThresholdCreateDto): Response<ThresholdResponseDto>
+
+    @PATCH("thresholds/{threshold_id}")
+    suspend fun updateThreshold(
+        @Path("threshold_id") thresholdId: Int,
+        @Body body: ThresholdUpdateDto
+    ): Response<ThresholdResponseDto>
+
+    @DELETE("thresholds/{threshold_id}")
+    suspend fun deleteThreshold(@Path("threshold_id") thresholdId: Int): Response<Unit>
 }
 
 

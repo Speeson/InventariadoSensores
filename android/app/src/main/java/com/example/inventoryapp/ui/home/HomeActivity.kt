@@ -25,6 +25,7 @@ import com.example.inventoryapp.ui.reports.ReportsActivity
 import kotlinx.coroutines.launch
 import com.example.inventoryapp.ui.offline.OfflineErrorsActivity
 import com.example.inventoryapp.ui.categories.CategoriesActivity
+import com.example.inventoryapp.ui.thresholds.ThresholdsActivity
 
 
 class HomeActivity : AppCompatActivity() {
@@ -136,6 +137,10 @@ class HomeActivity : AppCompatActivity() {
             startActivity(Intent(this, CategoriesActivity::class.java))
         }
 
+        binding.btnThresholds.setOnClickListener {
+            startActivity(Intent(this, ThresholdsActivity::class.java))
+        }
+
         binding.navViewMain.setNavigationItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_system_status -> showSystemStatus()
@@ -147,6 +152,11 @@ class HomeActivity : AppCompatActivity() {
         }
 
         binding.navViewBottom.setNavigationItemSelectedListener { item ->
+            if (item.itemId == R.id.nav_settings) {
+                Toast.makeText(this, "Ajustes (próximamente)", Toast.LENGTH_SHORT).show()
+                binding.drawerLayout.closeDrawer(GravityCompat.START)
+                return@setNavigationItemSelectedListener true
+            }
             if (item.itemId == R.id.nav_logout) {
                 binding.drawerLayout.closeDrawer(GravityCompat.START)
                 confirmLogout()

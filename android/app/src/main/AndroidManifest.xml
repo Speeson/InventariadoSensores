@@ -36,6 +36,7 @@
         <activity android:name=".ui.movements.MovementsMenuActivity" />
         <activity android:name=".ui.movements.MovementsListActivity" />
         <activity android:name=".ui.categories.CategoriesActivity" />
+        <activity android:name=".ui.thresholds.ThresholdsActivity" />
         <activity android:name=".ui.scan.ConfirmScanActivity" />
         <activity android:name=".ui.events.EventsActivity" />
         <activity android:name=".ui.rotation.RotationActivity" />
