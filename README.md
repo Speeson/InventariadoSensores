@@ -260,6 +260,11 @@ curl http://localhost:8000/users/me \
 Detectado en el repo:
 - BASE_URL: `http://10.0.2.2:8000/`
 
+**Cambiar IP desde el movil (sin recompilar):**
+- Long-press en el logo de Login o en la toolbar de Home.
+- Escribe la IP del PC (host) y guarda.
+- Se aplica solo en ese dispositivo.
+
 ### Conectar móvil/tablet por ADB (USB o Wi‑Fi)
 
 **Requisitos previos (móvil/tablet):**
