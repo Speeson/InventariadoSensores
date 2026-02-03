@@ -260,6 +260,52 @@ curl http://localhost:8000/users/me \
 Detectado en el repo:
 - BASE_URL: `http://10.0.2.2:8000/`
 
+### Conectar móvil/tablet por ADB (USB o Wi‑Fi)
+
+**Requisitos previos (móvil/tablet):**
+- Activar *Opciones de desarrollador*.
+- Activar *Depuración USB*.
+- En Wi‑Fi: mismo router/red que el PC.
+
+**Comandos básicos (PowerShell / CMD):**
+```bash
+adb devices
+```
+Si el dispositivo aparece en la lista, ya está conectado por USB.
+
+**Pasar a Wi‑Fi (ADB over TCP):**
+1) Conecta por USB primero.
+2) Obtén la IP del dispositivo (Wi‑Fi):
+   - En el móvil: Ajustes → Wi‑Fi → tu red → IP.
+
+```bash
+adb tcpip 5555
+adb connect <IP_DEL_DISPOSITIVO>:5555
+adb devices
+```
+
+Ahora puedes desconectar el cable y seguir por Wi‑Fi.
+
+**Volver a USB / desconectar Wi‑Fi:**
+```bash
+adb disconnect <IP_DEL_DISPOSITIVO>:5555
+adb usb
+```
+
+**Emparejar por Wi‑Fi (Android 11+ / ADB pair):**
+1) En el móvil: Opciones de desarrollador → *Depuración inalámbrica* → Emparejar dispositivo.
+2) Anota **IP:puerto** y el **código de emparejamiento**.
+
+```bash
+adb pair <IP_DEL_DISPOSITIVO>:<PUERTO_PAIR>
+adb connect <IP_DEL_DISPOSITIVO>:<PUERTO_CONNECT>
+adb devices
+```
+
+**Notas útiles:**
+- Si `adb` no se reconoce, añade la ruta de `platform-tools` al PATH.
+- Si no conecta, revisa firewall y que PC y móvil estén en la misma red.
+
 **Pasos:**
 1. Abrir carpeta `android/` en Android Studio
 2. Sync Gradle
@@ -318,6 +364,20 @@ Android:
 - Pantalla de rotación (IN/OUT/stock agregados por producto).
 - Dropdown de locations en formularios (events/scan/movements/stock).
 - Mejoras de sesión (validación y feedback de errores).
+
+Android (UI/UX y nuevas pantallas):
+- Rediseño completo del login con fondo degradado, tarjeta central, iconos en inputs,
+  boton con degradado y enlaces de registro/recuperacion.
+- Nuevo menu principal con tarjetas e iconos personalizados, drawer lateral con perfil,
+  accesos (estado del sistema, errores offline, alertas) y logout.
+- Soporte de tema claro/oscuro con toggle en el menu (sin cerrar el drawer).
+- Listados en tarjetas (productos, movimientos, stock, eventos, errores offline),
+  con colores adaptados al tema y jerarquia visual mejorada.
+- Nueva pantalla de categorias (listar, crear, editar, eliminar y filtrar por id).
+- Nueva pantalla de umbrales (thresholds) con layout tipo login y acceso directo desde home.
+- Nueva pantalla de alertas con pestañas (alertas del sistema / pendientes offline),
+  limpieza rapida por seccion y eventos fallidos.
+- Alertas del sistema con dialogo central ante caidas de servicios y guardado en historial.
 
 ---
 

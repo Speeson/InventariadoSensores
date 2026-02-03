@@ -8,6 +8,13 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.io.IOException
+import java.net.SocketTimeoutException
+import com.example.inventoryapp.data.local.SystemAlertType
+import com.example.inventoryapp.data.local.SystemAlertStore
+import com.example.inventoryapp.ui.common.SystemAlertManager
+import com.example.inventoryapp.ui.common.ActivityTracker
+import com.example.inventoryapp.ui.common.UiNotifier
 
 object NetworkModule {
 
@@ -49,7 +56,43 @@ object NetworkModule {
                         .build()
                 } else chain.request()
 
-                chain.proceed(req)
+                try {
+                    val response = chain.proceed(req)
+                    if (response.code >= 500) {
+                        SystemAlertManager.record(
+                            appContext,
+                            SystemAlertType.SERVER_ERROR,
+                            "Servicio no disponible",
+                            "El servidor respondió ${response.code}. Revisa API/DB/Redis/Celery."
+                        )
+                    } else if (response.code == 401) {
+                        SystemAlertManager.record(
+                            appContext,
+                            SystemAlertType.AUTH_EXPIRED,
+                            "Sesión caducada",
+                            "Tu sesión ha expirado. Inicia sesión de nuevo.",
+                            blocking = false
+                        )
+                    }
+                    response
+                } catch (e: IOException) {
+                    if (e is SocketTimeoutException) {
+                        val store = SystemAlertStore(appContext)
+                        if (store.shouldRecord(SystemAlertType.TIMEOUT, "timeout", 30_000L)) {
+                            store.rememberLast(SystemAlertType.TIMEOUT, "timeout")
+                            val activity = ActivityTracker.getCurrent()
+                            if (activity != null) {
+                                activity.runOnUiThread {
+                                    UiNotifier.show(activity, "Timeout de conexión. Intenta de nuevo.")
+                                }
+                            }
+                        }
+                    } else {
+                        val msg = e.message ?: "No se pudo contactar con el servidor"
+                        SystemAlertManager.record(appContext, SystemAlertType.NETWORK, "Sin conexión", msg)
+                    }
+                    throw e
+                }
             }
             .build()
     }

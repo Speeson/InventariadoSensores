@@ -27,6 +27,8 @@ class ProductListAdapter(
         holder.binding.tvSku.text = "SKU: ${p.sku}"
         holder.binding.tvBarcode.text = "Barcode: ${p.barcode ?: "-"}"
         holder.binding.tvMeta.text = "ID: ${p.id}  •  Cat: ${p.categoryId}"
+        val isOffline = p.id < 0 || p.name.contains("(offline)", ignoreCase = true)
+        holder.binding.ivOfflineAlert.visibility = if (isOffline) android.view.View.VISIBLE else android.view.View.GONE
         holder.binding.root.setOnClickListener { onClick(p) }
     }
 

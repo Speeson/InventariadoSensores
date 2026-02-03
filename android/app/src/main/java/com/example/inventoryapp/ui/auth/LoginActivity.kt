@@ -3,7 +3,6 @@ package com.example.inventoryapp.ui.auth
 import android.content.Intent
 import android.os.Bundle
 import android.widget.EditText
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -11,6 +10,7 @@ import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.RegisterRequest
 import com.example.inventoryapp.databinding.ActivityLoginBinding
+import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.home.HomeActivity
 import kotlinx.coroutines.launch
 import com.example.inventoryapp.R
@@ -72,7 +72,7 @@ class LoginActivity : AppCompatActivity() {
                     val token = response.body()!!.accessToken
                     session.saveToken(token)
 
-                    Toast.makeText(this@LoginActivity, "¡Bienvenido!", Toast.LENGTH_SHORT).show()
+                    UiNotifier.show(this@LoginActivity, "¡Bienvenido!")
 
                     startActivity(Intent(this@LoginActivity, HomeActivity::class.java))
                     finish()
@@ -81,10 +81,10 @@ class LoginActivity : AppCompatActivity() {
                         401 -> "Usuario o contraseña incorrectos"
                         else -> "Error en el servidor: ${response.code()}"
                     }
-                    Toast.makeText(this@LoginActivity, errorMsg, Toast.LENGTH_LONG).show()
+                    UiNotifier.show(this@LoginActivity, errorMsg)
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@LoginActivity, "Error de conexión: ${e.message}", Toast.LENGTH_LONG).show()
+                UiNotifier.show(this@LoginActivity, "Error de conexión: ${e.message}")
             } finally {
                 setLoading(false)
             }
@@ -133,7 +133,7 @@ class LoginActivity : AppCompatActivity() {
                     val token = response.body()!!.accessToken
                     session.saveToken(token)
 
-                    Toast.makeText(this@LoginActivity, "Cuenta creada", Toast.LENGTH_SHORT).show()
+                    UiNotifier.show(this@LoginActivity, "Cuenta creada")
                     dialog.dismiss()
 
                     // Ir a Home y pasar email para mostrar bienvenida
@@ -147,10 +147,10 @@ class LoginActivity : AppCompatActivity() {
                         422 -> "Datos invalidos (revisa username/email/contrasena)"
                         else -> "Error (${response.code()}): ${response.errorBody()?.string() ?: "sin detalle"}"
                     }
-                    Toast.makeText(this@LoginActivity, msg, Toast.LENGTH_LONG).show()
+                    UiNotifier.show(this@LoginActivity, msg)
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@LoginActivity, "Error de conexion: ${e.message}", Toast.LENGTH_LONG).show()
+                UiNotifier.show(this@LoginActivity, "Error de conexión: ${e.message}")
             } finally {
                 setUiEnabled(true)
             }

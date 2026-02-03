@@ -21,7 +21,7 @@
             android:layout_height="40dp"
             android:layout_marginEnd="12dp"
             android:contentDescription="@null"
-            android:src="@drawable/ic_status" />
+            android:src="@drawable/events" />
 
         <LinearLayout
             android:layout_width="0dp"

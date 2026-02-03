@@ -44,6 +44,7 @@
         <activity android:name=".ui.reports.TopConsumedActivity" />
         <activity android:name=".ui.reports.TurnoverReportActivity" />
         <activity android:name=".ui.offline.OfflineErrorsActivity" />
+        <activity android:name=".ui.alerts.AlertsActivity" />
         <activity android:name=".ui.stock.StockActivity" />
         <activity android:name=".ui.movements.ResultActivity" />
         <activity android:name=".ui.home.HomeActivity" />

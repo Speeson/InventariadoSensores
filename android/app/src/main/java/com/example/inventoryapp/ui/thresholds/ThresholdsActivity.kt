@@ -2,7 +2,6 @@ package com.example.inventoryapp.ui.thresholds
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -13,6 +12,8 @@ import com.example.inventoryapp.data.remote.model.ThresholdCreateDto
 import com.example.inventoryapp.data.remote.model.ThresholdResponseDto
 import com.example.inventoryapp.data.remote.model.ThresholdUpdateDto
 import com.example.inventoryapp.databinding.ActivityThresholdsBinding
+import com.example.inventoryapp.ui.common.ApiErrorFormatter
+import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.auth.LoginActivity
 import kotlinx.coroutines.launch
 
@@ -67,10 +68,10 @@ class ThresholdsActivity : AppCompatActivity() {
                     items = res.body()!!.items
                     adapter.submit(items)
                 } else {
-                    Toast.makeText(this@ThresholdsActivity, "Error ${res.code()}", Toast.LENGTH_SHORT).show()
+                    UiNotifier.show(this@ThresholdsActivity, ApiErrorFormatter.format(res.code()))
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@ThresholdsActivity, "Error de red: ${e.message}", Toast.LENGTH_LONG).show()
+                UiNotifier.show(this@ThresholdsActivity, "Error de red: ${e.message}")
             }
         }
     }
@@ -96,10 +97,10 @@ class ThresholdsActivity : AppCompatActivity() {
                     binding.etMinQty.setText("")
                     loadThresholds()
                 } else {
-                    Toast.makeText(this@ThresholdsActivity, "Error ${res.code()}: ${res.errorBody()?.string()}", Toast.LENGTH_LONG).show()
+                    UiNotifier.show(this@ThresholdsActivity, ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@ThresholdsActivity, "Error de red: ${e.message}", Toast.LENGTH_LONG).show()
+                UiNotifier.show(this@ThresholdsActivity, "Error de red: ${e.message}")
             } finally {
                 binding.btnCreate.isEnabled = true
             }
@@ -133,7 +134,7 @@ class ThresholdsActivity : AppCompatActivity() {
                 val newLoc = inputLocation.text.toString().trim().ifBlank { null }
                 val newMin = inputMin.text.toString().trim().toIntOrNull()
                 if (newMin == null || newMin < 0) {
-                    Toast.makeText(this, "Min >= 0", Toast.LENGTH_SHORT).show()
+                    UiNotifier.show(this, "Min >= 0")
                 } else {
                     updateThreshold(threshold.id, newLoc, newMin)
                 }
@@ -152,10 +153,10 @@ class ThresholdsActivity : AppCompatActivity() {
                 if (res.isSuccessful) {
                     loadThresholds()
                 } else {
-                    Toast.makeText(this@ThresholdsActivity, "Error ${res.code()}: ${res.errorBody()?.string()}", Toast.LENGTH_LONG).show()
+                    UiNotifier.show(this@ThresholdsActivity, ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@ThresholdsActivity, "Error de red: ${e.message}", Toast.LENGTH_LONG).show()
+                UiNotifier.show(this@ThresholdsActivity, "Error de red: ${e.message}")
             }
         }
     }
@@ -168,10 +169,10 @@ class ThresholdsActivity : AppCompatActivity() {
                 if (res.isSuccessful) {
                     loadThresholds()
                 } else {
-                    Toast.makeText(this@ThresholdsActivity, "Error ${res.code()}: ${res.errorBody()?.string()}", Toast.LENGTH_LONG).show()
+                    UiNotifier.show(this@ThresholdsActivity, ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@ThresholdsActivity, "Error de red: ${e.message}", Toast.LENGTH_LONG).show()
+                UiNotifier.show(this@ThresholdsActivity, "Error de red: ${e.message}")
             }
         }
     }

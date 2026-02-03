@@ -2,7 +2,6 @@ package com.example.inventoryapp.ui.categories
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -13,6 +12,8 @@ import com.example.inventoryapp.data.remote.model.CategoryCreateDto
 import com.example.inventoryapp.data.remote.model.CategoryResponseDto
 import com.example.inventoryapp.data.remote.model.CategoryUpdateDto
 import com.example.inventoryapp.databinding.ActivityCategoriesBinding
+import com.example.inventoryapp.ui.common.ApiErrorFormatter
+import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.auth.LoginActivity
 import kotlinx.coroutines.launch
 
@@ -78,11 +79,11 @@ class CategoriesActivity : AppCompatActivity() {
                     items = listOf(res.body()!!)
                     adapter.submit(items)
                 } else {
-                    Toast.makeText(this@CategoriesActivity, "No encontrado (${res.code()})", Toast.LENGTH_SHORT).show()
+                    UiNotifier.show(this@CategoriesActivity, ApiErrorFormatter.format(res.code()))
                     adapter.submit(emptyList())
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@CategoriesActivity, "Error de red: ${e.message}", Toast.LENGTH_LONG).show()
+                UiNotifier.show(this@CategoriesActivity, "Error de red: ${e.message}")
             }
         }
     }
@@ -96,10 +97,10 @@ class CategoriesActivity : AppCompatActivity() {
                     items = res.body()!!.items
                     adapter.submit(items)
                 } else {
-                    Toast.makeText(this@CategoriesActivity, "Error ${res.code()}", Toast.LENGTH_SHORT).show()
+                    UiNotifier.show(this@CategoriesActivity, ApiErrorFormatter.format(res.code()))
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@CategoriesActivity, "Error de red: ${e.message}", Toast.LENGTH_LONG).show()
+                UiNotifier.show(this@CategoriesActivity, "Error de red: ${e.message}")
             }
         }
     }
@@ -117,10 +118,10 @@ class CategoriesActivity : AppCompatActivity() {
                     binding.etName.setText("")
                     loadCategories()
                 } else {
-                    Toast.makeText(this@CategoriesActivity, "Error ${res.code()}: ${res.errorBody()?.string()}", Toast.LENGTH_LONG).show()
+                    UiNotifier.show(this@CategoriesActivity, ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@CategoriesActivity, "Error de red: ${e.message}", Toast.LENGTH_LONG).show()
+                UiNotifier.show(this@CategoriesActivity, "Error de red: ${e.message}")
             } finally {
                 binding.btnCreate.isEnabled = true
             }
@@ -142,7 +143,7 @@ class CategoriesActivity : AppCompatActivity() {
             .setPositiveButton("Guardar") { _, _ ->
                 val newName = input.text.toString().trim()
                 if (newName.isBlank()) {
-                    Toast.makeText(this, "Nombre requerido", Toast.LENGTH_SHORT).show()
+                    UiNotifier.show(this, "Nombre requerido")
                 } else {
                     updateCategory(category.id, newName)
                 }
@@ -158,10 +159,10 @@ class CategoriesActivity : AppCompatActivity() {
                 if (res.isSuccessful) {
                     loadCategories()
                 } else {
-                    Toast.makeText(this@CategoriesActivity, "Error ${res.code()}: ${res.errorBody()?.string()}", Toast.LENGTH_LONG).show()
+                    UiNotifier.show(this@CategoriesActivity, ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@CategoriesActivity, "Error de red: ${e.message}", Toast.LENGTH_LONG).show()
+                UiNotifier.show(this@CategoriesActivity, "Error de red: ${e.message}")
             }
         }
     }
@@ -174,10 +175,10 @@ class CategoriesActivity : AppCompatActivity() {
                 if (res.isSuccessful) {
                     loadCategories()
                 } else {
-                    Toast.makeText(this@CategoriesActivity, "Error ${res.code()}: ${res.errorBody()?.string()}", Toast.LENGTH_LONG).show()
+                    UiNotifier.show(this@CategoriesActivity, ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@CategoriesActivity, "Error de red: ${e.message}", Toast.LENGTH_LONG).show()
+                UiNotifier.show(this@CategoriesActivity, "Error de red: ${e.message}")
             }
         }
     }

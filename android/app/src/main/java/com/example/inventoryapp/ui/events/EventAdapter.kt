@@ -34,7 +34,7 @@ class EventAdapter(
         val colorRes = when (status.uppercase()) {
             "PROCESSED" -> android.R.color.holo_green_dark
             "PENDING" -> android.R.color.holo_orange_dark
-            "ERROR" -> android.R.color.holo_red_dark
+            "ERROR", "FAILED" -> android.R.color.holo_red_dark
             else -> android.R.color.darker_gray
         }
         val color = ContextCompat.getColor(holder.itemView.context, colorRes)

@@ -2,7 +2,6 @@
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.core.view.GravityCompat
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -26,6 +25,11 @@ import kotlinx.coroutines.launch
 import com.example.inventoryapp.ui.offline.OfflineErrorsActivity
 import com.example.inventoryapp.ui.categories.CategoriesActivity
 import com.example.inventoryapp.ui.thresholds.ThresholdsActivity
+import com.example.inventoryapp.ui.alerts.AlertsActivity
+import com.example.inventoryapp.ui.common.ApiErrorFormatter
+import com.example.inventoryapp.ui.common.UiNotifier
+import com.example.inventoryapp.ui.common.SystemAlertManager
+import com.example.inventoryapp.data.local.SystemAlertType
 
 
 class HomeActivity : AppCompatActivity() {
@@ -92,11 +96,7 @@ class HomeActivity : AppCompatActivity() {
                 try {
                     val res = NetworkModule.api.me()
                     if (res.code() == 401) {
-                        Toast.makeText(
-                            this@HomeActivity,
-                            "Sesion caducada. Inicia sesion de nuevo.",
-                            Toast.LENGTH_LONG
-                        ).show()
+                        UiNotifier.show(this@HomeActivity, ApiErrorFormatter.format(401))
                         session.clearToken()
                         goToLogin()
                         return@launch
@@ -106,25 +106,13 @@ class HomeActivity : AppCompatActivity() {
                         if (role == "MANAGER" || role == "ADMIN") {
                             startActivity(Intent(this@HomeActivity, RotationActivity::class.java))
                         } else {
-                            Toast.makeText(
-                                this@HomeActivity,
-                                "Permiso denegado. Permisos insuficientes.",
-                                Toast.LENGTH_LONG
-                            ).show()
+                            UiNotifier.show(this@HomeActivity, "Permiso denegado. Permisos insuficientes.")
                         }
                     } else {
-                        Toast.makeText(
-                            this@HomeActivity,
-                            "No se pudo validar permisos (${res.code()}).",
-                            Toast.LENGTH_LONG
-                        ).show()
+                        UiNotifier.show(this@HomeActivity, ApiErrorFormatter.format(res.code()))
                     }
                 } catch (e: Exception) {
-                    Toast.makeText(
-                        this@HomeActivity,
-                        "Error de conexión: ${e.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
+                    UiNotifier.show(this@HomeActivity, "Error de conexión: ${e.message}")
                 }
             }
         }
@@ -145,7 +133,7 @@ class HomeActivity : AppCompatActivity() {
             when (item.itemId) {
                 R.id.nav_system_status -> showSystemStatus()
                 R.id.nav_offline_errors -> startActivity(Intent(this, OfflineErrorsActivity::class.java))
-                R.id.nav_alerts -> Toast.makeText(this, "Alertas (próximamente)", Toast.LENGTH_SHORT).show()
+                R.id.nav_alerts -> startActivity(Intent(this, AlertsActivity::class.java))
             }
             binding.drawerLayout.closeDrawer(GravityCompat.START)
             true
@@ -153,7 +141,7 @@ class HomeActivity : AppCompatActivity() {
 
         binding.navViewBottom.setNavigationItemSelectedListener { item ->
             if (item.itemId == R.id.nav_settings) {
-                Toast.makeText(this, "Ajustes (próximamente)", Toast.LENGTH_SHORT).show()
+                UiNotifier.show(this, "Ajustes (próximamente)")
                 binding.drawerLayout.closeDrawer(GravityCompat.START)
                 return@setNavigationItemSelectedListener true
             }
@@ -188,19 +176,28 @@ class HomeActivity : AppCompatActivity() {
             val report = OfflineSyncer.flush(this@HomeActivity)
 
             if (report.sent > 0) {
-                Toast.makeText(
+                UiNotifier.showBlocking(
                     this@HomeActivity,
-                    "Reenviados ${report.sent} pendientes ✅",
-                    Toast.LENGTH_LONG
-                ).show()
+                    "Pendientes procesados",
+                    "Se han enviado correctamente ${report.sent} pendientes offline.",
+                    com.example.inventoryapp.R.drawable.ic_check_green
+                )
+                SystemAlertManager.record(
+                    this@HomeActivity,
+                    SystemAlertType.OFFLINE_SYNC_OK,
+                    "Sincronización completada",
+                    "Se enviaron correctamente ${report.sent} pendientes offline.",
+                    blocking = false
+                )
             }
 
             if (report.movedToFailed > 0) {
-                Toast.makeText(
+                UiNotifier.showBlocking(
                     this@HomeActivity,
-                    "${report.movedToFailed} pendientes con error ❗ Revisa 'Pendientes'",
-                    Toast.LENGTH_LONG
-                ).show()
+                    "Pendientes con error",
+                    "${report.movedToFailed} pendientes han fallado. Revisa la pestaña de Pendientes offline.",
+                    com.example.inventoryapp.R.drawable.ic_error_red
+                )
             }
         }
     }
@@ -265,7 +262,7 @@ class HomeActivity : AppCompatActivity() {
                         .setPositiveButton("OK", null)
                         .show()
                 } else if (res.code() == 401) {
-                    Toast.makeText(this@HomeActivity, "Sesión caducada. Inicia sesión de nuevo.", Toast.LENGTH_LONG).show()
+                    UiNotifier.show(this@HomeActivity, ApiErrorFormatter.format(401))
                     session.clearToken()
                     goToLogin()
                 } else {
@@ -290,19 +287,11 @@ class HomeActivity : AppCompatActivity() {
         try {
             val res = NetworkModule.api.me()
             if (res.code() == 401) {
-                Toast.makeText(
-                    this@HomeActivity,
-                    "Sesion caducada. Inicia sesion de nuevo.",
-                    Toast.LENGTH_LONG
-                ).show()
+                UiNotifier.show(this@HomeActivity, ApiErrorFormatter.format(401))
                 session.clearToken()
                 goToLogin()
             } else if (res.code() >= 500) {
-                Toast.makeText(
-                    this@HomeActivity,
-                    "Error del servidor (${res.code()}).",
-                    Toast.LENGTH_LONG
-                ).show()
+                UiNotifier.show(this@HomeActivity, ApiErrorFormatter.format(res.code()))
             }
         } catch (_: Exception) {
             // Si no hay red, no forzamos logout

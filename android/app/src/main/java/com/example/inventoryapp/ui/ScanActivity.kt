@@ -16,6 +16,7 @@ import androidx.camera.core.ImageProxy
 import androidx.lifecycle.lifecycleScope
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.databinding.ActivityScanBinding
+import com.example.inventoryapp.ui.common.UiNotifier
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import kotlinx.coroutines.launch
@@ -30,6 +31,8 @@ class ScanActivity : AppCompatActivity() {
     private var hasNavigated = false
     private var isValidating = false
     private var cameraProvider: ProcessCameraProvider? = null
+    private var lastNotFoundCode: String? = null
+    private var lastNotFoundAt: Long = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -97,7 +100,7 @@ class ScanActivity : AppCompatActivity() {
             if (granted) {
                 startCamera()
             } else {
-                Toast.makeText(this, "Permiso de camara denegado", Toast.LENGTH_LONG).show()
+                UiNotifier.show(this, "Permiso de cámara denegado")
             }
         }
     }
@@ -127,7 +130,7 @@ class ScanActivity : AppCompatActivity() {
                 provider.unbindAll()
                 provider.bindToLifecycle(this, cameraSelector, preview, analysis)
             } catch (e: Exception) {
-                Toast.makeText(this, "Error al iniciar camara: ${e.message}", Toast.LENGTH_LONG).show()
+                UiNotifier.show(this, "Error al iniciar cámara: ${e.message}")
             }
 
         }, ContextCompat.getMainExecutor(this))
@@ -142,6 +145,13 @@ class ScanActivity : AppCompatActivity() {
         isValidating = false
         hasNavigated = false
         lastScannedCode = null
+        lastNotFoundCode = null
+        lastNotFoundAt = 0L
+    }
+
+    override fun onPause() {
+        super.onPause()
+        stopCamera()
     }
 
     @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
@@ -166,9 +176,12 @@ class ScanActivity : AppCompatActivity() {
             .addOnSuccessListener { barcodes ->
                 val code = barcodes.firstOrNull()?.rawValue
                 if (!code.isNullOrBlank() && code != lastScannedCode) {
+                    if (code == lastNotFoundCode && (System.currentTimeMillis() - lastNotFoundAt) < 3000) {
+                        return@addOnSuccessListener
+                    }
                     lastScannedCode = code
                     binding.etBarcode.setText(code)
-                    Toast.makeText(this, "Detectado: $code", Toast.LENGTH_SHORT).show()
+                    UiNotifier.show(this, "Detectado: $code")
                     if (!hasNavigated) {
                         validateAndNavigate(code)
                     }
@@ -193,12 +206,13 @@ class ScanActivity : AppCompatActivity() {
                     hasNavigated = true
                     openConfirm(barcode, false)
                 } else {
-                    lastScannedCode = null
-                    Toast.makeText(this@ScanActivity, "Producto no encontrado", Toast.LENGTH_LONG).show()
+                    lastNotFoundCode = barcode
+                    lastNotFoundAt = System.currentTimeMillis()
+                    UiNotifier.show(this@ScanActivity, "Producto no encontrado")
                 }
             } catch (_: Exception) {
                 lastScannedCode = null
-                Toast.makeText(this@ScanActivity, "Sin conexion. Se enviara al reconectar", Toast.LENGTH_LONG).show()
+                UiNotifier.show(this@ScanActivity, "Sin conexión. Se enviará al reconectar")
                 openConfirm(barcode, true)
             } finally {
                 isValidating = false

@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tvAlertsTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Alertas del sistema"
+                android:textStyle="bold"
+                android:textSize="18sp" />
+
+            <ImageButton
+                android:id="@+id/btnClearSystem"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Limpiar alertas del sistema"
+                android:src="@android:drawable/ic_menu_close_clear_cancel"
+                android:tint="#4A7BF7" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvAlertsEmpty"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sin alertas del sistema"
+            android:visibility="gone"
+            android:layout_marginTop="6dp"
+            android:textColor="?attr/colorOnSurface"
+            android:alpha="0.7" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvSystemAlerts"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:nestedScrollingEnabled="false" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="18dp">
+
+            <TextView
+                android:id="@+id/tvBackendAlertsTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Alertas de stock"
+                android:textStyle="bold"
+                android:textSize="18sp" />
+
+            <ImageButton
+                android:id="@+id/btnClearStock"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Limpiar alertas de stock"
+                android:src="@android:drawable/ic_menu_close_clear_cancel"
+                android:tint="#4A7BF7" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvBackendAlertsEmpty"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sin alertas de stock"
+            android:visibility="gone"
+            android:layout_marginTop="6dp"
+            android:textColor="?attr/colorOnSurface"
+            android:alpha="0.7" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvAlerts"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:nestedScrollingEnabled="false" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="18dp">
+
+            <TextView
+                android:id="@+id/tvEventsTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Eventos fallidos"
+                android:textStyle="bold"
+                android:textSize="18sp" />
+
+            <ImageButton
+                android:id="@+id/btnClearFailedEvents"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Limpiar eventos fallidos"
+                android:src="@android:drawable/ic_menu_close_clear_cancel"
+                android:tint="#4A7BF7" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvEventsEmpty"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sin eventos fallidos"
+            android:visibility="gone"
+            android:layout_marginTop="6dp"
+            android:textColor="?attr/colorOnSurface"
+            android:alpha="0.7" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvFailedEvents"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:nestedScrollingEnabled="false" />
+
+    </LinearLayout>
+
+</androidx.core.widget.NestedScrollView>

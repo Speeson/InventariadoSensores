@@ -28,6 +28,9 @@ import com.example.inventoryapp.data.remote.model.ThresholdCreateDto
 import com.example.inventoryapp.data.remote.model.ThresholdListResponseDto
 import com.example.inventoryapp.data.remote.model.ThresholdResponseDto
 import com.example.inventoryapp.data.remote.model.ThresholdUpdateDto
+import com.example.inventoryapp.data.remote.model.AlertListResponseDto
+import com.example.inventoryapp.data.remote.model.AlertResponseDto
+import com.example.inventoryapp.data.remote.model.AlertStatusDto
 
 
 
@@ -221,6 +224,18 @@ interface InventoryApi {
 
     @DELETE("thresholds/{threshold_id}")
     suspend fun deleteThreshold(@Path("threshold_id") thresholdId: Int): Response<Unit>
+
+    @GET("alerts/")
+    suspend fun listAlerts(
+        @Query("status") status: AlertStatusDto? = null,
+        @Query("product_id") productId: Int? = null,
+        @Query("location") location: String? = null,
+        @Query("limit") limit: Int = 50,
+        @Query("offset") offset: Int = 0
+    ): Response<AlertListResponseDto>
+
+    @POST("alerts/{alert_id}/ack")
+    suspend fun ackAlert(@Path("alert_id") alertId: Int): Response<AlertResponseDto>
 }
 
 
