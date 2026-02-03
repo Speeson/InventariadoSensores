@@ -22,7 +22,6 @@ import com.example.inventoryapp.ui.stock.StockActivity
 import com.example.inventoryapp.ui.rotation.RotationActivity
 import com.example.inventoryapp.ui.reports.ReportsActivity
 import kotlinx.coroutines.launch
-import com.example.inventoryapp.ui.offline.OfflineErrorsActivity
 import com.example.inventoryapp.ui.categories.CategoriesActivity
 import com.example.inventoryapp.ui.thresholds.ThresholdsActivity
 import com.example.inventoryapp.ui.alerts.AlertsActivity
@@ -132,7 +131,6 @@ class HomeActivity : AppCompatActivity() {
         binding.navViewMain.setNavigationItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_system_status -> showSystemStatus()
-                R.id.nav_offline_errors -> startActivity(Intent(this, OfflineErrorsActivity::class.java))
                 R.id.nav_alerts -> startActivity(Intent(this, AlertsActivity::class.java))
             }
             binding.drawerLayout.closeDrawer(GravityCompat.START)

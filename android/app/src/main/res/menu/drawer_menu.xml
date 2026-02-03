@@ -5,10 +5,6 @@
         android:title="Estado del sistema"
         android:icon="@drawable/system" />
     <item
-        android:id="@+id/nav_offline_errors"
-        android:title="Errores offline"
-        android:icon="@android:drawable/ic_dialog_alert" />
-    <item
         android:id="@+id/nav_alerts"
         android:title="Alertas"
         android:icon="@drawable/ic_bell" />
