@@ -1,0 +1,191 @@
+package com.example.inventoryapp.ui.categories
+
+import android.content.Intent
+import android.os.Bundle
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.inventoryapp.data.local.SessionManager
+import com.example.inventoryapp.data.remote.NetworkModule
+import com.example.inventoryapp.data.remote.model.CategoryCreateDto
+import com.example.inventoryapp.data.remote.model.CategoryResponseDto
+import com.example.inventoryapp.data.remote.model.CategoryUpdateDto
+import com.example.inventoryapp.databinding.ActivityCategoriesBinding
+import com.example.inventoryapp.ui.auth.LoginActivity
+import kotlinx.coroutines.launch
+
+class CategoriesActivity : AppCompatActivity() {
+
+    private lateinit var binding: ActivityCategoriesBinding
+    private lateinit var session: SessionManager
+    private lateinit var adapter: CategoryListAdapter
+    private var items: List<CategoryResponseDto> = emptyList()
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityCategoriesBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        session = SessionManager(this)
+
+        setSupportActionBar(binding.toolbar)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        binding.toolbar.setNavigationOnClickListener { finish() }
+
+        adapter = CategoryListAdapter { category ->
+            showEditDialog(category)
+        }
+        binding.rvCategories.layoutManager = LinearLayoutManager(this)
+        binding.rvCategories.adapter = adapter
+
+        binding.btnCreate.setOnClickListener { createCategory() }
+        binding.btnSearch.setOnClickListener { search() }
+        binding.btnClear.setOnClickListener {
+            binding.etSearchId.setText("")
+            binding.etSearchName.setText("")
+            loadCategories()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        loadCategories()
+    }
+
+    override fun onSupportNavigateUp(): Boolean {
+        finish()
+        return true
+    }
+
+    private fun search() {
+        val id = binding.etSearchId.text.toString().trim().toIntOrNull()
+        val name = binding.etSearchName.text.toString().trim().ifBlank { null }
+        if (id != null) {
+            getById(id)
+        } else {
+            loadCategories(name = name)
+        }
+    }
+
+    private fun getById(id: Int) {
+        lifecycleScope.launch {
+            try {
+                val res = NetworkModule.api.getCategory(id)
+                if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
+                if (res.isSuccessful && res.body() != null) {
+                    items = listOf(res.body()!!)
+                    adapter.submit(items)
+                } else {
+                    Toast.makeText(this@CategoriesActivity, "No encontrado (${res.code()})", Toast.LENGTH_SHORT).show()
+                    adapter.submit(emptyList())
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@CategoriesActivity, "Error de red: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun loadCategories(name: String? = null) {
+        lifecycleScope.launch {
+            try {
+                val res = NetworkModule.api.listCategories(name = name, limit = 100, offset = 0)
+                if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
+                if (res.isSuccessful && res.body() != null) {
+                    items = res.body()!!.items
+                    adapter.submit(items)
+                } else {
+                    Toast.makeText(this@CategoriesActivity, "Error ${res.code()}", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@CategoriesActivity, "Error de red: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun createCategory() {
+        val name = binding.etName.text.toString().trim()
+        if (name.isBlank()) { binding.etName.error = "Nombre requerido"; return }
+
+        binding.btnCreate.isEnabled = false
+        lifecycleScope.launch {
+            try {
+                val res = NetworkModule.api.createCategory(CategoryCreateDto(name))
+                if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
+                if (res.isSuccessful) {
+                    binding.etName.setText("")
+                    loadCategories()
+                } else {
+                    Toast.makeText(this@CategoriesActivity, "Error ${res.code()}: ${res.errorBody()?.string()}", Toast.LENGTH_LONG).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@CategoriesActivity, "Error de red: ${e.message}", Toast.LENGTH_LONG).show()
+            } finally {
+                binding.btnCreate.isEnabled = true
+            }
+        }
+    }
+
+    private fun showEditDialog(category: CategoryResponseDto) {
+        val input = android.widget.EditText(this).apply {
+            setText(category.name)
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Editar categoría #${category.id}")
+            .setView(input)
+            .setNegativeButton("Cancelar", null)
+            .setNeutralButton("Eliminar") { _, _ ->
+                deleteCategory(category.id)
+            }
+            .setPositiveButton("Guardar") { _, _ ->
+                val newName = input.text.toString().trim()
+                if (newName.isBlank()) {
+                    Toast.makeText(this, "Nombre requerido", Toast.LENGTH_SHORT).show()
+                } else {
+                    updateCategory(category.id, newName)
+                }
+            }
+            .show()
+    }
+
+    private fun updateCategory(id: Int, name: String) {
+        lifecycleScope.launch {
+            try {
+                val res = NetworkModule.api.updateCategory(id, CategoryUpdateDto(name = name))
+                if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
+                if (res.isSuccessful) {
+                    loadCategories()
+                } else {
+                    Toast.makeText(this@CategoriesActivity, "Error ${res.code()}: ${res.errorBody()?.string()}", Toast.LENGTH_LONG).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@CategoriesActivity, "Error de red: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun deleteCategory(id: Int) {
+        lifecycleScope.launch {
+            try {
+                val res = NetworkModule.api.deleteCategory(id)
+                if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
+                if (res.isSuccessful) {
+                    loadCategories()
+                } else {
+                    Toast.makeText(this@CategoriesActivity, "Error ${res.code()}: ${res.errorBody()?.string()}", Toast.LENGTH_LONG).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@CategoriesActivity, "Error de red: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun goToLogin() {
+        val i = Intent(this, LoginActivity::class.java)
+        i.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(i)
+        finish()
+    }
+}

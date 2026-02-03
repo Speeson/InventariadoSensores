@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_toggle_theme"
+        android:title="Tema oscuro"
+        android:icon="@drawable/ic_moon" />
+    <item
+        android:id="@+id/nav_logout"
+        android:title="Cerrar sesión"
+        android:icon="@android:drawable/ic_lock_power_off" />
+</menu>

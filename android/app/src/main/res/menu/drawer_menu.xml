@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_system_status"
+        android:title="Estado del sistema"
+        android:icon="@drawable/system" />
+    <item
+        android:id="@+id/nav_offline_errors"
+        android:title="Errores offline"
+        android:icon="@android:drawable/ic_dialog_alert" />
+    <item
+        android:id="@+id/nav_alerts"
+        android:title="Alertas"
+        android:icon="@drawable/ic_bell" />
+</menu>

@@ -1,88 +1,357 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/drawerLayout"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:layout_height="match_parent">
 
-    <androidx.appcompat.widget.Toolbar
-        android:id="@+id/toolbar"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="?attr/colorPrimary"
-        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
-        app:title="Menú"
-        app:titleTextColor="@android:color/white"
-        app:popupTheme="@style/ThemeOverlay.AppCompat.Dark"/>
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="@drawable/bg_home_gradient">
 
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
-
-        <LinearLayout
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="20dp">
+            android:background="@android:color/transparent"
+            android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+            app:title=""
+            app:popupTheme="@style/ThemeOverlay.AppCompat.Dark">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnScan"
+            <TextView
+                android:id="@+id/tvToolbarTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Escanear producto"
-                android:layout_marginBottom="12dp" />
+                android:gravity="center"
+                android:text=""
+                android:textSize="1sp" />
+        </androidx.appcompat.widget.Toolbar>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnProducts"
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Productos"
-                android:layout_marginBottom="12dp" />
+                android:orientation="vertical"
+                android:padding="20dp">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnStock"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Stock"
-                android:layout_marginBottom="12dp" />
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:layout_marginBottom="16dp"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="2dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="#1A000000"
+                    app:cardBackgroundColor="?attr/colorSurface">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnMovements"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Movimientos"
-                android:layout_marginBottom="12dp" />
+                    <TextView
+                        android:id="@+id/tvHomeTitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:padding="12dp"
+                        android:text="IoTrack"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorOnSurface" />
+                </com.google.android.material.card.MaterialCardView>
 
-            <!-- Dejo estos botones preparados para cuando los implementemos -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnEvents"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Eventos (sensores)"
-                android:layout_marginBottom="12dp" />
+                <GridLayout
+                    android:id="@+id/gridMenu"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:columnCount="2"
+                    android:rowCount="4"
+                    android:useDefaultMargins="true">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnRotation"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Rotacion"
-                android:layout_marginBottom="12dp" />
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/btnScan"
+                        android:layout_width="0dp"
+                        android:layout_height="130dp"
+                        android:layout_columnWeight="1"
+                        android:layout_margin="6dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="2dp">
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:gravity="center">
+                            <ImageView
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:tint="#4A7BF7"
+                                android:src="@drawable/scaner"
+                                android:contentDescription="@null" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Escanear"
+                                android:textStyle="bold"
+                                android:layout_marginTop="8dp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnReports"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Reportes"
-                android:layout_marginBottom="12dp" />
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/btnEvents"
+                        android:layout_width="0dp"
+                        android:layout_height="130dp"
+                        android:layout_columnWeight="1"
+                        android:layout_margin="6dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="2dp">
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:gravity="center">
+                            <ImageView
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:tint="#4A7BF7"
+                                android:src="@drawable/events"
+                                android:contentDescription="@null" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Eventos"
+                                android:textStyle="bold"
+                                android:layout_marginTop="8dp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
 
-            <Button
-                android:id="@+id/btnOfflineErrors"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Errores offline"
-                android:layout_marginTop="200dp"/>
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/btnProducts"
+                        android:layout_width="0dp"
+                        android:layout_height="130dp"
+                        android:layout_columnWeight="1"
+                        android:layout_margin="6dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="2dp">
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:gravity="center">
+                            <ImageView
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:tint="#4A7BF7"
+                                android:src="@drawable/products"
+                                android:contentDescription="@null" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Productos"
+                                android:textStyle="bold"
+                                android:layout_marginTop="8dp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
 
-        </LinearLayout>
-    </ScrollView>
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/btnStock"
+                        android:layout_width="0dp"
+                        android:layout_height="130dp"
+                        android:layout_columnWeight="1"
+                        android:layout_margin="6dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="2dp">
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:gravity="center">
+                            <ImageView
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:tint="#4A7BF7"
+                                android:src="@drawable/stock"
+                                android:contentDescription="@null" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Stock"
+                                android:textStyle="bold"
+                                android:layout_marginTop="8dp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
 
-</LinearLayout>
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/btnMovements"
+                        android:layout_width="0dp"
+                        android:layout_height="130dp"
+                        android:layout_columnWeight="1"
+                        android:layout_margin="6dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="2dp">
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:gravity="center">
+                            <ImageView
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:tint="#4A7BF7"
+                                android:src="@drawable/movements"
+                                android:contentDescription="@null" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Movimientos"
+                                android:textStyle="bold"
+                                android:layout_marginTop="8dp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/btnCategories"
+                        android:layout_width="0dp"
+                        android:layout_height="130dp"
+                        android:layout_columnWeight="1"
+                        android:layout_margin="6dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="2dp">
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:gravity="center">
+                            <ImageView
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:tint="#4A7BF7"
+                                android:tintMode="src_in"
+                                android:src="@drawable/category"
+                                android:contentDescription="@null" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Categorías"
+                                android:textStyle="bold"
+                                android:layout_marginTop="8dp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/btnRotation"
+                        android:layout_width="0dp"
+                        android:layout_height="130dp"
+                        android:layout_columnWeight="1"
+                        android:layout_margin="6dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="2dp">
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:gravity="center">
+                            <ImageView
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:tint="#4A7BF7"
+                                android:src="@drawable/rotation"
+                                android:contentDescription="@null" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Rotacion"
+                                android:textStyle="bold"
+                                android:layout_marginTop="8dp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/btnReports"
+                        android:layout_width="0dp"
+                        android:layout_height="130dp"
+                        android:layout_columnWeight="1"
+                        android:layout_margin="6dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="2dp">
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:gravity="center">
+                            <ImageView
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:tint="#4A7BF7"
+                                android:src="@drawable/reports"
+                                android:contentDescription="@null" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Reportes"
+                                android:textStyle="bold"
+                                android:layout_marginTop="8dp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                </GridLayout>
+
+            </LinearLayout>
+        </ScrollView>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:orientation="vertical"
+        android:background="@android:color/white">
+
+        <com.google.android.material.navigation.NavigationView
+            android:id="@+id/navViewMain"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            app:headerLayout="@layout/nav_header_home"
+            app:itemIconSize="28dp"
+            app:itemIconTint="#4A7BF7"
+            app:itemTextColor="#4A4A4A"
+            app:menu="@menu/drawer_menu" />
+
+        <com.google.android.material.navigation.NavigationView
+            android:id="@+id/navViewBottom"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:itemIconSize="28dp"
+            app:itemIconTint="#4A7BF7"
+            app:itemTextColor="#4A4A4A"
+            app:menu="@menu/drawer_menu_bottom" />
+    </LinearLayout>
+
+</androidx.drawerlayout.widget.DrawerLayout>

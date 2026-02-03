@@ -2,11 +2,11 @@
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuItem
 import android.widget.Toast
+import androidx.core.view.GravityCompat
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.lifecycleScope
 import com.example.inventoryapp.R
 import com.example.inventoryapp.data.local.OfflineQueue
@@ -24,6 +24,7 @@ import com.example.inventoryapp.ui.rotation.RotationActivity
 import com.example.inventoryapp.ui.reports.ReportsActivity
 import kotlinx.coroutines.launch
 import com.example.inventoryapp.ui.offline.OfflineErrorsActivity
+import com.example.inventoryapp.ui.categories.CategoriesActivity
 
 
 class HomeActivity : AppCompatActivity() {
@@ -38,6 +39,12 @@ class HomeActivity : AppCompatActivity() {
 
         session = SessionManager(this)
 
+        val prefs = getSharedPreferences("ui_prefs", MODE_PRIVATE)
+        val isDark = prefs.getBoolean("dark_mode", false)
+        AppCompatDelegate.setDefaultNightMode(
+            if (isDark) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
+        )
+
         // ✅ Si no hay token, fuera
         if (session.getToken().isNullOrBlank()) {
             goToLogin()
@@ -45,6 +52,10 @@ class HomeActivity : AppCompatActivity() {
         }
 
         setSupportActionBar(binding.toolbar)
+        binding.toolbar.setNavigationIcon(android.R.drawable.ic_menu_sort_by_size)
+        binding.toolbar.setNavigationOnClickListener {
+            binding.drawerLayout.openDrawer(GravityCompat.START)
+        }
 
         // Pop-up bienvenida si venías de registro
         intent.getStringExtra("welcome_email")?.takeIf { it.isNotBlank() }?.let { email ->
@@ -121,8 +132,38 @@ class HomeActivity : AppCompatActivity() {
             startActivity(Intent(this, ReportsActivity::class.java))
         }
 
-        binding.btnOfflineErrors.setOnClickListener {
-            startActivity(Intent(this, OfflineErrorsActivity::class.java))
+        binding.btnCategories.setOnClickListener {
+            startActivity(Intent(this, CategoriesActivity::class.java))
+        }
+
+        binding.navViewMain.setNavigationItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_system_status -> showSystemStatus()
+                R.id.nav_offline_errors -> startActivity(Intent(this, OfflineErrorsActivity::class.java))
+                R.id.nav_alerts -> Toast.makeText(this, "Alertas (próximamente)", Toast.LENGTH_SHORT).show()
+            }
+            binding.drawerLayout.closeDrawer(GravityCompat.START)
+            true
+        }
+
+        binding.navViewBottom.setNavigationItemSelectedListener { item ->
+            if (item.itemId == R.id.nav_logout) {
+                binding.drawerLayout.closeDrawer(GravityCompat.START)
+                confirmLogout()
+                return@setNavigationItemSelectedListener true
+            }
+            if (item.itemId == R.id.nav_toggle_theme) {
+                toggleTheme()
+                return@setNavigationItemSelectedListener true
+            }
+            false
+        }
+
+        updateThemeMenuItem()
+
+        if (prefs.getBoolean("reopen_drawer", false)) {
+            prefs.edit().putBoolean("reopen_drawer", false).apply()
+            binding.drawerLayout.openDrawer(GravityCompat.START)
         }
 
     }
@@ -132,6 +173,7 @@ class HomeActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             ensureValidSession()
+            updateDrawerHeader()
 
             val report = OfflineSyncer.flush(this@HomeActivity)
 
@@ -153,20 +195,6 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
-
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.home_menu, menu)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_system_status -> { showSystemStatus(); true }
-            R.id.action_profile -> { showProfile(); true }
-            R.id.action_logout -> { confirmLogout(); true }
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
 
     private fun showSystemStatus() {
         lifecycleScope.launch {
@@ -271,6 +299,24 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
+    private suspend fun updateDrawerHeader() {
+        try {
+            val header = binding.navViewMain.getHeaderView(0)
+            val tvName = header.findViewById<android.widget.TextView>(com.example.inventoryapp.R.id.tvUserName)
+            val tvEmail = header.findViewById<android.widget.TextView>(com.example.inventoryapp.R.id.tvUserEmail)
+            val tvRole = header.findViewById<android.widget.TextView>(com.example.inventoryapp.R.id.tvUserRole)
+            val res = NetworkModule.api.me()
+            if (res.isSuccessful && res.body() != null) {
+                val me = res.body()!!
+                tvName.text = me.username
+                tvEmail.text = me.email
+                tvRole.text = me.role
+            }
+        } catch (_: Exception) {
+            // Silent if offline.
+        }
+    }
+
 private fun confirmLogout() {
         AlertDialog.Builder(this)
             .setTitle("Cerrar sesión")
@@ -290,6 +336,33 @@ private fun confirmLogout() {
         i.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(i)
         finish()
+    }
+
+    private fun toggleTheme() {
+        val prefs = getSharedPreferences("ui_prefs", MODE_PRIVATE)
+        val isDark = prefs.getBoolean("dark_mode", false)
+        val newMode = !isDark
+        prefs.edit().putBoolean("dark_mode", newMode).putBoolean("reopen_drawer", true).apply()
+        val mode = if (newMode) {
+            AppCompatDelegate.MODE_NIGHT_YES
+        } else {
+            AppCompatDelegate.MODE_NIGHT_NO
+        }
+        AppCompatDelegate.setDefaultNightMode(mode)
+        recreate()
+    }
+
+    private fun updateThemeMenuItem() {
+        val prefs = getSharedPreferences("ui_prefs", MODE_PRIVATE)
+        val isDark = prefs.getBoolean("dark_mode", false)
+        val item = binding.navViewBottom.menu.findItem(R.id.nav_toggle_theme)
+        if (isDark) {
+            item.title = "Tema claro"
+            item.setIcon(R.drawable.ic_sun)
+        } else {
+            item.title = "Tema oscuro"
+            item.setIcon(R.drawable.ic_moon)
+        }
     }
 }
 

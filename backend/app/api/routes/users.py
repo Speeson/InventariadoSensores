@@ -10,7 +10,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 @router.get("/me", response_model=UserMeResponse)
 def me(user: User = Depends(get_current_user)):
     role = user.role.value if hasattr(user.role, "value") else user.role
-    return UserMeResponse(id=user.id, email=user.email, role=role)
+    return UserMeResponse(id=user.id, username=user.username, email=user.email, role=role)
 
 @router.get("/admin-only")
 def admin_only(user: User = Depends(require_roles("ADMIN"))):

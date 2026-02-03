@@ -20,6 +20,10 @@ import com.example.inventoryapp.data.remote.model.EventCreateDto
 import com.example.inventoryapp.data.remote.model.EventListResponseDto
 import com.example.inventoryapp.data.remote.model.EventResponseDto
 import com.example.inventoryapp.data.remote.model.EventTypeDto
+import com.example.inventoryapp.data.remote.model.CategoryCreateDto
+import com.example.inventoryapp.data.remote.model.CategoryListResponseDto
+import com.example.inventoryapp.data.remote.model.CategoryResponseDto
+import com.example.inventoryapp.data.remote.model.CategoryUpdateDto
 
 
 
@@ -32,6 +36,7 @@ data class RegisterRequest(
 
 data class UserMeResponse(
     val id: Int,
+    val username: String,
     val email: String,
     val role: String
 )
@@ -167,6 +172,28 @@ interface InventoryApi {
         @Query("limit") limit: Int = 200,
         @Query("offset") offset: Int = 0
     ): Response<LocationListResponseDto>
+
+    @GET("categories/")
+    suspend fun listCategories(
+        @Query("name") name: String? = null,
+        @Query("limit") limit: Int = 50,
+        @Query("offset") offset: Int = 0
+    ): Response<CategoryListResponseDto>
+
+    @GET("categories/{category_id}")
+    suspend fun getCategory(@Path("category_id") categoryId: Int): Response<CategoryResponseDto>
+
+    @POST("categories/")
+    suspend fun createCategory(@Body body: CategoryCreateDto): Response<CategoryResponseDto>
+
+    @PATCH("categories/{category_id}")
+    suspend fun updateCategory(
+        @Path("category_id") categoryId: Int,
+        @Body body: CategoryUpdateDto
+    ): Response<CategoryResponseDto>
+
+    @DELETE("categories/{category_id}")
+    suspend fun deleteCategory(@Path("category_id") categoryId: Int): Response<Unit>
 }
 
 

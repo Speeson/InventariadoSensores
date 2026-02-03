@@ -55,8 +55,8 @@ class LoginActivity : AppCompatActivity() {
             imm.hideSoftInputFromWindow(view.windowToken, 0)
         }
 
-        // Botón "Crear cuenta" (asegúrate de tenerlo en el layout con id btnCreateAccount)
-        binding.btnCreateAccount.setOnClickListener {
+        // Texto "Crear cuenta"
+        binding.tvCreateAccount.setOnClickListener {
             showRegisterDialog()
         }
     }
@@ -160,17 +160,17 @@ class LoginActivity : AppCompatActivity() {
     private fun setUiEnabled(enabled: Boolean) {
         binding.btnLogin.isEnabled = enabled
         // Si el botón existe en tu layout, esto compila; si no, comenta esta línea.
-        binding.btnCreateAccount.isEnabled = enabled
+        binding.tvCreateAccount.isEnabled = enabled
         binding.etUser.isEnabled = enabled
         binding.etPass.isEnabled = enabled
     }
 
     private fun setLoading(loading: Boolean) {
         binding.btnLogin.isEnabled = !loading
-        binding.btnCreateAccount.isEnabled = !loading
+        binding.tvCreateAccount.isEnabled = !loading
         binding.etUser.isEnabled = !loading
         binding.etPass.isEnabled = !loading
-        binding.btnLogin.text = if (loading) "Entrando..." else "Entrar"
+        binding.btnLogin.text = if (loading) "Entrando..." else "Login"
     }
 
 }
