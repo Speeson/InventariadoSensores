@@ -59,6 +59,11 @@ class LoginActivity : AppCompatActivity() {
         binding.tvCreateAccount.setOnClickListener {
             showRegisterDialog()
         }
+
+        binding.imgLogo.setOnLongClickListener {
+            showHostDialog()
+            true
+        }
     }
 
     private fun loginWithApi(user: String, pass: String) {
@@ -171,6 +176,28 @@ class LoginActivity : AppCompatActivity() {
         binding.etUser.isEnabled = !loading
         binding.etPass.isEnabled = !loading
         binding.btnLogin.text = if (loading) "Entrando..." else "Login"
+    }
+
+    private fun showHostDialog() {
+        val input = EditText(this).apply {
+            hint = "IP del servidor (ej. 192.168.1.50)"
+            setText(NetworkModule.getCustomHost() ?: "")
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Configurar servidor")
+            .setMessage("Se guardará solo en este dispositivo.")
+            .setView(input)
+            .setNegativeButton("Cancelar", null)
+            .setNeutralButton("Limpiar") { _, _ ->
+                NetworkModule.setCustomHost(null)
+                UiNotifier.show(this, "Servidor restablecido")
+            }
+            .setPositiveButton("Guardar") { _, _ ->
+                NetworkModule.setCustomHost(input.text.toString())
+                UiNotifier.show(this, "Servidor actualizado")
+            }
+            .show()
     }
 
 }

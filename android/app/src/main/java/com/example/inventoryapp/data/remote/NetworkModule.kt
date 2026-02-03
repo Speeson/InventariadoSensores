@@ -18,6 +18,9 @@ import com.example.inventoryapp.ui.common.UiNotifier
 
 object NetworkModule {
 
+    private const val PREFS_NAME = "network_prefs"
+    private const val KEY_CUSTOM_HOST = "custom_host"
+
     private fun isEmulator(): Boolean {
         return Build.FINGERPRINT.startsWith("generic")
             || Build.FINGERPRINT.startsWith("unknown")
@@ -30,7 +33,11 @@ object NetworkModule {
     }
 
     private fun baseUrl(): String {
-        val host = if (isEmulator()) "10.0.2.2" else BuildConfig.LOCAL_DEV_HOST
+        val host = if (isEmulator()) {
+            "10.0.2.2"
+        } else {
+            getCustomHost()?.ifBlank { null } ?: BuildConfig.LOCAL_DEV_HOST
+        }
         return "http://$host:8000/"
     }
     private lateinit var appContext: Context
@@ -89,7 +96,19 @@ object NetworkModule {
                         }
                     } else {
                         val msg = e.message ?: "No se pudo contactar con el servidor"
-                        SystemAlertManager.record(appContext, SystemAlertType.NETWORK, "Sin conexión", msg)
+                        SystemAlertManager.record(
+                            appContext,
+                            SystemAlertType.NETWORK,
+                            "Sin conexion",
+                            msg,
+                            blocking = false
+                        )
+                        val activity = ActivityTracker.getCurrent()
+                        if (activity != null) {
+                            activity.runOnUiThread {
+                                UiNotifier.show(activity, "Intentando conectar...")
+                            }
+                        }
                     }
                     throw e
                 }
@@ -97,12 +116,33 @@ object NetworkModule {
             .build()
     }
 
-    val api: InventoryApi by lazy {
-        Retrofit.Builder()
-            .baseUrl(baseUrl())
-            .addConverterFactory(GsonConverterFactory.create())
-            .client(client)
-            .build()
-            .create(InventoryApi::class.java)
+    @Volatile private var apiInstance: InventoryApi? = null
+    @Volatile private var cachedBaseUrl: String? = null
+
+    val api: InventoryApi
+        get() {
+            val url = baseUrl()
+            if (apiInstance == null || cachedBaseUrl != url) {
+                cachedBaseUrl = url
+                apiInstance = Retrofit.Builder()
+                    .baseUrl(url)
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .client(client)
+                    .build()
+                    .create(InventoryApi::class.java)
+            }
+            return apiInstance!!
+        }
+
+    fun setCustomHost(host: String?) {
+        val prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_CUSTOM_HOST, host?.trim()).apply()
+        cachedBaseUrl = null
+        apiInstance = null
+    }
+
+    fun getCustomHost(): String? {
+        val prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getString(KEY_CUSTOM_HOST, null)
     }
 }

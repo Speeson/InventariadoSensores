@@ -3,6 +3,9 @@ plugins {
     alias(libs.plugins.kotlin.android)
 }
 
+val localHost = (project.findProperty("LOCAL_DEV_HOST") as String?)
+    ?: "192.168.1.51"
+
 android {
     namespace = "com.example.inventoryapp"
     compileSdk = 34
@@ -17,7 +20,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Local dev host for physical devices (Wi-Fi/LAN)
-        buildConfigField("String", "LOCAL_DEV_HOST", "\"192.168.1.51\"")
+        buildConfigField("String", "LOCAL_DEV_HOST", "\"$localHost\"")
     }
 
     buildTypes {

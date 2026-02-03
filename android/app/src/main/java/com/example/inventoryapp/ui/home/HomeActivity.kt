@@ -2,6 +2,7 @@
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.EditText
 import androidx.core.view.GravityCompat
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -59,6 +60,10 @@ class HomeActivity : AppCompatActivity() {
         binding.toolbar.setNavigationIcon(android.R.drawable.ic_menu_sort_by_size)
         binding.toolbar.setNavigationOnClickListener {
             binding.drawerLayout.openDrawer(GravityCompat.START)
+        }
+        binding.toolbar.setOnLongClickListener {
+            showHostDialog()
+            true
         }
 
         // Pop-up bienvenida si venías de registro
@@ -245,6 +250,28 @@ class HomeActivity : AppCompatActivity() {
                     .show()
             }
         }
+    }
+
+    private fun showHostDialog() {
+        val input = EditText(this).apply {
+            hint = "IP del servidor (ej. 192.168.1.50)"
+            setText(NetworkModule.getCustomHost() ?: "")
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Configurar servidor")
+            .setMessage("Se guardará solo en este dispositivo.")
+            .setView(input)
+            .setNegativeButton("Cancelar", null)
+            .setNeutralButton("Limpiar") { _, _ ->
+                NetworkModule.setCustomHost(null)
+                UiNotifier.show(this, "Servidor restablecido")
+            }
+            .setPositiveButton("Guardar") { _, _ ->
+                NetworkModule.setCustomHost(input.text.toString())
+                UiNotifier.show(this, "Servidor actualizado")
+            }
+            .show()
     }
 
 
