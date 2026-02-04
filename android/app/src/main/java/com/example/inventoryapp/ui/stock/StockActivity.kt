@@ -17,6 +17,7 @@ import com.example.inventoryapp.data.remote.model.StockUpdateDto
 import com.example.inventoryapp.databinding.ActivityStockBinding
 import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.common.SendSnack
+import com.example.inventoryapp.ui.common.UiNotifier
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -67,7 +68,16 @@ class StockActivity : AppCompatActivity() {
                 } else {
                     val pending = buildPendingStocks()
                     adapter.submit(pending)
-                    snack.showError("❌ Error ${res.code()}")
+                    if (res.code() == 403) {
+                        UiNotifier.showBlocking(
+                            this@StockActivity,
+                            "Permisos insuficientes",
+                            "No tienes permisos para ver stock.",
+                            com.example.inventoryapp.R.drawable.ic_lock
+                        )
+                    } else {
+                        snack.showError("❌ Error ${res.code()}")
+                    }
                 }
             } catch (e: Exception) {
                 val pending = buildPendingStocks()
@@ -103,7 +113,25 @@ class StockActivity : AppCompatActivity() {
                     binding.etQuantity.setText("")
                     loadStocks()
                 } else {
-                    snack.showError("❌ Error ${res.code()}: ${res.errorBody()?.string()}")
+                    if (res.code() == 403) {
+                        UiNotifier.showBlocking(
+                            this@StockActivity,
+                            "Permisos insuficientes",
+                            "No tienes permisos para crear stock.",
+                            com.example.inventoryapp.R.drawable.ic_lock
+                        )
+                    } else {
+                        if (res.code() == 403) {
+                        UiNotifier.showBlocking(
+                            this@StockActivity,
+                            "Permisos insuficientes",
+                            "No tienes permisos para actualizar stock.",
+                            com.example.inventoryapp.R.drawable.ic_lock
+                        )
+                    } else {
+                        snack.showError("❌ Error ${res.code()}: ${res.errorBody()?.string()}")
+                    }
+                    }
                 }
 
             } catch (e: IOException) {
@@ -151,8 +179,16 @@ class StockActivity : AppCompatActivity() {
                 if (res.isSuccessful) {
                     snack.showSuccess("✅ Stock actualizado")
                     loadStocks()
-                } else {
-                    snack.showError("❌ Error ${res.code()}: ${res.errorBody()?.string()}")
+                } else {                    if (res.code() == 403) {
+                        UiNotifier.showBlocking(
+                            this@StockActivity,
+                            "Permisos insuficientes",
+                            "No tienes permisos para actualizar stock.",
+                            com.example.inventoryapp.R.drawable.ic_lock
+                        )
+                    } else {
+                        snack.showError("? Error ${res.code()}: ${res.errorBody()?.string()}")
+                    }
                 }
 
             } catch (e: IOException) {

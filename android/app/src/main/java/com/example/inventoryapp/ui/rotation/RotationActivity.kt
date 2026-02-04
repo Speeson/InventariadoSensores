@@ -60,7 +60,12 @@ class RotationActivity : AppCompatActivity() {
                     if (role == "MANAGER" || role == "ADMIN") {
                         loadRotation(withSnack = false)
                     } else {
-                        snack.showError("Permiso denegado. Permisos insuficientes.")
+                        com.example.inventoryapp.ui.common.UiNotifier.showBlocking(
+                            this@RotationActivity,
+                            "Permisos insuficientes",
+                            "No tienes permisos para acceder a esta sección.",
+                            com.example.inventoryapp.R.drawable.ic_lock
+                        )
                         finish()
                     }
                 } else {
@@ -89,7 +94,12 @@ class RotationActivity : AppCompatActivity() {
                 }
 
                 if (movRes.code() == 403 || prodRes.code() == 403) {
-                    snack.showError("Permiso denegado. Permisos insuficientes.")
+                    com.example.inventoryapp.ui.common.UiNotifier.showBlocking(
+                        this@RotationActivity,
+                        "Permisos insuficientes",
+                        "No tienes permisos para acceder a esta sección.",
+                        com.example.inventoryapp.R.drawable.ic_lock
+                    )
                     return@launch
                 }
 

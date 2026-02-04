@@ -122,7 +122,12 @@ class HomeActivity : AppCompatActivity() {
                         if (role == "MANAGER" || role == "ADMIN") {
                             startActivity(Intent(this@HomeActivity, RotationActivity::class.java))
                         } else {
-                            UiNotifier.show(this@HomeActivity, "Permiso denegado. Permisos insuficientes.")
+                            UiNotifier.showBlocking(
+                                this@HomeActivity,
+                                "Permisos insuficientes",
+                                "No tienes permisos para acceder a esta sección.",
+                                com.example.inventoryapp.R.drawable.ic_lock
+                            )
                         }
                     } else {
                         UiNotifier.show(this@HomeActivity, ApiErrorFormatter.format(res.code()))

@@ -18,6 +18,7 @@ import com.example.inventoryapp.databinding.ActivityEventsBinding
 import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.auth.LoginActivity
 import com.example.inventoryapp.ui.common.SendSnack
+import com.example.inventoryapp.ui.common.UiNotifier
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -111,7 +112,16 @@ class EventsActivity : AppCompatActivity() {
                         snack.showQueuedOffline("Sin conexión. Evento guardado offline")
                         loadEvents(withSnack = false)
                     } else {
-                        snack.showError("Error: ${ex?.message ?: "sin detalle"}")
+                        if (isForbidden(ex)) {
+                            UiNotifier.showBlocking(
+                                this@EventsActivity,
+                                "Permisos insuficientes",
+                                "No tienes permisos para crear eventos.",
+                                com.example.inventoryapp.R.drawable.ic_lock
+                            )
+                        } else {
+                            snack.showError("Error: ${ex?.message ?: "sin detalle"}")
+                        }
                     }
                 }
             } catch (e: IOException) {
@@ -145,6 +155,12 @@ class EventsActivity : AppCompatActivity() {
                 // Silent fallback to manual input.
             }
         }
+    }
+
+
+    private fun isForbidden(ex: Throwable?): Boolean {
+        val msg = ex?.message ?: return false
+        return msg.contains("HTTP 403")
     }
 
     private fun normalizeLocationInput(raw: String): String {

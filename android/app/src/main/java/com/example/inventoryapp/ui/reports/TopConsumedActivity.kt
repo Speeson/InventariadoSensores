@@ -69,7 +69,12 @@ class TopConsumedActivity : AppCompatActivity() {
                     return@launch
                 }
                 if (res.code() == 403) {
-                    snack.showError("Permiso denegado. Permisos insuficientes.")
+                    com.example.inventoryapp.ui.common.UiNotifier.showBlocking(
+                        this@TopConsumedActivity,
+                        "Permisos insuficientes",
+                        "No tienes permisos para ver este reporte.",
+                        com.example.inventoryapp.R.drawable.ic_lock
+                    )
                     return@launch
                 }
                 if (!res.isSuccessful || res.body() == null) {

@@ -16,6 +16,7 @@ import com.example.inventoryapp.databinding.ActivityProductDetailBinding
 import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.auth.LoginActivity
 import com.example.inventoryapp.ui.common.SendSnack
+import com.example.inventoryapp.ui.common.UiNotifier
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -69,7 +70,16 @@ class ProductDetailActivity : AppCompatActivity() {
                     binding.etCategoryId.setText(p.categoryId.toString())
                     binding.etSku.isEnabled = false
                 } else {
-                    snack.showError("Error ${res.code()}")
+                    if (res.code() == 403) {
+                        UiNotifier.showBlocking(
+                            this@ProductDetailActivity,
+                            "Permisos insuficientes",
+                            "No tienes permisos para acceder a este producto.",
+                            com.example.inventoryapp.R.drawable.ic_lock
+                        )
+                    } else {
+                        snack.showError("Error ${res.code()}")
+                    }
                 }
             } catch (e: Exception) {
                 snack.showError("Error red: ${e.message}")
@@ -112,7 +122,16 @@ class ProductDetailActivity : AppCompatActivity() {
                         binding.etSku.isEnabled = false
                         binding.tvTitle.text = "Editar producto #$productId"
                     } else {
-                        snack.showError("Error ${res.code()}: ${res.errorBody()?.string()}")
+                        if (res.code() == 403) {
+                            UiNotifier.showBlocking(
+                                this@ProductDetailActivity,
+                                "Permisos insuficientes",
+                                "No tienes permisos para crear productos.",
+                                com.example.inventoryapp.R.drawable.ic_lock
+                            )
+                        } else {
+                            snack.showError("Error ${res.code()}: ${res.errorBody()?.string()}")
+                        }
                     }
 
                 } else {
@@ -124,7 +143,16 @@ class ProductDetailActivity : AppCompatActivity() {
                     if (res.isSuccessful) {
                         snack.showSuccess("Producto actualizado")
                     } else {
-                        snack.showError("Error ${res.code()}: ${res.errorBody()?.string()}")
+                        if (res.code() == 403) {
+                            UiNotifier.showBlocking(
+                                this@ProductDetailActivity,
+                                "Permisos insuficientes",
+                                "No tienes permisos para editar productos.",
+                                com.example.inventoryapp.R.drawable.ic_lock
+                            )
+                        } else {
+                            snack.showError("Error ${res.code()}: ${res.errorBody()?.string()}")
+                        }
                     }
                 }
 
@@ -171,7 +199,16 @@ class ProductDetailActivity : AppCompatActivity() {
                     snack.showSuccess("Producto eliminado")
                     finish()
                 } else {
-                    snack.showError("Error ${res.code()}: ${res.errorBody()?.string()}")
+                    if (res.code() == 403) {
+                        UiNotifier.showBlocking(
+                            this@ProductDetailActivity,
+                            "Permisos insuficientes",
+                            "No tienes permisos para eliminar productos.",
+                            com.example.inventoryapp.R.drawable.ic_lock
+                        )
+                    } else {
+                        snack.showError("Error ${res.code()}: ${res.errorBody()?.string()}")
+                    }
                     binding.btnDelete.isEnabled = true
                 }
 

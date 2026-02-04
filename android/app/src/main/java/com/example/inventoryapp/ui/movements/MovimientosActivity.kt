@@ -17,6 +17,7 @@ import com.example.inventoryapp.data.remote.model.MovementTransferOperationReque
 import com.example.inventoryapp.databinding.ActivityMovimientosBinding
 import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.common.SendSnack
+import com.example.inventoryapp.ui.common.UiNotifier
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -101,7 +102,16 @@ class MovimientosActivity : AppCompatActivity() {
                             val body = res.body()!!
                             snack.showSuccess("IN OK | stock=${body.stock.quantity} @ ${body.stock.location}")
                         } else {
+                            if (res.code() == 403) {
+                            UiNotifier.showBlocking(
+                                this@MovimientosActivity,
+                                "Permisos insuficientes",
+                                "No tienes permisos para crear movimientos.",
+                                com.example.inventoryapp.R.drawable.ic_lock
+                            )
+                        } else {
                             snack.showError("Error ${res.code()}: ${res.errorBody()?.string()}")
+                        }
                         }
                     }
 
@@ -112,7 +122,16 @@ class MovimientosActivity : AppCompatActivity() {
                             val body = res.body()!!
                             snack.showSuccess("OUT OK | stock=${body.stock.quantity} @ ${body.stock.location}")
                         } else {
+                            if (res.code() == 403) {
+                            UiNotifier.showBlocking(
+                                this@MovimientosActivity,
+                                "Permisos insuficientes",
+                                "No tienes permisos para crear movimientos.",
+                                com.example.inventoryapp.R.drawable.ic_lock
+                            )
+                        } else {
                             snack.showError("Error ${res.code()}: ${res.errorBody()?.string()}")
+                        }
                         }
                     }
 
@@ -123,7 +142,16 @@ class MovimientosActivity : AppCompatActivity() {
                             val body = res.body()!!
                             snack.showSuccess("ADJUST OK | stock=${body.stock.quantity} @ ${body.stock.location}")
                         } else {
+                            if (res.code() == 403) {
+                            UiNotifier.showBlocking(
+                                this@MovimientosActivity,
+                                "Permisos insuficientes",
+                                "No tienes permisos para crear movimientos.",
+                                com.example.inventoryapp.R.drawable.ic_lock
+                            )
+                        } else {
                             snack.showError("Error ${res.code()}: ${res.errorBody()?.string()}")
+                        }
                         }
                     }
 
@@ -137,7 +165,16 @@ class MovimientosActivity : AppCompatActivity() {
                                     "${body.toStock.location}=${body.toStock.quantity}"
                             )
                         } else {
+                            if (res.code() == 403) {
+                            UiNotifier.showBlocking(
+                                this@MovimientosActivity,
+                                "Permisos insuficientes",
+                                "No tienes permisos para crear movimientos.",
+                                com.example.inventoryapp.R.drawable.ic_lock
+                            )
+                        } else {
                             snack.showError("Error ${res.code()}: ${res.errorBody()?.string()}")
+                        }
                         }
                     }
                 }
