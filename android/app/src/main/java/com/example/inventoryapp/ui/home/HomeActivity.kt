@@ -3,6 +3,9 @@
 import android.content.Intent
 import android.os.Bundle
 import android.widget.EditText
+import android.widget.ImageView
+import android.widget.TextView
+import android.graphics.Color
 import androidx.core.view.GravityCompat
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -31,12 +34,15 @@ import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.common.SystemAlertManager
 import com.example.inventoryapp.data.local.SystemAlertType
 import com.example.inventoryapp.data.remote.model.AlertStatusDto
+import com.google.android.material.color.MaterialColors
+import com.google.android.material.card.MaterialCardView
 
 
 class HomeActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityHomeBinding
     private lateinit var session: SessionManager
+    private var currentRole: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -98,6 +104,10 @@ class HomeActivity : AppCompatActivity() {
         }
 
         binding.btnRotation.setOnClickListener {
+            if (!canAccessRestricted()) {
+                UiNotifier.show(this@HomeActivity, "Solo admin/manager")
+                return@setOnClickListener
+            }
             lifecycleScope.launch {
                 try {
                     val res = NetworkModule.api.me()
@@ -124,14 +134,26 @@ class HomeActivity : AppCompatActivity() {
         }
 
         binding.btnReports.setOnClickListener {
+            if (!canAccessRestricted()) {
+                UiNotifier.show(this@HomeActivity, "Solo admin/manager")
+                return@setOnClickListener
+            }
             startActivity(Intent(this, ReportsActivity::class.java))
         }
 
         binding.btnCategories.setOnClickListener {
+            if (!canAccessRestricted()) {
+                UiNotifier.show(this@HomeActivity, "Solo admin/manager")
+                return@setOnClickListener
+            }
             startActivity(Intent(this, CategoriesActivity::class.java))
         }
 
         binding.btnThresholds.setOnClickListener {
+            if (!canAccessRestricted()) {
+                UiNotifier.show(this@HomeActivity, "Solo admin/manager")
+                return@setOnClickListener
+            }
             startActivity(Intent(this, ThresholdsActivity::class.java))
         }
         binding.btnAlertsQuick.setOnClickListener {
@@ -340,15 +362,143 @@ class HomeActivity : AppCompatActivity() {
             val tvName = header.findViewById<android.widget.TextView>(com.example.inventoryapp.R.id.tvUserName)
             val tvEmail = header.findViewById<android.widget.TextView>(com.example.inventoryapp.R.id.tvUserEmail)
             val tvRole = header.findViewById<android.widget.TextView>(com.example.inventoryapp.R.id.tvUserRole)
+            val rowToggle = header.findViewById<android.view.View>(com.example.inventoryapp.R.id.rowRestrictedToggle)
+            val toggle = header.findViewById<androidx.appcompat.widget.SwitchCompat>(com.example.inventoryapp.R.id.switchShowRestricted)
             val res = NetworkModule.api.me()
             if (res.isSuccessful && res.body() != null) {
                 val me = res.body()!!
+                currentRole = me.role
                 tvName.text = me.username
                 tvEmail.text = me.email
                 tvRole.text = me.role
+
+                val prefs = getSharedPreferences("ui_prefs", MODE_PRIVATE)
+                val showRestricted = prefs.getBoolean("show_restricted_cards", false)
+                val isUser = me.role.equals("USER", ignoreCase = true)
+                rowToggle.visibility = if (isUser) android.view.View.VISIBLE else android.view.View.GONE
+                toggle.setOnCheckedChangeListener(null)
+                toggle.isChecked = showRestricted
+                toggle.setOnCheckedChangeListener { _, isChecked ->
+                    prefs.edit().putBoolean("show_restricted_cards", isChecked).apply()
+                    applyRestrictedUi(isChecked)
+                }
+                applyRestrictedUi(showRestricted)
             }
         } catch (_: Exception) {
             // Silent if offline.
+        }
+    }
+
+    private fun canAccessRestricted(): Boolean {
+        return !currentRole.equals("USER", ignoreCase = true)
+    }
+
+    private fun applyRestrictedUi(showRestricted: Boolean) {
+        val isUser = currentRole.equals("USER", ignoreCase = true)
+        if (!isUser) {
+            setRestrictedCardState(
+                binding.btnRotation,
+                binding.ivRotationIcon,
+                binding.tvRotationLabel,
+                R.drawable.rotation,
+                restricted = false
+            )
+            setRestrictedCardState(
+                binding.btnReports,
+                binding.ivReportsIcon,
+                binding.tvReportsLabel,
+                R.drawable.reports,
+                restricted = false
+            )
+            setRestrictedCardState(
+                binding.btnCategories,
+                binding.ivCategoriesIcon,
+                binding.tvCategoriesLabel,
+                R.drawable.category,
+                restricted = false
+            )
+            setRestrictedCardState(
+                binding.btnThresholds,
+                binding.ivThresholdsIcon,
+                binding.tvThresholdsLabel,
+                R.drawable.umbral,
+                restricted = false
+            )
+            binding.btnRotation.visibility = android.view.View.VISIBLE
+            binding.btnReports.visibility = android.view.View.VISIBLE
+            binding.btnCategories.visibility = android.view.View.VISIBLE
+            binding.btnThresholds.visibility = android.view.View.VISIBLE
+            return
+        }
+
+        if (!showRestricted) {
+            binding.btnRotation.visibility = android.view.View.GONE
+            binding.btnReports.visibility = android.view.View.GONE
+            binding.btnCategories.visibility = android.view.View.GONE
+            binding.btnThresholds.visibility = android.view.View.GONE
+            return
+        }
+
+        binding.btnRotation.visibility = android.view.View.VISIBLE
+        binding.btnReports.visibility = android.view.View.VISIBLE
+        binding.btnCategories.visibility = android.view.View.VISIBLE
+        binding.btnThresholds.visibility = android.view.View.VISIBLE
+
+        setRestrictedCardState(
+            binding.btnRotation,
+            binding.ivRotationIcon,
+            binding.tvRotationLabel,
+            R.drawable.rotation,
+            restricted = true
+        )
+        setRestrictedCardState(
+            binding.btnReports,
+            binding.ivReportsIcon,
+            binding.tvReportsLabel,
+            R.drawable.reports,
+            restricted = true
+        )
+        setRestrictedCardState(
+            binding.btnCategories,
+            binding.ivCategoriesIcon,
+            binding.tvCategoriesLabel,
+            R.drawable.category,
+            restricted = true
+        )
+        setRestrictedCardState(
+            binding.btnThresholds,
+            binding.ivThresholdsIcon,
+            binding.tvThresholdsLabel,
+            R.drawable.umbral,
+            restricted = true
+        )
+    }
+
+    private fun setRestrictedCardState(
+        card: MaterialCardView,
+        icon: ImageView,
+        label: TextView,
+        originalIconRes: Int,
+        restricted: Boolean
+    ) {
+        if (label.tag == null) {
+            label.tag = label.text.toString()
+        }
+
+        if (restricted) {
+            label.text = "Solo admin/manager"
+            label.setTextColor(Color.DKGRAY)
+            icon.setImageResource(R.drawable.ic_lock)
+            icon.setColorFilter(Color.parseColor("#9E9E9E"))
+            card.setCardBackgroundColor(Color.parseColor("#E0E0E0"))
+            card.alpha = 0.75f
+        } else {
+            label.text = label.tag as String
+            label.setTextColor(MaterialColors.getColor(label, com.google.android.material.R.attr.colorOnSurface))
+            icon.setImageResource(originalIconRes)
+            icon.setColorFilter(Color.parseColor("#4A7BF7"))
+            card.setCardBackgroundColor(MaterialColors.getColor(card, com.google.android.material.R.attr.colorSurface))
+            card.alpha = 1.0f
         }
     }
 

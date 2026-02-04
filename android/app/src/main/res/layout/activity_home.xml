@@ -278,6 +278,7 @@
                             android:orientation="vertical"
                             android:gravity="center">
                             <ImageView
+                                android:id="@+id/ivCategoriesIcon"
                                 android:layout_width="48dp"
                                 android:layout_height="48dp"
                                 android:tint="#4A7BF7"
@@ -285,6 +286,7 @@
                                 android:src="@drawable/category"
                                 android:contentDescription="@null" />
                             <TextView
+                                android:id="@+id/tvCategoriesLabel"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Categorías"
@@ -310,12 +312,14 @@
                             android:orientation="vertical"
                             android:gravity="center">
                             <ImageView
+                                android:id="@+id/ivRotationIcon"
                                 android:layout_width="48dp"
                                 android:layout_height="48dp"
                                 android:tint="#4A7BF7"
                                 android:src="@drawable/rotation"
                                 android:contentDescription="@null" />
                             <TextView
+                                android:id="@+id/tvRotationLabel"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Traslados"
@@ -341,12 +345,14 @@
                             android:orientation="vertical"
                             android:gravity="center">
                             <ImageView
+                                android:id="@+id/ivReportsIcon"
                                 android:layout_width="48dp"
                                 android:layout_height="48dp"
                                 android:tint="#4A7BF7"
                                 android:src="@drawable/reports"
                                 android:contentDescription="@null" />
                             <TextView
+                                android:id="@+id/tvReportsLabel"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Reportes"
@@ -374,12 +380,14 @@
                             android:gravity="center"
                             android:padding="12dp">
                             <ImageView
+                                android:id="@+id/ivThresholdsIcon"
                                 android:layout_width="36dp"
                                 android:layout_height="36dp"
                                 android:tint="#4A7BF7"
                                 android:src="@drawable/umbral"
                                 android:contentDescription="@null" />
                             <TextView
+                                android:id="@+id/tvThresholdsLabel"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Thresholds / Umbrales"

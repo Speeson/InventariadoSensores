@@ -64,4 +64,28 @@
         android:layout_marginTop="12dp"
         android:background="#80FFFFFF" />
 
+    <LinearLayout
+        android:id="@+id/rowRestrictedToggle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="12dp">
+
+        <TextView
+            android:id="@+id/tvRestrictedToggleLabel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Mostrar opciones bloqueadas"
+            android:textColor="@android:color/white"
+            android:textSize="12sp"
+            android:alpha="0.9" />
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/switchShowRestricted"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
+
 </LinearLayout>
