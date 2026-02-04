@@ -40,7 +40,8 @@ class ProductListAdapter(
         holder.binding.tvCategory.text = "Categoria: $catLabel"
         holder.binding.tvMeta.text = "ID: ${p.id}  •  Updated: ${p.updatedAt}"
         val isOffline = p.id < 0 || p.name.contains("(offline)", ignoreCase = true)
-        holder.binding.ivOfflineAlert.visibility = if (isOffline) android.view.View.VISIBLE else android.view.View.GONE
+        holder.binding.ivOfflineAlert.visibility =
+            if (isOffline) android.view.View.VISIBLE else android.view.View.GONE
         val barcode = p.barcode?.trim()
         holder.binding.btnCopyBarcode.visibility =
             if (barcode.isNullOrBlank()) android.view.View.GONE else android.view.View.VISIBLE

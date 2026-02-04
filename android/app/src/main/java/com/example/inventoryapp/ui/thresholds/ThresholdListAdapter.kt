@@ -36,6 +36,8 @@ class ThresholdListAdapter(
         val titleSuffix = if (isOffline) " (offline)" else ""
         holder.binding.tvTitle.text = "Producto: $productLabel$titleSuffix"
         holder.binding.tvMeta.text = "Umbral: ${t.minQuantity}  •  Loc: $loc  •  ID $idLabel"
+        holder.binding.ivWarning.visibility =
+            if (isOffline) android.view.View.VISIBLE else android.view.View.GONE
         holder.binding.root.setOnClickListener { onClick(t) }
     }
 

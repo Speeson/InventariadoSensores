@@ -29,6 +29,8 @@ class StockListAdapter(
         holder.binding.tvTitle.text = "Stock #$titleId$titleSuffix  •  Prod ${s.productId}"
         holder.binding.tvLocation.text = "Ubicacion: ${s.location}"
         holder.binding.tvMeta.text = "Cantidad: ${s.quantity}"
+        holder.binding.ivWarning.visibility =
+            if (isOffline) android.view.View.VISIBLE else android.view.View.GONE
         holder.binding.root.setOnClickListener { onClick(s) }
     }
 

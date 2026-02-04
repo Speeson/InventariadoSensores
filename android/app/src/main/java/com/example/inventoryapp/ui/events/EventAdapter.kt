@@ -45,6 +45,7 @@ class EventAdapter(
 
         holder.tvDate.text = item.createdAt
         holder.ivPending.visibility = if (item.isPending) View.VISIBLE else View.GONE
+        holder.ivWarning.visibility = if (item.isPending) View.VISIBLE else View.GONE
         holder.ivPending.setOnClickListener {
             if (item.isPending) onPendingClick(item)
         }
@@ -59,6 +60,7 @@ class EventAdapter(
         val tvStatus: TextView = view.findViewById(R.id.tvEventStatus)
         val tvDate: TextView = view.findViewById(R.id.tvEventDate)
         val ivPending: ImageView = view.findViewById(R.id.ivEventPending)
+        val ivWarning: ImageView = view.findViewById(R.id.ivWarning)
         val ivIcon: ImageView = view.findViewById(R.id.ivIcon)
     }
 }

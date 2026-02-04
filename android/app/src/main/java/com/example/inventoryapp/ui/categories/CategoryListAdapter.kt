@@ -28,6 +28,8 @@ class CategoryListAdapter(
         val idLabel = if (isOffline) "offline" else c.id.toString()
         holder.binding.tvName.text = name
         holder.binding.tvMeta.text = "ID: $idLabel"
+        holder.binding.ivWarning.visibility =
+            if (isOffline) android.view.View.VISIBLE else android.view.View.GONE
         holder.binding.root.setOnClickListener { onClick(c) }
     }
 

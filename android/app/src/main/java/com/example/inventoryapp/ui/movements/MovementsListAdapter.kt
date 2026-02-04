@@ -40,6 +40,8 @@ class MovementsListAdapter : RecyclerView.Adapter<MovementsListAdapter.VH>() {
         }
         holder.binding.ivIcon.setImageResource(iconRes)
         holder.binding.ivIcon.alpha = if (row.isPending) 0.7f else 1.0f
+        holder.binding.ivWarning.visibility =
+            if (row.isPending) android.view.View.VISIBLE else android.view.View.GONE
     }
 
     fun submit(newItems: List<MovementRow>) {
