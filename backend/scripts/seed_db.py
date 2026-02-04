@@ -18,6 +18,7 @@ from app.models.enums import (
     UserRole,
 )
 from app.repositories import location_repo
+from datetime import datetime, timedelta
 
 
 def run_seed():
@@ -117,6 +118,31 @@ def run_seed():
             products.append(product)
         db.commit()
 
+        # Productos extra para reportes (no tocar los 20 anteriores)
+        extra_products = []
+        for sku, name, barcode, category_name in [
+            ("CPU-R7-7700", "Procesador AMD Ryzen 7 7700", "8410010203001", "Procesadores"),
+            ("GPU-RTX-4070", "Tarjeta grafica RTX 4070", "8410010203002", "Tarjetas graficas"),
+            ("SSD-2TB-NVME", "SSD NVMe 2TB", "8410010203003", "Almacenamiento"),
+            ("RAM-64-5200", "Memoria RAM 64GB DDR5 5200", "8410010203004", "Memoria RAM"),
+            ("MON-34-UW", "Monitor 34\" Ultrawide", "8410010203005", "Monitores"),
+            ("NIC-PCI-10G", "Tarjeta red PCIe 10Gb", "8410010203006", "Redes"),
+        ]:
+            product, _ = get_or_create(
+                Product,
+                sku=sku,
+                defaults={
+                    "name": name,
+                    "barcode": barcode,
+                    "category_id": category_by_name[category_name].id,
+                    "active": True,
+                },
+            )
+            extra_products.append(product)
+        db.commit()
+
+        all_products = products + extra_products
+
         for product, quantity, location in [
             (products[0], 120, "Oficina Central"),
             (products[1], 80, "Planta Norte"),
@@ -128,6 +154,13 @@ def run_seed():
             (products[7], 12, "Sala Pruebas"),
             (products[8], 30, "Taller"),
             (products[9], 9, "Recepcion"),
+            # stocks extra para nuevos productos
+            (extra_products[0], 55, "Oficina Central"),
+            (extra_products[1], 14, "Almacen A"),
+            (extra_products[2], 60, "Almacen B"),
+            (extra_products[3], 20, "Planta Norte"),
+            (extra_products[4], 8, "Sala Pruebas"),
+            (extra_products[5], 6, "Laboratorio I+D"),
         ]:
             location_obj = locations[location]
             get_or_create(
@@ -142,6 +175,10 @@ def run_seed():
             (products[0], "Oficina Central", 20),
             (products[1], "Planta Norte", 15),
             (products[2], "Planta Sur", 5),
+            # thresholds extra para demo de alertas
+            (products[9], "Recepcion", 12),
+            (extra_products[1], "Almacen A", 18),
+            (extra_products[5], "Laboratorio I+D", 8),
         ]:
             loc_obj = locations[location]
             get_or_create(
@@ -180,6 +217,7 @@ def run_seed():
         def pick_user(index: int) -> int:
             return user_ids[index % len(user_ids)]
 
+        now = datetime.utcnow()
         movements = [
             {
                 "product_id": products[0].id,
@@ -188,6 +226,7 @@ def run_seed():
                 "movement_type": MovementType.IN,
                 "movement_source": Source.SCAN,
                 "location_id": locations["Oficina Central"].id,
+                "created_at": now - timedelta(days=12),
             },
             {
                 "product_id": products[1].id,
@@ -196,6 +235,7 @@ def run_seed():
                 "movement_type": MovementType.IN,
                 "movement_source": Source.MANUAL,
                 "location_id": locations["Planta Norte"].id,
+                "created_at": now - timedelta(days=10),
             },
             {
                 "product_id": products[2].id,
@@ -204,6 +244,7 @@ def run_seed():
                 "movement_type": MovementType.OUT,
                 "movement_source": Source.MANUAL,
                 "location_id": locations["Planta Sur"].id,
+                "created_at": now - timedelta(days=9),
             },
             {
                 "product_id": products[3].id,
@@ -212,6 +253,7 @@ def run_seed():
                 "movement_type": MovementType.ADJUST,
                 "movement_source": Source.SCAN,
                 "location_id": locations["Laboratorio I+D"].id,
+                "created_at": now - timedelta(days=8),
             },
             {
                 "product_id": products[4].id,
@@ -220,6 +262,7 @@ def run_seed():
                 "movement_type": MovementType.OUT,
                 "movement_source": Source.SCAN,
                 "location_id": locations["Almacen A"].id,
+                "created_at": now - timedelta(days=7),
             },
             {
                 "product_id": products[0].id,
@@ -228,6 +271,7 @@ def run_seed():
                 "movement_type": MovementType.OUT,
                 "movement_source": Source.MANUAL,
                 "location_id": locations["Oficina Central"].id,
+                "created_at": now - timedelta(days=6),
             },
             {
                 "product_id": products[1].id,
@@ -236,6 +280,7 @@ def run_seed():
                 "movement_type": MovementType.OUT,
                 "movement_source": Source.SCAN,
                 "location_id": locations["Planta Norte"].id,
+                "created_at": now - timedelta(days=5),
             },
             {
                 "product_id": products[2].id,
@@ -244,6 +289,7 @@ def run_seed():
                 "movement_type": MovementType.IN,
                 "movement_source": Source.MANUAL,
                 "location_id": locations["Planta Sur"].id,
+                "created_at": now - timedelta(days=4),
             },
             {
                 "product_id": products[3].id,
@@ -252,6 +298,7 @@ def run_seed():
                 "movement_type": MovementType.OUT,
                 "movement_source": Source.SCAN,
                 "location_id": locations["Laboratorio I+D"].id,
+                "created_at": now - timedelta(days=3),
             },
             {
                 "product_id": products[4].id,
@@ -260,6 +307,7 @@ def run_seed():
                 "movement_type": MovementType.IN,
                 "movement_source": Source.SCAN,
                 "location_id": locations["Almacen A"].id,
+                "created_at": now - timedelta(days=2),
             },
             {
                 "product_id": products[0].id,
@@ -269,6 +317,7 @@ def run_seed():
                 "movement_source": Source.MANUAL,
                 "location_id": locations["Oficina Central"].id,
                 "transfer_id": "11111111-1111-1111-1111-111111111111",
+                "created_at": now - timedelta(days=1),
             },
             {
                 "product_id": products[0].id,
@@ -278,6 +327,125 @@ def run_seed():
                 "movement_source": Source.MANUAL,
                 "location_id": locations["Planta Norte"].id,
                 "transfer_id": "11111111-1111-1111-1111-111111111111",
+                "created_at": now - timedelta(days=1),
+            },
+            # movimientos extra para reportes (top consumidos / turnover)
+            {
+                "product_id": extra_products[0].id,
+                "quantity": 25,
+                "user_id": pick_user(1),
+                "movement_type": MovementType.OUT,
+                "movement_source": Source.MANUAL,
+                "location_id": locations["Oficina Central"].id,
+                "created_at": now - timedelta(days=20),
+            },
+            {
+                "product_id": extra_products[1].id,
+                "quantity": 18,
+                "user_id": pick_user(2),
+                "movement_type": MovementType.OUT,
+                "movement_source": Source.SCAN,
+                "location_id": locations["Almacen A"].id,
+                "created_at": now - timedelta(days=18),
+            },
+            {
+                "product_id": extra_products[2].id,
+                "quantity": 30,
+                "user_id": pick_user(0),
+                "movement_type": MovementType.OUT,
+                "movement_source": Source.SCAN,
+                "location_id": locations["Almacen B"].id,
+                "created_at": now - timedelta(days=16),
+            },
+            {
+                "product_id": extra_products[3].id,
+                "quantity": 12,
+                "user_id": pick_user(1),
+                "movement_type": MovementType.OUT,
+                "movement_source": Source.MANUAL,
+                "location_id": locations["Planta Norte"].id,
+                "created_at": now - timedelta(days=14),
+            },
+            {
+                "product_id": extra_products[4].id,
+                "quantity": 10,
+                "user_id": pick_user(2),
+                "movement_type": MovementType.OUT,
+                "movement_source": Source.SCAN,
+                "location_id": locations["Sala Pruebas"].id,
+                "created_at": now - timedelta(days=13),
+            },
+            {
+                "product_id": extra_products[2].id,
+                "quantity": 40,
+                "user_id": pick_user(0),
+                "movement_type": MovementType.IN,
+                "movement_source": Source.MANUAL,
+                "location_id": locations["Almacen B"].id,
+                "created_at": now - timedelta(days=22),
+            },
+            {
+                "product_id": extra_products[1].id,
+                "quantity": 8,
+                "user_id": pick_user(1),
+                "movement_type": MovementType.IN,
+                "movement_source": Source.MANUAL,
+                "location_id": locations["Almacen A"].id,
+                "created_at": now - timedelta(days=21),
+            },
+            {
+                "product_id": extra_products[0].id,
+                "quantity": 15,
+                "user_id": pick_user(2),
+                "movement_type": MovementType.OUT,
+                "movement_source": Source.MANUAL,
+                "location_id": locations["Oficina Central"].id,
+                "created_at": now - timedelta(days=11),
+            },
+            {
+                "product_id": extra_products[1].id,
+                "quantity": 22,
+                "user_id": pick_user(0),
+                "movement_type": MovementType.OUT,
+                "movement_source": Source.SCAN,
+                "location_id": locations["Almacen A"].id,
+                "created_at": now - timedelta(days=10),
+            },
+            {
+                "product_id": extra_products[2].id,
+                "quantity": 35,
+                "user_id": pick_user(1),
+                "movement_type": MovementType.OUT,
+                "movement_source": Source.MANUAL,
+                "location_id": locations["Almacen B"].id,
+                "created_at": now - timedelta(days=9),
+            },
+            {
+                "product_id": extra_products[3].id,
+                "quantity": 14,
+                "user_id": pick_user(2),
+                "movement_type": MovementType.OUT,
+                "movement_source": Source.SCAN,
+                "location_id": locations["Planta Norte"].id,
+                "created_at": now - timedelta(days=8),
+            },
+            {
+                "product_id": extra_products[4].id,
+                "quantity": 9,
+                "user_id": pick_user(0),
+                "movement_type": MovementType.OUT,
+                "movement_source": Source.SCAN,
+                "location_id": locations["Sala Pruebas"].id,
+                "created_at": now - timedelta(days=7),
+            },
+            {
+                "product_id": extra_products[5].id,
+                "quantity": 11,
+                "user_id": pick_user(1),
+                "movement_type": MovementType.OUT,
+                "movement_source": Source.MANUAL,
+                "location_id": locations["Laboratorio I+D"].id,
+                "created_at": now - timedelta(days=6),
             },
         ]
         for movement in movements:
