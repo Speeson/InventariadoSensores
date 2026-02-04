@@ -15,6 +15,7 @@ def _smtp_configured() -> bool:
 def send_low_stock_email(
     *,
     product_id: int,
+    product_name: str | None = None,
     location: str,
     quantity: int,
     min_quantity: int,
@@ -30,10 +31,11 @@ def send_low_stock_email(
     to_addr = _get_env("SMTP_TO")
     use_tls = _get_env("SMTP_USE_TLS", "true").lower() in ("1", "true", "yes")
 
-    subject = f"Alerta de stock bajo: producto {product_id}"
+    product_label = f"{product_name} ({product_id})" if product_name else f"Producto {product_id}"
+    subject = f"Alerta de stock bajo: {product_label}"
     body = (
         "Se ha detectado stock bajo.\n\n"
-        f"Producto ID: {product_id}\n"
+        f"Producto: {product_label}\n"
         f"Ubicacion: {location}\n"
         f"Cantidad actual: {quantity}\n"
         f"Minimo configurado: {min_quantity}\n"

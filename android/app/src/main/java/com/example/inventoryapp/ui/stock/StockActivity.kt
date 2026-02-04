@@ -30,6 +30,7 @@ class StockActivity : AppCompatActivity() {
     private val gson = Gson()
     private var items: List<StockResponseDto> = emptyList()
     private lateinit var adapter: StockListAdapter
+    private var productNameById: Map<Int, String> = emptyMap()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,10 +65,12 @@ class StockActivity : AppCompatActivity() {
                 if (res.isSuccessful && res.body() != null) {
                     val pending = buildPendingStocks()
                     items = pending + res.body()!!.items
-                    adapter.submit(items)
+                    productNameById = resolveProductNames(items)
+                    adapter.submit(items, productNameById)
                 } else {
                     val pending = buildPendingStocks()
-                    adapter.submit(pending)
+                    productNameById = resolveProductNames(pending)
+                    adapter.submit(pending, productNameById)
                     if (res.code() == 403) {
                         UiNotifier.showBlocking(
                             this@StockActivity,
@@ -81,7 +84,8 @@ class StockActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 val pending = buildPendingStocks()
-                adapter.submit(pending)
+                productNameById = resolveProductNames(pending)
+                adapter.submit(pending, productNameById)
                 if (e is IOException) {
                     snack.showError("Sin conexión a Internet")
                 } else {
@@ -89,6 +93,28 @@ class StockActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private suspend fun resolveProductNames(stocks: List<StockResponseDto>): Map<Int, String> {
+        val ids = stocks.map { it.productId }.distinct()
+        if (ids.isEmpty()) return emptyMap()
+
+        val resolved = mutableMapOf<Int, String>()
+
+        val productRes = runCatching { NetworkModule.api.listProducts(limit = 200, offset = 0) }.getOrNull()
+        if (productRes?.isSuccessful == true && productRes.body() != null) {
+            resolved.putAll(productRes.body()!!.items.associate { it.id to it.name })
+        }
+
+        for (id in ids) {
+            if (resolved.containsKey(id)) continue
+            val singleRes = runCatching { NetworkModule.api.getProduct(id) }.getOrNull()
+            if (singleRes?.isSuccessful == true && singleRes.body() != null) {
+                resolved[id] = singleRes.body()!!.name
+            }
+        }
+
+        return resolved
     }
 
     private fun createStock() {

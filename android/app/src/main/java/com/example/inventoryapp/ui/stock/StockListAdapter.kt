@@ -11,6 +11,7 @@ class StockListAdapter(
 ) : RecyclerView.Adapter<StockListAdapter.VH>() {
 
     private val items = mutableListOf<StockResponseDto>()
+    private var productNameById: Map<Int, String> = emptyMap()
 
     inner class VH(val binding: ItemStockCardBinding) : RecyclerView.ViewHolder(binding.root)
 
@@ -26,7 +27,8 @@ class StockListAdapter(
         val isOffline = s.id < 0 || s.createdAt == "offline"
         val titleId = if (isOffline) "offline" else s.id.toString()
         val titleSuffix = if (isOffline) " (offline)" else ""
-        holder.binding.tvTitle.text = "Stock #$titleId$titleSuffix  •  Prod ${s.productId}"
+        val productName = productNameById[s.productId] ?: "Producto"
+        holder.binding.tvTitle.text = "Stock #$titleId$titleSuffix  •  $productName (${s.productId})"
         holder.binding.tvLocation.text = "Ubicacion: ${s.location}"
         holder.binding.tvMeta.text = "Cantidad: ${s.quantity}"
         holder.binding.ivWarning.visibility =
@@ -34,9 +36,10 @@ class StockListAdapter(
         holder.binding.root.setOnClickListener { onClick(s) }
     }
 
-    fun submit(newItems: List<StockResponseDto>) {
+    fun submit(newItems: List<StockResponseDto>, productNameById: Map<Int, String>) {
         items.clear()
         items.addAll(newItems)
+        this.productNameById = productNameById
         notifyDataSetChanged()
     }
 }

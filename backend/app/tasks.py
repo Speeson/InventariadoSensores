@@ -19,7 +19,7 @@ MAX_RETRIES = 3
 @celery_app.task(name="app.tasks.scan_low_stock")
 def scan_low_stock() -> dict:
     created = 0
-    to_notify: list[tuple[int, str, int, int]] = []
+    to_notify: list[tuple[int, str | None, str, int, int]] = []
     with SessionLocal() as db:
         thresholds = db.scalars(select(StockThreshold)).all()
         if not thresholds:
@@ -29,8 +29,12 @@ def scan_low_stock() -> dict:
         for threshold in thresholds:
             threshold_map[(threshold.product_id, threshold.location)] = threshold
 
-        stocks = db.execute(select(Stock, Location).join(Location, Stock.location_id == Location.id)).all()
-        for stock, location in stocks:
+        stocks = db.execute(
+            select(Stock, Location, Product)
+            .join(Location, Stock.location_id == Location.id)
+            .join(Product, Stock.product_id == Product.id)
+        ).all()
+        for stock, location, product in stocks:
             threshold = threshold_map.get((stock.product_id, location.code)) or threshold_map.get(
                 (stock.product_id, None)
             )
@@ -58,16 +62,17 @@ def scan_low_stock() -> dict:
             db.add(alert)
             created += 1
             to_notify.append(
-                (stock.product_id, location.code, stock.quantity, threshold.min_quantity)
+                (stock.product_id, product.name, location.code, stock.quantity, threshold.min_quantity)
             )
 
         if created:
             db.commit()
 
     if to_notify:
-        for product_id, location_code, quantity, min_quantity in to_notify:
+        for product_id, product_name, location_code, quantity, min_quantity in to_notify:
             send_low_stock_email(
                 product_id=product_id,
+                product_name=product_name,
                 location=location_code,
                 quantity=quantity,
                 min_quantity=min_quantity,
