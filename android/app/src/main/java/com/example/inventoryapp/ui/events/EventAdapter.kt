@@ -26,8 +26,10 @@ class EventAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
-        holder.tvTitle.text = "Evento #${item.id}"
-        holder.tvMeta.text = "${item.eventType} | prod=${item.productId} | delta=${item.delta}"
+        holder.tvTitle.text = "Evento"
+        holder.tvIdBadge.text = "${item.id}"
+        val productLabel = item.productName ?: "Producto ${item.productId}"
+        holder.tvMeta.text = "${item.eventType} | $productLabel | delta=${item.delta} | src=${item.source}"
         val status = item.status
         holder.tvStatus.text = status
 
@@ -52,6 +54,7 @@ class EventAdapter(
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val tvTitle: TextView = view.findViewById(R.id.tvEventTitle)
+        val tvIdBadge: TextView = view.findViewById(R.id.tvEventIdBadge)
         val tvMeta: TextView = view.findViewById(R.id.tvEventMeta)
         val tvStatus: TextView = view.findViewById(R.id.tvEventStatus)
         val tvDate: TextView = view.findViewById(R.id.tvEventDate)

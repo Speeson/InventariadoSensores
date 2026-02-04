@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.databinding.ActivityTurnoverReportBinding
+import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.auth.LoginActivity
 import com.example.inventoryapp.ui.common.SendSnack
 import com.example.inventoryapp.ui.reports.TurnoverAdapter
@@ -29,9 +30,10 @@ class TurnoverReportActivity : AppCompatActivity() {
         snack = SendSnack(binding.root)
         session = SessionManager(this)
 
-        setSupportActionBar(binding.toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        binding.toolbar.setNavigationOnClickListener { finish() }
+        binding.btnBack.setOnClickListener { finish() }
+        binding.btnAlertsQuick.setOnClickListener {
+            startActivity(Intent(this, AlertsActivity::class.java))
+        }
 
         adapter = TurnoverAdapter(emptyList())
         binding.rvTurnover.layoutManager = LinearLayoutManager(this)

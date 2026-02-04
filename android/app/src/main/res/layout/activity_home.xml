@@ -17,6 +17,8 @@
             android:layout_height="wrap_content"
             android:background="@android:color/transparent"
             android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+            app:contentInsetStart="16dp"
+            app:contentInsetStartWithNavigation="16dp"
             app:title=""
             app:popupTheme="@style/ThemeOverlay.AppCompat.Dark">
 
@@ -32,40 +34,34 @@
                     android:text=""
                     android:textSize="1sp" />
 
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/btnThresholds"
-                    android:layout_width="86dp"
-                    android:layout_height="48dp"
+                <FrameLayout
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
                     android:layout_gravity="end|center_vertical"
-                    android:layout_marginEnd="8dp"
-                    app:cardCornerRadius="10dp"
-                    app:cardElevation="2dp"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="#1A000000"
-                    app:cardBackgroundColor="@android:color/white">
+                    android:layout_marginEnd="8dp">
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:orientation="vertical"
-                        android:gravity="center">
+                    <ImageButton
+                        android:id="@+id/btnAlertsQuick"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@android:color/transparent"
+                        android:contentDescription="Alertas"
+                        android:src="@drawable/ic_bell"
+                        android:tint="@android:color/white" />
 
-                        <ImageView
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:src="@drawable/umbral"
-                            android:tint="#4A7BF7"
-                            android:contentDescription="@null" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Thresholds"
-                            android:textSize="9sp"
-                            android:textStyle="bold"
-                            android:textColor="#4A7BF7" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
+                    <TextView
+                        android:id="@+id/tvAlertsBadge"
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:layout_gravity="end|top"
+                        android:background="@drawable/bg_badge_red"
+                        android:textColor="@android:color/white"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:gravity="center"
+                        android:visibility="gone"
+                        android:text="0" />
+                </FrameLayout>
             </FrameLayout>
         </androidx.appcompat.widget.Toolbar>
 
@@ -77,13 +73,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="20dp">
+                android:padding="16dp">
 
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
-                    android:layout_marginBottom="16dp"
+                    android:layout_marginBottom="12dp"
                     app:cardCornerRadius="12dp"
                     app:cardElevation="2dp"
                     app:strokeWidth="1dp"
@@ -107,13 +103,13 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:columnCount="2"
-                    android:rowCount="4"
+                    android:rowCount="5"
                     android:useDefaultMargins="true">
 
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/btnScan"
                         android:layout_width="0dp"
-                        android:layout_height="130dp"
+                        android:layout_height="112dp"
                         android:layout_columnWeight="1"
                         android:layout_margin="6dp"
                         android:clickable="true"
@@ -144,7 +140,7 @@
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/btnEvents"
                         android:layout_width="0dp"
-                        android:layout_height="130dp"
+                        android:layout_height="112dp"
                         android:layout_columnWeight="1"
                         android:layout_margin="6dp"
                         android:clickable="true"
@@ -175,7 +171,7 @@
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/btnProducts"
                         android:layout_width="0dp"
-                        android:layout_height="130dp"
+                        android:layout_height="112dp"
                         android:layout_columnWeight="1"
                         android:layout_margin="6dp"
                         android:clickable="true"
@@ -206,7 +202,7 @@
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/btnStock"
                         android:layout_width="0dp"
-                        android:layout_height="130dp"
+                        android:layout_height="112dp"
                         android:layout_columnWeight="1"
                         android:layout_margin="6dp"
                         android:clickable="true"
@@ -237,7 +233,7 @@
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/btnMovements"
                         android:layout_width="0dp"
-                        android:layout_height="130dp"
+                        android:layout_height="112dp"
                         android:layout_columnWeight="1"
                         android:layout_margin="6dp"
                         android:clickable="true"
@@ -268,7 +264,7 @@
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/btnCategories"
                         android:layout_width="0dp"
-                        android:layout_height="130dp"
+                        android:layout_height="112dp"
                         android:layout_columnWeight="1"
                         android:layout_margin="6dp"
                         android:clickable="true"
@@ -300,7 +296,7 @@
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/btnRotation"
                         android:layout_width="0dp"
-                        android:layout_height="130dp"
+                        android:layout_height="112dp"
                         android:layout_columnWeight="1"
                         android:layout_margin="6dp"
                         android:clickable="true"
@@ -322,7 +318,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Rotacion"
+                                android:text="Traslados"
                                 android:textStyle="bold"
                                 android:layout_marginTop="8dp" />
                         </LinearLayout>
@@ -331,7 +327,7 @@
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/btnReports"
                         android:layout_width="0dp"
-                        android:layout_height="130dp"
+                        android:layout_height="112dp"
                         android:layout_columnWeight="1"
                         android:layout_margin="6dp"
                         android:clickable="true"
@@ -356,6 +352,41 @@
                                 android:text="Reportes"
                                 android:textStyle="bold"
                                 android:layout_marginTop="8dp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/btnThresholds"
+                        android:layout_width="0dp"
+                        android:layout_height="96dp"
+                        android:layout_columnSpan="2"
+                        android:layout_columnWeight="2"
+                        android:layout_margin="6dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="2dp">
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:gravity="center"
+                            android:padding="12dp">
+                            <ImageView
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:tint="#4A7BF7"
+                                android:src="@drawable/umbral"
+                                android:contentDescription="@null" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Thresholds / Umbrales"
+                                android:textStyle="bold"
+                                android:textSize="14sp"
+                                android:textColor="?attr/colorOnSurface"
+                                android:layout_marginTop="6dp" />
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 

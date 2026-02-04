@@ -1,5 +1,6 @@
 package com.example.inventoryapp.ui.stock
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.ArrayAdapter
 import androidx.appcompat.app.AlertDialog
@@ -14,6 +15,7 @@ import com.example.inventoryapp.data.remote.model.StockCreateDto
 import com.example.inventoryapp.data.remote.model.StockResponseDto
 import com.example.inventoryapp.data.remote.model.StockUpdateDto
 import com.example.inventoryapp.databinding.ActivityStockBinding
+import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.common.SendSnack
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
@@ -35,9 +37,10 @@ class StockActivity : AppCompatActivity() {
 
         snack = SendSnack(binding.root)
 
-        setSupportActionBar(binding.toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        binding.toolbar.setNavigationOnClickListener { finish() }
+        binding.btnBack.setOnClickListener { finish() }
+        binding.btnAlertsQuick.setOnClickListener {
+            startActivity(Intent(this, AlertsActivity::class.java))
+        }
 
         binding.btnCreate.setOnClickListener { createStock() }
 
@@ -53,23 +56,27 @@ class StockActivity : AppCompatActivity() {
         loadStocks()
     }
 
-    override fun onSupportNavigateUp(): Boolean {
-        finish()
-        return true
-    }
-
     private fun loadStocks() {
         lifecycleScope.launch {
             try {
                 val res = NetworkModule.api.listStocks()
                 if (res.isSuccessful && res.body() != null) {
-                    items = res.body()!!.items
+                    val pending = buildPendingStocks()
+                    items = pending + res.body()!!.items
                     adapter.submit(items)
                 } else {
+                    val pending = buildPendingStocks()
+                    adapter.submit(pending)
                     snack.showError("❌ Error ${res.code()}")
                 }
             } catch (e: Exception) {
-                snack.showError("❌ Error de red: ${e.message}")
+                val pending = buildPendingStocks()
+                adapter.submit(pending)
+                if (e is IOException) {
+                    snack.showError("Sin conexión a Internet")
+                } else {
+                    snack.showError("❌ Error de red: ${e.message}")
+                }
             }
         }
     }
@@ -101,7 +108,8 @@ class StockActivity : AppCompatActivity() {
 
             } catch (e: IOException) {
                 OfflineQueue(this@StockActivity).enqueue(PendingType.STOCK_CREATE, gson.toJson(dto))
-                snack.showQueuedOffline("📦 Sin red. Stock guardado offline ✅")
+                snack.showQueuedOffline("Sin conexión. Stock guardado offline")
+                loadStocks()
 
             } catch (e: Exception) {
                 snack.showError("❌ Error: ${e.message}")
@@ -150,10 +158,36 @@ class StockActivity : AppCompatActivity() {
             } catch (e: IOException) {
                 val payload = OfflineSyncer.StockUpdatePayload(stockId, body)
                 OfflineQueue(this@StockActivity).enqueue(PendingType.STOCK_UPDATE, gson.toJson(payload))
-                snack.showQueuedOffline("📦 Sin red. Update guardado offline ✅")
+                snack.showQueuedOffline("Sin conexión. Update guardado offline")
 
             } catch (e: Exception) {
                 snack.showError("❌ Error red: ${e.message}")
+            }
+        }
+    }
+
+    private fun buildPendingStocks(): List<StockResponseDto> {
+        val pending = OfflineQueue(this).getAll().filter { it.type == PendingType.STOCK_CREATE }
+        return pending.mapIndexed { index, p ->
+            val dto = runCatching { gson.fromJson(p.payloadJson, StockCreateDto::class.java) }.getOrNull()
+            if (dto == null) {
+                StockResponseDto(
+                    productId = 0,
+                    location = "offline",
+                    quantity = 0,
+                    id = -1 - index,
+                    createdAt = "offline",
+                    updatedAt = "offline"
+                )
+            } else {
+                StockResponseDto(
+                    productId = dto.productId,
+                    location = dto.location,
+                    quantity = dto.quantity,
+                    id = -1 - index,
+                    createdAt = "offline",
+                    updatedAt = "offline"
+                )
             }
         }
     }

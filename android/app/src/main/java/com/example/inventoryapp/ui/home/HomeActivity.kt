@@ -30,6 +30,7 @@ import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.common.SystemAlertManager
 import com.example.inventoryapp.data.local.SystemAlertType
+import com.example.inventoryapp.data.remote.model.AlertStatusDto
 
 
 class HomeActivity : AppCompatActivity() {
@@ -43,6 +44,7 @@ class HomeActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         session = SessionManager(this)
+        applyTitleGradient()
 
         val prefs = getSharedPreferences("ui_prefs", MODE_PRIVATE)
         val isDark = prefs.getBoolean("dark_mode", false)
@@ -57,7 +59,7 @@ class HomeActivity : AppCompatActivity() {
         }
 
         setSupportActionBar(binding.toolbar)
-        binding.toolbar.setNavigationIcon(android.R.drawable.ic_menu_sort_by_size)
+        binding.toolbar.setNavigationIcon(R.drawable.menu)
         binding.toolbar.setNavigationOnClickListener {
             binding.drawerLayout.openDrawer(GravityCompat.START)
         }
@@ -132,11 +134,18 @@ class HomeActivity : AppCompatActivity() {
         binding.btnThresholds.setOnClickListener {
             startActivity(Intent(this, ThresholdsActivity::class.java))
         }
+        binding.btnAlertsQuick.setOnClickListener {
+            startActivity(Intent(this, AlertsActivity::class.java))
+            binding.tvAlertsBadge.visibility = android.view.View.GONE
+        }
 
         binding.navViewMain.setNavigationItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_system_status -> showSystemStatus()
-                R.id.nav_alerts -> startActivity(Intent(this, AlertsActivity::class.java))
+                R.id.nav_alerts -> {
+                    startActivity(Intent(this, AlertsActivity::class.java))
+                    binding.tvAlertsBadge.visibility = android.view.View.GONE
+                }
             }
             binding.drawerLayout.closeDrawer(GravityCompat.START)
             true
@@ -175,6 +184,8 @@ class HomeActivity : AppCompatActivity() {
         lifecycleScope.launch {
             ensureValidSession()
             updateDrawerHeader()
+            loadAndShowStockAlertPopup()
+            updateAlertsBadge()
 
             val report = OfflineSyncer.flush(this@HomeActivity)
 
@@ -341,6 +352,71 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
+    private suspend fun loadAndShowStockAlertPopup() {
+        try {
+            val res = NetworkModule.api.listAlerts(status = AlertStatusDto.PENDING, limit = 1, offset = 0)
+            if (!res.isSuccessful || res.body() == null) return
+            val alert = res.body()!!.items.firstOrNull() ?: return
+
+            val prefs = getSharedPreferences("alert_popup", MODE_PRIVATE)
+            val lastId = prefs.getInt("last_alert_id", -1)
+            if (alert.id == lastId) return
+
+            var productName: String? = null
+            var location: String? = null
+            try {
+                val stockRes = NetworkModule.api.getStock(alert.stockId)
+                if (stockRes.isSuccessful && stockRes.body() != null) {
+                    val stock = stockRes.body()!!
+                    location = stock.location
+                    val productRes = NetworkModule.api.getProduct(stock.productId)
+                    if (productRes.isSuccessful && productRes.body() != null) {
+                        productName = productRes.body()!!.name
+                    }
+                }
+            } catch (_: Exception) {
+                // Keep fallback labels if lookup fails.
+            }
+
+            val productLabel = productName ?: "Producto ${alert.stockId}"
+            val locationLabel = location ?: "N/D"
+            val message = "Stock bajo: $productLabel\n" +
+                "Cantidad: ${alert.quantity}\n" +
+                "Umbral: ${alert.minQuantity}\n" +
+                "Location: $locationLabel"
+
+            AlertDialog.Builder(this@HomeActivity)
+                .setTitle("Alerta de stock")
+                .setMessage(message)
+                .setPositiveButton("OK", null)
+                .show()
+
+            prefs.edit().putInt("last_alert_id", alert.id).apply()
+        } catch (_: Exception) {
+            // Silent if offline or API error.
+        }
+    }
+
+    private suspend fun updateAlertsBadge() {
+        try {
+            val res = NetworkModule.api.listAlerts(status = AlertStatusDto.PENDING, limit = 1, offset = 0)
+            if (!res.isSuccessful || res.body() == null) {
+                binding.tvAlertsBadge.visibility = android.view.View.GONE
+                return
+            }
+            val total = res.body()!!.total
+            if (total > 0) {
+                val label = if (total > 99) "99+" else total.toString()
+                binding.tvAlertsBadge.text = label
+                binding.tvAlertsBadge.visibility = android.view.View.VISIBLE
+            } else {
+                binding.tvAlertsBadge.visibility = android.view.View.GONE
+            }
+        } catch (_: Exception) {
+            binding.tvAlertsBadge.visibility = android.view.View.GONE
+        }
+    }
+
 private fun confirmLogout() {
         AlertDialog.Builder(this)
             .setTitle("Cerrar sesión")
@@ -388,5 +464,31 @@ private fun confirmLogout() {
             item.setIcon(R.drawable.ic_moon)
         }
     }
+
+    private fun applyTitleGradient() {
+        binding.tvHomeTitle.post {
+            val paint = binding.tvHomeTitle.paint
+            val width = paint.measureText(binding.tvHomeTitle.text.toString())
+            if (width <= 0f) return@post
+            val shader = android.graphics.LinearGradient(
+                0f,
+                0f,
+                width,
+                0f,
+                intArrayOf(
+                    android.graphics.Color.parseColor("#12C2E9"),
+                    android.graphics.Color.parseColor("#2C9CE2"),
+                    android.graphics.Color.parseColor("#4A7BF7")
+                ),
+                null,
+                android.graphics.Shader.TileMode.CLAMP
+            )
+            paint.shader = shader
+            binding.tvHomeTitle.invalidate()
+        }
+    }
 }
+
+
+
 

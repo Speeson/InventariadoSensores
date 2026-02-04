@@ -15,6 +15,7 @@ import com.example.inventoryapp.data.remote.model.EventResponseDto
 import com.example.inventoryapp.data.remote.model.EventTypeDto
 import com.example.inventoryapp.data.repository.remote.EventRepository
 import com.example.inventoryapp.databinding.ActivityEventsBinding
+import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.auth.LoginActivity
 import com.example.inventoryapp.ui.common.SendSnack
 import com.google.gson.Gson
@@ -41,9 +42,10 @@ class EventsActivity : AppCompatActivity() {
         snack = SendSnack(binding.root)
         session = SessionManager(this)
 
-        setSupportActionBar(binding.toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        binding.toolbar.setNavigationOnClickListener { finish() }
+        binding.btnBack.setOnClickListener { finish() }
+        binding.btnAlertsQuick.setOnClickListener {
+            startActivity(Intent(this, AlertsActivity::class.java))
+        }
 
         binding.btnCreateEvent.setOnClickListener { createEvent() }
         binding.btnRefresh.setOnClickListener { loadEvents(withSnack = true) }
@@ -106,7 +108,7 @@ class EventsActivity : AppCompatActivity() {
                     val ex = res.exceptionOrNull()
                     if (ex is IOException) {
                         OfflineQueue(this@EventsActivity).enqueue(PendingType.EVENT_CREATE, gson.toJson(dto))
-                        snack.showQueuedOffline("Guardado en modo offline")
+                        snack.showQueuedOffline("Sin conexión. Evento guardado offline")
                         loadEvents(withSnack = false)
                     } else {
                         snack.showError("Error: ${ex?.message ?: "sin detalle"}")
@@ -114,7 +116,7 @@ class EventsActivity : AppCompatActivity() {
                 }
             } catch (e: IOException) {
                 OfflineQueue(this@EventsActivity).enqueue(PendingType.EVENT_CREATE, gson.toJson(dto))
-                snack.showQueuedOffline("Guardado en modo offline")
+                snack.showQueuedOffline("Sin conexión. Evento guardado offline")
                 loadEvents(withSnack = false)
             } catch (e: Exception) {
                 snack.showError("Error: ${e.message}")
@@ -160,21 +162,45 @@ class EventsActivity : AppCompatActivity() {
             try {
                 val res = repo.listEvents(limit = 50, offset = 0)
                 if (res.isSuccess) {
-                    val remoteItems = res.getOrNull()!!.items.map { it.toRowUi() }
+                    val remoteEvents = res.getOrNull()!!.items
                     val pendingItems = buildPendingRows()
+                    val allProductIds = mutableSetOf<Int>()
+                    remoteEvents.forEach { allProductIds.add(it.productId) }
+                    pendingItems.forEach { allProductIds.add(it.productId) }
+                    val productNames = fetchProductNames(allProductIds)
+
+                    val remoteItems = remoteEvents.map { it.toRowUi(productNames) }
+                    val pendingWithNames = pendingItems.map { it.copy(productName = productNames[it.productId]) }
                     items = pendingItems + remoteItems
-                    adapter.submit(items)
+                    adapter.submit(pendingWithNames + remoteItems)
                     if (withSnack) snack.showSuccess("OK: Eventos cargados")
                 } else {
-                    if (withSnack) snack.showError("Error: ${res.exceptionOrNull()?.message ?: "sin detalle"}")
+                    val ex = res.exceptionOrNull()
+                    if (withSnack) {
+                        if (ex is IOException) {
+                            snack.showError("Sin conexión a Internet")
+                        } else {
+                            snack.showError("Error: ${ex?.message ?: "sin detalle"}")
+                        }
+                    }
                     val pendingItems = buildPendingRows()
-                    items = pendingItems
+                    val productNames = fetchProductNames(pendingItems.map { it.productId }.toSet())
+                    val pendingWithNames = pendingItems.map { it.copy(productName = productNames[it.productId]) }
+                    items = pendingWithNames
                     adapter.submit(items)
                 }
             } catch (e: Exception) {
-                if (withSnack) snack.showError("Error de red: ${e.message}")
+                if (withSnack) {
+                    if (e is IOException) {
+                        snack.showError("Sin conexión a Internet")
+                    } else {
+                        snack.showError("Error de red: ${e.message}")
+                    }
+                }
                 val pendingItems = buildPendingRows()
-                items = pendingItems
+                val productNames = fetchProductNames(pendingItems.map { it.productId }.toSet())
+                val pendingWithNames = pendingItems.map { it.copy(productName = productNames[it.productId]) }
+                items = pendingWithNames
                 adapter.submit(items)
             }
         }
@@ -190,7 +216,9 @@ class EventsActivity : AppCompatActivity() {
                     id = -1 - index,
                     eventType = EventTypeDto.SENSOR_IN,
                     productId = 0,
+                    productName = null,
                     delta = 0,
+                    source = "offline",
                     createdAt = "offline",
                     status = "PENDING",
                     isPending = true,
@@ -201,7 +229,9 @@ class EventsActivity : AppCompatActivity() {
                     id = -1 - index,
                     eventType = dto.eventType,
                     productId = dto.productId,
+                    productName = null,
                     delta = dto.delta,
+                    source = dto.source,
                     createdAt = "offline",
                     status = "PENDING",
                     isPending = true,
@@ -211,18 +241,35 @@ class EventsActivity : AppCompatActivity() {
         }
     }
 
-    private fun EventResponseDto.toRowUi(): EventRowUi {
+    private fun EventResponseDto.toRowUi(productNames: Map<Int, String>): EventRowUi {
         val status = eventStatus ?: if (processed) "PROCESSED" else "PENDING"
         return EventRowUi(
             id = id,
             eventType = eventType,
             productId = productId,
+            productName = productNames[productId],
             delta = delta,
+            source = source,
             createdAt = createdAt,
             status = status,
             isPending = false,
             pendingMessage = null
         )
+    }
+
+    private suspend fun fetchProductNames(ids: Set<Int>): Map<Int, String> {
+        val out = mutableMapOf<Int, String>()
+        ids.forEach { id ->
+            try {
+                val res = NetworkModule.api.getProduct(id)
+                if (res.isSuccessful && res.body() != null) {
+                    out[id] = res.body()!!.name
+                }
+            } catch (_: Exception) {
+                // Keep fallback labels if lookup fails.
+            }
+        }
+        return out
     }
 
     private fun goToLogin() {

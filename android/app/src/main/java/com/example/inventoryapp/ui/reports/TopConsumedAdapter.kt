@@ -26,7 +26,7 @@ class TopConsumedAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
         holder.tvTitle.text = "${item.sku} - ${item.name}"
-        holder.tvMeta.text = "OUT=${item.totalOut}"
+        holder.tvMeta.text = "Salidas totales=${item.totalOut}"
         holder.tvId.text = "ID ${item.productId}"
     }
 

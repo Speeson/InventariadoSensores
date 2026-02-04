@@ -25,14 +25,17 @@
                 android:textStyle="bold"
                 android:textSize="18sp" />
 
-            <ImageButton
+            <Button
                 android:id="@+id/btnClearSystem"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
                 android:contentDescription="Limpiar alertas del sistema"
-                android:src="@android:drawable/ic_menu_close_clear_cancel"
-                android:tint="#4A7BF7" />
+                android:paddingStart="18dp"
+                android:paddingEnd="18dp"
+                android:text="Clear all"
+                android:textAllCaps="false"
+                android:textColor="@android:color/white"
+                android:backgroundTint="#E53935" />
         </LinearLayout>
 
         <TextView
@@ -68,14 +71,17 @@
                 android:textStyle="bold"
                 android:textSize="18sp" />
 
-            <ImageButton
+            <Button
                 android:id="@+id/btnClearStock"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
                 android:contentDescription="Limpiar alertas de stock"
-                android:src="@android:drawable/ic_menu_close_clear_cancel"
-                android:tint="#4A7BF7" />
+                android:paddingStart="18dp"
+                android:paddingEnd="18dp"
+                android:text="Clear all"
+                android:textAllCaps="false"
+                android:textColor="@android:color/white"
+                android:backgroundTint="#E53935" />
         </LinearLayout>
 
         <TextView
@@ -111,14 +117,17 @@
                 android:textStyle="bold"
                 android:textSize="18sp" />
 
-            <ImageButton
+            <Button
                 android:id="@+id/btnClearFailedEvents"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
                 android:contentDescription="Limpiar eventos fallidos"
-                android:src="@android:drawable/ic_menu_close_clear_cancel"
-                android:tint="#4A7BF7" />
+                android:paddingStart="18dp"
+                android:paddingEnd="18dp"
+                android:text="Clear all"
+                android:textAllCaps="false"
+                android:textColor="@android:color/white"
+                android:backgroundTint="#E53935" />
         </LinearLayout>
 
         <TextView

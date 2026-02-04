@@ -1,4 +1,4 @@
-package com.example.inventoryapp.ui.thresholds
+﻿package com.example.inventoryapp.ui.thresholds
 
 import android.content.Intent
 import android.os.Bundle
@@ -6,16 +6,21 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.inventoryapp.data.local.OfflineQueue
+import com.example.inventoryapp.data.local.PendingType
 import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.model.ThresholdCreateDto
 import com.example.inventoryapp.data.remote.model.ThresholdResponseDto
 import com.example.inventoryapp.data.remote.model.ThresholdUpdateDto
 import com.example.inventoryapp.databinding.ActivityThresholdsBinding
+import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.auth.LoginActivity
+import com.google.gson.Gson
 import kotlinx.coroutines.launch
+import java.io.IOException
 
 class ThresholdsActivity : AppCompatActivity() {
 
@@ -23,6 +28,7 @@ class ThresholdsActivity : AppCompatActivity() {
     private lateinit var session: SessionManager
     private lateinit var adapter: ThresholdListAdapter
     private var items: List<ThresholdResponseDto> = emptyList()
+    private val gson = Gson()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,6 +38,9 @@ class ThresholdsActivity : AppCompatActivity() {
         session = SessionManager(this)
 
         binding.btnBack.setOnClickListener { finish() }
+        binding.btnAlertsQuick.setOnClickListener {
+            startActivity(Intent(this, AlertsActivity::class.java))
+        }
 
         adapter = ThresholdListAdapter { threshold ->
             showEditDialog(threshold)
@@ -65,13 +74,24 @@ class ThresholdsActivity : AppCompatActivity() {
                 val res = NetworkModule.api.listThresholds(productId = productId, location = location, limit = 100, offset = 0)
                 if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
                 if (res.isSuccessful && res.body() != null) {
-                    items = res.body()!!.items
-                    adapter.submit(items)
+                    val pending = buildPendingThresholds()
+                    items = pending + res.body()!!.items
+                    val productNames = fetchProductNames(items.map { it.productId }.toSet())
+                    val rows = items.map { ThresholdRowUi(it, productNames[it.productId]) }
+                    adapter.submit(rows)
                 } else {
                     UiNotifier.show(this@ThresholdsActivity, ApiErrorFormatter.format(res.code()))
                 }
             } catch (e: Exception) {
-                UiNotifier.show(this@ThresholdsActivity, "Error de red: ${e.message}")
+                val pending = buildPendingThresholds()
+                val productNames = fetchProductNames(pending.map { it.productId }.toSet())
+                val rows = pending.map { ThresholdRowUi(it, productNames[it.productId]) }
+                adapter.submit(rows)
+                if (e is IOException) {
+                    UiNotifier.show(this@ThresholdsActivity, "Sin conexión a Internet")
+                } else {
+                    UiNotifier.show(this@ThresholdsActivity, "Error de red: ${e.message}")
+                }
             }
         }
     }
@@ -100,7 +120,14 @@ class ThresholdsActivity : AppCompatActivity() {
                     UiNotifier.show(this@ThresholdsActivity, ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))
                 }
             } catch (e: Exception) {
-                UiNotifier.show(this@ThresholdsActivity, "Error de red: ${e.message}")
+                if (e is IOException) {
+                    val dto = ThresholdCreateDto(productId = productId, location = location, minQuantity = minQty)
+                    OfflineQueue(this@ThresholdsActivity).enqueue(PendingType.THRESHOLD_CREATE, gson.toJson(dto))
+                    UiNotifier.show(this@ThresholdsActivity, "Sin conexión. Threshold guardado offline")
+                    loadThresholds()
+                } else {
+                    UiNotifier.show(this@ThresholdsActivity, "Error de red: ${e.message}")
+                }
             } finally {
                 binding.btnCreate.isEnabled = true
             }
@@ -108,7 +135,6 @@ class ThresholdsActivity : AppCompatActivity() {
     }
 
     private fun showEditDialog(threshold: ThresholdResponseDto) {
-        val view = layoutInflater.inflate(android.R.layout.simple_list_item_2, null)
         val inputLocation = android.widget.EditText(this).apply {
             hint = "Location"
             setText(threshold.location ?: "")
@@ -156,7 +182,11 @@ class ThresholdsActivity : AppCompatActivity() {
                     UiNotifier.show(this@ThresholdsActivity, ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))
                 }
             } catch (e: Exception) {
-                UiNotifier.show(this@ThresholdsActivity, "Error de red: ${e.message}")
+                if (e is IOException) {
+                    UiNotifier.show(this@ThresholdsActivity, "Sin conexión a Internet")
+                } else {
+                    UiNotifier.show(this@ThresholdsActivity, "Error de red: ${e.message}")
+                }
             }
         }
     }
@@ -172,9 +202,44 @@ class ThresholdsActivity : AppCompatActivity() {
                     UiNotifier.show(this@ThresholdsActivity, ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))
                 }
             } catch (e: Exception) {
-                UiNotifier.show(this@ThresholdsActivity, "Error de red: ${e.message}")
+                if (e is IOException) {
+                    UiNotifier.show(this@ThresholdsActivity, "Sin conexión a Internet")
+                } else {
+                    UiNotifier.show(this@ThresholdsActivity, "Error de red: ${e.message}")
+                }
             }
         }
+    }
+
+    private fun buildPendingThresholds(): List<ThresholdResponseDto> {
+        val pending = OfflineQueue(this).getAll().filter { it.type == PendingType.THRESHOLD_CREATE }
+        return pending.mapIndexed { index, p ->
+            val dto = runCatching { gson.fromJson(p.payloadJson, ThresholdCreateDto::class.java) }.getOrNull()
+            ThresholdResponseDto(
+                id = -1 - index,
+                productId = dto?.productId ?: 0,
+                locationId = null,
+                location = dto?.location,
+                minQuantity = dto?.minQuantity ?: 0,
+                createdAt = "offline",
+                updatedAt = null
+            )
+        }
+    }
+
+    private suspend fun fetchProductNames(ids: Set<Int>): Map<Int, String> {
+        val out = mutableMapOf<Int, String>()
+        ids.forEach { id ->
+            try {
+                val res = NetworkModule.api.getProduct(id)
+                if (res.isSuccessful && res.body() != null) {
+                    out[id] = res.body()!!.name
+                }
+            } catch (_: Exception) {
+                // Keep fallback labels if lookup fails.
+            }
+        }
+        return out
     }
 
     private fun goToLogin() {

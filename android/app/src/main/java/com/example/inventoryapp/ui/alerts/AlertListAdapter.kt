@@ -1,4 +1,4 @@
-package com.example.inventoryapp.ui.alerts
+﻿package com.example.inventoryapp.ui.alerts
 
 import android.view.LayoutInflater
 import android.view.View
@@ -11,12 +11,18 @@ import com.example.inventoryapp.R
 import com.example.inventoryapp.data.remote.model.AlertResponseDto
 import com.example.inventoryapp.data.remote.model.AlertStatusDto
 
+data class AlertRowUi(
+    val alert: AlertResponseDto,
+    val productName: String?,
+    val location: String?
+)
+
 class AlertListAdapter(
-    private var items: List<AlertResponseDto>,
-    private val onClick: (AlertResponseDto) -> Unit
+    private var items: List<AlertRowUi>,
+    private val onClick: (AlertRowUi) -> Unit
 ) : RecyclerView.Adapter<AlertListAdapter.ViewHolder>() {
 
-    fun submit(list: List<AlertResponseDto>) {
+    fun submit(list: List<AlertRowUi>) {
         items = list
         notifyDataSetChanged()
     }
@@ -28,12 +34,15 @@ class AlertListAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
-        holder.tvTitle.text = "Alerta #${item.id} - Stock bajo"
-        holder.tvMeta.text = "Stock ${item.stockId} · Qty ${item.quantity} / Min ${item.minQuantity}"
-        holder.tvDate.text = item.createdAt
-        holder.tvStatus.text = statusLabel(item.alertStatus)
+        val alert = item.alert
+        holder.tvTitle.text = "Alerta #${alert.id} - Stock bajo"
+        val productLabel = item.productName ?: "Producto ${alert.stockId}"
+        val locationLabel = item.location ?: "N/D"
+        holder.tvMeta.text = "Producto: $productLabel · Qty ${alert.quantity} / Min ${alert.minQuantity} · Loc $locationLabel"
+        holder.tvDate.text = alert.createdAt
+        holder.tvStatus.text = statusLabel(alert.alertStatus)
 
-        val colorRes = when (item.alertStatus) {
+        val colorRes = when (alert.alertStatus) {
             AlertStatusDto.PENDING -> android.R.color.holo_orange_dark
             AlertStatusDto.ACK -> android.R.color.holo_blue_dark
             AlertStatusDto.RESOLVED -> android.R.color.holo_green_dark

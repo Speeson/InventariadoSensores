@@ -14,6 +14,8 @@ import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.domain.model.Movement
 import com.example.inventoryapp.domain.model.MovementType
 import com.example.inventoryapp.data.repository.remote.RemoteScanRepository
+import com.example.inventoryapp.data.repository.remote.ScanSendResult
+import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.movements.ResultActivity
 import com.example.inventoryapp.ui.common.SendSnack
 import com.google.gson.Gson
@@ -33,9 +35,10 @@ class ConfirmScanActivity : AppCompatActivity() {
         binding = ActivityConfirmScanBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        setSupportActionBar(binding.toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        binding.toolbar.setNavigationOnClickListener { finish() }
+        binding.btnBack.setOnClickListener { finish() }
+        binding.btnAlertsQuick.setOnClickListener {
+            startActivity(Intent(this, AlertsActivity::class.java))
+        }
 
         val snack = SendSnack(binding.root)
         val barcode = intent.getStringExtra("barcode").orEmpty()
@@ -116,7 +119,14 @@ class ConfirmScanActivity : AppCompatActivity() {
                         val i = Intent(this@ConfirmScanActivity, ResultActivity::class.java)
                         if (result.isSuccess) {
                             i.putExtra("success", true)
-                            i.putExtra("msg", result.getOrNull() ?: "Evento OK")
+                            val payload = result.getOrNull()
+                            i.putExtra("msg", buildSendMessage(payload))
+                            if (payload != null) {
+                                i.putExtra("event_status", payload.status)
+                                if (payload.eventId != null) {
+                                    i.putExtra("event_id", payload.eventId)
+                                }
+                            }
                         } else {
                             val error = result.exceptionOrNull()
                             if (error is java.io.IOException) {
@@ -202,5 +212,11 @@ class ConfirmScanActivity : AppCompatActivity() {
         binding.btnTypeIn.setTextColor(if (isIn) selectedText else normalText)
         binding.btnTypeOut.setBackgroundColor(if (!isIn) selectedBg else normalBg)
         binding.btnTypeOut.setTextColor(if (!isIn) selectedText else normalText)
+    }
+
+    private fun buildSendMessage(payload: ScanSendResult?): String {
+        if (payload == null) return "Evento enviado"
+        val idPart = payload.eventId?.let { " (id=$it)" } ?: ""
+        return "Evento enviado: ${payload.productName}$idPart"
     }
 }

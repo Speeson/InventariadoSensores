@@ -6,6 +6,7 @@ import android.os.Bundle
 import java.util.Calendar
 import androidx.appcompat.app.AppCompatActivity
 import com.example.inventoryapp.databinding.ActivityReportsBinding
+import com.example.inventoryapp.ui.alerts.AlertsActivity
 
 class ReportsActivity : AppCompatActivity() {
 
@@ -16,9 +17,10 @@ class ReportsActivity : AppCompatActivity() {
         binding = ActivityReportsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        setSupportActionBar(binding.toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        binding.toolbar.setNavigationOnClickListener { finish() }
+        binding.btnBack.setOnClickListener { finish() }
+        binding.btnAlertsQuick.setOnClickListener {
+            startActivity(Intent(this, AlertsActivity::class.java))
+        }
 
         binding.btnTopConsumedSearch.setOnClickListener {
             val i = Intent(this, TopConsumedActivity::class.java)

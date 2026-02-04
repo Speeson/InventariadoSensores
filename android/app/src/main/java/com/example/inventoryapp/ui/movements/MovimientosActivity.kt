@@ -1,11 +1,12 @@
-package com.example.inventoryapp.ui.movements
+﻿package com.example.inventoryapp.ui.movements
 
+import android.content.Intent
 import android.os.Bundle
 import android.text.InputType
 import android.widget.ArrayAdapter
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import androidx.core.widget.addTextChangedListener
+import androidx.lifecycle.lifecycleScope
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.PendingType
 import com.example.inventoryapp.data.remote.NetworkModule
@@ -14,6 +15,7 @@ import com.example.inventoryapp.data.remote.model.MovementOperationRequest
 import com.example.inventoryapp.data.remote.model.MovementSourceDto
 import com.example.inventoryapp.data.remote.model.MovementTransferOperationRequest
 import com.example.inventoryapp.databinding.ActivityMovimientosBinding
+import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.common.SendSnack
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
@@ -33,11 +35,12 @@ class MovimientosActivity : AppCompatActivity() {
 
         snack = SendSnack(binding.root)
 
-        setSupportActionBar(binding.toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        binding.toolbar.setNavigationOnClickListener { finish() }
+        binding.btnBack.setOnClickListener { finish() }
+        binding.btnAlertsQuick.setOnClickListener {
+            startActivity(Intent(this, AlertsActivity::class.java))
+        }
 
-        // Si tienes tvResult en el layout, lo dejamos vacío para evitar doble mensaje
+        // Si tienes tvResult en el layout, lo dejamos vacio para evitar doble mensaje
         binding.tvResult.text = ""
 
         binding.btnSendMovement.setOnClickListener { sendMovement() }
@@ -46,11 +49,6 @@ class MovimientosActivity : AppCompatActivity() {
         setupSourceDropdown()
         setupLocationDropdown()
         setupQuantityFocusHint()
-    }
-
-    override fun onSupportNavigateUp(): Boolean {
-        finish()
-        return true
     }
 
     private fun sendMovement() {
@@ -186,6 +184,7 @@ class MovimientosActivity : AppCompatActivity() {
         binding.etMovementType.setAdapter(adapter)
         updateTransferVisibility("")
         updateQuantityForType("")
+        updateLocationHints("")
 
         binding.etMovementType.setOnItemClickListener { _, _, position, _ ->
             if (values[position].isBlank()) {
@@ -200,6 +199,7 @@ class MovimientosActivity : AppCompatActivity() {
             val type = text?.toString()?.trim()?.uppercase() ?: ""
             updateTransferVisibility(type)
             updateQuantityForType(type)
+            updateLocationHints(type)
         }
     }
 
@@ -217,6 +217,16 @@ class MovimientosActivity : AppCompatActivity() {
             quantityHint = "Cantidad"
             binding.etQuantity.hint = quantityHint
             binding.etQuantity.inputType = InputType.TYPE_CLASS_NUMBER
+        }
+    }
+
+    private fun updateLocationHints(type: String) {
+        if (type == "TRANSFER") {
+            binding.etLocation.hint = "Ubicacion de origen"
+            binding.tilToLocation.hint = "Ubicacion destino"
+        } else {
+            binding.etLocation.hint = "Ubicacion"
+            binding.tilToLocation.hint = "Ubicacion destino"
         }
     }
 

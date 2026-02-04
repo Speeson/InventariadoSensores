@@ -9,6 +9,7 @@ import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.model.MovementTypeDto
 import com.example.inventoryapp.databinding.ActivityRotationBinding
+import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.auth.LoginActivity
 import com.example.inventoryapp.ui.common.SendSnack
 import kotlinx.coroutines.launch
@@ -28,9 +29,10 @@ class RotationActivity : AppCompatActivity() {
         snack = SendSnack(binding.root)
         session = SessionManager(this)
 
-        setSupportActionBar(binding.toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        binding.toolbar.setNavigationOnClickListener { finish() }
+        binding.btnBack.setOnClickListener { finish() }
+        binding.btnAlertsQuick.setOnClickListener {
+            startActivity(Intent(this, AlertsActivity::class.java))
+        }
 
         adapter = RotationAdapter(emptyList())
         binding.rvRotation.layoutManager = LinearLayoutManager(this)

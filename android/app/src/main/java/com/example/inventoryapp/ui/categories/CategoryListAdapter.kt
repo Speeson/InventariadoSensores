@@ -23,8 +23,11 @@ class CategoryListAdapter(
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val c = items[position]
-        holder.binding.tvName.text = c.name
-        holder.binding.tvMeta.text = "ID: ${c.id}"
+        val isOffline = c.id < 0 || c.createdAt == "offline"
+        val name = if (isOffline) "${c.name} (offline)" else c.name
+        val idLabel = if (isOffline) "offline" else c.id.toString()
+        holder.binding.tvName.text = name
+        holder.binding.tvMeta.text = "ID: $idLabel"
         holder.binding.root.setOnClickListener { onClick(c) }
     }
 

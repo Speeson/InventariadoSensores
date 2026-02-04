@@ -24,7 +24,7 @@ class RotationAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
         holder.tvTitle.text = "${item.sku} - ${item.name}"
-        holder.tvMeta.text = "Cant=${item.quantity} | ${item.fromLocation} -> ${item.toLocation}"
+        holder.tvMeta.text = "Cantidad=${item.quantity} | ${item.fromLocation} -> ${item.toLocation}"
         holder.tvId.text = "ID ${item.productId} | ${item.createdAt}"
     }
 

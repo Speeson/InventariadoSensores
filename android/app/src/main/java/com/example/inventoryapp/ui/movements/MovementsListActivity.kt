@@ -1,10 +1,11 @@
-package com.example.inventoryapp.ui.movements
+﻿package com.example.inventoryapp.ui.movements
 
+import android.content.Intent
 import android.os.Bundle
+import android.widget.ArrayAdapter
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import android.widget.ArrayAdapter
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.PendingType
 import com.example.inventoryapp.data.remote.NetworkModule
@@ -14,6 +15,7 @@ import com.example.inventoryapp.data.remote.model.MovementSourceDto
 import com.example.inventoryapp.data.remote.model.MovementTransferOperationRequest
 import com.example.inventoryapp.data.remote.model.MovementTypeDto
 import com.example.inventoryapp.databinding.ActivityMovementsListBinding
+import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.common.SendSnack
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
@@ -33,9 +35,10 @@ class MovementsListActivity : AppCompatActivity() {
 
         snack = SendSnack(binding.root)
 
-        setSupportActionBar(binding.toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        binding.toolbar.setNavigationOnClickListener { finish() }
+        binding.btnBack.setOnClickListener { finish() }
+        binding.btnAlertsQuick.setOnClickListener {
+            startActivity(Intent(this, AlertsActivity::class.java))
+        }
 
         adapter = MovementsListAdapter()
         binding.rvMovements.layoutManager = LinearLayoutManager(this)
@@ -52,11 +55,6 @@ class MovementsListActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         loadMovements(withSnack = false)
-    }
-
-    override fun onSupportNavigateUp(): Boolean {
-        finish()
-        return true
     }
 
     private fun loadMovements(withSnack: Boolean) {
@@ -79,46 +77,57 @@ class MovementsListActivity : AppCompatActivity() {
                     offset = 0
                 )
                 if (res.isSuccessful && res.body() != null) {
-                    val remote = res.body()!!.items.map { item ->
+                    val remoteItems = res.body()!!.items
+                    val pendingProductIds = collectPendingProductIds()
+                    val allProductIds = mutableSetOf<Int>()
+                    remoteItems.forEach { allProductIds.add(it.productId) }
+                    allProductIds.addAll(pendingProductIds)
+                    val productNames = fetchProductNames(allProductIds)
+
+                    val remote = remoteItems.map { item ->
                         val loc = item.location ?: item.locationId?.toString() ?: "n/a"
+                        val productName = productNames[item.productId] ?: "Producto ${item.productId}"
                         MovementRow(
-                            title = "${item.movementType}  •  qty ${item.quantity}",
-                            meta = "Prod ${item.productId}  •  Loc ${loc}",
+                            title = "${item.movementType}  •  Cantidad=${item.quantity}",
+                            meta = "Producto: $productName  •  Loc ${loc}",
                             sub = "Src ${item.movementSource}  •  ${item.createdAt}",
                             isPending = false,
                             type = item.movementType.name
                         )
                     }
-                    val pending = buildPendingRows()
+                    val pending = buildPendingRows(productNames)
                     adapter.submit(pending + remote)
                     if (withSnack) snack.showSuccess("Movimientos cargados")
                 } else {
                     if (withSnack) snack.showError("Error ${res.code()}: ${res.errorBody()?.string()}")
-                    val pending = buildPendingRows()
+                    val productNames = fetchProductNames(collectPendingProductIds().toSet())
+                    val pending = buildPendingRows(productNames)
                     adapter.submit(pending)
                 }
             } catch (e: Exception) {
                 if (withSnack) snack.showError("Error de red: ${e.message}")
-                val pending = buildPendingRows()
+                val productNames = fetchProductNames(collectPendingProductIds().toSet())
+                val pending = buildPendingRows(productNames)
                 adapter.submit(pending)
             }
         }
     }
 
-    private fun buildPendingRows(): List<MovementRow> {
+    private fun buildPendingRows(productNames: Map<Int, String>): List<MovementRow> {
         val queue = OfflineQueue(this)
         val pending = queue.getAll()
         val out = mutableListOf<MovementRow>()
 
-        pending.forEachIndexed { index, p ->
+        pending.forEach { p ->
             when (p.type) {
                 PendingType.MOVEMENT_IN -> {
                     val dto = runCatching { gson.fromJson(p.payloadJson, MovementOperationRequest::class.java) }.getOrNull()
                     if (dto != null) {
+                        val productName = productNames[dto.productId] ?: "Producto ${dto.productId}"
                         out.add(
                             MovementRow(
-                                title = "IN  •  qty ${dto.quantity}",
-                                meta = "Prod ${dto.productId}  •  Loc ${dto.location}",
+                                title = "IN  •  Cantidad=${dto.quantity}",
+                                meta = "Producto: $productName  •  Loc ${dto.location}",
                                 sub = "Src ${dto.movementSource}  •  offline",
                                 isPending = true,
                                 type = "IN"
@@ -139,10 +148,11 @@ class MovementsListActivity : AppCompatActivity() {
                 PendingType.MOVEMENT_OUT -> {
                     val dto = runCatching { gson.fromJson(p.payloadJson, MovementOperationRequest::class.java) }.getOrNull()
                     if (dto != null) {
+                        val productName = productNames[dto.productId] ?: "Producto ${dto.productId}"
                         out.add(
                             MovementRow(
-                                title = "OUT  •  qty ${dto.quantity}",
-                                meta = "Prod ${dto.productId}  •  Loc ${dto.location}",
+                                title = "OUT  •  Cantidad=${dto.quantity}",
+                                meta = "Producto: $productName  •  Loc ${dto.location}",
                                 sub = "Src ${dto.movementSource}  •  offline",
                                 isPending = true,
                                 type = "OUT"
@@ -163,10 +173,11 @@ class MovementsListActivity : AppCompatActivity() {
                 PendingType.MOVEMENT_ADJUST -> {
                     val dto = runCatching { gson.fromJson(p.payloadJson, MovementAdjustOperationRequest::class.java) }.getOrNull()
                     if (dto != null) {
+                        val productName = productNames[dto.productId] ?: "Producto ${dto.productId}"
                         out.add(
                             MovementRow(
-                                title = "ADJUST  •  delta ${dto.delta}",
-                                meta = "Prod ${dto.productId}  •  Loc ${dto.location}",
+                                title = "ADJUST  •  Cantidad=${dto.delta}",
+                                meta = "Producto: $productName  •  Loc ${dto.location}",
                                 sub = "Src ${dto.movementSource}  •  offline",
                                 isPending = true,
                                 type = "ADJUST"
@@ -187,10 +198,11 @@ class MovementsListActivity : AppCompatActivity() {
                 PendingType.MOVEMENT_TRANSFER -> {
                     val dto = runCatching { gson.fromJson(p.payloadJson, MovementTransferOperationRequest::class.java) }.getOrNull()
                     if (dto != null) {
+                        val productName = productNames[dto.productId] ?: "Producto ${dto.productId}"
                         out.add(
                             MovementRow(
-                                title = "TRANSFER  •  qty ${dto.quantity}",
-                                meta = "Prod ${dto.productId}  •  ${dto.fromLocation} -> ${dto.toLocation}",
+                                title = "TRANSFER  •  Cantidad=${dto.quantity}",
+                                meta = "Producto: $productName  •  ${dto.fromLocation} -> ${dto.toLocation}",
                                 sub = "Src ${dto.movementSource}  •  offline",
                                 isPending = true,
                                 type = "TRANSFER"
@@ -212,6 +224,46 @@ class MovementsListActivity : AppCompatActivity() {
             }
         }
 
+        return out
+    }
+
+    private fun collectPendingProductIds(): List<Int> {
+        val queue = OfflineQueue(this)
+        val pending = queue.getAll()
+        val out = mutableListOf<Int>()
+        pending.forEach { p ->
+            when (p.type) {
+                PendingType.MOVEMENT_IN,
+                PendingType.MOVEMENT_OUT -> {
+                    val dto = runCatching { gson.fromJson(p.payloadJson, MovementOperationRequest::class.java) }.getOrNull()
+                    if (dto != null) out.add(dto.productId)
+                }
+                PendingType.MOVEMENT_ADJUST -> {
+                    val dto = runCatching { gson.fromJson(p.payloadJson, MovementAdjustOperationRequest::class.java) }.getOrNull()
+                    if (dto != null) out.add(dto.productId)
+                }
+                PendingType.MOVEMENT_TRANSFER -> {
+                    val dto = runCatching { gson.fromJson(p.payloadJson, MovementTransferOperationRequest::class.java) }.getOrNull()
+                    if (dto != null) out.add(dto.productId)
+                }
+                else -> Unit
+            }
+        }
+        return out
+    }
+
+    private suspend fun fetchProductNames(ids: Set<Int>): Map<Int, String> {
+        val out = mutableMapOf<Int, String>()
+        ids.forEach { id ->
+            try {
+                val res = NetworkModule.api.getProduct(id)
+                if (res.isSuccessful && res.body() != null) {
+                    out[id] = res.body()!!.name
+                }
+            } catch (_: Exception) {
+                // Keep fallback labels if lookup fails.
+            }
+        }
         return out
     }
 

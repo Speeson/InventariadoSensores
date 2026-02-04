@@ -27,9 +27,9 @@ class TurnoverAdapter(
         val turnoverText = item.turnover?.let { String.format("%.2f", it) } ?: "N/A"
         holder.tvTitle.text = "${item.sku} - ${item.name}"
         holder.tvMeta.text =
-            "OUT=${item.outs} | AVG=${String.format("%.2f", item.stockAverage)} | TURN=$turnoverText"
+            "Salidas=${item.outs} | Stock medio=${String.format("%.2f", item.stockAverage)} | Rotacion=$turnoverText"
         holder.tvId.text =
-            "ID ${item.productId} | INIT=${String.format("%.2f", item.stockInitial)} | FINAL=${String.format("%.2f", item.stockFinal)}"
+            "ID ${item.productId} | Inicial=${String.format("%.2f", item.stockInitial)} | Final=${String.format("%.2f", item.stockFinal)}"
     }
 
     override fun getItemCount(): Int = items.size

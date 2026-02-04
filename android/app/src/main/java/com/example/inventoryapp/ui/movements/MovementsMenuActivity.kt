@@ -1,9 +1,10 @@
-package com.example.inventoryapp.ui.movements
+﻿package com.example.inventoryapp.ui.movements
 
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.example.inventoryapp.databinding.ActivityMovementsMenuBinding
+import com.example.inventoryapp.ui.alerts.AlertsActivity
 
 class MovementsMenuActivity : AppCompatActivity() {
 
@@ -14,9 +15,10 @@ class MovementsMenuActivity : AppCompatActivity() {
         binding = ActivityMovementsMenuBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        setSupportActionBar(binding.toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        binding.toolbar.setNavigationOnClickListener { finish() }
+        binding.btnBack.setOnClickListener { finish() }
+        binding.btnAlertsQuick.setOnClickListener {
+            startActivity(Intent(this, AlertsActivity::class.java))
+        }
 
         binding.btnGoList.setOnClickListener {
             startActivity(Intent(this, MovementsListActivity::class.java))
@@ -25,10 +27,5 @@ class MovementsMenuActivity : AppCompatActivity() {
         binding.btnGoCreate.setOnClickListener {
             startActivity(Intent(this, MovimientosActivity::class.java))
         }
-    }
-
-    override fun onSupportNavigateUp(): Boolean {
-        finish()
-        return true
     }
 }

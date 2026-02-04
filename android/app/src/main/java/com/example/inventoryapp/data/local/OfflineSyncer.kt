@@ -172,6 +172,14 @@ object OfflineSyncer {
                 val payload = gson.fromJson(req.payloadJson, ProductDeletePayload::class.java)
                 NetworkModule.api.deleteProduct(payload.productId)
             }
+            PendingType.CATEGORY_CREATE -> {
+                val dto = gson.fromJson(req.payloadJson, CategoryCreateDto::class.java)
+                NetworkModule.api.createCategory(dto)
+            }
+            PendingType.THRESHOLD_CREATE -> {
+                val dto = gson.fromJson(req.payloadJson, ThresholdCreateDto::class.java)
+                NetworkModule.api.createThreshold(dto)
+            }
             PendingType.STOCK_CREATE -> {
                 val dto = gson.fromJson(req.payloadJson, StockCreateDto::class.java)
                 NetworkModule.api.createStock(dto)

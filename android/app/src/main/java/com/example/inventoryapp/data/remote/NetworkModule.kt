@@ -1,4 +1,4 @@
-package com.example.inventoryapp.data.remote
+﻿package com.example.inventoryapp.data.remote
 
 import android.content.Context
 import android.os.Build
@@ -40,6 +40,7 @@ object NetworkModule {
         }
         return "http://$host:8000/"
     }
+
     private lateinit var appContext: Context
 
     fun init(context: Context) {
@@ -49,6 +50,8 @@ object NetworkModule {
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
     }
+
+    @Volatile private var lastNetworkPopupAt: Long = 0L
 
     private val client: OkHttpClient by lazy {
         OkHttpClient.Builder()
@@ -95,19 +98,16 @@ object NetworkModule {
                             }
                         }
                     } else {
-                        val msg = e.message ?: "No se pudo contactar con el servidor"
-                        SystemAlertManager.record(
-                            appContext,
-                            SystemAlertType.NETWORK,
-                            "Sin conexion",
-                            msg,
-                            blocking = false
-                        )
-                        val activity = ActivityTracker.getCurrent()
-                        if (activity != null) {
-                            activity.runOnUiThread {
-                                UiNotifier.show(activity, "Intentando conectar...")
-                            }
+                        val now = System.currentTimeMillis()
+                        if (now - lastNetworkPopupAt > 30_000L) {
+                            lastNetworkPopupAt = now
+                            SystemAlertManager.record(
+                                appContext,
+                                SystemAlertType.NETWORK,
+                                "Sin conexión",
+                                "Se perdió la conexión. Reconectando...",
+                                blocking = true
+                            )
                         }
                     }
                     throw e

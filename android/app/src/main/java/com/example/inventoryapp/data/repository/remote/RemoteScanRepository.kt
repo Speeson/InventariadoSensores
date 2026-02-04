@@ -6,10 +6,16 @@ import com.example.inventoryapp.data.remote.model.EventTypeDto
 import com.example.inventoryapp.domain.model.Movement
 import com.example.inventoryapp.domain.model.MovementType
 
+data class ScanSendResult(
+    val productName: String,
+    val eventId: Int?,
+    val status: String
+)
+
 class RemoteScanRepository {
 
     // Envia un solo evento; el backend procesa el stock
-    suspend fun sendFromBarcode(movement: Movement): Result<String> {
+    suspend fun sendFromBarcode(movement: Movement): Result<ScanSendResult> {
         return try {
             val prodRes = NetworkModule.api.listProducts(barcode = movement.barcode, limit = 1, offset = 0)
             if (!prodRes.isSuccessful || prodRes.body() == null) {
@@ -39,8 +45,13 @@ class RemoteScanRepository {
 
             val body = eventRes.body()
             val status = body?.eventStatus ?: if (body?.processed == true) "PROCESSED" else "PENDING"
-            val msg = "OK: ${product.name} (id=${productId}) | evento ${body?.id ?: "?"} | ${status}"
-            Result.success(msg)
+            Result.success(
+                ScanSendResult(
+                    productName = product.name,
+                    eventId = body?.id,
+                    status = status
+                )
+            )
 
         } catch (e: Exception) {
             Result.failure(e)

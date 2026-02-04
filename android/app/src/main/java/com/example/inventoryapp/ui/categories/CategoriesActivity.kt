@@ -6,16 +6,21 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.inventoryapp.data.local.OfflineQueue
+import com.example.inventoryapp.data.local.PendingType
 import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.model.CategoryCreateDto
 import com.example.inventoryapp.data.remote.model.CategoryResponseDto
 import com.example.inventoryapp.data.remote.model.CategoryUpdateDto
 import com.example.inventoryapp.databinding.ActivityCategoriesBinding
+import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.auth.LoginActivity
+import com.google.gson.Gson
 import kotlinx.coroutines.launch
+import java.io.IOException
 
 class CategoriesActivity : AppCompatActivity() {
 
@@ -23,6 +28,7 @@ class CategoriesActivity : AppCompatActivity() {
     private lateinit var session: SessionManager
     private lateinit var adapter: CategoryListAdapter
     private var items: List<CategoryResponseDto> = emptyList()
+    private val gson = Gson()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,9 +37,10 @@ class CategoriesActivity : AppCompatActivity() {
 
         session = SessionManager(this)
 
-        setSupportActionBar(binding.toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        binding.toolbar.setNavigationOnClickListener { finish() }
+        binding.btnBack.setOnClickListener { finish() }
+        binding.btnAlertsQuick.setOnClickListener {
+            startActivity(Intent(this, AlertsActivity::class.java))
+        }
 
         adapter = CategoryListAdapter { category ->
             showEditDialog(category)
@@ -55,11 +62,6 @@ class CategoriesActivity : AppCompatActivity() {
         loadCategories()
     }
 
-    override fun onSupportNavigateUp(): Boolean {
-        finish()
-        return true
-    }
-
     private fun search() {
         val id = binding.etSearchId.text.toString().trim().toIntOrNull()
         val name = binding.etSearchName.text.toString().trim().ifBlank { null }
@@ -76,14 +78,21 @@ class CategoriesActivity : AppCompatActivity() {
                 val res = NetworkModule.api.getCategory(id)
                 if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
                 if (res.isSuccessful && res.body() != null) {
-                    items = listOf(res.body()!!)
+                    val pending = buildPendingCategories()
+                    items = pending + listOf(res.body()!!)
                     adapter.submit(items)
                 } else {
                     UiNotifier.show(this@CategoriesActivity, ApiErrorFormatter.format(res.code()))
                     adapter.submit(emptyList())
                 }
             } catch (e: Exception) {
-                UiNotifier.show(this@CategoriesActivity, "Error de red: ${e.message}")
+                val pending = buildPendingCategories()
+                adapter.submit(pending)
+                if (e is IOException) {
+                    UiNotifier.show(this@CategoriesActivity, "Sin conexión a Internet")
+                } else {
+                    UiNotifier.show(this@CategoriesActivity, "Error de red: ${e.message}")
+                }
             }
         }
     }
@@ -94,13 +103,20 @@ class CategoriesActivity : AppCompatActivity() {
                 val res = NetworkModule.api.listCategories(name = name, limit = 100, offset = 0)
                 if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
                 if (res.isSuccessful && res.body() != null) {
-                    items = res.body()!!.items
+                    val pending = buildPendingCategories()
+                    items = pending + res.body()!!.items
                     adapter.submit(items)
                 } else {
                     UiNotifier.show(this@CategoriesActivity, ApiErrorFormatter.format(res.code()))
                 }
             } catch (e: Exception) {
-                UiNotifier.show(this@CategoriesActivity, "Error de red: ${e.message}")
+                val pending = buildPendingCategories()
+                adapter.submit(pending)
+                if (e is IOException) {
+                    UiNotifier.show(this@CategoriesActivity, "Sin conexión a Internet")
+                } else {
+                    UiNotifier.show(this@CategoriesActivity, "Error de red: ${e.message}")
+                }
             }
         }
     }
@@ -121,7 +137,13 @@ class CategoriesActivity : AppCompatActivity() {
                     UiNotifier.show(this@CategoriesActivity, ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))
                 }
             } catch (e: Exception) {
-                UiNotifier.show(this@CategoriesActivity, "Error de red: ${e.message}")
+                if (e is IOException) {
+                    OfflineQueue(this@CategoriesActivity).enqueue(PendingType.CATEGORY_CREATE, gson.toJson(CategoryCreateDto(name)))
+                    UiNotifier.show(this@CategoriesActivity, "Sin conexión. Categoria guardada offline")
+                    loadCategories()
+                } else {
+                    UiNotifier.show(this@CategoriesActivity, "Error de red: ${e.message}")
+                }
             } finally {
                 binding.btnCreate.isEnabled = true
             }
@@ -162,7 +184,11 @@ class CategoriesActivity : AppCompatActivity() {
                     UiNotifier.show(this@CategoriesActivity, ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))
                 }
             } catch (e: Exception) {
-                UiNotifier.show(this@CategoriesActivity, "Error de red: ${e.message}")
+                if (e is IOException) {
+                    UiNotifier.show(this@CategoriesActivity, "Sin conexión a Internet")
+                } else {
+                    UiNotifier.show(this@CategoriesActivity, "Error de red: ${e.message}")
+                }
             }
         }
     }
@@ -178,8 +204,25 @@ class CategoriesActivity : AppCompatActivity() {
                     UiNotifier.show(this@CategoriesActivity, ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))
                 }
             } catch (e: Exception) {
-                UiNotifier.show(this@CategoriesActivity, "Error de red: ${e.message}")
+                if (e is IOException) {
+                    UiNotifier.show(this@CategoriesActivity, "Sin conexión a Internet")
+                } else {
+                    UiNotifier.show(this@CategoriesActivity, "Error de red: ${e.message}")
+                }
             }
+        }
+    }
+
+    private fun buildPendingCategories(): List<CategoryResponseDto> {
+        val pending = OfflineQueue(this).getAll().filter { it.type == PendingType.CATEGORY_CREATE }
+        return pending.mapIndexed { index, p ->
+            val dto = runCatching { gson.fromJson(p.payloadJson, CategoryCreateDto::class.java) }.getOrNull()
+            CategoryResponseDto(
+                id = -1 - index,
+                name = dto?.name ?: "Categoria offline",
+                createdAt = "offline",
+                updatedAt = null
+            )
         }
     }
 

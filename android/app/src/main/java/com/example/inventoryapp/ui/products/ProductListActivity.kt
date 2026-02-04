@@ -1,4 +1,4 @@
-package com.example.inventoryapp.ui.products
+﻿package com.example.inventoryapp.ui.products
 
 import android.content.Intent
 import android.os.Bundle
@@ -9,9 +9,11 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.remote.NetworkModule
+import com.example.inventoryapp.data.remote.model.CategoryResponseDto
 import com.example.inventoryapp.data.remote.model.ProductCreateDto
 import com.example.inventoryapp.data.remote.model.ProductResponseDto
 import com.example.inventoryapp.databinding.ActivityProductListBinding
+import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.auth.LoginActivity
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.UiNotifier
@@ -35,9 +37,10 @@ class ProductListActivity : AppCompatActivity() {
         session = SessionManager(this)
         offlineQueue = OfflineQueue(this)
 
-        // Toolbar + flecha
-        setSupportActionBar(binding.toolbar)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        binding.btnBack.setOnClickListener { finish() }
+        binding.btnAlertsQuick.setOnClickListener {
+            startActivity(Intent(this, AlertsActivity::class.java))
+        }
 
         binding.btnNewProduct.setOnClickListener {
             startActivity(Intent(this, ProductDetailActivity::class.java))
@@ -69,11 +72,6 @@ class ProductListActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         loadProducts()
-    }
-
-    override fun onSupportNavigateUp(): Boolean {
-        finish()
-        return true
     }
 
     private fun search() {
@@ -111,17 +109,20 @@ class ProductListActivity : AppCompatActivity() {
                     UiNotifier.show(this@ProductListActivity, ApiErrorFormatter.format(401))
                     val offlineItems = buildOfflineProducts()
                     if (offlineItems.isNotEmpty()) {
-                        adapter.submit(offlineItems)
+                        val categoryMap = fetchCategoryMap()
+                        adapter.submit(offlineItems.map { ProductRowUi(it, categoryMap[it.categoryId]) })
                         UiNotifier.show(this@ProductListActivity, "Mostrando productos offline")
                     } else {
-                        session.clearToken() // asegurate de tener este metodo
+                        session.clearToken()
                         goToLogin()
                     }
                     return@launch
                 }
                 if (res.isSuccessful && res.body() != null) {
                     products = res.body()!!.items
-                    adapter.submit(products)
+                    val categoryMap = fetchCategoryMap()
+                    val rows = products.map { ProductRowUi(it, categoryMap[it.categoryId]) }
+                    adapter.submit(rows)
 
                     if (products.isEmpty()) {
                         UiNotifier.show(this@ProductListActivity, "Sin resultados")
@@ -141,7 +142,10 @@ class ProductListActivity : AppCompatActivity() {
     private fun loadOfflineOnly() {
         val items = buildOfflineProducts()
         products = items
-        adapter.submit(items)
+        lifecycleScope.launch {
+            val categoryMap = fetchCategoryMap()
+            adapter.submit(items.map { ProductRowUi(it, categoryMap[it.categoryId]) })
+        }
         if (items.isNotEmpty()) {
             UiNotifier.show(this@ProductListActivity, "Mostrando productos offline")
         } else {
@@ -164,6 +168,17 @@ class ProductListActivity : AppCompatActivity() {
                 createdAt = "offline",
                 updatedAt = "offline"
             )
+        }
+    }
+
+    private suspend fun fetchCategoryMap(): Map<Int, String> {
+        return try {
+            val res = NetworkModule.api.listCategories(limit = 200, offset = 0)
+            if (res.isSuccessful && res.body() != null) {
+                res.body()!!.items.associateBy({ it.id }, { it.name })
+            } else emptyMap()
+        } catch (_: Exception) {
+            emptyMap()
         }
     }
 

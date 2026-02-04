@@ -32,15 +32,14 @@ class MovementsListAdapter : RecyclerView.Adapter<MovementsListAdapter.VH>() {
         holder.binding.tvMeta.text = row.meta
         holder.binding.tvSub.text = row.sub
         val iconRes = when (row.type.uppercase()) {
-            "IN" -> android.R.drawable.arrow_down_float
-            "OUT" -> android.R.drawable.arrow_up_float
-            "ADJUST" -> android.R.drawable.ic_menu_manage
+            "IN" -> com.example.inventoryapp.R.drawable.triangle_down
+            "OUT" -> com.example.inventoryapp.R.drawable.triangle_up
+            "ADJUST" -> com.example.inventoryapp.R.drawable.adjust
             "TRANSFER" -> android.R.drawable.ic_menu_directions
             else -> android.R.drawable.ic_menu_help
         }
         holder.binding.ivIcon.setImageResource(iconRes)
-        val color = if (row.isPending) 0xFFFFA000.toInt() else 0xFF4CAF50.toInt()
-        holder.binding.ivIcon.setColorFilter(color)
+        holder.binding.ivIcon.alpha = if (row.isPending) 0.7f else 1.0f
     }
 
     fun submit(newItems: List<MovementRow>) {

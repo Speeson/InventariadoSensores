@@ -5,7 +5,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -58,7 +57,7 @@ class AlertsListFragment : Fragment() {
         systemStore = SystemAlertStore(requireContext())
         dismissedStore = EventAlertDismissStore(requireContext())
 
-        alertAdapter = AlertListAdapter(emptyList()) { alert -> showAlertActions(alert) }
+        alertAdapter = AlertListAdapter(emptyList()) { row -> showAlertActions(row) }
         binding.rvAlerts.layoutManager = LinearLayoutManager(requireContext())
         binding.rvAlerts.adapter = alertAdapter
 
@@ -153,8 +152,10 @@ class AlertsListFragment : Fragment() {
 
                 if (res.isSuccessful && res.body() != null) {
                     val items = res.body()!!.items
-                    alertAdapter.submit(items)
-                    binding.tvBackendAlertsEmpty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
+                    val rows = enrichAlerts(items)
+                    alertAdapter.submit(rows)
+                    binding.tvBackendAlertsEmpty.visibility = if (rows.isEmpty()) View.VISIBLE else View.GONE
+                    maybeShowCenteredAlert(rows)
                 } else {
                     snack.showError(ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))
                 }
@@ -192,10 +193,14 @@ class AlertsListFragment : Fragment() {
         }
     }
 
-    private fun showAlertActions(alert: AlertResponseDto) {
-        val message = "Stock: ${alert.stockId}\n" +
+    private fun showAlertActions(row: AlertRowUi) {
+        val alert = row.alert
+        val productLabel = row.productName ?: "Producto ${alert.stockId}"
+        val locationLabel = row.location ?: "N/D"
+        val message = "Producto: $productLabel\n" +
             "Cantidad: ${alert.quantity}\n" +
             "Minimo: ${alert.minQuantity}\n" +
+            "Location: $locationLabel\n" +
             "Estado: ${alert.alertStatus}\n" +
             "Creado: ${alert.createdAt}"
 
@@ -258,13 +263,58 @@ class AlertsListFragment : Fragment() {
         }
     }
 
+    private suspend fun enrichAlerts(items: List<AlertResponseDto>): List<AlertRowUi> {
+        return items.map { alert ->
+            var productName: String? = null
+            var location: String? = null
+            try {
+                val stockRes = NetworkModule.api.getStock(alert.stockId)
+                if (stockRes.isSuccessful && stockRes.body() != null) {
+                    val stock = stockRes.body()!!
+                    location = stock.location
+                    val productRes = NetworkModule.api.getProduct(stock.productId)
+                    if (productRes.isSuccessful && productRes.body() != null) {
+                        productName = productRes.body()!!.name
+                    }
+                }
+            } catch (_: Exception) {
+                // Keep fallback labels if lookup fails.
+            }
+            AlertRowUi(alert = alert, productName = productName, location = location)
+        }
+    }
+
+    private fun maybeShowCenteredAlert(rows: List<AlertRowUi>) {
+        val pending = rows.firstOrNull { it.alert.alertStatus == AlertStatusDto.PENDING } ?: return
+        val prefs = requireContext().getSharedPreferences("alert_popup", 0)
+        val lastId = prefs.getInt("last_alert_id", -1)
+        if (pending.alert.id == lastId) return
+
+        val productLabel = pending.productName ?: "Producto ${pending.alert.stockId}"
+        val locationLabel = pending.location ?: "N/D"
+        val message = "Stock bajo: $productLabel\n" +
+            "Cantidad: ${pending.alert.quantity}\n" +
+            "Umbral: ${pending.alert.minQuantity}\n" +
+            "Location: $locationLabel"
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Alerta de stock")
+            .setMessage(message)
+            .setPositiveButton("OK", null)
+            .show()
+
+        prefs.edit().putInt("last_alert_id", pending.alert.id).apply()
+    }
+
     private fun EventResponseDto.toRowUi(): EventRowUi {
         val status = eventStatus ?: if (processed) "PROCESSED" else "PENDING"
         return EventRowUi(
             id = id,
             eventType = eventType,
             productId = productId,
+            productName = null,
             delta = delta,
+            source = source,
             createdAt = createdAt,
             status = status,
             isPending = false,
