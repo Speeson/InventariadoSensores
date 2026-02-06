@@ -36,15 +36,18 @@ Objetivo: generar y almacenar una etiqueta SVG al crear/actualizar un producto, 
 Backend:
 - Servicio `label_service` genera SVG y lo guarda en `backend/storage/labels/`.
 - Endpoint protegido `GET /products/{id}/label.svg` devuelve la etiqueta (genera si no existe).
+- Endpoint `POST /products/{id}/label/regenerate` para regenerar una etiqueta puntual.
 - Regenera etiqueta cuando cambia el barcode.
 
 Frontend (Android):
 - Botón de etiqueta (icono impresora) en la lista de productos.
 - Nueva pantalla con preview (WebView).
 - Acciones: Descargar SVG, Descargar PDF (export local desde WebView), Imprimir/Guardar PDF.
- - Preview centrado y escalado para ocupar la pantalla.
- - WebView sin caché para evitar SVG obsoletos.
- - Iconos de copiar/imprimir en lista más grandes.
+- Preview centrado y escalado para ocupar la pantalla.
+- WebView sin caché para evitar SVG obsoletos.
+- Iconos de copiar/imprimir en lista más grandes.
+- Botón "Regenerar etiqueta" en la pantalla de preview.
+- Botón "Regenerar etiqueta" con lock y texto "Solo admin/manager" si el usuario no tiene permisos y está habilitado el toggle de ver restringidos.
 
 Seed:
 - Para generar etiquetas en seed: `SEED_LABELS=1` al ejecutar `backend/scripts/seed_db.py`.

@@ -116,6 +116,9 @@ interface InventoryApi {
     @GET("products/{product_id}/label.svg")
     suspend fun getProductLabelSvg(@Path("product_id") productId: Int): Response<ResponseBody>
 
+    @POST("products/{product_id}/label/regenerate")
+    suspend fun regenerateProductLabel(@Path("product_id") productId: Int): Response<ResponseBody>
+
     @PATCH("products/{product_id}")
     suspend fun updateProduct(
         @Path("product_id") productId: Int,

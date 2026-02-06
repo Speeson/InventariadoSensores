@@ -109,6 +109,22 @@
                 </LinearLayout>
 
                 <Button
+                    android:id="@+id/btnRegenerate"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_button_gradient"
+                    android:backgroundTint="@null"
+                    app:backgroundTint="@null"
+                    android:text="Regenerar etiqueta"
+                    android:textAllCaps="false"
+                    android:textColor="@android:color/white"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:paddingVertical="10dp"
+                    android:visibility="gone" />
+
+                <Button
                     android:id="@+id/btnPrint"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

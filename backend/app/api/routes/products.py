@@ -174,3 +174,25 @@ def get_product_label_svg(product_id: int, db: Session = Depends(get_db)):
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error generando etiqueta")
 
     return FileResponse(label_path, media_type="image/svg+xml")
+
+
+@router.post(
+    "/{product_id}/label/regenerate",
+    dependencies=[Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value))],
+)
+def regenerate_product_label(product_id: int, db: Session = Depends(get_db)):
+    product = product_repo.get(db, product_id)
+    if not product:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
+    if not product.barcode:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Producto sin barcode")
+    try:
+        label_service.generate_and_store_label(
+            product_id=product.id,
+            barcode_value=product.barcode,
+            sku=product.sku,
+        )
+    except Exception:
+        logger.exception("No se pudo regenerar la etiqueta para producto %s", product.id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error regenerando etiqueta")
+    return {"ok": True, "product_id": product.id}

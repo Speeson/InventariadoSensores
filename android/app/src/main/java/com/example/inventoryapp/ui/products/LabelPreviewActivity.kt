@@ -45,8 +45,10 @@ class LabelPreviewActivity : AppCompatActivity() {
 
         binding.btnDownloadSvg.setOnClickListener { downloadSvg() }
         binding.btnDownloadPdf.setOnClickListener { downloadPdf() }
+        binding.btnRegenerate.setOnClickListener { regenerateLabel() }
         binding.btnPrint.setOnClickListener { printLabel() }
 
+        checkRoleForRegenerate()
         loadLabel()
     }
 
@@ -148,6 +150,67 @@ class LabelPreviewActivity : AppCompatActivity() {
             .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
             .build()
         printManager.print("Etiqueta_$productId", adapter, attrs)
+    }
+
+    private fun regenerateLabel() {
+        lifecycleScope.launch {
+            try {
+                val res = NetworkModule.api.regenerateProductLabel(productId)
+                if (res.isSuccessful) {
+                    UiNotifier.show(this@LabelPreviewActivity, "Etiqueta regenerada")
+                    loadLabel()
+                } else {
+                    UiNotifier.show(this@LabelPreviewActivity, "No se pudo regenerar la etiqueta")
+                }
+            } catch (e: Exception) {
+                UiNotifier.show(this@LabelPreviewActivity, "Error regenerando etiqueta: ${e.message}")
+            }
+        }
+    }
+
+    private fun checkRoleForRegenerate() {
+        binding.btnRegenerate.visibility = android.view.View.GONE
+        lifecycleScope.launch {
+            try {
+                val res = NetworkModule.api.me()
+                if (res.isSuccessful && res.body() != null) {
+                    val role = res.body()!!.role.uppercase()
+                    applyRegenerateVisibility(role)
+                }
+            } catch (_: Exception) {
+                // leave hidden
+            }
+        }
+    }
+
+    private fun applyRegenerateVisibility(role: String) {
+        if (role == "MANAGER" || role == "ADMIN") {
+            binding.btnRegenerate.visibility = android.view.View.VISIBLE
+            binding.btnRegenerate.isEnabled = true
+            binding.btnRegenerate.alpha = 1.0f
+            binding.btnRegenerate.text = "Regenerar etiqueta"
+            binding.btnRegenerate.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0)
+            return
+        }
+
+        val prefs = getSharedPreferences("ui_prefs", MODE_PRIVATE)
+        val showRestricted = prefs.getBoolean("show_restricted_cards", false)
+        if (!showRestricted) {
+            binding.btnRegenerate.visibility = android.view.View.GONE
+            return
+        }
+
+        binding.btnRegenerate.visibility = android.view.View.VISIBLE
+        binding.btnRegenerate.isEnabled = false
+        binding.btnRegenerate.alpha = 0.6f
+        binding.btnRegenerate.text = "Solo admin/manager"
+        binding.btnRegenerate.setCompoundDrawablesWithIntrinsicBounds(
+            com.example.inventoryapp.R.drawable.ic_lock,
+            0,
+            0,
+            0
+        )
+        binding.btnRegenerate.compoundDrawablePadding = 12
     }
 
     private fun saveToDownloads(filename: String, mime: String, bytes: ByteArray): Boolean {
