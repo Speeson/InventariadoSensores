@@ -16,7 +16,8 @@ data class ProductRowUi(
 )
 
 class ProductListAdapter(
-    private val onClick: (ProductResponseDto) -> Unit
+    private val onClick: (ProductResponseDto) -> Unit,
+    private val onLabelClick: (ProductResponseDto) -> Unit
 ) : RecyclerView.Adapter<ProductListAdapter.VH>() {
 
     private val items = mutableListOf<ProductRowUi>()
@@ -45,6 +46,8 @@ class ProductListAdapter(
         val barcode = p.barcode?.trim()
         holder.binding.btnCopyBarcode.visibility =
             if (barcode.isNullOrBlank()) android.view.View.GONE else android.view.View.VISIBLE
+        holder.binding.btnLabel.visibility =
+            if (barcode.isNullOrBlank()) android.view.View.GONE else android.view.View.VISIBLE
         holder.binding.btnCopyBarcode.setOnClickListener {
             val ctx = holder.itemView.context
             if (!barcode.isNullOrBlank()) {
@@ -52,6 +55,9 @@ class ProductListAdapter(
                 clipboard.setPrimaryClip(ClipData.newPlainText("barcode", barcode))
                 Toast.makeText(ctx, "Barcode copiado", Toast.LENGTH_SHORT).show()
             }
+        }
+        holder.binding.btnLabel.setOnClickListener {
+            onLabelClick(p)
         }
         holder.binding.root.setOnClickListener { onClick(p) }
     }

@@ -46,11 +46,20 @@ class ProductListActivity : AppCompatActivity() {
             startActivity(Intent(this, ProductDetailActivity::class.java))
         }
 
-        adapter = ProductListAdapter { p ->
-            val i = Intent(this, ProductDetailActivity::class.java)
-            i.putExtra("product_id", p.id)
-            startActivity(i)
-        }
+        adapter = ProductListAdapter(
+            onClick = { p ->
+                val i = Intent(this, ProductDetailActivity::class.java)
+                i.putExtra("product_id", p.id)
+                startActivity(i)
+            },
+            onLabelClick = { p ->
+                val i = Intent(this, LabelPreviewActivity::class.java)
+                i.putExtra("product_id", p.id)
+                i.putExtra("product_sku", p.sku)
+                i.putExtra("product_barcode", p.barcode ?: "")
+                startActivity(i)
+            }
+        )
         binding.rvProducts.layoutManager = LinearLayoutManager(this)
         binding.rvProducts.adapter = adapter
 

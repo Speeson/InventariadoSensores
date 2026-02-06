@@ -16,6 +16,7 @@ import retrofit2.http.DELETE
 import retrofit2.http.PATCH
 import retrofit2.http.Path
 import retrofit2.http.Query
+import okhttp3.ResponseBody
 import com.example.inventoryapp.data.remote.model.EventCreateDto
 import com.example.inventoryapp.data.remote.model.EventListResponseDto
 import com.example.inventoryapp.data.remote.model.EventResponseDto
@@ -111,6 +112,9 @@ interface InventoryApi {
 
     @GET("products/{product_id}")
     suspend fun getProduct(@Path("product_id") productId: Int): Response<ProductResponseDto>
+
+    @GET("products/{product_id}/label.svg")
+    suspend fun getProductLabelSvg(@Path("product_id") productId: Int): Response<ResponseBody>
 
     @PATCH("products/{product_id}")
     suspend fun updateProduct(

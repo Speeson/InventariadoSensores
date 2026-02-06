@@ -24,3 +24,27 @@ Backend:
   - OUT: `delta = -quantity`
   - IN/ADJUST: `delta = quantity`
   - Nota: los ADJUST históricos no preservaban signo, por lo que su `delta` queda con el valor previo de `quantity`.
+
+## Etiquetas de producto (SVG Code 128)
+
+Objetivo: generar y almacenar una etiqueta SVG al crear/actualizar un producto, con layout:
+- Título empresa: `IoTrack`
+- SKU a la derecha
+- Código de barras (Code 128)
+- Texto del barcode debajo
+
+Backend:
+- Servicio `label_service` genera SVG y lo guarda en `backend/storage/labels/`.
+- Endpoint protegido `GET /products/{id}/label.svg` devuelve la etiqueta (genera si no existe).
+- Regenera etiqueta cuando cambia el barcode.
+
+Frontend (Android):
+- Botón de etiqueta (icono impresora) en la lista de productos.
+- Nueva pantalla con preview (WebView).
+- Acciones: Descargar SVG, Descargar PDF (export local desde WebView), Imprimir/Guardar PDF.
+ - Preview centrado y escalado para ocupar la pantalla.
+ - WebView sin caché para evitar SVG obsoletos.
+ - Iconos de copiar/imprimir en lista más grandes.
+
+Seed:
+- Para generar etiquetas en seed: `SEED_LABELS=1` al ejecutar `backend/scripts/seed_db.py`.

@@ -75,11 +75,23 @@
 
                 <ImageButton
                     android:id="@+id/btnCopyBarcode"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
                     android:background="@android:color/transparent"
                     android:contentDescription="Copiar barcode"
+                    android:padding="0dp"
+                    android:scaleType="fitCenter"
                     android:src="@drawable/ic_copy" />
+
+                <ImageButton
+                    android:id="@+id/btnLabel"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@android:color/transparent"
+                    android:contentDescription="Ver etiqueta"
+                    android:padding="0dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_print" />
             </LinearLayout>
 
             <TextView

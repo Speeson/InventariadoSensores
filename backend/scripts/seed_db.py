@@ -1,4 +1,6 @@
 from app.db.session import SessionLocal
+from app.services import label_service
+import os
 from app.core.security import hash_password
 from app.models.audit_log import AuditLog
 from app.models.category import Category
@@ -21,7 +23,7 @@ from app.repositories import location_repo
 from datetime import datetime, timedelta
 
 
-def run_seed():
+def run_seed(generate_labels: bool = False):
     db = SessionLocal()
 
     try:
@@ -46,6 +48,22 @@ def run_seed():
             category, _ = get_or_create(Category, name=name)
             categories.append(category)
         db.commit()
+
+        if generate_labels:
+            label_failures = 0
+            for product in products + extra_products:
+                if not product.barcode:
+                    continue
+                try:
+                    label_service.generate_and_store_label(
+                        product_id=product.id,
+                        barcode_value=product.barcode,
+                        sku=product.sku,
+                    )
+                except Exception:
+                    label_failures += 1
+            if label_failures:
+                print(f"Etiquetas: {label_failures} fallos al generar")
 
         users = []
         for username, email, role in [
@@ -449,6 +467,13 @@ def run_seed():
             },
         ]
         for movement in movements:
+            if "delta" not in movement:
+                qty = movement["quantity"]
+                mtype = movement["movement_type"]
+                if mtype == MovementType.OUT:
+                    movement["delta"] = -qty
+                else:
+                    movement["delta"] = qty
             get_or_create(Movement, **movement)
         db.commit()
 
@@ -499,4 +524,5 @@ def run_seed():
 
 
 if __name__ == "__main__":
-    run_seed()
+    generate_labels = os.getenv("SEED_LABELS", "").strip() in {"1", "true", "TRUE", "yes", "YES"}
+    run_seed(generate_labels=generate_labels)

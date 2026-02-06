@@ -31,6 +31,7 @@
 
         <activity android:name=".ui.products.ProductListActivity" />
         <activity android:name=".ui.products.ProductDetailActivity" />
+        <activity android:name=".ui.products.LabelPreviewActivity" />
         <activity android:name=".ui.scan.ScanActivity" />
         <activity android:name=".ui.movements.MovimientosActivity" />
         <activity android:name=".ui.movements.MovementsMenuActivity" />

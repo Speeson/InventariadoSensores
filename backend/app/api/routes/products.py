@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import FileResponse
+import logging
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -8,6 +10,7 @@ from app.models.enums import UserRole
 from app.repositories import product_repo
 from app.schemas.product import ProductCreate, ProductUpdate, ProductResponse
 from app.models.category import Category
+from app.services import label_service
 
 
 class ProductListResponse(BaseModel):
@@ -18,6 +21,7 @@ class ProductListResponse(BaseModel):
 
 
 router = APIRouter(prefix="/products", tags=["products"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("/", response_model=ProductListResponse, dependencies=[Depends(get_current_user)])
@@ -75,6 +79,15 @@ def create_product(payload: ProductCreate, db: Session = Depends(get_db)):
         category_id=payload.category_id,
         active=payload.active if payload.active is not None else True,
     )
+    if product.barcode:
+        try:
+            label_service.generate_and_store_label(
+                product_id=product.id,
+                barcode_value=product.barcode,
+                sku=product.sku,
+            )
+        except Exception:
+            logger.exception("No se pudo generar la etiqueta para producto %s", product.id)
     return product
 
 
@@ -97,6 +110,7 @@ def update_product(product_id: int, payload: ProductUpdate, db: Session = Depend
         existing_barcode = product_repo.get_by_barcode(db, payload.barcode)
         if existing_barcode and existing_barcode.id != product_id:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Barcode ya existe")
+    should_regen_label = payload.barcode is not None
     if payload.name is not None or payload.barcode is not None or payload.category_id is not None or payload.active is not None:
         product = product_repo.update_product(
             db,
@@ -106,6 +120,15 @@ def update_product(product_id: int, payload: ProductUpdate, db: Session = Depend
             category_id=payload.category_id,
             active=payload.active,
         )
+        if should_regen_label and product.barcode:
+            try:
+                label_service.generate_and_store_label(
+                    product_id=product.id,
+                    barcode_value=product.barcode,
+                    sku=product.sku,
+                )
+            except Exception:
+                logger.exception("No se pudo regenerar la etiqueta para producto %s", product.id)
     return product
 
 
@@ -118,5 +141,36 @@ def delete_product(product_id: int, db: Session = Depends(get_db)):
     product = product_repo.get(db, product_id)
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
+    label_path = label_service.label_path_for(product.id)
     product_repo.delete_product(db, product)
+    try:
+        label_path.unlink()
+    except OSError:
+        pass
     return None
+
+
+@router.get(
+    "/{product_id}/label.svg",
+    dependencies=[Depends(get_current_user)],
+)
+def get_product_label_svg(product_id: int, db: Session = Depends(get_db)):
+    product = product_repo.get(db, product_id)
+    if not product:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
+    if not product.barcode:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Producto sin barcode")
+
+    label_path = label_service.label_path_for(product.id)
+    if not label_path.exists():
+        try:
+            label_service.generate_and_store_label(
+                product_id=product.id,
+                barcode_value=product.barcode,
+                sku=product.sku,
+            )
+        except Exception:
+            logger.exception("No se pudo generar la etiqueta para producto %s", product.id)
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error generando etiqueta")
+
+    return FileResponse(label_path, media_type="image/svg+xml")
