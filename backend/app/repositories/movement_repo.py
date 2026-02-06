@@ -52,6 +52,7 @@ def create_movement(
     *,
     product_id: int,
     quantity: int,
+    delta: int,
     user_id: int | None,
     movement_type: MovementType,
     movement_source: Source,
@@ -62,6 +63,7 @@ def create_movement(
     movement = Movement(
         product_id=product_id,
         quantity=quantity,
+        delta=delta,
         user_id=user_id,
         movement_type=movement_type,
         movement_source=movement_source,

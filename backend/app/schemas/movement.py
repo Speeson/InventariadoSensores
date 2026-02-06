@@ -16,6 +16,7 @@ class MovementResponse(BaseModel):
     id: int
     product_id: int
     quantity: int
+    delta: int
     movement_type: MovementType
     movement_source: Source
     transfer_id: str | None = None

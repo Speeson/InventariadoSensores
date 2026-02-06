@@ -10,6 +10,7 @@ class Movement(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+    delta: Mapped[int] = mapped_column(Integer, nullable=False)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=True)
     location_id: Mapped[int | None] = mapped_column(ForeignKey("locations.id"), nullable=True)
     location_rel = relationship("Location")

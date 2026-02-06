@@ -42,11 +42,20 @@ class MemoryRepo:
         self.events.append(ev)
         return ev
 
-    def insert_movement(self, *, product_id: int, quantity: int, user_id: Optional[int], event_id: int) -> dict:
+    def insert_movement(
+        self,
+        *,
+        product_id: int,
+        quantity: int,
+        delta: int,
+        user_id: Optional[int],
+        event_id: int,
+    ) -> dict:
         mv = {
             "id": self._movement_id,
             "product_id": product_id,
             "quantity": quantity,
+            "delta": delta,
             "user_id": user_id,
             "event_id": event_id,
             "created_at": datetime.now(timezone.utc).isoformat(),

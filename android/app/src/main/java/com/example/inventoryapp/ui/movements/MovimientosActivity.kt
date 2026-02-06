@@ -247,7 +247,7 @@ class MovimientosActivity : AppCompatActivity() {
 
     private fun updateQuantityForType(type: String) {
         if (type == "ADJUST") {
-            quantityHint = "Delta"
+            quantityHint = "(-)Negativo para retirar | (+)Positivo para introducir"
             binding.etQuantity.hint = quantityHint
             binding.etQuantity.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED
         } else {

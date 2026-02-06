@@ -87,8 +87,15 @@ class MovementsListActivity : AppCompatActivity() {
                     val remote = remoteItems.map { item ->
                         val loc = item.location ?: item.locationId?.toString() ?: "n/a"
                         val productName = productNames[item.productId] ?: "Producto ${item.productId}"
+                        val qtyLabel = "Cantidad=${item.quantity}"
+                        val deltaLabel = item.delta?.let { "Delta=$it" }
+                        val titleLabel = if (item.movementType == MovementTypeDto.ADJUST && deltaLabel != null) {
+                            deltaLabel
+                        } else {
+                            qtyLabel
+                        }
                         MovementRow(
-                            title = "${item.movementType}  •  Cantidad=${item.quantity}",
+                            title = "${item.movementType}  •  $titleLabel",
                             meta = "Producto: $productName  •  Loc ${loc}",
                             sub = "Src ${item.movementSource}  •  ${item.createdAt}",
                             isPending = false,

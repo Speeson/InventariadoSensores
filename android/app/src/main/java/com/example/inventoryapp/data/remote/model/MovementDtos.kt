@@ -31,6 +31,7 @@ data class MovementResponseDto(
     val id: Int,
     @SerializedName("product_id") val productId: Int,
     val quantity: Int,
+    val delta: Int? = null,
     @SerializedName("movement_type") val movementType: MovementTypeDto,
     @SerializedName("movement_source") val movementSource: MovementSourceDto,
     @SerializedName("transfer_id") val transferId: String? = null,

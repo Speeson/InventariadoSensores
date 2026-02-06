@@ -31,6 +31,7 @@ def apply_event(repo, payload: EventCreate, *, user_id=None) -> dict:
     movement = repo.insert_movement(
         product_id=payload.product_id,
         quantity=effective_delta,  # aquí sí +/- para auditoría
+        delta=effective_delta,
         user_id=user_id,
         event_id=event["id"],
     )
