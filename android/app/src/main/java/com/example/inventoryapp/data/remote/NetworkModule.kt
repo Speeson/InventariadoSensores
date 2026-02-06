@@ -15,6 +15,8 @@ import com.example.inventoryapp.data.local.SystemAlertStore
 import com.example.inventoryapp.ui.common.SystemAlertManager
 import com.example.inventoryapp.ui.common.ActivityTracker
 import com.example.inventoryapp.ui.common.UiNotifier
+import com.example.inventoryapp.ui.auth.LoginActivity
+import android.content.Intent
 
 object NetworkModule {
 
@@ -83,6 +85,16 @@ object NetworkModule {
                             "Tu sesión ha expirado. Inicia sesión de nuevo.",
                             blocking = false
                         )
+                        SessionManager(appContext).clearToken()
+                        val activity = ActivityTracker.getCurrent()
+                        if (activity != null) {
+                            activity.runOnUiThread {
+                                val i = Intent(activity, LoginActivity::class.java)
+                                i.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                activity.startActivity(i)
+                                activity.finish()
+                            }
+                        }
                     }
                     response
                 } catch (e: IOException) {

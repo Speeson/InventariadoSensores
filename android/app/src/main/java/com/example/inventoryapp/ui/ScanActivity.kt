@@ -1,4 +1,5 @@
 package com.example.inventoryapp.ui.scan
+import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 
 import android.Manifest
 import android.content.Intent
@@ -21,6 +22,8 @@ import com.example.inventoryapp.ui.common.UiNotifier
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import kotlinx.coroutines.launch
+import com.example.inventoryapp.ui.common.GradientIconUtil
+import com.example.inventoryapp.R
 
 class ScanActivity : AppCompatActivity() {
 
@@ -40,7 +43,11 @@ class ScanActivity : AppCompatActivity() {
         binding = ActivityScanBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.btnBack.setOnClickListener { finish() }
+        
+        GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
+        
+        AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
+binding.btnBack.setOnClickListener { finish() }
         binding.btnAlertsQuick.setOnClickListener {
             startActivity(Intent(this, AlertsActivity::class.java))
         }

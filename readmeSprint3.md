@@ -48,6 +48,8 @@ Frontend (Android):
 - Iconos de copiar/imprimir en lista más grandes.
 - Botón "Regenerar etiqueta" en la pantalla de preview.
 - Botón "Regenerar etiqueta" con lock y texto "Solo admin/manager" si el usuario no tiene permisos y está habilitado el toggle de ver restringidos.
+- Gradiente de iconos aplicado a las tarjetas del Home, campana de alertas y menú lateral.
+- Título "IoTrack" con el mismo gradiente de iconos.
 
 Seed:
 - Para generar etiquetas en seed: `SEED_LABELS=1` al ejecutar `backend/scripts/seed_db.py`.

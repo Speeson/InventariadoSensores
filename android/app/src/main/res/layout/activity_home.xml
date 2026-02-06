@@ -9,7 +9,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:background="@drawable/bg_home_gradient">
+        android:background="@color/home_bg">
 
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
@@ -24,7 +24,7 @@
 
             <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="match_parent">
 
                 <TextView
                     android:id="@+id/tvToolbarTitle"
@@ -37,23 +37,54 @@
                 <FrameLayout
                     android:layout_width="40dp"
                     android:layout_height="40dp"
-                    android:layout_gravity="end|center_vertical"
-                    android:layout_marginEnd="8dp">
+                    android:layout_gravity="start|center_vertical"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginTop="8dp">
 
                     <ImageButton
-                        android:id="@+id/btnAlertsQuick"
+                        android:id="@+id/btnMenu"
                         android:layout_width="40dp"
                         android:layout_height="40dp"
                         android:background="@android:color/transparent"
+                        android:contentDescription="Menu"
+                        android:src="@drawable/menu" />
+                </FrameLayout>
+
+                <ProgressBar
+                    android:id="@+id/themeSpinner"
+                    style="?android:attr/progressBarStyleSmall"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:indeterminate="true"
+                    android:visibility="gone" />
+
+                <FrameLayout
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:layout_gravity="end|center_vertical"
+                    android:layout_marginEnd="16dp"
+                    android:layout_marginTop="8dp">
+
+                    <ImageButton
+                        android:id="@+id/btnAlertsQuick"
+                        android:layout_width="64dp"
+                        android:layout_height="64dp"
+                        android:background="@android:color/transparent"
                         android:contentDescription="Alertas"
-                        android:src="@drawable/ic_bell"
-                        android:tint="@android:color/white" />
+                        android:scaleType="centerInside"
+                        android:scaleX="1.0"
+                        android:scaleY="1.0"
+                        android:padding="0dp"
+                        android:src="@drawable/ic_bell" />
 
                     <TextView
                         android:id="@+id/tvAlertsBadge"
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:layout_gravity="end|top"
+                        android:layout_marginEnd="6dp"
+                        android:layout_marginTop="2dp"
                         android:background="@drawable/bg_badge_red"
                         android:textColor="@android:color/white"
                         android:textSize="10sp"
@@ -123,9 +154,9 @@
                             android:orientation="vertical"
                             android:gravity="center">
                             <ImageView
+                                android:id="@+id/ivScanIcon"
                                 android:layout_width="48dp"
                                 android:layout_height="48dp"
-                                android:tint="#4A7BF7"
                                 android:src="@drawable/scaner"
                                 android:contentDescription="@null" />
                             <TextView
@@ -154,9 +185,9 @@
                             android:orientation="vertical"
                             android:gravity="center">
                             <ImageView
+                                android:id="@+id/ivEventsIcon"
                                 android:layout_width="48dp"
                                 android:layout_height="48dp"
-                                android:tint="#4A7BF7"
                                 android:src="@drawable/events"
                                 android:contentDescription="@null" />
                             <TextView
@@ -185,9 +216,9 @@
                             android:orientation="vertical"
                             android:gravity="center">
                             <ImageView
+                                android:id="@+id/ivProductsIcon"
                                 android:layout_width="48dp"
                                 android:layout_height="48dp"
-                                android:tint="#4A7BF7"
                                 android:src="@drawable/products"
                                 android:contentDescription="@null" />
                             <TextView
@@ -216,9 +247,9 @@
                             android:orientation="vertical"
                             android:gravity="center">
                             <ImageView
+                                android:id="@+id/ivStockIcon"
                                 android:layout_width="48dp"
                                 android:layout_height="48dp"
-                                android:tint="#4A7BF7"
                                 android:src="@drawable/stock"
                                 android:contentDescription="@null" />
                             <TextView
@@ -247,9 +278,9 @@
                             android:orientation="vertical"
                             android:gravity="center">
                             <ImageView
+                                android:id="@+id/ivMovementsIcon"
                                 android:layout_width="48dp"
                                 android:layout_height="48dp"
-                                android:tint="#4A7BF7"
                                 android:src="@drawable/movements"
                                 android:contentDescription="@null" />
                             <TextView
@@ -281,8 +312,6 @@
                                 android:id="@+id/ivCategoriesIcon"
                                 android:layout_width="48dp"
                                 android:layout_height="48dp"
-                                android:tint="#4A7BF7"
-                                android:tintMode="src_in"
                                 android:src="@drawable/category"
                                 android:contentDescription="@null" />
                             <TextView
@@ -315,7 +344,6 @@
                                 android:id="@+id/ivRotationIcon"
                                 android:layout_width="48dp"
                                 android:layout_height="48dp"
-                                android:tint="#4A7BF7"
                                 android:src="@drawable/rotation"
                                 android:contentDescription="@null" />
                             <TextView
@@ -348,7 +376,6 @@
                                 android:id="@+id/ivReportsIcon"
                                 android:layout_width="48dp"
                                 android:layout_height="48dp"
-                                android:tint="#4A7BF7"
                                 android:src="@drawable/reports"
                                 android:contentDescription="@null" />
                             <TextView
@@ -383,7 +410,6 @@
                                 android:id="@+id/ivThresholdsIcon"
                                 android:layout_width="36dp"
                                 android:layout_height="36dp"
-                                android:tint="#4A7BF7"
                                 android:src="@drawable/umbral"
                                 android:contentDescription="@null" />
                             <TextView

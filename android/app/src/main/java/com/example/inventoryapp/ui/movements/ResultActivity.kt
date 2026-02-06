@@ -1,4 +1,6 @@
-﻿package com.example.inventoryapp.ui.movements
+package com.example.inventoryapp.ui.movements
+import androidx.lifecycle.lifecycleScope
+import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 
 import android.content.Intent
 import android.os.Bundle
@@ -7,6 +9,8 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.inventoryapp.databinding.ActivityResultBinding
 import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.scan.ScanActivity
+import com.example.inventoryapp.ui.common.GradientIconUtil
+import com.example.inventoryapp.R
 
 class ResultActivity : AppCompatActivity() {
 
@@ -17,7 +21,11 @@ class ResultActivity : AppCompatActivity() {
         binding = ActivityResultBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val success = intent.getBooleanExtra("success", false)
+        
+        GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
+        
+        AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
+val success = intent.getBooleanExtra("success", false)
         val msg = intent.getStringExtra("msg").orEmpty()
         val eventStatus = intent.getStringExtra("event_status")
 

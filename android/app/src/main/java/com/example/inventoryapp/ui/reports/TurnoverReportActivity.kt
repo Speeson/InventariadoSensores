@@ -1,4 +1,6 @@
 package com.example.inventoryapp.ui.reports
+import com.example.inventoryapp.ui.common.AlertsBadgeUtil
+import com.example.inventoryapp.R
 
 import android.content.Intent
 import android.os.Bundle
@@ -14,6 +16,7 @@ import com.example.inventoryapp.ui.common.SendSnack
 import com.example.inventoryapp.ui.reports.TurnoverAdapter
 import com.example.inventoryapp.ui.reports.TurnoverRow
 import kotlinx.coroutines.launch
+import com.example.inventoryapp.ui.common.GradientIconUtil
 
 class TurnoverReportActivity : AppCompatActivity() {
 
@@ -27,7 +30,11 @@ class TurnoverReportActivity : AppCompatActivity() {
         binding = ActivityTurnoverReportBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        snack = SendSnack(binding.root)
+        
+        GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
+        
+        AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
+snack = SendSnack(binding.root)
         session = SessionManager(this)
 
         binding.btnBack.setOnClickListener { finish() }

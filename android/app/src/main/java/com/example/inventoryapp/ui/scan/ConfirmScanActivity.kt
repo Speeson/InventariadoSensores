@@ -1,4 +1,5 @@
 package com.example.inventoryapp.ui.scan
+import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 
 import android.content.Intent
 import android.os.Bundle
@@ -20,6 +21,8 @@ import com.example.inventoryapp.ui.movements.ResultActivity
 import com.example.inventoryapp.ui.common.SendSnack
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
+import com.example.inventoryapp.ui.common.GradientIconUtil
+import com.example.inventoryapp.R
 
 class ConfirmScanActivity : AppCompatActivity() {
 
@@ -35,7 +38,11 @@ class ConfirmScanActivity : AppCompatActivity() {
         binding = ActivityConfirmScanBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.btnBack.setOnClickListener { finish() }
+        
+        GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
+        
+        AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
+binding.btnBack.setOnClickListener { finish() }
         binding.btnAlertsQuick.setOnClickListener {
             startActivity(Intent(this, AlertsActivity::class.java))
         }

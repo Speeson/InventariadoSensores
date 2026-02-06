@@ -1,4 +1,5 @@
 package com.example.inventoryapp.ui.categories
+import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 
 import android.content.Intent
 import android.os.Bundle
@@ -21,6 +22,8 @@ import com.example.inventoryapp.ui.auth.LoginActivity
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.io.IOException
+import com.example.inventoryapp.ui.common.GradientIconUtil
+import com.example.inventoryapp.R
 
 class CategoriesActivity : AppCompatActivity() {
 
@@ -35,7 +38,11 @@ class CategoriesActivity : AppCompatActivity() {
         binding = ActivityCategoriesBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        session = SessionManager(this)
+        
+        GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
+        
+        AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
+session = SessionManager(this)
 
         binding.btnBack.setOnClickListener { finish() }
         binding.btnAlertsQuick.setOnClickListener {

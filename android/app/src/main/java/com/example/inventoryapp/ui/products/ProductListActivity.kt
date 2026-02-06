@@ -1,4 +1,5 @@
-﻿package com.example.inventoryapp.ui.products
+package com.example.inventoryapp.ui.products
+import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 
 import android.content.Intent
 import android.os.Bundle
@@ -19,6 +20,8 @@ import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
+import com.example.inventoryapp.ui.common.GradientIconUtil
+import com.example.inventoryapp.R
 
 class ProductListActivity : AppCompatActivity() {
 
@@ -34,7 +37,11 @@ class ProductListActivity : AppCompatActivity() {
         binding = ActivityProductListBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        session = SessionManager(this)
+        
+        GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
+        
+        AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
+session = SessionManager(this)
         offlineQueue = OfflineQueue(this)
 
         binding.btnBack.setOnClickListener { finish() }
@@ -182,7 +189,7 @@ class ProductListActivity : AppCompatActivity() {
 
     private suspend fun fetchCategoryMap(): Map<Int, String> {
         return try {
-            val res = NetworkModule.api.listCategories(limit = 200, offset = 0)
+            val res = NetworkModule.api.listCategories(limit = 100, offset = 0)
             if (res.isSuccessful && res.body() != null) {
                 res.body()!!.items.associateBy({ it.id }, { it.name })
             } else emptyMap()

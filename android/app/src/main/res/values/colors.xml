@@ -2,4 +2,9 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="icon_grad_start">#6DC7FF</color>
+    <color name="icon_grad_mid1">#E6ABFF</color>
+    <color name="icon_grad_mid2">#1A6DFF</color>
+    <color name="icon_grad_end">#C822FF</color>
+    <color name="home_bg">#F4F8FF</color>
 </resources>

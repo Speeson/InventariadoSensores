@@ -1,4 +1,6 @@
 package com.example.inventoryapp.ui.reports
+import androidx.lifecycle.lifecycleScope
+import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 
 import android.app.DatePickerDialog
 import android.content.Intent
@@ -7,6 +9,8 @@ import java.util.Calendar
 import androidx.appcompat.app.AppCompatActivity
 import com.example.inventoryapp.databinding.ActivityReportsBinding
 import com.example.inventoryapp.ui.alerts.AlertsActivity
+import com.example.inventoryapp.ui.common.GradientIconUtil
+import com.example.inventoryapp.R
 
 class ReportsActivity : AppCompatActivity() {
 
@@ -17,7 +21,11 @@ class ReportsActivity : AppCompatActivity() {
         binding = ActivityReportsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.btnBack.setOnClickListener { finish() }
+        
+        GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
+        
+        AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
+binding.btnBack.setOnClickListener { finish() }
         binding.btnAlertsQuick.setOnClickListener {
             startActivity(Intent(this, AlertsActivity::class.java))
         }

@@ -1,4 +1,4 @@
-﻿package com.example.inventoryapp.ui.home
+package com.example.inventoryapp.ui.home
 
 import android.content.Intent
 import android.os.Bundle
@@ -6,11 +6,20 @@ import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
 import android.graphics.Color
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
+import android.graphics.Shader
 import androidx.core.view.GravityCompat
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.lifecycleScope
+import androidx.core.content.ContextCompat
 import com.example.inventoryapp.R
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.OfflineSyncer
@@ -36,6 +45,7 @@ import com.example.inventoryapp.data.local.SystemAlertType
 import com.example.inventoryapp.data.remote.model.AlertStatusDto
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.navigation.NavigationView
 
 
 class HomeActivity : AppCompatActivity() {
@@ -43,6 +53,8 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var binding: ActivityHomeBinding
     private lateinit var session: SessionManager
     private var currentRole: String? = null
+    private val prefs by lazy { getSharedPreferences("ui_prefs", MODE_PRIVATE) }
+    private var gradientIconCache: MutableMap<Int, Bitmap> = mutableMapOf()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,7 +64,6 @@ class HomeActivity : AppCompatActivity() {
         session = SessionManager(this)
         applyTitleGradient()
 
-        val prefs = getSharedPreferences("ui_prefs", MODE_PRIVATE)
         val isDark = prefs.getBoolean("dark_mode", false)
         AppCompatDelegate.setDefaultNightMode(
             if (isDark) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
@@ -63,13 +74,13 @@ class HomeActivity : AppCompatActivity() {
             goToLogin()
             return
         }
+        syncCachedRoleWithToken()
 
         setSupportActionBar(binding.toolbar)
-        binding.toolbar.setNavigationIcon(R.drawable.menu)
-        binding.toolbar.setNavigationOnClickListener {
+        binding.btnMenu.setOnClickListener {
             binding.drawerLayout.openDrawer(GravityCompat.START)
         }
-        binding.toolbar.setOnLongClickListener {
+        binding.btnMenu.setOnLongClickListener {
             showHostDialog()
             true
         }
@@ -114,6 +125,7 @@ class HomeActivity : AppCompatActivity() {
                     if (res.code() == 401) {
                         UiNotifier.show(this@HomeActivity, ApiErrorFormatter.format(401))
                         session.clearToken()
+                        clearCachedRole()
                         goToLogin()
                         return@launch
                     }
@@ -197,6 +209,9 @@ class HomeActivity : AppCompatActivity() {
         }
 
         updateThemeMenuItem()
+        applyGradientIcons()
+        applyCachedRoleToToggle()
+        showThemeLoaderIfNeeded()
 
         if (prefs.getBoolean("reopen_drawer", false)) {
             prefs.edit().putBoolean("reopen_drawer", false).apply()
@@ -352,6 +367,7 @@ class HomeActivity : AppCompatActivity() {
             if (res.code() == 401) {
                 UiNotifier.show(this@HomeActivity, ApiErrorFormatter.format(401))
                 session.clearToken()
+                clearCachedRole()
                 goToLogin()
             } else if (res.code() >= 500) {
                 UiNotifier.show(this@HomeActivity, ApiErrorFormatter.format(res.code()))
@@ -373,11 +389,15 @@ class HomeActivity : AppCompatActivity() {
             if (res.isSuccessful && res.body() != null) {
                 val me = res.body()!!
                 currentRole = me.role
+                prefs.edit()
+                    .putString("cached_role", me.role)
+                    .putInt("cached_user_id", me.id)
+                    .putString("cached_token", session.getToken())
+                    .apply()
                 tvName.text = me.username
                 tvEmail.text = me.email
                 tvRole.text = me.role
 
-                val prefs = getSharedPreferences("ui_prefs", MODE_PRIVATE)
                 val showRestricted = prefs.getBoolean("show_restricted_cards", false)
                 val isUser = me.role.equals("USER", ignoreCase = true)
                 rowToggle.visibility = if (isUser) android.view.View.VISIBLE else android.view.View.GONE
@@ -500,8 +520,8 @@ class HomeActivity : AppCompatActivity() {
         } else {
             label.text = label.tag as String
             label.setTextColor(MaterialColors.getColor(label, com.google.android.material.R.attr.colorOnSurface))
-            icon.setImageResource(originalIconRes)
-            icon.setColorFilter(Color.parseColor("#4A7BF7"))
+            icon.setImageBitmap(getGradientBitmap(originalIconRes))
+            icon.clearColorFilter()
             card.setCardBackgroundColor(MaterialColors.getColor(card, com.google.android.material.R.attr.colorSurface))
             card.alpha = 1.0f
         }
@@ -583,6 +603,7 @@ private fun confirmLogout() {
 
     private fun logout() {
         session.clearToken()
+        clearCachedRole()
         goToLogin()
     }
 
@@ -593,11 +614,30 @@ private fun confirmLogout() {
         finish()
     }
 
+    private fun clearCachedRole() {
+        prefs.edit()
+            .remove("cached_role")
+            .remove("cached_user_id")
+            .remove("cached_token")
+            .apply()
+    }
+
+    private fun syncCachedRoleWithToken() {
+        val token = session.getToken()
+        val cachedToken = prefs.getString("cached_token", null)
+        if (!token.isNullOrBlank() && !cachedToken.isNullOrBlank() && token != cachedToken) {
+            clearCachedRole()
+        }
+    }
+
     private fun toggleTheme() {
-        val prefs = getSharedPreferences("ui_prefs", MODE_PRIVATE)
         val isDark = prefs.getBoolean("dark_mode", false)
         val newMode = !isDark
-        prefs.edit().putBoolean("dark_mode", newMode).putBoolean("reopen_drawer", true).apply()
+        prefs.edit()
+            .putBoolean("dark_mode", newMode)
+            .putBoolean("reopen_drawer", true)
+            .putBoolean("theme_loading", true)
+            .apply()
         val mode = if (newMode) {
             AppCompatDelegate.MODE_NIGHT_YES
         } else {
@@ -608,7 +648,6 @@ private fun confirmLogout() {
     }
 
     private fun updateThemeMenuItem() {
-        val prefs = getSharedPreferences("ui_prefs", MODE_PRIVATE)
         val isDark = prefs.getBoolean("dark_mode", false)
         val item = binding.navViewBottom.menu.findItem(R.id.nav_toggle_theme)
         if (isDark) {
@@ -625,22 +664,164 @@ private fun confirmLogout() {
             val paint = binding.tvHomeTitle.paint
             val width = paint.measureText(binding.tvHomeTitle.text.toString())
             if (width <= 0f) return@post
+            val c1 = ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_start)
+            val c2 = ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_mid2)
+            val c3 = ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_mid1)
+            val c4 = ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_end)
             val shader = android.graphics.LinearGradient(
                 0f,
                 0f,
                 width,
                 0f,
-                intArrayOf(
-                    android.graphics.Color.parseColor("#12C2E9"),
-                    android.graphics.Color.parseColor("#2C9CE2"),
-                    android.graphics.Color.parseColor("#4A7BF7")
-                ),
+                intArrayOf(c1, c2, c3, c4),
                 null,
                 android.graphics.Shader.TileMode.CLAMP
             )
             paint.shader = shader
             binding.tvHomeTitle.invalidate()
         }
+    }
+
+    private fun showThemeLoaderIfNeeded() {
+        if (!prefs.getBoolean("theme_loading", false)) return
+        binding.themeSpinner.visibility = android.view.View.VISIBLE
+        binding.themeSpinner.postDelayed({
+            binding.themeSpinner.visibility = android.view.View.GONE
+            prefs.edit().putBoolean("theme_loading", false).apply()
+        }, 500)
+    }
+
+    private fun applyCachedRoleToToggle() {
+        val header = binding.navViewMain.getHeaderView(0)
+        val rowToggle = header.findViewById<android.view.View>(com.example.inventoryapp.R.id.rowRestrictedToggle)
+        val toggle = header.findViewById<androidx.appcompat.widget.SwitchCompat>(com.example.inventoryapp.R.id.switchShowRestricted)
+        val cachedRole = prefs.getString("cached_role", null)
+        val cachedUserId = prefs.getInt("cached_user_id", -1)
+        if (cachedRole.isNullOrBlank()) return
+        if (cachedUserId <= 0) return
+        currentRole = cachedRole
+        val showRestricted = prefs.getBoolean("show_restricted_cards", false)
+        val isUser = cachedRole.equals("USER", ignoreCase = true)
+        rowToggle.visibility = if (isUser) android.view.View.VISIBLE else android.view.View.GONE
+        toggle.setOnCheckedChangeListener(null)
+        toggle.isChecked = showRestricted
+        toggle.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("show_restricted_cards", isChecked).apply()
+            applyRestrictedUi(isChecked)
+        }
+        applyRestrictedUi(showRestricted)
+    }
+
+    private fun applyGradientIcons() {
+        setGradientImage(binding.btnAlertsQuick, R.drawable.ic_bell)
+        setGradientImage(binding.btnMenu, R.drawable.menu)
+        binding.root.findViewById<ImageView>(R.id.ivScanIcon)
+            ?.let { setGradientImage(it, R.drawable.scaner) }
+        binding.root.findViewById<ImageView>(R.id.ivEventsIcon)
+            ?.let { setGradientImage(it, R.drawable.events) }
+        binding.root.findViewById<ImageView>(R.id.ivProductsIcon)
+            ?.let { setGradientImage(it, R.drawable.products) }
+        binding.root.findViewById<ImageView>(R.id.ivStockIcon)
+            ?.let { setGradientImage(it, R.drawable.stock) }
+        binding.root.findViewById<ImageView>(R.id.ivMovementsIcon)
+            ?.let { setGradientImage(it, R.drawable.movements) }
+
+        // Restricted icons handled in setRestrictedCardState when needed
+        setGradientImage(binding.ivCategoriesIcon, R.drawable.category)
+        setGradientImage(binding.ivRotationIcon, R.drawable.rotation)
+        setGradientImage(binding.ivReportsIcon, R.drawable.reports)
+        setGradientImage(binding.ivThresholdsIcon, R.drawable.umbral)
+
+        applyGradientToMenu(binding.navViewMain)
+        applyGradientToMenu(binding.navViewBottom)
+    }
+
+    private fun applyGradientToMenu(nav: NavigationView) {
+        nav.itemIconTintList = null
+        val menu = nav.menu
+        for (i in 0 until menu.size()) {
+            val item = menu.getItem(i)
+            val icon = item.icon ?: continue
+            val bmp = getGradientBitmapFromDrawable(icon)
+            item.icon = android.graphics.drawable.BitmapDrawable(resources, bmp)
+        }
+    }
+
+    private fun getGradientBitmap(resId: Int): Bitmap {
+        gradientIconCache[resId]?.let { return it }
+        val src = BitmapFactory.decodeResource(resources, resId)
+        if (src == null) {
+            val d = ContextCompat.getDrawable(this, resId)
+            if (d != null) {
+                return getGradientBitmapFromDrawable(d)
+            }
+            return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        }
+        val out = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(out)
+        val colors = intArrayOf(
+            ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_start),
+            ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_mid2),
+            ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_mid1),
+            ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_end)
+        )
+        val shader = LinearGradient(
+            0f,
+            0f,
+            src.width.toFloat(),
+            src.height.toFloat(),
+            colors,
+            floatArrayOf(0f, 0.33f, 0.66f, 1f),
+            Shader.TileMode.CLAMP
+        )
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.shader = shader }
+        canvas.drawRect(0f, 0f, src.width.toFloat(), src.height.toFloat(), paint)
+        paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
+        canvas.drawBitmap(src, 0f, 0f, paint)
+        paint.xfermode = null
+        gradientIconCache[resId] = out
+        return out
+    }
+
+    private fun setGradientImage(view: ImageView, resId: Int) {
+        val drawable = ContextCompat.getDrawable(this, resId)
+        if (drawable == null) {
+            view.setImageResource(resId)
+            return
+        }
+        view.setImageBitmap(getGradientBitmapFromDrawable(drawable))
+    }
+
+    private fun getGradientBitmapFromDrawable(drawable: android.graphics.drawable.Drawable): Bitmap {
+        val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 64
+        val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 64
+        val src = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(src)
+        drawable.setBounds(0, 0, width, height)
+        drawable.draw(canvas)
+        val out = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val outCanvas = Canvas(out)
+        val colors = intArrayOf(
+            ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_start),
+            ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_mid2),
+            ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_mid1),
+            ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_end)
+        )
+        val shader = LinearGradient(
+            0f,
+            0f,
+            width.toFloat(),
+            height.toFloat(),
+            colors,
+            floatArrayOf(0f, 0.33f, 0.66f, 1f),
+            Shader.TileMode.CLAMP
+        )
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.shader = shader }
+        outCanvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
+        paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
+        outCanvas.drawBitmap(src, 0f, 0f, paint)
+        paint.xfermode = null
+        return out
     }
 }
 

@@ -1,4 +1,4 @@
-﻿package com.example.inventoryapp.ui.alerts
+package com.example.inventoryapp.ui.alerts
 
 import android.view.LayoutInflater
 import android.view.View

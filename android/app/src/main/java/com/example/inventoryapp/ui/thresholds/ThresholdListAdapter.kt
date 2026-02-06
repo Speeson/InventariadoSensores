@@ -1,4 +1,4 @@
-﻿package com.example.inventoryapp.ui.thresholds
+package com.example.inventoryapp.ui.thresholds
 
 import android.view.LayoutInflater
 import android.view.ViewGroup

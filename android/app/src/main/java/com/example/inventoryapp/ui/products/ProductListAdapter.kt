@@ -1,12 +1,22 @@
-﻿package com.example.inventoryapp.ui.products
+package com.example.inventoryapp.ui.products
 
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
+import android.graphics.Shader
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
+import androidx.core.content.ContextCompat
+import com.example.inventoryapp.R
 import com.example.inventoryapp.data.remote.model.ProductResponseDto
 import com.example.inventoryapp.databinding.ItemProductCardBinding
 
@@ -21,6 +31,7 @@ class ProductListAdapter(
 ) : RecyclerView.Adapter<ProductListAdapter.VH>() {
 
     private val items = mutableListOf<ProductRowUi>()
+    private var gradientIcon: Bitmap? = null
 
     inner class VH(val binding: ItemProductCardBinding) : RecyclerView.ViewHolder(binding.root)
 
@@ -35,11 +46,14 @@ class ProductListAdapter(
         val row = items[position]
         val p = row.product
         holder.binding.tvName.text = p.name
-        holder.binding.tvSku.text = "SKU: ${p.sku}"
-        holder.binding.tvBarcode.text = "Barcode: ${p.barcode ?: "-"}"
-        val catLabel = row.categoryName ?: "ID ${p.categoryId}"
-        holder.binding.tvCategory.text = "Categoria: $catLabel"
-        holder.binding.tvMeta.text = "ID: ${p.id}  •  Updated: ${p.updatedAt}"
+        holder.binding.ivIcon.setImageBitmap(getGradientIcon(holder.itemView.context))
+        val catName = row.categoryName ?: "N/D"
+        val barcodeText = p.barcode ?: "-"
+        holder.binding.tvDetails.text =
+            "SKU: ${p.sku}\n" +
+            "Barcode: $barcodeText\n" +
+            "Categoria: $catName (ID ${p.categoryId})  •  ID: ${p.id}\n" +
+            "Updated: ${p.updatedAt}"
         val isOffline = p.id < 0 || p.name.contains("(offline)", ignoreCase = true)
         holder.binding.ivOfflineAlert.visibility =
             if (isOffline) android.view.View.VISIBLE else android.view.View.GONE
@@ -66,5 +80,34 @@ class ProductListAdapter(
         items.clear()
         items.addAll(newItems)
         notifyDataSetChanged()
+    }
+
+    private fun getGradientIcon(context: Context): Bitmap {
+        gradientIcon?.let { return it }
+        val src = BitmapFactory.decodeResource(context.resources, R.drawable.products)
+        val out = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(out)
+        val colors = intArrayOf(
+            ContextCompat.getColor(context, R.color.icon_grad_start),  // light blue (top)
+            ContextCompat.getColor(context, R.color.icon_grad_mid2),   // dark blue (mid)
+            ContextCompat.getColor(context, R.color.icon_grad_mid1),   // pink (lower-mid)
+            ContextCompat.getColor(context, R.color.icon_grad_end)     // violet (bottom)
+        )
+        val shader = LinearGradient(
+            0f,
+            0f,
+            src.width.toFloat(),
+            src.height.toFloat(),
+            colors,
+            floatArrayOf(0f, 0.33f, 0.66f, 1f),
+            Shader.TileMode.CLAMP
+        )
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.shader = shader }
+        canvas.drawRect(0f, 0f, src.width.toFloat(), src.height.toFloat(), paint)
+        paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
+        canvas.drawBitmap(src, 0f, 0f, paint)
+        paint.xfermode = null
+        gradientIcon = out
+        return out
     }
 }

@@ -1,4 +1,6 @@
-﻿package com.example.inventoryapp.ui.products
+package com.example.inventoryapp.ui.products
+import com.example.inventoryapp.ui.common.AlertsBadgeUtil
+import com.example.inventoryapp.R
 
 import android.content.Intent
 import android.os.Bundle
@@ -20,6 +22,7 @@ import com.example.inventoryapp.ui.common.UiNotifier
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.io.IOException
+import com.example.inventoryapp.ui.common.GradientIconUtil
 
 class ProductDetailActivity : AppCompatActivity() {
 
@@ -35,7 +38,11 @@ class ProductDetailActivity : AppCompatActivity() {
         binding = ActivityProductDetailBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        snack = SendSnack(binding.root)
+        
+        GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
+        
+        AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
+snack = SendSnack(binding.root)
         session = SessionManager(this)
 
         binding.btnBack.setOnClickListener { finish() }
