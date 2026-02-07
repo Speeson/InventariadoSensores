@@ -33,9 +33,7 @@
         <activity android:name=".ui.products.ProductDetailActivity" />
         <activity android:name=".ui.products.LabelPreviewActivity" />
         <activity android:name=".ui.scan.ScanActivity" />
-        <activity android:name=".ui.movements.MovimientosActivity" />
         <activity android:name=".ui.movements.MovementsMenuActivity" />
-        <activity android:name=".ui.movements.MovementsListActivity" />
         <activity android:name=".ui.categories.CategoriesActivity" />
         <activity android:name=".ui.thresholds.ThresholdsActivity" />
         <activity android:name=".ui.scan.ConfirmScanActivity" />

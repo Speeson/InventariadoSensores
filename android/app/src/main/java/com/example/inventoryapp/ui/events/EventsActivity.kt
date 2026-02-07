@@ -65,6 +65,7 @@ class EventsActivity : AppCompatActivity() {
         GradientIconUtil.applyGradient(binding.ivCreateEventSearch, R.drawable.search)
         applyEventsTitleGradient()
         binding.tilSearchType.post { applySearchDropdownIcon() }
+        binding.tilCreateType.post { applyCreateDropdownIcon() }
         
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
 snack = SendSnack(binding.root)
@@ -123,6 +124,7 @@ snack = SendSnack(binding.root)
         binding.rvEvents.adapter = adapter
 
         setupLocationDropdown()
+        setupCreateDropdowns()
         setupSearchDropdowns()
 
         applyPagerButtonStyle(binding.btnPrevPage, enabled = false)
@@ -141,11 +143,17 @@ snack = SendSnack(binding.root)
     }
 
     private fun createEvent() {
-        val typeRaw = binding.etEventType.text.toString().trim().uppercase()
+        val typeRawInput = binding.etEventType.text.toString().trim().uppercase()
         val productId = binding.etProductId.text.toString().trim().toIntOrNull()
         val delta = binding.etDelta.text.toString().trim().toIntOrNull()
         val location = normalizeLocationInput(binding.etLocation.text.toString().trim()).ifBlank { "default" }
-        val source = binding.etSource.text.toString().trim().ifBlank { "sensor_simulado" }
+        val source = binding.etSource.text.toString().trim().uppercase()
+
+        val typeRaw = when (typeRawInput) {
+            "IN" -> "SENSOR_IN"
+            "OUT" -> "SENSOR_OUT"
+            else -> typeRawInput
+        }
 
         val eventType = when (typeRaw) {
             "SENSOR_IN" -> EventTypeDto.SENSOR_IN
@@ -155,6 +163,7 @@ snack = SendSnack(binding.root)
 
         if (productId == null) { binding.etProductId.error = "Product ID requerido"; return }
         if (delta == null || delta <= 0) { binding.etDelta.error = "Delta debe ser > 0"; return }
+        if (source.isBlank()) { binding.etSource.error = "Fuente requerida"; return }
 
         val dto = EventCreateDto(
             eventType = eventType,
@@ -425,6 +434,47 @@ snack = SendSnack(binding.root)
         binding.etSearchSource.setOnClickListener { binding.etSearchSource.showDropDown() }
         binding.etSearchSource.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) binding.etSearchSource.showDropDown()
+        }
+    }
+
+    private fun setupCreateDropdowns() {
+        val typeOptions = listOf("", "SENSOR_IN", "SENSOR_OUT")
+        val typeAdapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, typeOptions)
+        binding.etEventType.setAdapter(typeAdapter)
+        binding.etEventType.setOnItemClickListener { _, _, position, _ ->
+            if (typeOptions[position].isBlank()) binding.etEventType.setText("", false)
+        }
+        binding.etEventType.setOnClickListener { binding.etEventType.showDropDown() }
+        binding.etEventType.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) binding.etEventType.showDropDown()
+        }
+
+        val sourceOptions = listOf("", "SCAN", "MANUAL")
+        val sourceAdapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, sourceOptions)
+        binding.etSource.setAdapter(sourceAdapter)
+        binding.etSource.setOnItemClickListener { _, _, position, _ ->
+            if (sourceOptions[position].isBlank()) binding.etSource.setText("", false)
+        }
+        binding.etSource.setOnClickListener { binding.etSource.showDropDown() }
+        binding.etSource.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) binding.etSource.showDropDown()
+        }
+    }
+
+    private fun applyCreateDropdownIcon() {
+        binding.tilCreateType.setEndIconTintList(null)
+        binding.tilCreateSource.setEndIconTintList(null)
+        binding.tilCreateLocation.setEndIconTintList(null)
+        val endIconId = com.google.android.material.R.id.text_input_end_icon
+        listOf(binding.tilCreateType, binding.tilCreateSource, binding.tilCreateLocation).forEach { til ->
+            til.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
+                GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
+                iv.layoutParams = iv.layoutParams.apply {
+                    width = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                    height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                }
+                iv.scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
+            }
         }
     }
 

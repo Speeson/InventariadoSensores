@@ -6,11 +6,12 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.inventoryapp.databinding.ItemMovementCardBinding
 
 data class MovementRow(
+    val movementId: Int,
+    val type: String,
     val title: String,
     val meta: String,
     val sub: String,
-    val isPending: Boolean,
-    val type: String
+    val isPending: Boolean
 )
 
 class MovementsListAdapter : RecyclerView.Adapter<MovementsListAdapter.VH>() {
@@ -28,6 +29,8 @@ class MovementsListAdapter : RecyclerView.Adapter<MovementsListAdapter.VH>() {
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val row = items[position]
+        holder.binding.tvTypeTag.text = row.type
+        holder.binding.tvMovementId.text = if (row.movementId < 0) "ID offline" else "ID ${row.movementId}"
         holder.binding.tvTitle.text = row.title
         holder.binding.tvMeta.text = row.meta
         holder.binding.tvSub.text = row.sub

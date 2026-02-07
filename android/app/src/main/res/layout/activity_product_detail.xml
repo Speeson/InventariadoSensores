@@ -136,7 +136,7 @@
                             android:id="@+id/etBarcode"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Barcode"
+                            android:hint="Código de barras"
                             android:inputType="number"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />
@@ -152,7 +152,7 @@
                             android:id="@+id/etCategoryId"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Category ID"
+                            android:hint="ID de categoría"
                             android:inputType="number"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />

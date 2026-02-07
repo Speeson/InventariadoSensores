@@ -148,18 +148,21 @@
                         android:visibility="gone">
 
                         <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilCreateType"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginBottom="12dp"
-                            app:boxBackgroundMode="outline">
+                            app:boxBackgroundMode="outline"
+                            app:endIconMode="dropdown_menu"
+                            app:endIconDrawable="@drawable/triangle_down_lg"
+                            app:endIconTint="@null">
 
-                        <com.google.android.material.textfield.TextInputEditText
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
                             android:id="@+id/etEventType"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Tipo (SENSOR_IN / SENSOR_OUT)"
-                            android:text="SENSOR_IN"
-                            android:inputType="text"
+                            android:hint="Tipo"
+                            android:inputType="none"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />
                         </com.google.android.material.textfield.TextInputLayout>
@@ -174,7 +177,7 @@
                             android:id="@+id/etProductId"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Product ID"
+                            android:hint="ID de producto"
                             android:inputType="number"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />
@@ -190,41 +193,48 @@
                             android:id="@+id/etDelta"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Delta ( > 0 )"
+                            android:hint="Delta (> 0)"
                             android:inputType="number"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />
                         </com.google.android.material.textfield.TextInputLayout>
 
                         <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilCreateLocation"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginBottom="12dp"
-                            app:boxBackgroundMode="outline">
+                            app:boxBackgroundMode="outline"
+                            app:endIconMode="dropdown_menu"
+                            app:endIconDrawable="@drawable/triangle_down_lg"
+                            app:endIconTint="@null">
 
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
                             android:id="@+id/etLocation"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Location"
+                            android:hint="Ubicación"
                             android:minHeight="56dp"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />
                         </com.google.android.material.textfield.TextInputLayout>
 
                         <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilCreateSource"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginBottom="12dp"
-                            app:boxBackgroundMode="outline">
+                            app:boxBackgroundMode="outline"
+                            app:endIconMode="dropdown_menu"
+                            app:endIconDrawable="@drawable/triangle_down_lg"
+                            app:endIconTint="@null">
 
-                        <com.google.android.material.textfield.TextInputEditText
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
                             android:id="@+id/etSource"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Source"
-                            android:text="sensor_simulado"
-                            android:inputType="text"
+                            android:hint="Fuente"
+                            android:inputType="none"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />
                         </com.google.android.material.textfield.TextInputLayout>
@@ -266,7 +276,7 @@
                                 android:id="@+id/etSearchType"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:hint="Tipo (SENSOR_IN / SENSOR_OUT)"
+                                android:hint="Tipo"
                                 android:inputType="none"
                                 android:paddingStart="8dp"
                                 android:paddingEnd="8dp" />
@@ -302,7 +312,7 @@
                                 android:id="@+id/etSearchSource"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:hint="Source"
+                                android:hint="Fuente"
                                 android:inputType="none"
                                 android:paddingStart="8dp"
                                 android:paddingEnd="8dp" />

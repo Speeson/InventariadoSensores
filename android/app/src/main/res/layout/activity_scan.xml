@@ -31,10 +31,16 @@
                     android:src="@drawable/back"
                     android:padding="6dp" />
 
-                <View
+                <TextView
+                    android:id="@+id/tvScanTitle"
                     android:layout_width="0dp"
-                    android:layout_height="0dp"
-                    android:layout_weight="1" />
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="Escanear"
+                    android:textStyle="bold"
+                    android:textSize="22sp"
+                    android:textColor="?attr/colorOnSurface" />
 
                 <FrameLayout
                     android:layout_width="64dp"
@@ -87,7 +93,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Escaneo (camara)"
+                        android:text="Escaneo (cámara)"
                         android:textStyle="bold"
                         android:textColor="?attr/colorOnSurface"
                         android:layout_marginBottom="8dp" />
@@ -96,10 +102,10 @@
                         android:id="@+id/btnActivateScanner"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:background="@drawable/bg_button_gradient"
+                        android:background="@drawable/bg_button_soft_purple"
                         android:backgroundTint="@null"
                         app:backgroundTint="@null"
-                        android:text="Activar escaner"
+                        android:text="Activar escáner"
                         android:textAllCaps="false"
                         android:textColor="@android:color/white"
                         android:textStyle="bold"
@@ -111,10 +117,10 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:background="@drawable/bg_button_gradient"
+                        android:background="@drawable/bg_button_soft_purple"
                         android:backgroundTint="@null"
                         app:backgroundTint="@null"
-                        android:text="Cerrar escaner"
+                        android:text="Cerrar escáner"
                         android:textAllCaps="false"
                         android:textColor="@android:color/white"
                         android:textStyle="bold"
@@ -165,7 +171,7 @@
                             android:id="@+id/etBarcode"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Introduce el codigo manual"
+                            android:hint="Introduce el código manual"
                             android:inputType="text"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />
@@ -175,7 +181,7 @@
                         android:id="@+id/btnContinue"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:background="@drawable/bg_button_gradient"
+                        android:background="@drawable/bg_button_soft_purple"
                         android:backgroundTint="@null"
                         app:backgroundTint="@null"
                         android:text="Continuar"

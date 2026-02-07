@@ -84,8 +84,11 @@
                     <TextView
                         android:id="@+id/tvMsg"
                         android:layout_marginTop="8dp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"/>
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="16sp"
+                        android:lineSpacingExtra="4dp"/>
 
                     <Button
                         android:id="@+id/btnBack"
@@ -93,7 +96,7 @@
                         android:layout_marginTop="16dp"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:background="@drawable/bg_button_gradient"
+                        android:background="@drawable/bg_button_soft_purple"
                         android:backgroundTint="@null"
                         app:backgroundTint="@null"
                         android:textAllCaps="false"

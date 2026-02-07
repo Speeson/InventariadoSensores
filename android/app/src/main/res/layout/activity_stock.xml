@@ -157,7 +157,7 @@
                             android:id="@+id/etProductId"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Product ID o nombre"
+                            android:hint="Producto (ID o nombre)"
                             android:inputType="text"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />
@@ -177,7 +177,7 @@
                             android:id="@+id/etLocation"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Location"
+                            android:hint="Ubicación"
                             android:minHeight="56dp"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />
@@ -253,7 +253,7 @@
                             android:id="@+id/etSearchLocation"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Location"
+                            android:hint="Ubicación"
                             android:minHeight="56dp"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />

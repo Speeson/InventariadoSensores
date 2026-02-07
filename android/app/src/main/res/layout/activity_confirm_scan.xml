@@ -1,135 +1,269 @@
 <?xml version="1.0" encoding="utf-8"?>
+
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+
     xmlns:app="http://schemas.android.com/apk/res-auto"
+
     android:layout_width="match_parent"
+
     android:layout_height="match_parent"
+
     android:background="@color/home_bg">
 
+
+
     <ScrollView
+
         android:layout_width="match_parent"
+
         android:layout_height="match_parent"
+
         android:fillViewport="true">
 
+
+
         <LinearLayout
+
             android:layout_width="match_parent"
+
             android:layout_height="wrap_content"
+
             android:orientation="vertical"
+
             android:padding="20dp">
 
+
+
             <LinearLayout
+
                 android:layout_width="match_parent"
+
                 android:layout_height="wrap_content"
+
                 android:orientation="horizontal"
+
                 android:gravity="center_vertical">
 
+
+
                 <ImageButton
+
                     android:id="@+id/btnBack"
+
                     android:layout_width="36dp"
+
                     android:layout_height="36dp"
+
                     android:background="@drawable/bg_back_shadow"
+
                     android:contentDescription="@null"
+
                     android:src="@drawable/back"
+
                     android:padding="6dp" />
 
-                <View
+
+
+                <TextView
+                    android:id="@+id/tvConfirmTitle"
                     android:layout_width="0dp"
-                    android:layout_height="0dp"
-                    android:layout_weight="1" />
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="Confirmar escaneo"
+                    android:textStyle="bold"
+                    android:textSize="22sp"
+                    android:textColor="?attr/colorOnSurface" />
+
 
                 <FrameLayout
+
                     android:layout_width="64dp"
+
                     android:layout_height="64dp">
 
+
+
                     <ImageButton
+
                         android:id="@+id/btnAlertsQuick"
+
                         android:layout_width="64dp"
+
                         android:layout_height="64dp"
+
                         android:background="@android:color/transparent"
+
                         android:contentDescription="Alertas"
+
                         android:scaleType="centerInside"
+
                         android:padding="0dp"
+
                         android:src="@drawable/ic_bell" />
 
+
+
                     <TextView
+
                         android:id="@+id/tvAlertsBadge"
+
                         android:layout_width="18dp"
+
                         android:layout_height="18dp"
+
                         android:layout_gravity="end|top"
+
                         android:layout_marginEnd="6dp"
+
                         android:layout_marginTop="2dp"
+
                         android:background="@drawable/bg_badge_red"
+
                         android:textColor="@android:color/white"
+
                         android:textSize="10sp"
+
                         android:textStyle="bold"
+
                         android:gravity="center"
+
                         android:visibility="gone"
+
                         android:text="0" />
+
                 </FrameLayout>
+
             </LinearLayout>
 
+
+
             <com.google.android.material.card.MaterialCardView
+
                 android:layout_width="match_parent"
+
                 android:layout_height="wrap_content"
+
                 android:layout_marginTop="16dp"
+
                 android:layout_marginBottom="12dp"
+
                 app:cardCornerRadius="14dp"
+
                 app:cardElevation="3dp"
+
                 app:strokeWidth="1dp"
+
                 app:strokeColor="#1A000000"
+
                 app:cardBackgroundColor="?attr/colorSurface">
 
+
+
                 <LinearLayout
+
                     android:layout_width="match_parent"
+
                     android:layout_height="wrap_content"
+
                     android:orientation="vertical"
+
                     android:padding="16dp">
 
-                    <TextView
-                        android:id="@+id/tvProductName"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Producto"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorOnSurface"
-                        android:textSize="18sp"
-                        android:layout_marginBottom="6dp" />
+
 
                     <TextView
-                        android:id="@+id/tvBarcode"
+
+                        android:id="@+id/tvProductName"
+
                         android:layout_width="match_parent"
+
                         android:layout_height="wrap_content"
-                        android:text="Barcode:"
+
+                        android:text="Producto"
+
+                        android:textStyle="bold"
+
+                        android:textColor="?attr/colorOnSurface"
+
+                        android:textSize="18sp"
+
+                        android:layout_marginBottom="6dp" />
+
+
+
+                    <TextView
+
+                        android:id="@+id/tvBarcode"
+
+                        android:layout_width="match_parent"
+
+                        android:layout_height="wrap_content"
+
+                        android:text="C�digo de barras:"
                         android:layout_marginBottom="12dp" />
 
+
+
                     <TextView
+
                         android:layout_width="wrap_content"
+
                         android:layout_height="wrap_content"
+
                         android:text="Tipo de movimiento"
+
                         android:textStyle="bold"
+
                         android:textColor="?attr/colorOnSurface"
+
                         android:layout_marginBottom="6dp" />
 
+
+
                     <LinearLayout
+
                         android:layout_width="match_parent"
+
                         android:layout_height="wrap_content"
+
                         android:orientation="horizontal"
+
                         android:layout_marginBottom="12dp">
 
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnTypeIn"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="IN" />
+
 
                         <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnTypeOut"
+
+                            android:id="@+id/btnTypeIn"
+
                             android:layout_width="0dp"
+
                             android:layout_height="wrap_content"
+
                             android:layout_weight="1"
+
+                            android:text="IN" />
+
+
+
+                        <com.google.android.material.button.MaterialButton
+
+                            android:id="@+id/btnTypeOut"
+
+                            android:layout_width="0dp"
+
+                            android:layout_height="wrap_content"
+
+                            android:layout_weight="1"
+
                             android:layout_marginStart="8dp"
+
                             android:text="OUT" />
+
                     </LinearLayout>
+
+
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
@@ -147,11 +281,17 @@
                             android:paddingEnd="8dp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
+
+
                     <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilLocation"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="12dp"
-                        app:boxBackgroundMode="outline">
+                        app:boxBackgroundMode="outline"
+                        app:endIconMode="dropdown_menu"
+                        app:endIconDrawable="@drawable/triangle_down_lg"
+                        app:endIconTint="@null">
 
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
                             android:id="@+id/etLocation"
@@ -163,24 +303,48 @@
                             android:paddingEnd="8dp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
+
+
                     <Button
+
                         android:id="@+id/btnConfirm"
+
                         android:layout_width="match_parent"
+
                         android:layout_height="wrap_content"
-                        android:background="@drawable/bg_button_gradient"
+
+                        android:background="@drawable/bg_button_soft_purple"
                         android:backgroundTint="@null"
+
                         app:backgroundTint="@null"
+
                         android:text="Confirmar"
+
                         android:textAllCaps="false"
+
                         android:textColor="@android:color/white"
+
                         android:textStyle="bold"
+
                         android:textSize="15sp"
+
                         android:paddingVertical="12dp" />
 
+
+
                 </LinearLayout>
+
             </com.google.android.material.card.MaterialCardView>
 
+
+
         </LinearLayout>
+
     </ScrollView>
 
+
+
 </FrameLayout>
+
+
+

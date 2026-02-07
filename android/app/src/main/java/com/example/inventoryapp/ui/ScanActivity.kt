@@ -45,6 +45,7 @@ class ScanActivity : AppCompatActivity() {
 
         
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
+        applyScanTitleGradient()
         
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
 binding.btnBack.setOnClickListener { finish() }
@@ -234,5 +235,28 @@ binding.btnBack.setOnClickListener { finish() }
         i.putExtra("barcode", barcode)
         i.putExtra("offline", offline)
         startActivity(i)
+    }
+
+    private fun applyScanTitleGradient() {
+        binding.tvScanTitle.post {
+            val paint = binding.tvScanTitle.paint
+            val width = paint.measureText(binding.tvScanTitle.text.toString())
+            if (width <= 0f) return@post
+            val c1 = ContextCompat.getColor(this, R.color.icon_grad_start)
+            val c2 = ContextCompat.getColor(this, R.color.icon_grad_mid2)
+            val c3 = ContextCompat.getColor(this, R.color.icon_grad_mid1)
+            val c4 = ContextCompat.getColor(this, R.color.icon_grad_end)
+            val shader = android.graphics.LinearGradient(
+                0f,
+                0f,
+                width,
+                0f,
+                intArrayOf(c1, c2, c3, c4),
+                null,
+                android.graphics.Shader.TileMode.CLAMP
+            )
+            paint.shader = shader
+            binding.tvScanTitle.invalidate()
+        }
     }
 }

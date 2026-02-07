@@ -189,7 +189,7 @@
                             android:id="@+id/etBarcode"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Barcode (13 digitos)"
+                            android:hint="Código de barras (13 dígitos)"
                             android:inputType="number"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />
@@ -209,7 +209,7 @@
                             android:id="@+id/etCategory"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Categoria"
+                            android:hint="Categoría"
                             android:minHeight="56dp"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />
@@ -281,7 +281,7 @@
                             android:id="@+id/etSearchBarcode"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Barcode"
+                            android:hint="Código de barras"
                             android:inputType="number"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />
@@ -301,7 +301,7 @@
                             android:id="@+id/etSearchCategory"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Categoria"
+                            android:hint="Categoría"
                             android:minHeight="56dp"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />

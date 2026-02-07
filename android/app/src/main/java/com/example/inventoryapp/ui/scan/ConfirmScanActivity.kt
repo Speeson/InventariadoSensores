@@ -23,6 +23,8 @@ import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import com.example.inventoryapp.ui.common.GradientIconUtil
 import com.example.inventoryapp.R
+import java.text.NumberFormat
+import java.util.Locale
 
 class ConfirmScanActivity : AppCompatActivity() {
 
@@ -32,6 +34,10 @@ class ConfirmScanActivity : AppCompatActivity() {
     private var productExists: Boolean = true
     private var isOfflineMode: Boolean = false
     private val gson = Gson()
+    private var productId: Int? = null
+    private var productName: String? = null
+    private var lastQuantity: Int = 0
+    private var lastLocationRaw: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,6 +46,7 @@ class ConfirmScanActivity : AppCompatActivity() {
 
         
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
+        applyConfirmTitleGradient()
         
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
 binding.btnBack.setOnClickListener { finish() }
@@ -50,13 +57,14 @@ binding.btnBack.setOnClickListener { finish() }
         val snack = SendSnack(binding.root)
         val barcode = intent.getStringExtra("barcode").orEmpty()
         isOfflineMode = intent.getBooleanExtra("offline", false)
-        binding.tvBarcode.text = "Barcode: $barcode"
+        binding.tvBarcode.text = "Código de barras: $barcode"
 
         applyTypeSelection(MovementType.OUT)
         binding.btnTypeIn.setOnClickListener { applyTypeSelection(MovementType.IN) }
         binding.btnTypeOut.setOnClickListener { applyTypeSelection(MovementType.OUT) }
 
         setupLocationDropdown()
+        binding.tilLocation.post { applyLocationDropdownIcon() }
 
         if (isOfflineMode) {
             binding.tvProductName.text = "Sin conexion: validacion pendiente"
@@ -70,6 +78,8 @@ binding.btnBack.setOnClickListener { finish() }
                     val res = NetworkModule.api.listProducts(barcode = barcode, limit = 1, offset = 0)
                     if (res.isSuccessful && res.body() != null && res.body()!!.items.isNotEmpty()) {
                         val p = res.body()!!.items.first()
+                        productId = p.id
+                        productName = p.name
                         binding.tvProductName.text = "${p.name} (SKU ${p.sku})"
                         productExists = true
                     } else {
@@ -104,7 +114,9 @@ binding.btnBack.setOnClickListener { finish() }
                 return@setOnClickListener
             }
 
-            val location = normalizeLocationInput(binding.etLocation.text.toString().trim()).ifEmpty { "default" }
+            lastQuantity = quantity
+            lastLocationRaw = binding.etLocation.text.toString().trim()
+            val location = normalizeLocationInput(lastLocationRaw).ifEmpty { "default" }
             val movement = Movement(
                 barcode = barcode,
                 type = selectedType,
@@ -184,8 +196,10 @@ binding.btnBack.setOnClickListener { finish() }
                 val res = NetworkModule.api.listLocations(limit = 200, offset = 0)
                 if (res.isSuccessful && res.body() != null) {
                     val items = res.body()!!.items
-                    val values = items.map { "(${it.id}) ${it.code}" }.distinct().sorted()
-                    val allValues = if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
+                    val values = items.sortedBy { it.id }
+                        .map { "(${it.id}) ${it.code}" }
+                        .distinct()
+                    val allValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
                     val adapter = ArrayAdapter(this@ConfirmScanActivity, android.R.layout.simple_list_item_1, allValues)
                     binding.etLocation.setAdapter(adapter)
                     binding.etLocation.setOnClickListener { binding.etLocation.showDropDown() }
@@ -209,9 +223,9 @@ binding.btnBack.setOnClickListener { finish() }
 
     private fun applyTypeSelection(type: MovementType) {
         selectedType = type
-        val selectedBg = ContextCompat.getColor(this, android.R.color.holo_blue_dark)
+        val selectedBg = ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_end)
         val selectedText = ContextCompat.getColor(this, android.R.color.white)
-        val normalBg = ContextCompat.getColor(this, android.R.color.darker_gray)
+        val normalBg = ContextCompat.getColor(this, com.example.inventoryapp.R.color.toggle_idle)
         val normalText = ContextCompat.getColor(this, android.R.color.black)
 
         val isIn = type == MovementType.IN
@@ -223,7 +237,58 @@ binding.btnBack.setOnClickListener { finish() }
 
     private fun buildSendMessage(payload: ScanSendResult?): String {
         if (payload == null) return "Evento enviado"
-        val idPart = payload.eventId?.let { " (id=$it)" } ?: ""
-        return "Evento enviado: ${payload.productName}$idPart"
+        val name = productName ?: payload.productName
+        val idPart = productId?.let { " (ID $it)" } ?: ""
+        val locationDisplay = formatLocationDisplay(lastLocationRaw)
+        val quantityDisplay = formatQuantity(lastQuantity)
+        return "Producto: $name$idPart\nUbicación: $locationDisplay\nCantidad: $quantityDisplay"
+    }
+
+    private fun formatLocationDisplay(raw: String): String {
+        val trimmed = raw.trim()
+        if (trimmed.isBlank()) return "-"
+        val match = Regex("^\\((\\d+)\\)\\s*(.+)$").find(trimmed)
+        return if (match != null) {
+            "${match.groupValues[2]} (ID ${match.groupValues[1]})"
+        } else {
+            trimmed
+        }
+    }
+
+    private fun formatQuantity(value: Int): String {
+        if (value <= 0) return "-"
+        return NumberFormat.getInstance(Locale("es", "ES")).format(value)
+    }
+
+    private fun applyLocationDropdownIcon() {
+        binding.tilLocation.setEndIconTintList(null)
+        val endIconId = com.google.android.material.R.id.text_input_end_icon
+        binding.tilLocation.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
+            GradientIconUtil.applyGradient(iv, com.example.inventoryapp.R.drawable.triangle_down_lg)
+            iv.scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
+        }
+    }
+
+    private fun applyConfirmTitleGradient() {
+        binding.tvConfirmTitle.post {
+            val paint = binding.tvConfirmTitle.paint
+            val width = paint.measureText(binding.tvConfirmTitle.text.toString())
+            if (width <= 0f) return@post
+            val c1 = ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_start)
+            val c2 = ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_mid2)
+            val c3 = ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_mid1)
+            val c4 = ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_end)
+            val shader = android.graphics.LinearGradient(
+                0f,
+                0f,
+                width,
+                0f,
+                intArrayOf(c1, c2, c3, c4),
+                null,
+                android.graphics.Shader.TileMode.CLAMP
+            )
+            paint.shader = shader
+            binding.tvConfirmTitle.invalidate()
+        }
     }
 }
