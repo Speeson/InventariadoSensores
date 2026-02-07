@@ -7,4 +7,7 @@
     <color name="icon_grad_mid2">#1A6DFF</color>
     <color name="icon_grad_end">#C822FF</color>
     <color name="home_bg">#F4F8FF</color>
+    <color name="toggle_idle">#EDE6FF</color>
+    <color name="toggle_active">#D6C3FF</color>
+    <color name="toggle_active_border">#A67CFF</color>
 </resources>

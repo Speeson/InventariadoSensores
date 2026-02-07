@@ -19,21 +19,28 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="center_vertical">
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
 
                 <ImageButton
                     android:id="@+id/btnBack"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:background="@drawable/bg_back_shadow"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
+                    android:background="@android:color/transparent"
                     android:contentDescription="@null"
                     android:src="@drawable/back"
                     android:padding="6dp" />
 
-                <View
+                <TextView
+                    android:id="@+id/tvEventsTitle"
                     android:layout_width="0dp"
-                    android:layout_height="0dp"
-                    android:layout_weight="1" />
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="Eventos"
+                    android:textStyle="bold"
+                    android:textSize="22sp"
+                    android:textColor="?attr/colorOnSurface" />
 
                 <FrameLayout
                     android:layout_width="64dp"
@@ -83,30 +90,55 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <FrameLayout
-                        android:id="@+id/layoutCreateEventHeader"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:paddingVertical="6dp">
-
-                        <TextView
-                            android:id="@+id/tvCreateEventTitle"
+                        <LinearLayout
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="Crear evento"
-                            android:textSize="18sp"
-                            android:textStyle="bold"
-                            android:textColor="?attr/colorOnSurface"
-                            android:gravity="center" />
+                            android:layout_height="56dp"
+                            android:orientation="horizontal"
+                            android:padding="4dp">
 
-                        <ImageView
-                            android:id="@+id/ivCreateEventChevron"
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:layout_gravity="end|center_vertical"
-                            android:contentDescription="@null"
-                            android:src="@drawable/add" />
-                    </FrameLayout>
+                        <FrameLayout
+                            android:id="@+id/layoutCreateEventHeader"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_toggle_idle"
+                            android:foreground="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true">
+
+                            <ImageView
+                                android:id="@+id/ivCreateEventAdd"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_gravity="center"
+                                android:contentDescription="@null"
+                                android:src="@drawable/add" />
+                        </FrameLayout>
+
+                        <View
+                            android:layout_width="1dp"
+                            android:layout_height="match_parent"
+                            android:background="#33FFFFFF" />
+
+                        <FrameLayout
+                            android:id="@+id/layoutSearchEventHeader"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_toggle_idle"
+                            android:foreground="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true">
+
+                            <ImageView
+                                android:id="@+id/ivCreateEventSearch"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_gravity="center"
+                                android:contentDescription="@null"
+                                android:src="@drawable/search" />
+                        </FrameLayout>
+                    </LinearLayout>
 
                     <LinearLayout
                         android:id="@+id/layoutCreateEventContent"
@@ -201,7 +233,7 @@
                             android:id="@+id/btnCreateEvent"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:background="@drawable/bg_button_gradient"
+                            android:background="@drawable/bg_button_soft_purple"
                             android:backgroundTint="@null"
                             app:backgroundTint="@null"
                             android:text="Crear evento"
@@ -210,6 +242,112 @@
                             android:textStyle="bold"
                             android:textSize="15sp"
                             android:paddingVertical="12dp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/layoutSearchEventContent"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginTop="12dp"
+                        android:visibility="gone">
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilSearchType"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="12dp"
+                            app:boxBackgroundMode="outline"
+                            app:endIconMode="dropdown_menu"
+                            app:endIconDrawable="@drawable/triangle_down_lg"
+                            app:endIconTint="@null">
+
+                            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                                android:id="@+id/etSearchType"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:hint="Tipo (SENSOR_IN / SENSOR_OUT)"
+                                android:inputType="none"
+                                android:paddingStart="8dp"
+                                android:paddingEnd="8dp" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="12dp"
+                            app:boxBackgroundMode="outline">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etSearchProduct"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:hint="Producto (ID o nombre)"
+                                android:inputType="text"
+                                android:paddingStart="8dp"
+                                android:paddingEnd="8dp" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:id="@+id/tilSearchSource"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="12dp"
+                            app:boxBackgroundMode="outline"
+                            app:endIconMode="dropdown_menu"
+                            app:endIconDrawable="@drawable/triangle_down_lg"
+                            app:endIconTint="@null">
+
+                            <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                                android:id="@+id/etSearchSource"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:hint="Source"
+                                android:inputType="none"
+                                android:paddingStart="8dp"
+                                android:paddingEnd="8dp" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <Button
+                                android:id="@+id/btnSearchEvents"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:background="@drawable/bg_button_soft_purple"
+                                android:backgroundTint="@null"
+                                app:backgroundTint="@null"
+                                android:text="Buscar"
+                                android:textAllCaps="false"
+                                android:textColor="@android:color/white"
+                                android:textStyle="bold"
+                                android:textSize="14sp"
+                                android:paddingVertical="10dp" />
+
+                            <Space
+                                android:layout_width="12dp"
+                                android:layout_height="0dp" />
+
+                            <Button
+                                android:id="@+id/btnClearSearch"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:background="@drawable/bg_button_soft_purple"
+                                android:backgroundTint="@null"
+                                app:backgroundTint="@null"
+                                android:text="Limpiar"
+                                android:textAllCaps="false"
+                                android:textColor="@android:color/white"
+                                android:textStyle="bold"
+                                android:textSize="14sp"
+                                android:paddingVertical="10dp" />
+                        </LinearLayout>
+
                     </LinearLayout>
 
                 </LinearLayout>
@@ -236,7 +374,7 @@
                         android:id="@+id/btnRefresh"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:background="@drawable/bg_button_gradient"
+                        android:background="@drawable/bg_button_soft_purple"
                         android:backgroundTint="@null"
                         app:backgroundTint="@null"
                         android:text="Recargar eventos"
@@ -245,6 +383,50 @@
                         android:textStyle="bold"
                         android:textSize="14sp"
                         android:paddingVertical="8dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="6dp"
+                        android:layout_marginBottom="6dp">
+
+                        <TextView
+                            android:id="@+id/tvEventsPageInfo"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Mostrando 0/0"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="12sp"
+                            android:includeFontPadding="false" />
+
+                        <Button
+                            android:id="@+id/btnPrevPage"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Anterior"
+                            android:textAllCaps="false"
+                            android:textSize="12sp"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="2dp"
+                            android:minHeight="0dp"
+                            android:minWidth="0dp" />
+
+                        <Button
+                            android:id="@+id/btnNextPage"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="Siguiente"
+                            android:textAllCaps="false"
+                            android:textSize="12sp"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="2dp"
+                            android:minHeight="0dp"
+                            android:minWidth="0dp" />
+                    </LinearLayout>
 
                     <androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/rvEvents"
