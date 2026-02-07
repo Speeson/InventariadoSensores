@@ -310,8 +310,10 @@ snack = SendSnack(binding.root)
                 val res = NetworkModule.api.listLocations(limit = 200, offset = 0)
                 if (res.isSuccessful && res.body() != null) {
                     val items = res.body()!!.items
-                    val values = items.map { "(${it.id}) ${it.code}" }.distinct().sorted()
-                    val allValues = if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
+                    val values = items.sortedBy { it.id }
+                        .map { "(${it.id}) ${it.code}" }
+                        .distinct()
+                    val allValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
                     val adapter = ArrayAdapter(this@EventsActivity, android.R.layout.simple_list_item_1, allValues)
                     binding.etLocation.setAdapter(adapter)
                     binding.etLocation.setOnClickListener { binding.etLocation.showDropDown() }

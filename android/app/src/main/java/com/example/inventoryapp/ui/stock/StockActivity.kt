@@ -27,6 +27,10 @@ import java.io.IOException
 import com.example.inventoryapp.ui.common.GradientIconUtil
 import android.graphics.drawable.GradientDrawable
 import androidx.core.content.ContextCompat
+import android.view.View
+import androidx.transition.AutoTransition
+import androidx.transition.TransitionManager
+import android.view.inputmethod.InputMethodManager
 
 class StockActivity : AppCompatActivity() {
 
@@ -35,12 +39,16 @@ class StockActivity : AppCompatActivity() {
 
     private val gson = Gson()
     private var items: List<StockResponseDto> = emptyList()
+    private var allItems: List<StockResponseDto> = emptyList()
     private lateinit var adapter: StockListAdapter
     private var productNameById: Map<Int, String> = emptyMap()
     private var currentOffset = 0
-    private val pageSize = 10
+    private val pageSize = 5
     private var totalCount = 0
     private var isLoading = false
+    private var filteredItems: List<StockResponseDto> = emptyList()
+    private var filteredOffset = 0
+    private var pendingFilterApply = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,6 +57,9 @@ class StockActivity : AppCompatActivity() {
 
         
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
+        GradientIconUtil.applyGradient(binding.ivCreateStockAdd, R.drawable.add)
+        GradientIconUtil.applyGradient(binding.ivCreateStockSearch, R.drawable.search)
+        applyStockTitleGradient()
         
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
         snack = SendSnack(binding.root)
@@ -59,20 +70,48 @@ class StockActivity : AppCompatActivity() {
         }
 
         binding.btnCreate.setOnClickListener { createStock() }
+        binding.btnRefresh.setOnClickListener { loadStocks() }
+        binding.layoutCreateStockHeader.setOnClickListener { toggleCreateStockForm() }
+        binding.layoutSearchStockHeader.setOnClickListener { toggleSearchForm() }
+        binding.btnSearchStock.setOnClickListener {
+            hideKeyboard()
+            applySearchFilters()
+        }
+        binding.btnClearSearchStock.setOnClickListener {
+            hideKeyboard()
+            clearSearchFilters()
+        }
 
         setupLocationDropdown()
+        setupSearchDropdowns()
+        binding.tilCreateLocation.post { applyStockDropdownIcon() }
 
         adapter = StockListAdapter { stock -> showEditDialog(stock) }
         binding.rvStocks.layoutManager = LinearLayoutManager(this)
         binding.rvStocks.adapter = adapter
 
         binding.btnPrevPage.setOnClickListener {
+            if (hasActiveFilters()) {
+                if (filteredOffset <= 0) return@setOnClickListener
+                filteredOffset = (filteredOffset - pageSize).coerceAtLeast(0)
+                applyFilteredPage()
+                binding.rvStocks.scrollToPosition(0)
+                return@setOnClickListener
+            }
             if (currentOffset <= 0) return@setOnClickListener
             currentOffset = (currentOffset - pageSize).coerceAtLeast(0)
             loadStocks()
             binding.rvStocks.scrollToPosition(0)
         }
         binding.btnNextPage.setOnClickListener {
+            if (hasActiveFilters()) {
+                val shown = (filteredOffset + items.size).coerceAtMost(filteredItems.size)
+                if (shown >= filteredItems.size) return@setOnClickListener
+                filteredOffset += pageSize
+                applyFilteredPage()
+                binding.rvStocks.scrollToPosition(0)
+                return@setOnClickListener
+            }
             val shown = (currentOffset + items.size).coerceAtMost(totalCount)
             if (shown >= totalCount) return@setOnClickListener
             currentOffset += pageSize
@@ -96,21 +135,25 @@ class StockActivity : AppCompatActivity() {
         isLoading = true
         lifecycleScope.launch {
             try {
-                val res = NetworkModule.api.listStocks(limit = pageSize, offset = currentOffset)
+                val filtersActive = hasActiveFilters()
+                val effectiveLimit = if (filtersActive) 100 else pageSize
+                val effectiveOffset = if (filtersActive) 0 else currentOffset
+                if (filtersActive) currentOffset = 0
+                val res = NetworkModule.api.listStocks(limit = effectiveLimit, offset = effectiveOffset)
                 if (res.isSuccessful && res.body() != null) {
                     val pending = buildPendingStocks()
                     val pageItems = res.body()!!.items
                     totalCount = res.body()!!.total
-                    items = (pending + pageItems).sortedBy { it.id }
-                    productNameById = resolveProductNames(items)
-                    adapter.submit(items, productNameById)
+                    val ordered = (pending + pageItems).sortedBy { it.id }
+                    productNameById = resolveProductNames(ordered)
+                    setAllItemsAndApplyFilters(ordered)
                     updatePageInfo(pageItems.size, pending.size)
                 } else {
                     val pending = buildPendingStocks()
                     val ordered = pending.sortedBy { it.id }
                     productNameById = resolveProductNames(ordered)
-                    adapter.submit(ordered, productNameById)
                     totalCount = pending.size
+                    setAllItemsAndApplyFilters(ordered)
                     updatePageInfo(ordered.size, ordered.size)
                     if (res.code() == 403) {
                         UiNotifier.showBlocking(
@@ -120,28 +163,43 @@ class StockActivity : AppCompatActivity() {
                             com.example.inventoryapp.R.drawable.ic_lock
                         )
                     } else {
-                        snack.showError("❌ Error ${res.code()}")
+                        snack.showError("? Error ${res.code()}")
                     }
                 }
             } catch (e: Exception) {
                 val pending = buildPendingStocks()
                 val ordered = pending.sortedBy { it.id }
                 productNameById = resolveProductNames(ordered)
-                adapter.submit(ordered, productNameById)
                 totalCount = pending.size
+                setAllItemsAndApplyFilters(ordered)
                 updatePageInfo(ordered.size, ordered.size)
                 if (e is IOException) {
-                    snack.showError("Sin conexión a Internet")
+                    snack.showError("Sin conexi?n a Internet")
                 } else {
-                    snack.showError("❌ Error de red: ${e.message}")
+                    snack.showError("? Error de red: ${e.message}")
                 }
             } finally {
                 isLoading = false
+                if (pendingFilterApply) {
+                    pendingFilterApply = false
+                    applySearchFiltersInternal(allowReload = false)
+                }
             }
         }
     }
 
     private fun updatePageInfo(pageSizeLoaded: Int, pendingCount: Int) {
+        if (hasActiveFilters()) {
+            val shown = (filteredOffset + items.size).coerceAtMost(filteredItems.size)
+            binding.tvStockPageInfo.text = "Mostrando $shown / ${filteredItems.size}"
+            val prevEnabled = filteredOffset > 0
+            val nextEnabled = shown < filteredItems.size
+            binding.btnPrevPage.isEnabled = prevEnabled
+            binding.btnNextPage.isEnabled = nextEnabled
+            applyPagerButtonStyle(binding.btnPrevPage, prevEnabled)
+            applyPagerButtonStyle(binding.btnNextPage, nextEnabled)
+            return
+        }
         val shownOnline = (currentOffset + pageSizeLoaded).coerceAtMost(totalCount)
         val label = if (totalCount > 0) {
             "Mostrando $shownOnline / $totalCount"
@@ -209,11 +267,12 @@ class StockActivity : AppCompatActivity() {
     }
 
     private fun createStock() {
-        val productId = binding.etProductId.text.toString().toIntOrNull()
+        val productInput = binding.etProductId.text.toString().trim()
+        val productId = productInput.toIntOrNull() ?: resolveProductIdByName(productInput)
         val location = normalizeLocationInput(binding.etLocation.text.toString().trim())
         val quantity = binding.etQuantity.text.toString().toIntOrNull()
 
-        if (productId == null) { binding.etProductId.error = "Product ID requerido"; return }
+        if (productId == null) { binding.etProductId.error = "Product ID o nombre válido"; return }
         if (location.isBlank()) { binding.etLocation.error = "Location requerida"; return }
         if (quantity == null || quantity < 0) { binding.etQuantity.error = "Quantity >= 0"; return }
 
@@ -351,13 +410,20 @@ class StockActivity : AppCompatActivity() {
                 val res = NetworkModule.api.listLocations(limit = 200, offset = 0)
                 if (res.isSuccessful && res.body() != null) {
                     val items = res.body()!!.items
-                    val values = items.map { "(${it.id}) ${it.code}" }.distinct().sorted()
-                    val allValues = if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
+                    val values = items.sortedBy { it.id }
+                        .map { "(${it.id}) ${it.code}" }
+                        .distinct()
+                    val allValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
                     val adapter = ArrayAdapter(this@StockActivity, android.R.layout.simple_list_item_1, allValues)
                     binding.etLocation.setAdapter(adapter)
                     binding.etLocation.setOnClickListener { binding.etLocation.showDropDown() }
                     binding.etLocation.setOnFocusChangeListener { _, hasFocus ->
                         if (hasFocus) binding.etLocation.showDropDown()
+                    }
+                    binding.etSearchLocation.setAdapter(adapter)
+                    binding.etSearchLocation.setOnClickListener { binding.etSearchLocation.showDropDown() }
+                    binding.etSearchLocation.setOnFocusChangeListener { _, hasFocus ->
+                        if (hasFocus) binding.etSearchLocation.showDropDown()
                     }
                 }
             } catch (_: Exception) {
@@ -366,11 +432,186 @@ class StockActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupSearchDropdowns() {
+        // Placeholder for future search dropdowns if needed.
+    }
+
+    private fun applyStockDropdownIcon() {
+        binding.tilCreateLocation.setEndIconTintList(null)
+        binding.tilSearchLocation.setEndIconTintList(null)
+        val endIconId = com.google.android.material.R.id.text_input_end_icon
+        binding.tilCreateLocation.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
+            GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
+        }
+        binding.tilSearchLocation.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
+            GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
+        }
+    }
+
+    private fun toggleCreateStockForm() {
+        TransitionManager.beginDelayedTransition(binding.scrollStock, AutoTransition().setDuration(180))
+        val isVisible = binding.layoutCreateStockContent.visibility == View.VISIBLE
+        if (isVisible) {
+            binding.layoutCreateStockContent.visibility = View.GONE
+            binding.layoutSearchStockContent.visibility = View.GONE
+            setToggleActive(null)
+        } else {
+            binding.layoutCreateStockContent.visibility = View.VISIBLE
+            binding.layoutSearchStockContent.visibility = View.GONE
+            setToggleActive(binding.layoutCreateStockHeader)
+        }
+    }
+
+    private fun toggleSearchForm() {
+        TransitionManager.beginDelayedTransition(binding.scrollStock, AutoTransition().setDuration(180))
+        val isVisible = binding.layoutSearchStockContent.visibility == View.VISIBLE
+        if (isVisible) {
+            hideSearchForm()
+        } else {
+            binding.layoutSearchStockContent.visibility = View.VISIBLE
+            binding.layoutCreateStockContent.visibility = View.GONE
+            setToggleActive(binding.layoutSearchStockHeader)
+        }
+    }
+
+    private fun hideSearchForm() {
+        binding.layoutSearchStockContent.visibility = View.GONE
+        binding.layoutCreateStockContent.visibility = View.GONE
+        setToggleActive(null)
+    }
+
+    private fun setToggleActive(active: View?) {
+        if (active === binding.layoutCreateStockHeader) {
+            binding.layoutCreateStockHeader.setBackgroundResource(R.drawable.bg_toggle_active)
+            binding.layoutSearchStockHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
+        } else if (active === binding.layoutSearchStockHeader) {
+            binding.layoutCreateStockHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
+            binding.layoutSearchStockHeader.setBackgroundResource(R.drawable.bg_toggle_active)
+        } else {
+            binding.layoutCreateStockHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
+            binding.layoutSearchStockHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
+        }
+    }
+
+    private fun applyStockTitleGradient() {
+        binding.tvStockTitle.post {
+            val paint = binding.tvStockTitle.paint
+            val width = paint.measureText(binding.tvStockTitle.text.toString())
+            if (width <= 0f) return@post
+            val c1 = ContextCompat.getColor(this, R.color.icon_grad_start)
+            val c2 = ContextCompat.getColor(this, R.color.icon_grad_mid2)
+            val c3 = ContextCompat.getColor(this, R.color.icon_grad_mid1)
+            val c4 = ContextCompat.getColor(this, R.color.icon_grad_end)
+            val shader = android.graphics.LinearGradient(
+                0f,
+                0f,
+                width,
+                0f,
+                intArrayOf(c1, c2, c3, c4),
+                null,
+                android.graphics.Shader.TileMode.CLAMP
+            )
+            paint.shader = shader
+            binding.tvStockTitle.invalidate()
+        }
+    }
+
+    private fun applySearchFilters() {
+        applySearchFiltersInternal(allowReload = true)
+    }
+
+    private fun applySearchFiltersInternal(allowReload: Boolean) {
+        val productRaw = binding.etSearchProduct.text.toString().trim()
+        val locationRaw = normalizeLocationInput(binding.etSearchLocation.text.toString().trim())
+        val qtyRaw = binding.etSearchQuantity.text.toString().trim()
+
+        if (allowReload && !isLoading && (currentOffset > 0 || totalCount > allItems.size)) {
+            pendingFilterApply = true
+            currentOffset = 0
+            loadStocks()
+            return
+        }
+
+        var filtered = allItems
+        if (productRaw.isNotBlank()) {
+            val productId = productRaw.toIntOrNull()
+            filtered = if (productId != null) {
+                filtered.filter { it.productId == productId }
+            } else {
+                val needle = productRaw.lowercase()
+                filtered.filter { (productNameById[it.productId] ?: "").lowercase().contains(needle) }
+            }
+        }
+        if (locationRaw.isNotBlank()) {
+            val needle = locationRaw.lowercase()
+            filtered = filtered.filter { it.location.lowercase().contains(needle) }
+        }
+        if (qtyRaw.isNotBlank()) {
+            val qty = qtyRaw.toIntOrNull()
+            if (qty != null) {
+                filtered = filtered.filter { it.quantity == qty }
+            }
+        }
+
+        filteredItems = filtered
+        filteredOffset = 0
+        applyFilteredPage()
+    }
+
+    private fun clearSearchFilters() {
+        binding.etSearchProduct.setText("")
+        binding.etSearchLocation.setText("")
+        binding.etSearchQuantity.setText("")
+        filteredItems = emptyList()
+        filteredOffset = 0
+        items = allItems
+        adapter.submit(allItems, productNameById)
+        updatePageInfo(items.size, items.size)
+    }
+
+    private fun setAllItemsAndApplyFilters(ordered: List<StockResponseDto>) {
+        allItems = ordered
+        if (hasActiveFilters() || pendingFilterApply) {
+            applySearchFiltersInternal(allowReload = false)
+        } else {
+            items = ordered
+            adapter.submit(ordered, productNameById)
+        }
+    }
+
+    private fun hasActiveFilters(): Boolean {
+        return binding.etSearchProduct.text?.isNotBlank() == true ||
+            binding.etSearchLocation.text?.isNotBlank() == true ||
+            binding.etSearchQuantity.text?.isNotBlank() == true
+    }
+
+    private fun applyFilteredPage() {
+        val from = filteredOffset.coerceAtLeast(0)
+        val to = (filteredOffset + pageSize).coerceAtMost(filteredItems.size)
+        val page = if (from < to) filteredItems.subList(from, to) else emptyList()
+        items = page
+        adapter.submit(page, productNameById)
+        updatePageInfo(page.size, page.size)
+    }
+
     private fun normalizeLocationInput(raw: String): String {
         val trimmed = raw.trim()
         if (trimmed.startsWith("(") && trimmed.contains(") ")) {
             return trimmed.substringAfter(") ").trim()
         }
         return trimmed
+    }
+
+    private fun resolveProductIdByName(input: String): Int? {
+        val needle = input.trim().lowercase()
+        if (needle.isBlank()) return null
+        val match = productNameById.entries.firstOrNull { it.value.lowercase() == needle }
+        return match?.key
+    }
+
+    private fun hideKeyboard() {
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager ?: return
+        val view = currentFocus ?: binding.root
+        imm.hideSoftInputFromWindow(view.windowToken, 0)
     }
 }

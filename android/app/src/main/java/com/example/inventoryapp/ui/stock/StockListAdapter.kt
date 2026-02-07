@@ -26,9 +26,10 @@ class StockListAdapter(
         val s = items[position]
         val isOffline = s.id < 0 || s.createdAt == "offline"
         val titleId = if (isOffline) "offline" else s.id.toString()
-        val titleSuffix = if (isOffline) " (offline)" else ""
         val productName = productNameById[s.productId] ?: "Producto"
-        holder.binding.tvTitle.text = "Stock #$titleId$titleSuffix  •  $productName (${s.productId})"
+        holder.binding.tvStockId.text = "ID\n$titleId"
+        val nameSuffix = if (isOffline) " (offline)" else ""
+        holder.binding.tvTitle.text = "$productName$nameSuffix (${s.productId})"
         holder.binding.tvLocation.text = "Ubicacion: ${s.location}"
         holder.binding.tvMeta.text = "Cantidad: ${s.quantity}"
         holder.binding.ivWarning.visibility =

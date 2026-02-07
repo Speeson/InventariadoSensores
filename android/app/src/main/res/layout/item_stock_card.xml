@@ -15,14 +15,32 @@
         android:orientation="horizontal"
         android:padding="12dp">
 
-        <ImageView
-            android:id="@+id/ivIcon"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+        <LinearLayout
+            android:layout_width="52dp"
+            android:layout_height="wrap_content"
             android:layout_marginEnd="12dp"
-            android:contentDescription="@null"
-            android:src="@drawable/stock"
-            android:tint="#4A7BF7" />
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <ImageView
+                android:id="@+id/ivIcon"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:contentDescription="@null"
+                android:src="@drawable/stock"
+                android:tint="#4A7BF7" />
+
+            <TextView
+                android:id="@+id/tvStockId"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="ID\n0"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:textColor="?attr/colorOnSurface" />
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="0dp"
@@ -36,13 +54,13 @@
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
 
-                <TextView
-                    android:id="@+id/tvTitle"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:textStyle="bold"
-                    android:textSize="16sp" />
+            <TextView
+                android:id="@+id/tvTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textStyle="bold"
+                android:textSize="16sp" />
 
                 <ImageView
                     android:id="@+id/ivWarning"
