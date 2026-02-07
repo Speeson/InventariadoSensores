@@ -25,7 +25,6 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
-import android.widget.Button
 import com.example.inventoryapp.R
 
 class LabelPreviewActivity : AppCompatActivity() {
@@ -56,8 +55,7 @@ class LabelPreviewActivity : AppCompatActivity() {
         binding.btnDownloadPdf.setOnClickListener { downloadPdf() }
         binding.btnRegenerate.setOnClickListener { regenerateLabel() }
         binding.btnPrint.setOnClickListener { printLabel() }
-        val btnSaveNiimbot = binding.root.findViewById<Button>(R.id.btnSaveNiimbot)
-        btnSaveNiimbot?.setOnClickListener { saveNiimbotLabel() }
+        binding.btnSaveNiimbot.setOnClickListener { saveNiimbotLabel() }
 
         checkRoleForRegenerate()
         loadLabel()

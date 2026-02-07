@@ -35,7 +35,7 @@
                 android:text="Etiqueta"
                 android:textStyle="bold"
                 android:textSize="18sp"
-                android:textColor="@android:color/white" />
+                android:textColor="?attr/colorOnSurface" />
         </LinearLayout>
 
         <com.google.android.material.card.MaterialCardView
@@ -59,7 +59,7 @@
                     android:id="@+id/tvMeta"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="SKU - C�digo de barras"
+                    android:text="SKU - Codigo de barras"
                     android:textColor="?attr/colorOnSurface"
                     android:layout_marginBottom="8dp" />
 
@@ -81,7 +81,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:background="@drawable/bg_button_gradient"
+                        android:background="@drawable/bg_button_soft_purple"
                         android:backgroundTint="@null"
                         app:backgroundTint="@null"
                         android:text="Descargar SVG"
@@ -97,7 +97,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:layout_marginStart="8dp"
-                        android:background="@drawable/bg_button_gradient"
+                        android:background="@drawable/bg_button_soft_purple"
                         android:backgroundTint="@null"
                         app:backgroundTint="@null"
                         android:text="Descargar PDF"
@@ -113,7 +113,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:background="@drawable/bg_button_gradient"
+                    android:background="@drawable/bg_button_soft_purple"
                     android:backgroundTint="@null"
                     app:backgroundTint="@null"
                     android:text="Regenerar etiqueta"
@@ -124,40 +124,37 @@
                     android:paddingVertical="10dp"
                     android:visibility="gone" />
 
-                <Button
-                    android:id="@+id/btnPrint"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:background="@drawable/bg_button_gradient"
-                    android:backgroundTint="@null"
-                    app:backgroundTint="@null"
-                    android:text="Imprimir / Guardar PDF"
-                    android:textAllCaps="false"
-                    android:textColor="@android:color/white"
-                    android:textStyle="bold"
-                    android:textSize="14sp"
-                    android:paddingVertical="10dp" />
+                    android:orientation="horizontal">
 
-                <Button
-                    android:id="@+id/btnSaveNiimbot"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:background="@drawable/bg_button_soft_purple"
-                    android:backgroundTint="@null"
-                    app:backgroundTint="@null"
-                    android:text="Guardar etiqueta"
-                    android:textAllCaps="false"
-                    android:textColor="@android:color/white"
-                    android:textStyle="bold"
-                    android:textSize="14sp"
-                    android:paddingVertical="10dp"
-                    android:drawableStart="@drawable/niimbot"
-                    android:drawablePadding="8dp" />
+                    <ImageButton
+                        android:id="@+id/btnPrint"
+                        android:layout_width="0dp"
+                        android:layout_height="64dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_button_soft_purple"
+                        android:contentDescription="@null"
+                        android:scaleType="centerInside"
+                        android:src="@drawable/print"
+                        android:padding="10dp" />
+
+                    <ImageButton
+                        android:id="@+id/btnSaveNiimbot"
+                        android:layout_width="0dp"
+                        android:layout_height="64dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_button_soft_purple"
+                        android:contentDescription="@null"
+                        android:scaleType="centerInside"
+                        android:src="@drawable/niimbot"
+                        android:padding="10dp" />
+                </LinearLayout>
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
 </FrameLayout>
-
