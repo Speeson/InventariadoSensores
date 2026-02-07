@@ -53,8 +53,9 @@ snack = SendSnack(binding.root)
         productId = intent.getIntExtra("product_id", -1).takeIf { it != -1 }
 
         if (productId == null) {
-            binding.tvTitle.text = "Nuevo producto"
-            binding.btnDelete.isEnabled = false
+            UiNotifier.show(this@ProductDetailActivity, "Solo edición: crea productos desde el listado")
+            finish()
+            return
         } else {
             binding.tvTitle.text = "Editar producto #$productId"
             loadProduct(productId!!)
