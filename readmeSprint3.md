@@ -67,3 +67,30 @@ Endpoints con orden:
 - Reportes:
   - Top consumidos: `order_dir=asc|desc` (por defecto `desc`).
   - Rotación: `order_dir=asc|desc` (por defecto `desc`).
+
+## Plantilla UI: Eventos, Stock y Productos
+
+Objetivo: unificar estructura visual con desplegables Crear/Buscar, paginación compacta y botones con estilo morado suave.
+
+**Eventos**
+- Header simple: back + título con gradiente + alertas.
+- Crear/Buscar en dos fracciones desplegables (exclusivos).
+- Búsqueda por tipo (IN/OUT o SENSOR_IN/SENSOR_OUT), producto (ID o nombre) y source (SCAN/MANUAL).
+- Paginación a 5 registros por página; cuando hay filtros, paginación local del resultado filtrado.
+- Botones de acción (Crear/Buscar/Limpiar/Recargar) con `bg_button_soft_purple`.
+- Dropdowns con icono de flecha hacia abajo con gradiente.
+
+**Stock**
+- Misma plantilla de eventos (crear/buscar + listado).
+- Crear stock: Product ID o nombre, Location (dropdown), Cantidad. Botón en morado suave.
+- Buscar stock: producto (ID o nombre), location (dropdown), cantidad.
+- Paginación a 5 registros; filtros con paginación local.
+- Tarjeta de stock: el ID se muestra debajo del icono (ya no “Stock #X” en el título).
+- Dropdown de locations ordenado por ID numérico y con opción vacía.
+
+**Productos**
+- Misma plantilla de stock.
+- Crear producto: SKU, nombre, barcode (13 dígitos), categoría (dropdown ordenado por ID y con opción vacía).
+- Buscar producto: ID/nombre, SKU, barcode, categoría (dropdown).
+- Paginación a 5 registros; filtros con paginación local.
+- `ProductDetail` queda solo para edición (crear se hace desde listado).
