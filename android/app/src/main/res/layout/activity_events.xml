@@ -5,16 +5,15 @@
     android:layout_height="match_parent"
     android:background="@color/home_bg">
 
-    <ScrollView
+    <LinearLayout
+        android:id="@+id/scrollEvents"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:fillViewport="true">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="20dp">
+        android:orientation="vertical"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingTop="20dp"
+        android:paddingBottom="8dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -84,19 +83,43 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Crear evento"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorOnSurface"
-                        android:layout_marginBottom="8dp" />
-
-                    <com.google.android.material.textfield.TextInputLayout
+                    <FrameLayout
+                        android:id="@+id/layoutCreateEventHeader"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="12dp"
-                        app:boxBackgroundMode="outline">
+                        android:paddingVertical="6dp">
+
+                        <TextView
+                            android:id="@+id/tvCreateEventTitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Crear evento"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="?attr/colorOnSurface"
+                            android:gravity="center" />
+
+                        <ImageView
+                            android:id="@+id/ivCreateEventChevron"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_gravity="end|center_vertical"
+                            android:contentDescription="@null"
+                            android:src="@drawable/add" />
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:id="@+id/layoutCreateEventContent"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="12dp"
+                            app:boxBackgroundMode="outline">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etEventType"
@@ -107,13 +130,13 @@
                             android:inputType="text"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                        </com.google.android.material.textfield.TextInputLayout>
 
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="12dp"
-                        app:boxBackgroundMode="outline">
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="12dp"
+                            app:boxBackgroundMode="outline">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etProductId"
@@ -123,13 +146,13 @@
                             android:inputType="number"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                        </com.google.android.material.textfield.TextInputLayout>
 
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="12dp"
-                        app:boxBackgroundMode="outline">
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="12dp"
+                            app:boxBackgroundMode="outline">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etDelta"
@@ -139,13 +162,13 @@
                             android:inputType="number"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                        </com.google.android.material.textfield.TextInputLayout>
 
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="12dp"
-                        app:boxBackgroundMode="outline">
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="12dp"
+                            app:boxBackgroundMode="outline">
 
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
                             android:id="@+id/etLocation"
@@ -155,13 +178,13 @@
                             android:minHeight="56dp"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                        </com.google.android.material.textfield.TextInputLayout>
 
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="12dp"
-                        app:boxBackgroundMode="outline">
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="12dp"
+                            app:boxBackgroundMode="outline">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etSource"
@@ -172,29 +195,31 @@
                             android:inputType="text"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                        </com.google.android.material.textfield.TextInputLayout>
 
-                    <Button
-                        android:id="@+id/btnCreateEvent"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/bg_button_gradient"
-                        android:backgroundTint="@null"
-                        app:backgroundTint="@null"
-                        android:text="Crear evento"
-                        android:textAllCaps="false"
-                        android:textColor="@android:color/white"
-                        android:textStyle="bold"
-                        android:textSize="15sp"
-                        android:paddingVertical="12dp" />
+                        <Button
+                            android:id="@+id/btnCreateEvent"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_button_gradient"
+                            android:backgroundTint="@null"
+                            app:backgroundTint="@null"
+                            android:text="Crear evento"
+                            android:textAllCaps="false"
+                            android:textColor="@android:color/white"
+                            android:textStyle="bold"
+                            android:textSize="15sp"
+                            android:paddingVertical="12dp" />
+                    </LinearLayout>
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginBottom="0dp"
                 app:cardCornerRadius="14dp"
                 app:cardElevation="3dp"
                 app:strokeWidth="1dp"
@@ -203,17 +228,9 @@
 
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
                     android:orientation="vertical"
                     android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Listado"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorOnSurface"
-                        android:layout_marginBottom="8dp" />
 
                     <Button
                         android:id="@+id/btnRefresh"
@@ -227,18 +244,18 @@
                         android:textColor="@android:color/white"
                         android:textStyle="bold"
                         android:textSize="14sp"
-                        android:paddingVertical="10dp" />
+                        android:paddingVertical="8dp" />
 
                     <androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/rvEvents"
                         android:layout_width="match_parent"
-                        android:layout_height="400dp"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
                         android:layout_marginTop="10dp" />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-        </LinearLayout>
-    </ScrollView>
+    </LinearLayout>
 
 </FrameLayout>

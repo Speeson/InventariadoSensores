@@ -26,6 +26,9 @@ import kotlinx.coroutines.launch
 import java.io.IOException
 import java.util.UUID
 import com.example.inventoryapp.ui.common.GradientIconUtil
+import android.view.View
+import androidx.transition.AutoTransition
+import androidx.transition.TransitionManager
 
 
 class EventsActivity : AppCompatActivity() {
@@ -58,6 +61,7 @@ snack = SendSnack(binding.root)
 
         binding.btnCreateEvent.setOnClickListener { createEvent() }
         binding.btnRefresh.setOnClickListener { loadEvents(withSnack = true) }
+        binding.layoutCreateEventHeader.setOnClickListener { toggleCreateEventForm() }
 
         adapter = EventAdapter(emptyList()) { row ->
             snack.showError(row.pendingMessage ?: "Guardado en modo offline")
@@ -66,6 +70,7 @@ snack = SendSnack(binding.root)
         binding.rvEvents.adapter = adapter
 
         setupLocationDropdown()
+        applyCreateEventTitleGradient()
     }
 
     override fun onResume() {
@@ -141,6 +146,42 @@ snack = SendSnack(binding.root)
             } finally {
                 binding.btnCreateEvent.isEnabled = true
             }
+        }
+    }
+
+    private fun toggleCreateEventForm() {
+        TransitionManager.beginDelayedTransition(binding.scrollEvents, AutoTransition().setDuration(180))
+        val isVisible = binding.layoutCreateEventContent.visibility == View.VISIBLE
+        if (isVisible) {
+            binding.layoutCreateEventContent.visibility = View.GONE
+            binding.ivCreateEventChevron.rotation = 0f
+        } else {
+            binding.layoutCreateEventContent.visibility = View.VISIBLE
+            binding.ivCreateEventChevron.rotation = 45f
+        }
+    }
+
+    private fun applyCreateEventTitleGradient() {
+        val title = binding.tvCreateEventTitle
+        title.post {
+            val paint = title.paint
+            val width = paint.measureText(title.text.toString())
+            if (width <= 0f) return@post
+            val c1 = androidx.core.content.ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_start)
+            val c2 = androidx.core.content.ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_mid2)
+            val c3 = androidx.core.content.ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_mid1)
+            val c4 = androidx.core.content.ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_end)
+            val shader = android.graphics.LinearGradient(
+                0f,
+                0f,
+                width,
+                0f,
+                intArrayOf(c1, c2, c3, c4),
+                null,
+                android.graphics.Shader.TileMode.CLAMP
+            )
+            paint.shader = shader
+            title.invalidate()
         }
     }
 
