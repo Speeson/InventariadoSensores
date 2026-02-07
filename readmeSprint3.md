@@ -94,3 +94,21 @@ Objetivo: unificar estructura visual con desplegables Crear/Buscar, paginación 
 - Buscar producto: ID/nombre, SKU, barcode, categoría (dropdown).
 - Paginación a 5 registros; filtros con paginación local.
 - `ProductDetail` queda solo para edición (crear se hace desde listado).
+
+## Etiquetas Niimbot (B1) + guardado en galería
+
+Objetivo: guardar la etiqueta que se ve en el preview y abrir la app Niimbot para imprimir.
+
+Android:
+- Botón Niimbot en la pantalla de etiqueta: guarda en galería y abre Niimbot.
+- La imagen guardada se genera **desde el preview** (WebView) y se recorta el blanco superior/inferior con margen.
+- Sin reescalado forzado: se guarda tal cual para ajustar tamaño en la app Niimbot.
+- Intent explícito para abrir Niimbot:
+  - Paquete: `com.gengcon.android.jccloudprinter`
+  - Activity: `com.gengcon.android.jccloudprinter.LaunchActivity`
+  - Fallback: `com.gengcon.android.jccloudprinter.LaunchFromWebActivity`
+
+UI pantalla etiqueta:
+- Botones cuadrados con iconos: `print.png` y `niimbot.png` (misma altura, lado a lado).
+- Botones y acciones con tema morado suave.
+- Título "Etiqueta" visible con el estilo de otras actividades.
