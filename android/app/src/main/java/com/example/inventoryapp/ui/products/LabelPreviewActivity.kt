@@ -48,7 +48,7 @@ class LabelPreviewActivity : AppCompatActivity() {
 
         binding.btnBack.setOnClickListener { finish() }
         binding.tvTitle.text = "Etiqueta"
-        binding.tvMeta.text = "SKU $sku  �  Barcode $barcode"
+        binding.tvMeta.text = "SKU $sku  -  Barcode $barcode"
 
         setupWebView()
 
@@ -186,50 +186,90 @@ class LabelPreviewActivity : AppCompatActivity() {
             return
         }
         UiNotifier.show(this, "Guardando etiqueta...")
-        val widthPx = 400
-        val heightPx = 240
-        binding.webLabel.post {
-            val preview = capturePreviewBitmap(widthPx, heightPx)
-            if (preview == null) {
-                UiNotifier.show(this, "No se pudo capturar la etiqueta")
-                return@post
+        tryCaptureAndSaveLabel(attemptsLeft = 6)
+    }
+
+    private fun tryCaptureAndSaveLabel(attemptsLeft: Int) {
+        binding.webLabel.postDelayed({
+            val raw = capturePreviewBitmap()
+            if (raw == null) {
+                if (attemptsLeft > 0) {
+                    tryCaptureAndSaveLabel(attemptsLeft - 1)
+                } else {
+                    UiNotifier.show(this, "La etiqueta aun no esta lista")
+                }
+                return@postDelayed
             }
+            val trimmed = trimVerticalWhitespace(raw)
             val filename = "label_${sku.ifBlank { productId.toString() }}_niimbot.png"
-            if (saveToPictures(filename, preview)) {
-                UiNotifier.show(this, "Etiqueta guardada en galería")
+            if (saveToPictures(filename, trimmed)) {
+                UiNotifier.show(this, "Etiqueta guardada en galeria")
                 openNiimbotApp()
             } else {
                 UiNotifier.show(this, "No se pudo guardar la etiqueta")
             }
-        }
+        }, 150)
     }
 
-    private fun toMonochrome(src: Bitmap): Bitmap {
-        val w = src.width
-        val h = src.height
-        val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        for (y in 0 until h) {
-            for (x in 0 until w) {
-                val c = src.getPixel(x, y)
-                val r = Color.red(c)
-                val g = Color.green(c)
-                val b = Color.blue(c)
-                val lum = (0.299 * r + 0.587 * g + 0.114 * b)
-                val bw = if (lum < 128) Color.BLACK else Color.WHITE
-                out.setPixel(x, y, bw)
-            }
-        }
-        return out
-    }
-
-    private fun capturePreviewBitmap(targetW: Int, targetH: Int): Bitmap? {
+    private fun capturePreviewBitmap(): Bitmap? {
         val view = binding.webLabel
         if (view.width <= 0 || view.height <= 0) return null
         val src = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(src)
         canvas.drawColor(Color.WHITE)
         view.draw(canvas)
-        return Bitmap.createScaledBitmap(src, targetW, targetH, false)
+        return src
+    }
+
+    private fun trimVerticalWhitespace(src: Bitmap): Bitmap {
+        val w = src.width
+        val h = src.height
+        val threshold = 250
+        val margin = 14
+        var top = 0
+        var bottom = h - 1
+        run {
+            var y = 0
+            while (y < h) {
+                var x = 0
+                var found = false
+                while (x < w) {
+                    val c = src.getPixel(x, y)
+                    if (Color.red(c) < threshold || Color.green(c) < threshold || Color.blue(c) < threshold) {
+                        found = true
+                        break
+                    }
+                    x++
+                }
+                if (found) {
+                    top = (y - margin).coerceAtLeast(0)
+                    break
+                }
+                y++
+            }
+        }
+        run {
+            var y = h - 1
+            while (y >= top) {
+                var x = 0
+                var found = false
+                while (x < w) {
+                    val c = src.getPixel(x, y)
+                    if (Color.red(c) < threshold || Color.green(c) < threshold || Color.blue(c) < threshold) {
+                        found = true
+                        break
+                    }
+                    x++
+                }
+                if (found) {
+                    bottom = (y + margin).coerceAtMost(h - 1)
+                    break
+                }
+                y--
+            }
+        }
+        val cropH = (bottom - top + 1).coerceAtLeast(1)
+        return Bitmap.createBitmap(src, 0, top, w, cropH)
     }
 
     private fun openNiimbotApp() {
@@ -427,4 +467,3 @@ private object WebViewPdfExporter {
         }
     }
 }
-
