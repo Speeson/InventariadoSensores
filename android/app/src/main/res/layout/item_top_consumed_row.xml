@@ -16,24 +16,30 @@
         android:padding="12dp">
 
         <TextView
-            android:id="@+id/tvTopTitle"
+            android:id="@+id/tvTopProduct"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="SKU - Producto"
+            android:text="Producto: Nombre"
             android:textStyle="bold" />
 
         <TextView
-            android:id="@+id/tvTopMeta"
+            android:id="@+id/tvTopSku"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="OUT=0" />
+            android:text="Sku: XXX" />
 
         <TextView
-            android:id="@+id/tvTopId"
-            android:layout_width="wrap_content"
+            android:id="@+id/tvTopTotal"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="ID 1"
-            android:layout_marginTop="2dp" />
+            android:text="Ventas totales: 0" />
+
+        <TextView
+            android:id="@+id/tvTopLocation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Ubicacion: A1"
+            android:visibility="gone" />
 
     </LinearLayout>
 

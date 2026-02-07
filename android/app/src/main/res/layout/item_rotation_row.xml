@@ -12,28 +12,75 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
         android:padding="12dp">
 
-        <TextView
-            android:id="@+id/tvRotationTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="SKU - Producto"
-            android:textStyle="bold" />
+        <LinearLayout
+            android:layout_width="60dp"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center" >
 
-        <TextView
-            android:id="@+id/tvRotationMeta"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Cantidad=0 | Origen -> Destino" />
+            <ImageView
+                android:id="@+id/ivRotationIcon"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:contentDescription="@null"
+                android:src="@drawable/rotations" />
 
-        <TextView
-            android:id="@+id/tvRotationId"
-            android:layout_width="wrap_content"
+            <TextView
+                android:id="@+id/tvRotationMovementId"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="ID 0"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="ID 1 | 2026-02-02"
-            android:layout_marginTop="2dp" />
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:paddingStart="10dp">
+
+            <TextView
+                android:id="@+id/tvRotationProduct"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Producto: Nombre"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvRotationSkuQty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="SKU: XXX - Cantidad: 0" />
+
+            <TextView
+                android:id="@+id/tvRotationFrom"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Origen: A1" />
+
+            <TextView
+                android:id="@+id/tvRotationTo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Destino: B2" />
+
+            <TextView
+                android:id="@+id/tvRotationDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="2026-02-02" />
+
+        </LinearLayout>
 
     </LinearLayout>
 

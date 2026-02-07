@@ -84,19 +84,11 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Indice de rotacion"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorOnSurface"
-                        android:layout_marginBottom="8dp" />
-
                     <Button
                         android:id="@+id/btnRefreshTurnover"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:background="@drawable/bg_button_gradient"
+                        android:background="@drawable/bg_button_soft_purple"
                         android:backgroundTint="@null"
                         app:backgroundTint="@null"
                         android:text="Recargar"
@@ -104,13 +96,57 @@
                         android:textColor="@android:color/white"
                         android:textStyle="bold"
                         android:textSize="15sp"
-                        android:paddingVertical="12dp" />
+                        android:paddingVertical="12dp" /><LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="6dp"
+                    android:layout_marginBottom="6dp">
 
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/rvTurnover"
-                        android:layout_width="match_parent"
-                        android:layout_height="400dp"
-                        android:layout_marginTop="10dp" />
+                    <TextView
+                        android:id="@+id/tvTurnPageInfo"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Mostrando 0/0"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="12sp"
+                        android:includeFontPadding="false" />
+
+                    <Button
+                        android:id="@+id/btnPrevTurnPage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Anterior"
+                        android:textAllCaps="false"
+                        android:textSize="12sp"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="2dp"
+                        android:minHeight="0dp"
+                        android:minWidth="0dp" />
+
+                    <Button
+                        android:id="@+id/btnNextTurnPage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:text="Siguiente"
+                        android:textAllCaps="false"
+                        android:textSize="12sp"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="2dp"
+                        android:minHeight="0dp"
+                        android:minWidth="0dp" />
+                </LinearLayout>
+
+
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvTurnover"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp" />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -119,3 +155,4 @@
     </ScrollView>
 
 </FrameLayout>
+

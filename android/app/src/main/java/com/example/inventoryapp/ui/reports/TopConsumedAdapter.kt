@@ -9,7 +9,8 @@ import com.example.inventoryapp.R
 import com.example.inventoryapp.data.remote.model.TopConsumedItemDto
 
 class TopConsumedAdapter(
-    private var items: List<TopConsumedItemDto>
+    private var items: List<TopConsumedItemDto>,
+    private val locationFilter: String?
 ) : RecyclerView.Adapter<TopConsumedAdapter.ViewHolder>() {
 
     fun submit(list: List<TopConsumedItemDto>) {
@@ -25,16 +26,23 @@ class TopConsumedAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
-        holder.tvTitle.text = "${item.sku} - ${item.name}"
-        holder.tvMeta.text = "Salidas totales=${item.totalOut}"
-        holder.tvId.text = "ID ${item.productId}"
+        holder.tvProduct.text = "Producto: ${item.name}"
+        holder.tvSku.text = "Sku: ${item.sku}"
+        holder.tvTotal.text = "Ventas totales: ${item.totalOut}"
+        if (!locationFilter.isNullOrBlank()) {
+            holder.tvLocation.visibility = View.VISIBLE
+            holder.tvLocation.text = "Ubicacion: $locationFilter"
+        } else {
+            holder.tvLocation.visibility = View.GONE
+        }
     }
 
     override fun getItemCount(): Int = items.size
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val tvTitle: TextView = view.findViewById(R.id.tvTopTitle)
-        val tvMeta: TextView = view.findViewById(R.id.tvTopMeta)
-        val tvId: TextView = view.findViewById(R.id.tvTopId)
+        val tvProduct: TextView = view.findViewById(R.id.tvTopProduct)
+        val tvSku: TextView = view.findViewById(R.id.tvTopSku)
+        val tvTotal: TextView = view.findViewById(R.id.tvTopTotal)
+        val tvLocation: TextView = view.findViewById(R.id.tvTopLocation)
     }
 }

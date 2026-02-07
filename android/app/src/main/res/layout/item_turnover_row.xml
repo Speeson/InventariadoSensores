@@ -16,24 +16,42 @@
         android:padding="12dp">
 
         <TextView
-            android:id="@+id/tvTurnTitle"
+            android:id="@+id/tvTurnProduct"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="SKU - Producto"
+            android:text="Producto: Nombre"
             android:textStyle="bold" />
 
         <TextView
-            android:id="@+id/tvTurnMeta"
+            android:id="@+id/tvTurnSku"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="OUT=0 | AVG=0.00 | TURN=0.00" />
+            android:text="Sku: XXX" />
 
         <TextView
-            android:id="@+id/tvTurnId"
-            android:layout_width="wrap_content"
+            android:id="@+id/tvTurnOuts"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="ID 1 | INIT=0.00 | FINAL=0.00"
-            android:layout_marginTop="2dp" />
+            android:text="Ventas totales: 0" />
+
+        <TextView
+            android:id="@+id/tvTurnAvg"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Stock medio - Rotacion: 0.00" />
+
+        <TextView
+            android:id="@+id/tvTurnInitFinal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Inicial: 0 - Final: 0" />
+
+        <TextView
+            android:id="@+id/tvTurnLocation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Ubicacion: A1"
+            android:visibility="gone" />
 
     </LinearLayout>
 

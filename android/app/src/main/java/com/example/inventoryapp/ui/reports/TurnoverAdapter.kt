@@ -8,7 +8,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.inventoryapp.R
 
 class TurnoverAdapter(
-    private var items: List<TurnoverRow>
+    private var items: List<TurnoverRow>,
+    private val locationFilter: String?
 ) : RecyclerView.Adapter<TurnoverAdapter.ViewHolder>() {
 
     fun submit(list: List<TurnoverRow>) {
@@ -25,18 +26,27 @@ class TurnoverAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
         val turnoverText = item.turnover?.let { String.format("%.2f", it) } ?: "N/A"
-        holder.tvTitle.text = "${item.sku} - ${item.name}"
-        holder.tvMeta.text =
-            "Salidas=${item.outs} | Stock medio=${String.format("%.2f", item.stockAverage)} | Rotacion=$turnoverText"
-        holder.tvId.text =
-            "ID ${item.productId} | Inicial=${String.format("%.2f", item.stockInitial)} | Final=${String.format("%.2f", item.stockFinal)}"
+        holder.tvProduct.text = "Producto: ${item.name}"
+        holder.tvSku.text = "Sku: ${item.sku}"
+        holder.tvOuts.text = "Ventas totales: ${item.outs}"
+        holder.tvAvg.text = "Stock medio - Rotacion: ${String.format("%.2f", item.stockAverage)} / $turnoverText"
+        holder.tvInitFinal.text = "Inicial: ${String.format("%.2f", item.stockInitial)} - Final: ${String.format("%.2f", item.stockFinal)}"
+        if (!locationFilter.isNullOrBlank()) {
+            holder.tvLocation.visibility = View.VISIBLE
+            holder.tvLocation.text = "Ubicacion: $locationFilter"
+        } else {
+            holder.tvLocation.visibility = View.GONE
+        }
     }
 
     override fun getItemCount(): Int = items.size
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val tvTitle: TextView = view.findViewById(R.id.tvTurnTitle)
-        val tvMeta: TextView = view.findViewById(R.id.tvTurnMeta)
-        val tvId: TextView = view.findViewById(R.id.tvTurnId)
+        val tvProduct: TextView = view.findViewById(R.id.tvTurnProduct)
+        val tvSku: TextView = view.findViewById(R.id.tvTurnSku)
+        val tvOuts: TextView = view.findViewById(R.id.tvTurnOuts)
+        val tvAvg: TextView = view.findViewById(R.id.tvTurnAvg)
+        val tvInitFinal: TextView = view.findViewById(R.id.tvTurnInitFinal)
+        val tvLocation: TextView = view.findViewById(R.id.tvTurnLocation)
     }
 }
