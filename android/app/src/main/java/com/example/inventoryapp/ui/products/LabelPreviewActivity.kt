@@ -1,15 +1,21 @@
 package com.example.inventoryapp.ui.products
 
 import android.content.ContentValues
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.print.PrintAttributes
 import android.print.PrintManager
 import android.util.Base64
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.webkit.WebSettings
+import android.content.ComponentName
+import android.content.Intent
+import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.inventoryapp.data.remote.NetworkModule
@@ -19,6 +25,8 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
+import android.widget.Button
+import com.example.inventoryapp.R
 
 class LabelPreviewActivity : AppCompatActivity() {
 
@@ -27,6 +35,7 @@ class LabelPreviewActivity : AppCompatActivity() {
     private var sku: String = ""
     private var barcode: String = ""
     private var lastSvg: String? = null
+    private val niimbotPackage = "com.gengcon.android.jccloudprinter"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,7 +48,7 @@ class LabelPreviewActivity : AppCompatActivity() {
 
         binding.btnBack.setOnClickListener { finish() }
         binding.tvTitle.text = "Etiqueta"
-        binding.tvMeta.text = "SKU $sku  •  Barcode $barcode"
+        binding.tvMeta.text = "SKU $sku  �  Barcode $barcode"
 
         setupWebView()
 
@@ -47,6 +56,8 @@ class LabelPreviewActivity : AppCompatActivity() {
         binding.btnDownloadPdf.setOnClickListener { downloadPdf() }
         binding.btnRegenerate.setOnClickListener { regenerateLabel() }
         binding.btnPrint.setOnClickListener { printLabel() }
+        val btnSaveNiimbot = binding.root.findViewById<Button>(R.id.btnSaveNiimbot)
+        btnSaveNiimbot?.setOnClickListener { saveNiimbotLabel() }
 
         checkRoleForRegenerate()
         loadLabel()
@@ -168,6 +179,159 @@ class LabelPreviewActivity : AppCompatActivity() {
         }
     }
 
+    private fun saveNiimbotLabel() {
+        val svg = lastSvg
+        if (svg.isNullOrBlank()) {
+            UiNotifier.show(this, "Etiqueta no disponible")
+            return
+        }
+        UiNotifier.show(this, "Guardando etiqueta...")
+        val widthPx = 400
+        val heightPx = 240
+        binding.webLabel.post {
+            val preview = capturePreviewBitmap(widthPx, heightPx)
+            if (preview == null) {
+                UiNotifier.show(this, "No se pudo capturar la etiqueta")
+                return@post
+            }
+            val filename = "label_${sku.ifBlank { productId.toString() }}_niimbot.png"
+            if (saveToPictures(filename, preview)) {
+                UiNotifier.show(this, "Etiqueta guardada en galería")
+                openNiimbotApp()
+            } else {
+                UiNotifier.show(this, "No se pudo guardar la etiqueta")
+            }
+        }
+    }
+
+    private fun toMonochrome(src: Bitmap): Bitmap {
+        val w = src.width
+        val h = src.height
+        val out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        for (y in 0 until h) {
+            for (x in 0 until w) {
+                val c = src.getPixel(x, y)
+                val r = Color.red(c)
+                val g = Color.green(c)
+                val b = Color.blue(c)
+                val lum = (0.299 * r + 0.587 * g + 0.114 * b)
+                val bw = if (lum < 128) Color.BLACK else Color.WHITE
+                out.setPixel(x, y, bw)
+            }
+        }
+        return out
+    }
+
+    private fun capturePreviewBitmap(targetW: Int, targetH: Int): Bitmap? {
+        val view = binding.webLabel
+        if (view.width <= 0 || view.height <= 0) return null
+        val src = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(src)
+        canvas.drawColor(Color.WHITE)
+        view.draw(canvas)
+        return Bitmap.createScaledBitmap(src, targetW, targetH, false)
+    }
+
+    private fun openNiimbotApp() {
+        try {
+            val explicit = Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_LAUNCHER)
+                component = ComponentName(
+                    "com.gengcon.android.jccloudprinter",
+                    "com.gengcon.android.jccloudprinter.LaunchActivity"
+                )
+            }
+            if (explicit.resolveActivity(packageManager) != null) {
+                UiNotifier.show(this, "Abriendo Niimbot…")
+                startActivity(explicit)
+                return
+            }
+
+            val explicitAlt = Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_LAUNCHER)
+                component = ComponentName(
+                    "com.gengcon.android.jccloudprinter",
+                    "com.gengcon.android.jccloudprinter.LaunchFromWebActivity"
+                )
+            }
+            if (explicitAlt.resolveActivity(packageManager) != null) {
+                UiNotifier.show(this, "Abriendo Niimbot…")
+                startActivity(explicitAlt)
+                return
+            }
+
+            val intent = packageManager.getLaunchIntentForPackage(niimbotPackage)
+            if (intent != null) {
+                UiNotifier.show(this, "Abriendo Niimbot…")
+                startActivity(intent)
+                return
+            }
+
+            val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+            val candidates = packageManager.queryIntentActivities(
+                launcherIntent.setPackage(niimbotPackage),
+                0
+            )
+            if (candidates.isNotEmpty()) {
+                val activity = candidates[0].activityInfo
+                val component = ComponentName(activity.packageName, activity.name)
+                val explicitIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+                explicitIntent.component = component
+                startActivity(explicitIntent)
+                return
+            }
+
+            val settingsIntent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                .setData(Uri.parse("package:$niimbotPackage"))
+            startActivity(settingsIntent)
+            UiNotifier.show(this, "No se encontró el launcher de Niimbot")
+        } catch (_: Exception) {
+            UiNotifier.show(this, "No se pudo abrir la app de Niimbot")
+        }
+    }
+
+    private fun saveToPictures(filename: String, bitmap: Bitmap): Boolean {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val values = ContentValues().apply {
+                    put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, filename)
+                    put(android.provider.MediaStore.Images.Media.MIME_TYPE, "image/png")
+                    put(android.provider.MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/IoTrack/labels")
+                    put(android.provider.MediaStore.Images.Media.IS_PENDING, 1)
+                }
+                val resolver = contentResolver
+                val uri = resolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                if (uri == null) {
+                    UiNotifier.show(this, "No se pudo crear el archivo en la galería")
+                    return false
+                }
+                val outStream = resolver.openOutputStream(uri)
+                if (outStream == null) {
+                    UiNotifier.show(this, "No se pudo abrir el archivo en la galería")
+                    return false
+                }
+                outStream.use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                }
+                values.clear()
+                values.put(android.provider.MediaStore.Images.Media.IS_PENDING, 0)
+                resolver.update(uri, values, null, null)
+                true
+            } else {
+                val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "IoTrack/labels")
+                if (!dir.exists()) dir.mkdirs()
+                val file = File(dir, filename)
+                FileOutputStream(file).use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                }
+                true
+            }
+        } catch (e: Exception) {
+            UiNotifier.show(this, "Error guardando etiqueta: ${e.message}")
+            false
+        }
+    }
+
     private fun checkRoleForRegenerate() {
         binding.btnRegenerate.visibility = android.view.View.GONE
         lifecycleScope.launch {
@@ -263,3 +427,4 @@ private object WebViewPdfExporter {
         }
     }
 }
+

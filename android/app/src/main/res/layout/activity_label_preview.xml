@@ -59,7 +59,7 @@
                     android:id="@+id/tvMeta"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="SKU - Código de barras"
+                    android:text="SKU - C�digo de barras"
                     android:textColor="?attr/colorOnSurface"
                     android:layout_marginBottom="8dp" />
 
@@ -139,7 +139,25 @@
                     android:textSize="14sp"
                     android:paddingVertical="10dp" />
 
+                <Button
+                    android:id="@+id/btnSaveNiimbot"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_button_soft_purple"
+                    android:backgroundTint="@null"
+                    app:backgroundTint="@null"
+                    android:text="Guardar etiqueta"
+                    android:textAllCaps="false"
+                    android:textColor="@android:color/white"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:paddingVertical="10dp"
+                    android:drawableStart="@drawable/niimbot"
+                    android:drawablePadding="8dp" />
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
 </FrameLayout>
+

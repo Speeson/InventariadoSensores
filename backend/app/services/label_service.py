@@ -51,10 +51,10 @@ def build_label_svg(*, barcode_value: str, sku: str, company: str = "IoTrack") -
      width="{LABEL_WIDTH_MM}mm" height="{LABEL_HEIGHT_MM}mm"
      viewBox="0 0 {VIEWBOX_W} {VIEWBOX_H}">
   <rect x="0" y="0" width="{VIEWBOX_W}" height="{VIEWBOX_H}" fill="#FFFFFF" />
-  <text x="80" y="62" font-family="Arial, sans-serif" font-size="50" font-weight="700">{company}</text>
-  <text x="700" y="62" font-family="Arial, sans-serif" font-size="50" text-anchor="end">SKU {sku}</text>
-  <image x="40" y="85" width="720" height="220" href="{barcode_href}" preserveAspectRatio="xMidYMid meet" />
-  <text x="400" y="352" font-family="Arial, sans-serif" font-size="60" text-anchor="middle">{barcode_value}</text>
+  <text x="40" y="55" font-family="Arial, sans-serif" font-size="50" font-weight="700">{company}</text>
+  <text x="760" y="55" font-family="Arial, sans-serif" font-size="50" text-anchor="end">SKU {sku}</text>
+  <image x="40" y="70" width="720" height="240" href="{barcode_href}" preserveAspectRatio="xMidYMid meet" />
+  <text x="400" y="360" font-family="Arial, sans-serif" font-size="60" text-anchor="middle">{barcode_value}</text>
 </svg>
 """
 
