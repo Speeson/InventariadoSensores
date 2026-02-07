@@ -24,6 +24,14 @@ import kotlinx.coroutines.launch
 import java.io.IOException
 import com.example.inventoryapp.ui.common.GradientIconUtil
 import com.example.inventoryapp.R
+import android.widget.ArrayAdapter
+import android.graphics.drawable.GradientDrawable
+import androidx.core.content.ContextCompat
+import android.view.View
+import androidx.transition.AutoTransition
+import androidx.transition.TransitionManager
+import android.view.inputmethod.InputMethodManager
+import android.widget.Button
 
 class ThresholdsActivity : AppCompatActivity() {
 
@@ -32,17 +40,27 @@ class ThresholdsActivity : AppCompatActivity() {
     private lateinit var adapter: ThresholdListAdapter
     private var items: List<ThresholdResponseDto> = emptyList()
     private val gson = Gson()
+    private var productNameById: Map<Int, String> = emptyMap()
+    private var currentOffset = 0
+    private val pageSize = 5
+    private var totalCount = 0
+    private var isLoading = false
+    private var filteredItems: List<ThresholdResponseDto> = emptyList()
+    private var filteredOffset = 0
+    private var pendingFilterApply = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityThresholdsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
-        
+        GradientIconUtil.applyGradient(binding.ivCreateThresholdAdd, R.drawable.add)
+        GradientIconUtil.applyGradient(binding.ivSearchThreshold, R.drawable.search)
+        applyThresholdTitleGradient()
+
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
-session = SessionManager(this)
+        session = SessionManager(this)
 
         binding.btnBack.setOnClickListener { finish() }
         binding.btnAlertsQuick.setOnClickListener {
@@ -56,59 +74,159 @@ session = SessionManager(this)
         binding.rvThresholds.adapter = adapter
 
         binding.btnCreate.setOnClickListener { createThreshold() }
-        binding.btnSearch.setOnClickListener { search() }
-        binding.btnClear.setOnClickListener {
-            binding.etSearchProductId.setText("")
-            binding.etSearchLocation.setText("")
-            loadThresholds()
+        binding.btnRefresh.setOnClickListener { loadThresholds() }
+        binding.layoutCreateThresholdHeader.setOnClickListener { toggleCreateForm() }
+        binding.layoutSearchThresholdHeader.setOnClickListener { toggleSearchForm() }
+        binding.btnSearch.setOnClickListener {
+            hideKeyboard()
+            applySearchFilters()
         }
+        binding.btnClear.setOnClickListener {
+            hideKeyboard()
+            clearSearchFilters()
+        }
+
+        setupLocationDropdowns()
+        binding.tilCreateLocation.post { applyThresholdDropdownIcons() }
+
+        binding.btnPrevThresholdPage.setOnClickListener {
+            if (hasActiveFilters()) {
+                if (filteredOffset <= 0) return@setOnClickListener
+                filteredOffset = (filteredOffset - pageSize).coerceAtLeast(0)
+                applyFilteredPage()
+                binding.rvThresholds.scrollToPosition(0)
+                return@setOnClickListener
+            }
+            if (currentOffset <= 0) return@setOnClickListener
+            currentOffset = (currentOffset - pageSize).coerceAtLeast(0)
+            loadThresholds()
+            binding.rvThresholds.scrollToPosition(0)
+        }
+        binding.btnNextThresholdPage.setOnClickListener {
+            if (hasActiveFilters()) {
+                val shown = (filteredOffset + items.size).coerceAtMost(filteredItems.size)
+                if (shown >= filteredItems.size) return@setOnClickListener
+                filteredOffset += pageSize
+                applyFilteredPage()
+                binding.rvThresholds.scrollToPosition(0)
+                return@setOnClickListener
+            }
+            val shown = (currentOffset + items.size).coerceAtMost(totalCount)
+            if (shown >= totalCount) return@setOnClickListener
+            currentOffset += pageSize
+            loadThresholds()
+            binding.rvThresholds.scrollToPosition(0)
+        }
+
+        applyPagerButtonStyle(binding.btnPrevThresholdPage, enabled = false)
+        applyPagerButtonStyle(binding.btnNextThresholdPage, enabled = false)
     }
 
     override fun onResume() {
         super.onResume()
+        currentOffset = 0
         loadThresholds()
     }
 
-    private fun search() {
-        val productId = binding.etSearchProductId.text.toString().trim().toIntOrNull()
-        val location = binding.etSearchLocation.text.toString().trim().ifBlank { null }
-        loadThresholds(productId = productId, location = location)
+    private fun applySearchFilters() {
+        applySearchFiltersInternal(allowReload = true)
+    }
+
+    private fun applySearchFiltersInternal(allowReload: Boolean) {
+        val productRaw = binding.etSearchProductId.text.toString().trim()
+        val locationRaw = normalizeLocationInput(binding.etSearchLocation.text.toString().trim())
+
+        if (allowReload && !isLoading && (currentOffset > 0 || totalCount > items.size)) {
+            pendingFilterApply = true
+            currentOffset = 0
+            loadThresholds()
+            return
+        }
+
+        var filtered = items
+        if (productRaw.isNotBlank()) {
+            val productId = productRaw.toIntOrNull()
+            filtered = if (productId != null) {
+                filtered.filter { it.productId == productId }
+            } else {
+                val needle = productRaw.lowercase()
+                filtered.filter { (productNameById[it.productId] ?: "").lowercase().contains(needle) }
+            }
+        }
+        if (locationRaw.isNotBlank()) {
+            val needle = locationRaw.lowercase()
+            filtered = filtered.filter { (it.location ?: "").lowercase().contains(needle) }
+        }
+
+        filteredItems = filtered
+        filteredOffset = 0
+        applyFilteredPage()
+    }
+
+    private fun clearSearchFilters() {
+        binding.etSearchProductId.setText("")
+        binding.etSearchLocation.setText("")
+        filteredItems = emptyList()
+        filteredOffset = 0
+        val rows = items.map { ThresholdRowUi(it, productNameById[it.productId]) }
+        adapter.submit(rows)
+        updatePageInfo(rows.size)
     }
 
     private fun loadThresholds(productId: Int? = null, location: String? = null) {
+        if (isLoading) return
+        isLoading = true
         lifecycleScope.launch {
             try {
-                val res = NetworkModule.api.listThresholds(productId = productId, location = location, limit = 100, offset = 0)
+                val filtersActive = hasActiveFilters()
+                val effectiveLimit = if (filtersActive) 200 else pageSize
+                val effectiveOffset = if (filtersActive) 0 else currentOffset
+                if (filtersActive) currentOffset = 0
+                val res = NetworkModule.api.listThresholds(productId = productId, location = location, limit = effectiveLimit, offset = effectiveOffset)
                 if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
                 if (res.isSuccessful && res.body() != null) {
                     val pending = buildPendingThresholds()
                     items = pending + res.body()!!.items
-                    val productNames = fetchProductNames(items.map { it.productId }.toSet())
-                    val rows = items.map { ThresholdRowUi(it, productNames[it.productId]) }
-                    adapter.submit(rows)
+                    totalCount = res.body()!!.total
+                    productNameById = fetchProductNames(items.map { it.productId }.toSet())
+                    val rows = items.map { ThresholdRowUi(it, productNameById[it.productId]) }
+                    if (hasActiveFilters() || pendingFilterApply) {
+                        applySearchFiltersInternal(allowReload = false)
+                    } else {
+                        adapter.submit(rows)
+                        updatePageInfo(rows.size)
+                    }
                 } else {
                     UiNotifier.show(this@ThresholdsActivity, ApiErrorFormatter.format(res.code()))
                 }
             } catch (e: Exception) {
                 val pending = buildPendingThresholds()
-                val productNames = fetchProductNames(pending.map { it.productId }.toSet())
-                val rows = pending.map { ThresholdRowUi(it, productNames[it.productId]) }
+                productNameById = fetchProductNames(pending.map { it.productId }.toSet())
+                val rows = pending.map { ThresholdRowUi(it, productNameById[it.productId]) }
                 adapter.submit(rows)
+                updatePageInfo(rows.size)
                 if (e is IOException) {
-                    UiNotifier.show(this@ThresholdsActivity, "Sin conexión a Internet")
+                    UiNotifier.show(this@ThresholdsActivity, "Sin conexion a Internet")
                 } else {
                     UiNotifier.show(this@ThresholdsActivity, "Error de red: ${e.message}")
+                }
+            } finally {
+                isLoading = false
+                if (pendingFilterApply) {
+                    pendingFilterApply = false
+                    applySearchFiltersInternal(allowReload = false)
                 }
             }
         }
     }
 
     private fun createThreshold() {
-        val productId = binding.etProductId.text.toString().trim().toIntOrNull()
-        val location = binding.etLocation.text.toString().trim().ifBlank { null }
+        val productInput = binding.etProductId.text.toString().trim()
+        val productId = productInput.toIntOrNull() ?: resolveProductIdByName(productInput)
+        val location = normalizeLocationInput(binding.etLocation.text.toString().trim()).ifBlank { null }
         val minQty = binding.etMinQty.text.toString().trim().toIntOrNull()
 
-        if (productId == null) { binding.etProductId.error = "Product ID requerido"; return }
+        if (productId == null) { binding.etProductId.error = "Producto ID o nombre valido"; return }
         if (minQty == null || minQty < 0) { binding.etMinQty.error = "Min >= 0"; return }
 
         binding.btnCreate.isEnabled = false
@@ -130,7 +248,7 @@ session = SessionManager(this)
                 if (e is IOException) {
                     val dto = ThresholdCreateDto(productId = productId, location = location, minQuantity = minQty)
                     OfflineQueue(this@ThresholdsActivity).enqueue(PendingType.THRESHOLD_CREATE, gson.toJson(dto))
-                    UiNotifier.show(this@ThresholdsActivity, "Sin conexión. Threshold guardado offline")
+                    UiNotifier.show(this@ThresholdsActivity, "Sin conexion. Threshold guardado offline")
                     loadThresholds()
                 } else {
                     UiNotifier.show(this@ThresholdsActivity, "Error de red: ${e.message}")
@@ -143,7 +261,7 @@ session = SessionManager(this)
 
     private fun showEditDialog(threshold: ThresholdResponseDto) {
         val inputLocation = android.widget.EditText(this).apply {
-            hint = "Location"
+            hint = "Ubicacion"
             setText(threshold.location ?: "")
         }
         val inputMin = android.widget.EditText(this).apply {
@@ -190,7 +308,7 @@ session = SessionManager(this)
                 }
             } catch (e: Exception) {
                 if (e is IOException) {
-                    UiNotifier.show(this@ThresholdsActivity, "Sin conexión a Internet")
+                    UiNotifier.show(this@ThresholdsActivity, "Sin conexion a Internet")
                 } else {
                     UiNotifier.show(this@ThresholdsActivity, "Error de red: ${e.message}")
                 }
@@ -210,7 +328,7 @@ session = SessionManager(this)
                 }
             } catch (e: Exception) {
                 if (e is IOException) {
-                    UiNotifier.show(this@ThresholdsActivity, "Sin conexión a Internet")
+                    UiNotifier.show(this@ThresholdsActivity, "Sin conexion a Internet")
                 } else {
                     UiNotifier.show(this@ThresholdsActivity, "Error de red: ${e.message}")
                 }
@@ -247,6 +365,197 @@ session = SessionManager(this)
             }
         }
         return out
+    }
+
+    private fun resolveProductIdByName(input: String): Int? {
+        val needle = input.trim().lowercase()
+        if (needle.isBlank()) return null
+        val match = productNameById.entries.firstOrNull { it.value.lowercase() == needle }
+        return match?.key
+    }
+
+    private fun normalizeLocationInput(raw: String): String {
+        val trimmed = raw.trim()
+        if (trimmed.startsWith("(") && trimmed.contains(") ")) {
+            return trimmed.substringAfter(") ").trim()
+        }
+        return trimmed
+    }
+
+    private fun hasActiveFilters(): Boolean {
+        return binding.etSearchProductId.text?.isNotBlank() == true ||
+            binding.etSearchLocation.text?.isNotBlank() == true
+    }
+
+    private fun applyFilteredPage() {
+        val from = filteredOffset.coerceAtLeast(0)
+        val to = (filteredOffset + pageSize).coerceAtMost(filteredItems.size)
+        val page = if (from < to) filteredItems.subList(from, to) else emptyList()
+        val rows = page.map { ThresholdRowUi(it, productNameById[it.productId]) }
+        adapter.submit(rows)
+        updatePageInfo(rows.size)
+    }
+
+    private fun updatePageInfo(pageSizeLoaded: Int) {
+        if (hasActiveFilters()) {
+            val shown = (filteredOffset + pageSizeLoaded).coerceAtMost(filteredItems.size)
+            binding.tvThresholdPageInfo.text = "Mostrando $shown/${filteredItems.size}"
+            val prevEnabled = filteredOffset > 0
+            val nextEnabled = shown < filteredItems.size
+            binding.btnPrevThresholdPage.isEnabled = prevEnabled
+            binding.btnNextThresholdPage.isEnabled = nextEnabled
+            applyPagerButtonStyle(binding.btnPrevThresholdPage, prevEnabled)
+            applyPagerButtonStyle(binding.btnNextThresholdPage, nextEnabled)
+            return
+        }
+        val shown = (currentOffset + pageSizeLoaded).coerceAtMost(totalCount)
+        val label = if (totalCount > 0) "Mostrando $shown/$totalCount" else "Mostrando ${pageSizeLoaded}/${pageSizeLoaded}"
+        binding.tvThresholdPageInfo.text = label
+        val prevEnabled = currentOffset > 0
+        val nextEnabled = shown < totalCount
+        binding.btnPrevThresholdPage.isEnabled = prevEnabled
+        binding.btnNextThresholdPage.isEnabled = nextEnabled
+        applyPagerButtonStyle(binding.btnPrevThresholdPage, prevEnabled)
+        applyPagerButtonStyle(binding.btnNextThresholdPage, nextEnabled)
+    }
+
+    private fun applyPagerButtonStyle(button: Button, enabled: Boolean) {
+        button.backgroundTintList = null
+        if (!enabled) {
+            val colors = intArrayOf(
+                ContextCompat.getColor(this, android.R.color.darker_gray),
+                ContextCompat.getColor(this, android.R.color.darker_gray)
+            )
+            val drawable = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
+                cornerRadius = resources.displayMetrics.density * 18f
+                setStroke((resources.displayMetrics.density * 1f).toInt(), 0xFFB0B0B0.toInt())
+            }
+            button.background = drawable
+            button.setTextColor(ContextCompat.getColor(this, android.R.color.white))
+            return
+        }
+        val colors = intArrayOf(
+            ContextCompat.getColor(this, R.color.icon_grad_start),
+            ContextCompat.getColor(this, R.color.icon_grad_mid2),
+            ContextCompat.getColor(this, R.color.icon_grad_mid1),
+            ContextCompat.getColor(this, R.color.icon_grad_end)
+        )
+        val drawable = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
+            cornerRadius = resources.displayMetrics.density * 18f
+            setStroke((resources.displayMetrics.density * 1f).toInt(), 0x33000000)
+        }
+        button.background = drawable
+        button.setTextColor(ContextCompat.getColor(this, android.R.color.white))
+    }
+
+    private fun toggleCreateForm() {
+        TransitionManager.beginDelayedTransition(binding.scrollThresholds, AutoTransition().setDuration(180))
+        val isVisible = binding.layoutCreateThresholdContent.visibility == View.VISIBLE
+        if (isVisible) {
+            binding.layoutCreateThresholdContent.visibility = View.GONE
+            binding.layoutSearchThresholdContent.visibility = View.GONE
+            setToggleActive(null)
+        } else {
+            binding.layoutCreateThresholdContent.visibility = View.VISIBLE
+            binding.layoutSearchThresholdContent.visibility = View.GONE
+            setToggleActive(binding.layoutCreateThresholdHeader)
+        }
+    }
+
+    private fun toggleSearchForm() {
+        TransitionManager.beginDelayedTransition(binding.scrollThresholds, AutoTransition().setDuration(180))
+        val isVisible = binding.layoutSearchThresholdContent.visibility == View.VISIBLE
+        if (isVisible) {
+            binding.layoutSearchThresholdContent.visibility = View.GONE
+            binding.layoutCreateThresholdContent.visibility = View.GONE
+            setToggleActive(null)
+        } else {
+            binding.layoutSearchThresholdContent.visibility = View.VISIBLE
+            binding.layoutCreateThresholdContent.visibility = View.GONE
+            setToggleActive(binding.layoutSearchThresholdHeader)
+        }
+    }
+
+    private fun setToggleActive(active: View?) {
+        if (active === binding.layoutCreateThresholdHeader) {
+            binding.layoutCreateThresholdHeader.setBackgroundResource(R.drawable.bg_toggle_active)
+            binding.layoutSearchThresholdHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
+        } else if (active === binding.layoutSearchThresholdHeader) {
+            binding.layoutCreateThresholdHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
+            binding.layoutSearchThresholdHeader.setBackgroundResource(R.drawable.bg_toggle_active)
+        } else {
+            binding.layoutCreateThresholdHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
+            binding.layoutSearchThresholdHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
+        }
+    }
+
+    private fun setupLocationDropdowns() {
+        lifecycleScope.launch {
+            try {
+                val res = NetworkModule.api.listLocations(limit = 200, offset = 0)
+                if (res.isSuccessful && res.body() != null) {
+                    val items = res.body()!!.items
+                    val values = items.sortedBy { it.id }
+                        .map { "(${it.id}) ${it.code}" }
+                        .distinct()
+                    val allValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
+                    val adapter = ArrayAdapter(this@ThresholdsActivity, android.R.layout.simple_list_item_1, allValues)
+                    binding.etLocation.setAdapter(adapter)
+                    binding.etLocation.setOnClickListener { binding.etLocation.showDropDown() }
+                    binding.etLocation.setOnFocusChangeListener { _, hasFocus ->
+                        if (hasFocus) binding.etLocation.showDropDown()
+                    }
+                    binding.etSearchLocation.setAdapter(adapter)
+                    binding.etSearchLocation.setOnClickListener { binding.etSearchLocation.showDropDown() }
+                    binding.etSearchLocation.setOnFocusChangeListener { _, hasFocus ->
+                        if (hasFocus) binding.etSearchLocation.showDropDown()
+                    }
+                }
+            } catch (_: Exception) {
+                // Silent fallback to manual input.
+            }
+        }
+    }
+
+    private fun applyThresholdDropdownIcons() {
+        binding.tilCreateLocation.setEndIconTintList(null)
+        binding.tilSearchLocation.setEndIconTintList(null)
+        val endIconId = com.google.android.material.R.id.text_input_end_icon
+        binding.tilCreateLocation.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
+            GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
+        }
+        binding.tilSearchLocation.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
+            GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
+        }
+    }
+
+    private fun applyThresholdTitleGradient() {
+        binding.tvThresholdsTitle.post {
+            val paint = binding.tvThresholdsTitle.paint
+            val width = paint.measureText(binding.tvThresholdsTitle.text.toString())
+            if (width <= 0f) return@post
+            val c1 = ContextCompat.getColor(this, R.color.icon_grad_start)
+            val c2 = ContextCompat.getColor(this, R.color.icon_grad_mid2)
+            val c3 = ContextCompat.getColor(this, R.color.icon_grad_mid1)
+            val c4 = ContextCompat.getColor(this, R.color.icon_grad_end)
+            val shader = android.graphics.LinearGradient(
+                0f,
+                0f,
+                width,
+                0f,
+                intArrayOf(c1, c2, c3, c4),
+                null,
+                android.graphics.Shader.TileMode.CLAMP
+            )
+            paint.shader = shader
+            binding.tvThresholdsTitle.invalidate()
+        }
+    }
+
+    private fun hideKeyboard() {
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager ?: return
+        val view = currentFocus ?: binding.root
+        imm.hideSoftInputFromWindow(view.windowToken, 0)
     }
 
     private fun goToLogin() {

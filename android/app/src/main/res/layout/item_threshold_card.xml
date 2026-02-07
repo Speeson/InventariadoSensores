@@ -12,40 +12,62 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
+        android:orientation="horizontal"
         android:padding="12dp">
 
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="60dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <ImageView
+                android:id="@+id/ivThresholdIcon"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:contentDescription="@null"
+                android:src="@drawable/threshold" />
+
+            <TextView
+                android:id="@+id/tvThresholdId"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="ID 0"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:paddingStart="10dp">
 
             <TextView
                 android:id="@+id/tvTitle"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:textStyle="bold"
-                android:textSize="15sp" />
+                android:text="Producto: Nombre"
+                android:textStyle="bold" />
 
-            <ImageView
-                android:id="@+id/ivWarning"
-                android:layout_width="18dp"
-                android:layout_height="18dp"
-                android:layout_marginStart="8dp"
-                android:contentDescription="Aviso"
-                android:src="@drawable/ic_error_red"
-                android:visibility="gone" />
+            <TextView
+                android:id="@+id/tvLocation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Ubicacion: -" />
+
+            <TextView
+                android:id="@+id/tvThreshold"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Umbral: 0" />
+
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/tvMeta"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="12sp"
-            android:textColor="?attr/colorOnSurface"
-            android:alpha="0.7" />
     </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>
+
