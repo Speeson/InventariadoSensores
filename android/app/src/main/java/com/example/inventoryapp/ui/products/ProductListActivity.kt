@@ -4,6 +4,7 @@ import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 import android.content.Intent
 import android.os.Bundle
 import android.view.inputmethod.EditorInfo
+import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -22,6 +23,8 @@ import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import com.example.inventoryapp.ui.common.GradientIconUtil
 import com.example.inventoryapp.R
+import android.graphics.drawable.GradientDrawable
+import androidx.core.content.ContextCompat
 
 class ProductListActivity : AppCompatActivity() {
 
@@ -29,8 +32,17 @@ class ProductListActivity : AppCompatActivity() {
     private lateinit var session: SessionManager
     private lateinit var offlineQueue: OfflineQueue
     private val gson = Gson()
-    private var products: List<ProductResponseDto> = emptyList()
+    private val products = mutableListOf<ProductResponseDto>()
     private lateinit var adapter: ProductListAdapter
+    private var isLoading = false
+    private var currentOffset = 0
+    private val pageSize = 10
+    private var currentSku: String? = null
+    private var currentName: String? = null
+    private var currentBarcode: String? = null
+    private var categoryCache: Map<Int, String>? = null
+    private var totalCount = 0
+    private var sortAsc = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,7 +53,7 @@ class ProductListActivity : AppCompatActivity() {
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
         
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
-session = SessionManager(this)
+        session = SessionManager(this)
         offlineQueue = OfflineQueue(this)
 
         binding.btnBack.setOnClickListener { finish() }
@@ -70,11 +82,33 @@ session = SessionManager(this)
         binding.rvProducts.layoutManager = LinearLayoutManager(this)
         binding.rvProducts.adapter = adapter
 
+        binding.btnPrevPage.setOnClickListener {
+            if (currentOffset <= 0) return@setOnClickListener
+            currentOffset = (currentOffset - pageSize).coerceAtLeast(0)
+            loadNextPage()
+            binding.rvProducts.scrollToPosition(0)
+        }
+        binding.btnNextPage.setOnClickListener {
+            val nextOffset = currentOffset + pageSize
+            if (nextOffset >= totalCount) return@setOnClickListener
+            currentOffset += pageSize
+            loadNextPage()
+            binding.rvProducts.scrollToPosition(0)
+        }
+        binding.btnSortUp.setOnClickListener {
+            sortAsc = true
+            resetAndLoad(currentSku, currentName, currentBarcode)
+        }
+        binding.btnSortDown.setOnClickListener {
+            sortAsc = false
+            resetAndLoad(currentSku, currentName, currentBarcode)
+        }
+
         binding.btnSearch.setOnClickListener { search() }
 
         binding.btnClear.setOnClickListener {
             binding.etSearch.setText("")
-            loadProducts()
+            resetAndLoad()
         }
 
         binding.etSearch.setOnEditorActionListener { _, actionId, _ ->
@@ -87,13 +121,13 @@ session = SessionManager(this)
 
     override fun onResume() {
         super.onResume()
-        loadProducts()
+        resetAndLoad()
     }
 
     private fun search() {
         val q = binding.etSearch.text.toString().trim()
         if (q.isBlank()) {
-            loadProducts()
+            resetAndLoad()
             return
         }
 
@@ -101,25 +135,40 @@ session = SessionManager(this)
         val looksLikeSku = !isBarcode && (q.contains("-") || (q.any { it.isLetter() } && q.any { it.isDigit() } && !q.contains(" ")))
 
         when {
-            isBarcode -> loadProducts(barcode = q)
-            looksLikeSku -> loadProducts(sku = q)
-            else -> loadProducts(name = q)
+            isBarcode -> resetAndLoad(barcode = q)
+            looksLikeSku -> resetAndLoad(sku = q)
+            else -> resetAndLoad(name = q)
         }
     }
 
-    private fun loadProducts(
+    private fun resetAndLoad(
         sku: String? = null,
         name: String? = null,
         barcode: String? = null
     ) {
+        currentSku = sku
+        currentName = name
+        currentBarcode = barcode
+        currentOffset = 0
+        isLoading = false
+        products.clear()
+        adapter.submit(emptyList())
+        loadNextPage()
+    }
+
+    private fun loadNextPage() {
+        if (isLoading) return
+        isLoading = true
         lifecycleScope.launch {
             try {
                 val res = NetworkModule.api.listProducts(
-                    sku = sku,
-                    name = name,
-                    barcode = barcode,
-                    limit = 50,
-                    offset = 0
+                    sku = currentSku,
+                    name = currentName,
+                    barcode = currentBarcode,
+                    orderBy = "id",
+                    orderDir = if (sortAsc) "asc" else "desc",
+                    limit = pageSize,
+                    offset = currentOffset
                 )
                 if (res.code() == 401) {
                     UiNotifier.show(this@ProductListActivity, ApiErrorFormatter.format(401))
@@ -132,17 +181,22 @@ session = SessionManager(this)
                         session.clearToken()
                         goToLogin()
                     }
+                    isLoading = false
                     return@launch
                 }
                 if (res.isSuccessful && res.body() != null) {
-                    products = res.body()!!.items
-                    val categoryMap = fetchCategoryMap()
-                    val rows = products.map { ProductRowUi(it, categoryMap[it.categoryId]) }
-                    adapter.submit(rows)
-
-                    if (products.isEmpty()) {
+                    val pageItems = res.body()!!.items
+                    if (pageItems.isEmpty() && currentOffset == 0) {
                         UiNotifier.show(this@ProductListActivity, "Sin resultados")
                     }
+                    val categoryMap = categoryCache ?: fetchCategoryMap().also { categoryCache = it }
+                    val rows = pageItems.map { ProductRowUi(it, categoryMap[it.categoryId]) }
+                    products.clear()
+                    products.addAll(pageItems)
+                    adapter.submit(rows)
+                    totalCount = res.body()!!.total
+                    updatePageInfo(pageItems.size)
+
                 } else {
                     val err = res.errorBody()?.string()
                     UiNotifier.show(this@ProductListActivity, ApiErrorFormatter.format(res.code(), err))
@@ -151,17 +205,27 @@ session = SessionManager(this)
             } catch (e: Exception) {
                 UiNotifier.show(this@ProductListActivity, "Error de red: ${e.message}")
                 loadOfflineOnly()
+            } finally {
+                isLoading = false
             }
         }
     }
 
     private fun loadOfflineOnly() {
-        val items = buildOfflineProducts()
-        products = items
+        val items = if (sortAsc) {
+            buildOfflineProducts().sortedBy { it.id }
+        } else {
+            buildOfflineProducts().sortedByDescending { it.id }
+        }
+        products.clear()
+        products.addAll(items)
+        totalCount = items.size
+        currentOffset = 0
         lifecycleScope.launch {
             val categoryMap = fetchCategoryMap()
             adapter.submit(items.map { ProductRowUi(it, categoryMap[it.categoryId]) })
         }
+        updatePageInfo(items.size)
         if (items.isNotEmpty()) {
             UiNotifier.show(this@ProductListActivity, "Mostrando productos offline")
         } else {
@@ -196,6 +260,51 @@ session = SessionManager(this)
         } catch (_: Exception) {
             emptyMap()
         }
+    }
+
+    private fun updatePageInfo(pageSizeLoaded: Int) {
+        val shown = (currentOffset + pageSizeLoaded).coerceAtMost(totalCount)
+        val label = if (totalCount > 0) {
+            "Mostrando $shown / $totalCount"
+        } else {
+            "Mostrando 0 / 0"
+        }
+        binding.tvProductPageInfo.text = label
+        val prevEnabled = currentOffset > 0
+        val nextEnabled = (currentOffset + pageSize) < totalCount
+        binding.btnPrevPage.isEnabled = prevEnabled
+        binding.btnNextPage.isEnabled = nextEnabled
+        applyPagerButtonStyle(binding.btnPrevPage, prevEnabled)
+        applyPagerButtonStyle(binding.btnNextPage, nextEnabled)
+    }
+
+    private fun applyPagerButtonStyle(button: Button, enabled: Boolean) {
+        button.backgroundTintList = null
+        if (!enabled) {
+            val colors = intArrayOf(
+                ContextCompat.getColor(this, android.R.color.darker_gray),
+                ContextCompat.getColor(this, android.R.color.darker_gray)
+            )
+            val drawable = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
+                cornerRadius = resources.displayMetrics.density * 18f
+                setStroke((resources.displayMetrics.density * 1f).toInt(), 0xFFB0B0B0.toInt())
+            }
+            button.background = drawable
+            button.setTextColor(ContextCompat.getColor(this, android.R.color.white))
+            return
+        }
+        val colors = intArrayOf(
+            ContextCompat.getColor(this, R.color.icon_grad_start),
+            ContextCompat.getColor(this, R.color.icon_grad_mid2),
+            ContextCompat.getColor(this, R.color.icon_grad_mid1),
+            ContextCompat.getColor(this, R.color.icon_grad_end)
+        )
+        val drawable = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
+            cornerRadius = resources.displayMetrics.density * 18f
+            setStroke((resources.displayMetrics.density * 1f).toInt(), 0x33000000)
+        }
+        button.background = drawable
+        button.setTextColor(ContextCompat.getColor(this, android.R.color.white))
     }
 
     private fun goToLogin() {

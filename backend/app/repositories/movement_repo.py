@@ -22,6 +22,7 @@ def list_movements(
     location_id: int | None = None,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
+    order_dir: str | None = "desc",
     limit: int = 50,
     offset: int = 0,
 ) -> Tuple[Iterable[Movement], int]:
@@ -41,7 +42,10 @@ def list_movements(
     if date_to is not None:
         filters.append(Movement.created_at <= date_to)
 
-    stmt = select(Movement).where(*filters).order_by(Movement.created_at.desc())
+    if order_dir == "asc":
+        stmt = select(Movement).where(*filters).order_by(Movement.created_at.asc())
+    else:
+        stmt = select(Movement).where(*filters).order_by(Movement.created_at.desc())
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
     items = db.scalars(stmt.offset(offset).limit(limit)).all()
     return items, total

@@ -26,6 +26,8 @@ def list_products(
     barcode: str | None = None,
     category_id: int | None = None,
     active: bool | None = None,
+    order_by: str | None = "id",
+    order_dir: str | None = "asc",
     limit: int = 50,
     offset: int = 0,
 ) -> Tuple[Iterable[Product], int]:
@@ -41,7 +43,11 @@ def list_products(
     if active is not None:
         filters.append(Product.active == active)
 
-    stmt = select(Product).where(*filters).order_by(Product.created_at.desc())
+    order_col = Product.created_at if order_by == "created_at" else Product.id
+    if order_dir == "asc":
+        stmt = select(Product).where(*filters).order_by(order_col.asc())
+    else:
+        stmt = select(Product).where(*filters).order_by(order_col.desc())
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
     items = db.scalars(stmt.offset(offset).limit(limit)).all()
     return items, total

@@ -22,6 +22,7 @@ def top_consumed(
     date_from: date | None = Query(None, description="YYYY-MM-DD"),
     date_to: date | None = Query(None, description="YYYY-MM-DD"),
     location: str | None = Query(None),
+    order_dir: str | None = Query("desc"),
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
@@ -30,12 +31,23 @@ def top_consumed(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="date_from no puede ser mayor que date_to",
         )
+    if order_dir not in {"asc", "desc"}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="order_dir debe ser 'asc' o 'desc'",
+        )
 
     dt_from = datetime.combine(date_from, time.min) if date_from else None
     dt_to = datetime.combine(date_to, time.max) if date_to else None
 
     rows, total = report_repo.list_top_consumed(
-        db, date_from=dt_from, date_to=dt_to, location=location, limit=limit, offset=offset
+        db,
+        date_from=dt_from,
+        date_to=dt_to,
+        location=location,
+        order_dir=order_dir,
+        limit=limit,
+        offset=offset,
     )
     items = [
         TopConsumedItem(product_id=r.product_id, sku=r.sku, name=r.name, total_out=r.total_out)
@@ -57,6 +69,7 @@ def turnover_report(
     date_from: date | None = Query(None, description="YYYY-MM-DD"),
     date_to: date | None = Query(None, description="YYYY-MM-DD"),
     location: str | None = Query(None),
+    order_dir: str | None = Query("desc"),
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
@@ -64,6 +77,11 @@ def turnover_report(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="date_from no puede ser mayor que date_to",
+        )
+    if order_dir not in {"asc", "desc"}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="order_dir debe ser 'asc' o 'desc'",
         )
 
     dt_from = datetime.combine(date_from, time.min) if date_from else None
@@ -74,6 +92,7 @@ def turnover_report(
         date_from=dt_from,
         date_to=dt_to,
         location=location,
+        order_dir=order_dir,
         limit=limit,
         offset=offset,
     )

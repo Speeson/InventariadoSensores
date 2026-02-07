@@ -162,3 +162,4 @@ def test_process_event_creates_stock_and_movement(db):
 
     movement = db.query(Movement).filter(Movement.product_id == product.id).first()
     assert movement is not None
+    assert movement.delta == 3

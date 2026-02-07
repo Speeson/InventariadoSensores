@@ -27,14 +27,21 @@ def list_events(
     event_type: EventType | None = Query(None),
     product_id: int | None = Query(None),
     processed: bool | None = Query(None),
+    order_by: str | None = Query("created_at"),
+    order_dir: str | None = Query("desc"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
+    if order_by != "created_at":
+        raise HTTPException(status_code=400, detail="order_by debe ser 'created_at'")
+    if order_dir not in {"asc", "desc"}:
+        raise HTTPException(status_code=400, detail="order_dir debe ser 'asc' o 'desc'")
     items, total = event_repo.list_events(
         db,
         event_type=event_type,
         product_id=product_id,
         processed=processed,
+        order_dir=order_dir,
         limit=limit,
         offset=offset,
     )

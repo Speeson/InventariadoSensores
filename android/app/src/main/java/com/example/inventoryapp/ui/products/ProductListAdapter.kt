@@ -47,12 +47,13 @@ class ProductListAdapter(
         val p = row.product
         holder.binding.tvName.text = p.name
         holder.binding.ivIcon.setImageBitmap(getGradientIcon(holder.itemView.context))
+        holder.binding.tvProductIdValue.text = p.id.toString()
         val catName = row.categoryName ?: "N/D"
         val barcodeText = p.barcode ?: "-"
         holder.binding.tvDetails.text =
             "SKU: ${p.sku}\n" +
             "Barcode: $barcodeText\n" +
-            "Categoria: $catName (ID ${p.categoryId})  •  ID: ${p.id}\n" +
+            "Categoria: $catName (ID ${p.categoryId})\n" +
             "Updated: ${p.updatedAt}"
         val isOffline = p.id < 0 || p.name.contains("(offline)", ignoreCase = true)
         holder.binding.ivOfflineAlert.visibility =
@@ -80,6 +81,13 @@ class ProductListAdapter(
         items.clear()
         items.addAll(newItems)
         notifyDataSetChanged()
+    }
+
+    fun append(moreItems: List<ProductRowUi>) {
+        if (moreItems.isEmpty()) return
+        val start = items.size
+        items.addAll(moreItems)
+        notifyItemRangeInserted(start, moreItems.size)
     }
 
     private fun getGradientIcon(context: Context): Bitmap {

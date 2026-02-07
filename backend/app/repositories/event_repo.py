@@ -43,6 +43,7 @@ def list_events(
     event_type: EventType | None = None,
     product_id: int | None = None,
     processed: bool | None = None,
+    order_dir: str | None = "desc",
     limit: int = 50,
     offset: int = 0,
 ) -> Tuple[Iterable[Event], int]:
@@ -55,7 +56,10 @@ def list_events(
         status = EventStatus.PROCESSED if processed else EventStatus.PENDING
         filters.append(Event.event_status == status)
 
-    stmt = select(Event).where(*filters).order_by(Event.created_at.desc())
+    if order_dir == "asc":
+        stmt = select(Event).where(*filters).order_by(Event.created_at.asc())
+    else:
+        stmt = select(Event).where(*filters).order_by(Event.created_at.desc())
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
     items = db.scalars(stmt.offset(offset).limit(limit)).all()
     return items, total

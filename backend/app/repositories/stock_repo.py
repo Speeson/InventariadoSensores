@@ -34,6 +34,7 @@ def list_stocks(
     *,
     product_id: int | None = None,
     location: str | None = None,
+    order_dir: str | None = "asc",
     limit: int = 50,
     offset: int = 0,
 ) -> Tuple[Iterable[Stock], int]:
@@ -45,7 +46,11 @@ def list_stocks(
         stmt = stmt.join(Location, Stock.location_id == Location.id)
         filters.append(Location.code.ilike(f"%{location}%"))
 
-    stmt = stmt.where(*filters).order_by(Stock.updated_at.desc())
+    stmt = stmt.where(*filters)
+    if order_dir == "desc":
+        stmt = stmt.order_by(Stock.id.desc())
+    else:
+        stmt = stmt.order_by(Stock.id.asc())
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
     items = db.scalars(stmt.offset(offset).limit(limit)).all()
     return items, total

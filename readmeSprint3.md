@@ -1,4 +1,4 @@
-# Sprint 3 - Cambios y decisiones
+﻿# Sprint 3 - Cambios y decisiones
 
 Fecha: 2026-02-05
 
@@ -53,3 +53,17 @@ Frontend (Android):
 
 Seed:
 - Para generar etiquetas en seed: `SEED_LABELS=1` al ejecutar `backend/scripts/seed_db.py`.
+
+## Listados: ordenación por API
+
+Objetivo: permitir ordenar resultados en backend para listas y reportes.
+
+Endpoints con orden:
+- Productos: `order_by=id|created_at`, `order_dir=asc|desc` (por defecto `id asc`).
+- Categorías: `order_by=id`, `order_dir=asc|desc` (por defecto `id asc`).
+- Stock: `order_by=id`, `order_dir=asc|desc` (por defecto `id asc`).
+- Movimientos: `order_by=created_at`, `order_dir=asc|desc` (por defecto `created_at desc`).
+- Eventos: `order_by=created_at`, `order_dir=asc|desc` (por defecto `created_at desc`).
+- Reportes:
+  - Top consumidos: `order_dir=asc|desc` (por defecto `desc`).
+  - Rotación: `order_dir=asc|desc` (por defecto `desc`).

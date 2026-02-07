@@ -103,6 +103,8 @@ interface InventoryApi {
         @Query("barcode") barcode: String? = null,
         @Query("category_id") categoryId: Int? = null,
         @Query("active") active: Boolean? = null,
+        @Query("order_by") orderBy: String? = null,
+        @Query("order_dir") orderDir: String? = null,
         @Query("limit") limit: Int = 50,
         @Query("offset") offset: Int = 0
     ): Response<ProductListResponseDto>

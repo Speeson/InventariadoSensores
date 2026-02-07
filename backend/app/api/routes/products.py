@@ -32,9 +32,16 @@ def list_products(
     barcode: str | None = Query(None),
     category_id: int | None = Query(None),
     active: bool | None = Query(None),
+    order_by: str | None = Query("id"),
+    order_dir: str | None = Query("asc"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
+    allowed_order = {"id", "created_at"}
+    if order_by not in allowed_order:
+        raise HTTPException(status_code=400, detail=f"order_by debe ser uno de {sorted(allowed_order)}")
+    if order_dir not in {"asc", "desc"}:
+        raise HTTPException(status_code=400, detail="order_dir debe ser 'asc' o 'desc'")
     items, total = product_repo.list_products(
         db,
         sku=sku,
@@ -42,6 +49,8 @@ def list_products(
         barcode=barcode,
         category_id=category_id,
         active=active,
+        order_by=order_by,
+        order_dir=order_dir,
         limit=limit,
         offset=offset,
     )

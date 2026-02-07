@@ -186,7 +186,70 @@
                         android:text="Listado"
                         android:textStyle="bold"
                         android:textColor="?attr/colorOnSurface"
-                        android:layout_marginBottom="8dp" />
+                        android:layout_marginBottom="4dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="6dp">
+
+                        <ImageButton
+                            android:id="@+id/btnSortUp"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:background="@android:color/transparent"
+                            android:contentDescription="Orden ascendente"
+                            android:scaleType="fitCenter"
+                            android:src="@drawable/up" />
+
+                        <ImageButton
+                            android:id="@+id/btnSortDown"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_marginStart="6dp"
+                            android:background="@android:color/transparent"
+                            android:contentDescription="Orden descendente"
+                            android:scaleType="fitCenter"
+                            android:src="@drawable/down" />
+
+                        <TextView
+                            android:id="@+id/tvProductPageInfo"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="8dp"
+                            android:text="Mostrando 0/0"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="12sp"
+                            android:includeFontPadding="false" />
+
+                        <Button
+                            android:id="@+id/btnPrevPage"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Anterior"
+                            android:textAllCaps="false"
+                            android:textSize="12sp"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="2dp"
+                            android:minHeight="0dp"
+                            android:minWidth="0dp" />
+
+                        <Button
+                            android:id="@+id/btnNextPage"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="Siguiente"
+                            android:textAllCaps="false"
+                            android:textSize="12sp"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="2dp"
+                            android:minHeight="0dp"
+                            android:minWidth="0dp" />
+                    </LinearLayout>
 
                     <androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/rvProducts"

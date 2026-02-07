@@ -14,6 +14,7 @@ def list_top_consumed(
     date_from=None,
     date_to=None,
     location: str | None = None,
+    order_dir: str | None = "desc",
     limit: int = 10,
     offset: int = 0,
 ) -> Tuple[Iterable[tuple], int]:
@@ -38,8 +39,12 @@ def list_top_consumed(
         .join(Product, Product.id == Movement.product_id)
         .where(*filters)
         .group_by(Movement.product_id, Product.sku, Product.name)
-        .order_by(func.sum(Movement.quantity).desc())
     )
+    total_out = func.sum(Movement.quantity)
+    if order_dir == "asc":
+        base = base.order_by(total_out.asc())
+    else:
+        base = base.order_by(total_out.desc())
 
     total = db.scalar(select(func.count()).select_from(base.subquery())) or 0
     rows = db.execute(base.offset(offset).limit(limit)).all()
@@ -52,6 +57,7 @@ def list_turnover(
     date_from=None,
     date_to=None,
     location: str | None = None,
+    order_dir: str | None = "desc",
     limit: int = 10,
     offset: int = 0,
 ) -> Tuple[Iterable[tuple], int, str | None]:
@@ -142,8 +148,10 @@ def list_turnover(
     )
 
     total = db.scalar(select(func.count()).select_from(base.subquery())) or 0
-    rows = db.execute(
-        base.order_by(turnover.desc().nulls_last()).offset(offset).limit(limit)
-    ).all()
+    if order_dir == "asc":
+        base = base.order_by(turnover.asc().nulls_last())
+    else:
+        base = base.order_by(turnover.desc().nulls_last())
+    rows = db.execute(base.offset(offset).limit(limit)).all()
 
     return rows, total, loc_code

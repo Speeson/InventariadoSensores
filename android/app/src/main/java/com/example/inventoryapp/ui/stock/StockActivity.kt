@@ -5,6 +5,7 @@ import com.example.inventoryapp.R
 import android.content.Intent
 import android.os.Bundle
 import android.widget.ArrayAdapter
+import android.widget.Button
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -24,6 +25,8 @@ import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.io.IOException
 import com.example.inventoryapp.ui.common.GradientIconUtil
+import android.graphics.drawable.GradientDrawable
+import androidx.core.content.ContextCompat
 
 class StockActivity : AppCompatActivity() {
 
@@ -34,6 +37,10 @@ class StockActivity : AppCompatActivity() {
     private var items: List<StockResponseDto> = emptyList()
     private lateinit var adapter: StockListAdapter
     private var productNameById: Map<Int, String> = emptyMap()
+    private var currentOffset = 0
+    private val pageSize = 10
+    private var totalCount = 0
+    private var isLoading = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,7 +51,7 @@ class StockActivity : AppCompatActivity() {
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
         
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
-snack = SendSnack(binding.root)
+        snack = SendSnack(binding.root)
 
         binding.btnBack.setOnClickListener { finish() }
         binding.btnAlertsQuick.setOnClickListener {
@@ -58,26 +65,53 @@ snack = SendSnack(binding.root)
         adapter = StockListAdapter { stock -> showEditDialog(stock) }
         binding.rvStocks.layoutManager = LinearLayoutManager(this)
         binding.rvStocks.adapter = adapter
+
+        binding.btnPrevPage.setOnClickListener {
+            if (currentOffset <= 0) return@setOnClickListener
+            currentOffset = (currentOffset - pageSize).coerceAtLeast(0)
+            loadStocks()
+            binding.rvStocks.scrollToPosition(0)
+        }
+        binding.btnNextPage.setOnClickListener {
+            val shown = (currentOffset + items.size).coerceAtMost(totalCount)
+            if (shown >= totalCount) return@setOnClickListener
+            currentOffset += pageSize
+            loadStocks()
+            binding.rvStocks.scrollToPosition(0)
+        }
+
+        // Initial button styling
+        applyPagerButtonStyle(binding.btnPrevPage, enabled = false)
+        applyPagerButtonStyle(binding.btnNextPage, enabled = false)
     }
 
     override fun onResume() {
         super.onResume()
+        currentOffset = 0
         loadStocks()
     }
 
     private fun loadStocks() {
+        if (isLoading) return
+        isLoading = true
         lifecycleScope.launch {
             try {
-                val res = NetworkModule.api.listStocks()
+                val res = NetworkModule.api.listStocks(limit = pageSize, offset = currentOffset)
                 if (res.isSuccessful && res.body() != null) {
                     val pending = buildPendingStocks()
-                    items = pending + res.body()!!.items
+                    val pageItems = res.body()!!.items
+                    totalCount = res.body()!!.total
+                    items = (pending + pageItems).sortedBy { it.id }
                     productNameById = resolveProductNames(items)
                     adapter.submit(items, productNameById)
+                    updatePageInfo(pageItems.size, pending.size)
                 } else {
                     val pending = buildPendingStocks()
-                    productNameById = resolveProductNames(pending)
-                    adapter.submit(pending, productNameById)
+                    val ordered = pending.sortedBy { it.id }
+                    productNameById = resolveProductNames(ordered)
+                    adapter.submit(ordered, productNameById)
+                    totalCount = pending.size
+                    updatePageInfo(ordered.size, ordered.size)
                     if (res.code() == 403) {
                         UiNotifier.showBlocking(
                             this@StockActivity,
@@ -91,15 +125,65 @@ snack = SendSnack(binding.root)
                 }
             } catch (e: Exception) {
                 val pending = buildPendingStocks()
-                productNameById = resolveProductNames(pending)
-                adapter.submit(pending, productNameById)
+                val ordered = pending.sortedBy { it.id }
+                productNameById = resolveProductNames(ordered)
+                adapter.submit(ordered, productNameById)
+                totalCount = pending.size
+                updatePageInfo(ordered.size, ordered.size)
                 if (e is IOException) {
                     snack.showError("Sin conexión a Internet")
                 } else {
                     snack.showError("❌ Error de red: ${e.message}")
                 }
+            } finally {
+                isLoading = false
             }
         }
+    }
+
+    private fun updatePageInfo(pageSizeLoaded: Int, pendingCount: Int) {
+        val shownOnline = (currentOffset + pageSizeLoaded).coerceAtMost(totalCount)
+        val label = if (totalCount > 0) {
+            "Mostrando $shownOnline / $totalCount"
+        } else {
+            "Mostrando $pendingCount / $pendingCount"
+        }
+        binding.tvStockPageInfo.text = label
+        val prevEnabled = currentOffset > 0
+        val nextEnabled = shownOnline < totalCount
+        binding.btnPrevPage.isEnabled = prevEnabled
+        binding.btnNextPage.isEnabled = nextEnabled
+        applyPagerButtonStyle(binding.btnPrevPage, prevEnabled)
+        applyPagerButtonStyle(binding.btnNextPage, nextEnabled)
+    }
+
+    private fun applyPagerButtonStyle(button: Button, enabled: Boolean) {
+        button.backgroundTintList = null
+        if (!enabled) {
+            val colors = intArrayOf(
+                ContextCompat.getColor(this, android.R.color.darker_gray),
+                ContextCompat.getColor(this, android.R.color.darker_gray)
+            )
+            val drawable = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
+                cornerRadius = resources.displayMetrics.density * 18f
+                setStroke((resources.displayMetrics.density * 1f).toInt(), 0xFFB0B0B0.toInt())
+            }
+            button.background = drawable
+            button.setTextColor(ContextCompat.getColor(this, android.R.color.white))
+            return
+        }
+        val colors = intArrayOf(
+            ContextCompat.getColor(this, R.color.icon_grad_start),
+            ContextCompat.getColor(this, R.color.icon_grad_mid2),
+            ContextCompat.getColor(this, R.color.icon_grad_mid1),
+            ContextCompat.getColor(this, R.color.icon_grad_end)
+        )
+        val drawable = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
+            cornerRadius = resources.displayMetrics.density * 18f
+            setStroke((resources.displayMetrics.density * 1f).toInt(), 0x33000000)
+        }
+        button.background = drawable
+        button.setTextColor(ContextCompat.getColor(this, android.R.color.white))
     }
 
     private suspend fun resolveProductNames(stocks: List<StockResponseDto>): Map<Int, String> {

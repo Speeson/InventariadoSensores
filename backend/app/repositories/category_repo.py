@@ -16,12 +16,20 @@ def get_by_name(db: Session, name: str) -> Category | None:
     )
 
 def list_categories(
-    db: Session, *, name: str | None = None, limit: int = 50, offset: int = 0
+    db: Session,
+    *,
+    name: str | None = None,
+    order_dir: str | None = "asc",
+    limit: int = 50,
+    offset: int = 0,
 ) -> Tuple[Iterable[Category], int]:
     filters = []
     if name:
         filters.append(func.lower(Category.name).ilike(f"%{_normalize(name).lower()}%"))
-    stmt = select(Category).where(*filters).order_by(Category.created_at.desc())
+    if order_dir == "desc":
+        stmt = select(Category).where(*filters).order_by(Category.id.desc())
+    else:
+        stmt = select(Category).where(*filters).order_by(Category.id.asc())
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
     items = db.scalars(stmt.offset(offset).limit(limit)).all()
     return items, total

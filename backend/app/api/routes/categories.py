@@ -20,10 +20,22 @@ router = APIRouter(prefix="/categories", tags=["categories"])
 def list_categories(
     db: Session = Depends(get_db),
     name: str | None = Query(None),
+    order_by: str | None = Query("id"),
+    order_dir: str | None = Query("asc"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
-    items, total = category_repo.list_categories(db, name=name, limit=limit, offset=offset)
+    if order_by != "id":
+        raise HTTPException(status_code=400, detail="order_by debe ser 'id'")
+    if order_dir not in {"asc", "desc"}:
+        raise HTTPException(status_code=400, detail="order_dir debe ser 'asc' o 'desc'")
+    items, total = category_repo.list_categories(
+        db,
+        name=name,
+        order_dir=order_dir,
+        limit=limit,
+        offset=offset,
+    )
     return CategoryListResponse(items=items, total=total, limit=limit, offset=offset)
 
 @router.get("/{category_id}", response_model=CategoryResponse, dependencies=[Depends(get_current_user)])

@@ -199,6 +199,7 @@ def process_event(event_id: int) -> dict:
             movement = Movement(
                 product_id=event.product_id,
                 quantity=event.delta,
+                delta=stock_delta,
                 user_id=None,
                 movement_type=movement_type,
                 movement_source=event.source,

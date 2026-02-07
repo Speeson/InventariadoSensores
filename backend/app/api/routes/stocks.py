@@ -24,13 +24,20 @@ def list_stocks(
     db: Session = Depends(get_db),
     product_id: int | None = Query(None),
     location: str | None = Query(None),
+    order_by: str | None = Query("id"),
+    order_dir: str | None = Query("asc"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
+    if order_by != "id":
+        raise HTTPException(status_code=400, detail="order_by debe ser 'id'")
+    if order_dir not in {"asc", "desc"}:
+        raise HTTPException(status_code=400, detail="order_dir debe ser 'asc' o 'desc'")
     items, total = stock_repo.list_stocks(
         db,
         product_id=product_id,
         location=location,
+        order_dir=order_dir,
         limit=limit,
         offset=offset,
     )

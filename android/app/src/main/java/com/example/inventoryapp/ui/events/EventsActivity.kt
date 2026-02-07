@@ -195,8 +195,9 @@ snack = SendSnack(binding.root)
 
                     val remoteItems = remoteEvents.map { it.toRowUi(productNames) }
                     val pendingWithNames = pendingItems.map { it.copy(productName = productNames[it.productId]) }
-                    items = pendingItems + remoteItems
-                    adapter.submit(pendingWithNames + remoteItems)
+                    val ordered = (pendingWithNames + remoteItems).sortedByDescending { it.id }
+                    items = ordered
+                    adapter.submit(ordered)
                     if (withSnack) snack.showSuccess("OK: Eventos cargados")
                 } else {
                     val ex = res.exceptionOrNull()
@@ -210,8 +211,9 @@ snack = SendSnack(binding.root)
                     val pendingItems = buildPendingRows()
                     val productNames = fetchProductNames(pendingItems.map { it.productId }.toSet())
                     val pendingWithNames = pendingItems.map { it.copy(productName = productNames[it.productId]) }
-                    items = pendingWithNames
-                    adapter.submit(items)
+                    val ordered = pendingWithNames.sortedByDescending { it.id }
+                    items = ordered
+                    adapter.submit(ordered)
                 }
             } catch (e: Exception) {
                 if (withSnack) {
@@ -224,8 +226,9 @@ snack = SendSnack(binding.root)
                 val pendingItems = buildPendingRows()
                 val productNames = fetchProductNames(pendingItems.map { it.productId }.toSet())
                 val pendingWithNames = pendingItems.map { it.copy(productName = productNames[it.productId]) }
-                items = pendingWithNames
-                adapter.submit(items)
+                val ordered = pendingWithNames.sortedByDescending { it.id }
+                items = ordered
+                adapter.submit(ordered)
             }
         }
     }

@@ -67,11 +67,17 @@ def list_movements(
     user_id: int | None = Query(None),
     date_from: datetime | None = Query(None),
     date_to: datetime | None = Query(None),
+    order_by: str | None = Query("created_at"),
+    order_dir: str | None = Query("desc"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
     if date_from and date_to and date_from > date_to:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="date_from no puede ser mayor que date_to")
+    if order_by != "created_at":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="order_by debe ser 'created_at'")
+    if order_dir not in {"asc", "desc"}:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="order_dir debe ser 'asc' o 'desc'")
 
     items, total = movement_repo.list_movements(
         db,
@@ -81,6 +87,7 @@ def list_movements(
         user_id=user_id,
         date_from=date_from,
         date_to=date_to,
+        order_dir=order_dir,
         limit=limit,
         offset=offset,
     )
