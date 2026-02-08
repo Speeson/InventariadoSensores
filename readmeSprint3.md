@@ -150,3 +150,45 @@ Objetivo: mejorar UX en login y reforzar seguridad.
 - Validación de sesión al abrir: si hay token, se valida con `/users/me` antes de entrar.
 - Si no hay red y existe sesión válida previa (cache de usuario/rol), se permite entrar en modo offline.
 - Si no hay sesión válida previa, se mantiene en login.
+
+## Importación CSV (Eventos + Transferencias) con auditoría y review
+
+Objetivo: importar lotes CSV como **eventos** (IN/OUT/ADJUST) y **transferencias** (dos movimientos con mismo `transfer_id`), con trazabilidad completa, cuarentena y revisión.
+
+Reglas clave:
+- CSV de eventos: `type` ∈ `IN|OUT|ADJUST`.
+- SKU y barcode **siempre obligatorios**.
+- `category_id` y `location_id` **numéricos y deben existir** (no se crean).
+- Si no existe el producto (sku/barcode), se **crea** (solo si no hay conflictos).
+- Si hay conflicto o duda razonable → **review** (suggest & review).
+- Errores no bloquean el lote (cuarentena).
+
+Tablas nuevas:
+- `import_batches`: auditoría por lote (usuario, fecha, totales).
+- `import_errors`: filas con error (cuarentena).
+- `import_reviews`: filas con duda/sugerencias.
+
+Endpoints:
+- `POST /imports/events/csv`
+- `POST /imports/transfers/csv`
+- `GET /imports/reviews`
+- `POST /imports/reviews/{id}/approve`
+- `POST /imports/reviews/{id}/reject`
+
+CSV ejemplos (carpeta):
+- `backend/context/import_samples/events_sample.csv`
+- `backend/context/import_samples/events_sample_review.csv`
+- `backend/context/import_samples/transfers_sample.csv`
+
+Flujo de review:
+- `approve` aplica la fila y genera movimientos/transferencias.
+- `reject` manda la fila a `import_errors`.
+
+Seed extra para pruebas:
+- `backend/scripts/seed2_db.py` crea un batch de prueba con 1 error + 1 review.
+  - Ejecutar **desde** `backend/`:
+    - `docker compose exec -w /app api python -m scripts.seed2_db`
+
+Notas:
+- El import usa `fuzzy_threshold` (default `0.9`) para sugerir duplicados.
+- Las transferencias se aplican como **dos movimientos** con el mismo `transfer_id`.

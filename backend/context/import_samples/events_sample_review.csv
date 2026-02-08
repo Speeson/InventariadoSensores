@@ -1,0 +1,2 @@
+type,sku,barcode,name,category_id,location_id,quantity
+IN,CPU-R7-9099,8400000000004,Ryzen 7 9099,1,1,5

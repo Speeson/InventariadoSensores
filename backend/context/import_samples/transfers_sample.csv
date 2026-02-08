@@ -1,0 +1,2 @@
+sku,barcode,name,category_id,from_location_id,to_location_id,quantity
+CPU-R7-9900,8400000000001,Procesador AMD Ryzen 7 9900,1,1,2,4

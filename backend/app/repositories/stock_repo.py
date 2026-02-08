@@ -29,6 +29,13 @@ def get_by_product_and_location(db: Session, product_id: int, location: str) -> 
     )
 
 
+def select_by_product_and_location_id(*, product_id: int, location_id: int):
+    return select(Stock).where(
+        Stock.product_id == product_id,
+        Stock.location_id == location_id,
+    )
+
+
 def list_stocks(
     db: Session,
     *,

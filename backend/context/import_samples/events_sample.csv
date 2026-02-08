@@ -1,0 +1,4 @@
+type,sku,barcode,name,category_id,location_id,quantity
+IN,CPU-R7-9900,8400000000001,Procesador AMD Ryzen 7 9900,1,1,10
+OUT,SSD-1TB-NVME,8400000000002,SSD NVMe 1TB,2,1,3
+ADJUST,RAM-32-3600,8400000000003,Memoria RAM 32GB DDR4 3600,3,2,-2
