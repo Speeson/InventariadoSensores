@@ -112,3 +112,31 @@ UI pantalla etiqueta:
 - Botones cuadrados con iconos: `print.png` y `niimbot.png` (misma altura, lado a lado).
 - Botones y acciones con tema morado suave.
 - Título "Etiqueta" visible con el estilo de otras actividades.
+
+## Cache híbrido (Redis + Room) y modo offline
+
+Objetivo: acelerar lecturas en online y permitir uso en offline con datos cacheados.
+
+Backend (Redis):
+- Cache de listados: productos, stock, eventos, movimientos, categorías, umbrales, ubicaciones, reportes.
+- TTLs:
+  - Listados: 300s
+  - Catálogos estáticos (categorías/ubicaciones): 3600s
+- Invalida cache en create/update/delete (y movimientos invalida reportes).
+- Nota seed: los movimientos del seed solo se insertan si la tabla está vacía (evita duplicados al reiniciar contenedor).
+
+Android (Room + cache-first):
+- Cache local para listados (Room).
+- Estrategia cache-first: mostrar cache al entrar y refrescar en background.
+- Offline: si no hay red, se usa cache local sin bloqueo.
+- Dropdowns (categorías/ubicaciones) leen de cache si la API falla.
+- Resolución de nombres de producto en offline para eventos/stock/movimientos.
+- Indicador “offline” en tarjetas: icono + color de texto.
+
+## Indicador visual Online/Offline
+
+Objetivo: indicar estado de conexión de forma clara y no intrusiva.
+
+- Barra superior fina (4dp) en todas las pantallas principales.
+- Verde cuando hay conexión, roja cuando está offline.
+- Avisos emergentes centrados cuando se pierde/restaura la conexión (sin spam).
