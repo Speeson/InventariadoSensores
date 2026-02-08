@@ -73,8 +73,16 @@ def get_stock(stock_id: int, db: Session = Depends(get_db), user=Depends(get_cur
     stock = stock_repo.get(db, stock_id)
     if not stock:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Stock no encontrado")
-    cache_set(cache_key, stock, ttl_seconds=300)
-    return stock
+    payload = StockResponse(
+        id=stock.id,
+        product_id=stock.product_id,
+        location=stock.location or "N/D",
+        quantity=stock.quantity,
+        created_at=stock.created_at,
+        updated_at=stock.updated_at,
+    )
+    cache_set(cache_key, payload, ttl_seconds=300)
+    return payload
 
 
 @router.post(

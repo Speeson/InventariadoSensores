@@ -120,11 +120,18 @@ object NetworkModule {
                     val response = chain.proceed(req)
                     notifyNetworkUpOnce()
                     if (response.code >= 500) {
+                        val path = response.request.url.encodedPath
+                        val userMessage = buildFriendlyServerError(path)
+                        val message = if (isAdminUser()) {
+                            "Error ${response.code} en $path. Revisa logs del backend."
+                        } else {
+                            userMessage
+                        }
                         SystemAlertManager.record(
                             appContext,
                             SystemAlertType.SERVER_ERROR,
                             "Servicio no disponible",
-                            "El servidor respondió ${response.code}. Revisa API/DB/Redis/Celery."
+                            message
                         )
                     } else if (response.code == 401) {
                         SystemAlertManager.record(
@@ -182,5 +189,24 @@ object NetworkModule {
     fun getCustomHost(): String? {
         val prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return prefs.getString(KEY_CUSTOM_HOST, null)
+    }
+
+    private fun isAdminUser(): Boolean {
+        val prefs = appContext.getSharedPreferences("ui_prefs", Context.MODE_PRIVATE)
+        val role = prefs.getString("cached_role", null) ?: return false
+        return role.equals("ADMIN", ignoreCase = true)
+    }
+
+    private fun buildFriendlyServerError(path: String): String {
+        return when {
+            path.startsWith("/stocks/") -> "No se pudo cargar el stock. Intenta de nuevo."
+            path.startsWith("/products/") -> "No se pudo cargar el producto. Intenta de nuevo."
+            path.startsWith("/imports/") -> "No se pudo procesar la importación. Revisa el CSV e inténtalo de nuevo."
+            path.startsWith("/events/") -> "No se pudo cargar eventos. Intenta de nuevo."
+            path.startsWith("/movements/") -> "No se pudo cargar movimientos. Intenta de nuevo."
+            path.startsWith("/alerts/") -> "No se pudieron cargar las alertas. Intenta de nuevo."
+            path.startsWith("/reports/") -> "No se pudo cargar el reporte. Intenta de nuevo."
+            else -> "Ha ocurrido un problema temporal en el servidor. Intenta de nuevo en unos minutos."
+        }
     }
 }

@@ -189,6 +189,50 @@ Seed extra para pruebas:
   - Ejecutar **desde** `backend/`:
     - `docker compose exec -w /app api python -m scripts.seed2_db`
 
+## Notificaciones de errores 500 (usuario vs admin)
+
+Objetivo: evitar mensajes técnicos para usuarios y managers, pero dar detalle al admin.
+
+Android:
+- Si la API responde 500:
+  - `USER` / `MANAGER`: mensaje amigable según endpoint.
+  - `ADMIN`: mensaje técnico con código y ruta (ej: `Error 500 en /stocks/10`).
+  
+Implementación:
+- `android/app/src/main/java/com/example/inventoryapp/data/remote/NetworkModule.kt`
+
+## Frontend Importaciones (Android)
+
+Objetivo: pantalla de importación con tabs, subida de CSV y revisión con bottom sheet.
+
+UI:
+- Nueva tarjeta en Home: **Importar CSV** (grid consistente).
+- Pantalla `Importar CSV` con tabs:
+  - Eventos
+  - Transferencias
+  - Revisiones
+- Formulario de import:
+  - Selector CSV
+  - `dry-run`
+  - `fuzzy threshold`
+  - Resumen + lista de errores
+- Reviews:
+  - Lista compacta
+  - Bottom sheet con payload legible, sugerencias y botón “Ver JSON”
+  - Acciones: Aprobar / Rechazar
+
+Archivos clave:
+- `android/app/src/main/res/layout/activity_imports.xml`
+- `android/app/src/main/res/layout/fragment_import_form.xml`
+- `android/app/src/main/res/layout/fragment_import_reviews.xml`
+- `android/app/src/main/res/layout/dialog_import_review_bottom_sheet.xml`
+- `android/app/src/main/java/com/example/inventoryapp/ui/imports/ImportsActivity.kt`
+- `android/app/src/main/java/com/example/inventoryapp/ui/imports/ImportFormFragment.kt`
+- `android/app/src/main/java/com/example/inventoryapp/ui/imports/ImportEventsFragment.kt`
+- `android/app/src/main/java/com/example/inventoryapp/ui/imports/ImportTransfersFragment.kt`
+- `android/app/src/main/java/com/example/inventoryapp/ui/imports/ImportReviewsFragment.kt`
+- `android/app/src/main/java/com/example/inventoryapp/ui/imports/ImportsPagerAdapter.kt`
+
 Notas:
 - El import usa `fuzzy_threshold` (default `0.9`) para sugerir duplicados.
 - Las transferencias se aplican como **dos movimientos** con el mismo `transfer_id`.
