@@ -33,7 +33,7 @@
                 android:id="@+id/tvUserName"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Usuario"
+                android:text="Cargando..."
                 android:textStyle="bold"
                 android:textSize="16sp"
                 android:textColor="@android:color/white" />
@@ -42,7 +42,7 @@
                 android:id="@+id/tvUserEmail"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="email@demo.com"
+                android:text=""
                 android:textSize="13sp"
                 android:textColor="@android:color/white"
                 android:alpha="0.9" />
@@ -51,7 +51,7 @@
                 android:id="@+id/tvUserRole"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="ROL"
+                android:text=""
                 android:textSize="12sp"
                 android:textColor="@android:color/white"
                 android:alpha="0.85" />

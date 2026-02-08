@@ -2,6 +2,7 @@ package com.example.inventoryapp.ui.auth
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.ArrayAdapter
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -14,11 +15,14 @@ import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.home.HomeActivity
 import kotlinx.coroutines.launch
 import com.example.inventoryapp.R
+import java.util.LinkedHashSet
+import android.content.Context
 
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginBinding
     private lateinit var session: SessionManager
+    private lateinit var emailAdapter: ArrayAdapter<String>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,11 +30,12 @@ class LoginActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         session = SessionManager(this)
+        setupEmailAutocomplete()
+        NetworkModule.forceOnline()
 
-        // Si ya hay token, podrías saltar el login (opcional)
+        // Si ya hay token, validar contra la API antes de entrar.
         if (!session.getToken().isNullOrBlank()) {
-            startActivity(Intent(this, HomeActivity::class.java))
-            finish()
+            validateExistingSession()
         }
 
         binding.btnLogin.setOnClickListener {
@@ -66,6 +71,44 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupEmailAutocomplete() {
+        val prefs = getSharedPreferences("login_prefs", MODE_PRIVATE)
+        val savedEmail = prefs.getString("saved_email", "") ?: ""
+        val recent = prefs.getStringSet("recent_emails", emptySet()) ?: emptySet()
+        val list = recent.toMutableList()
+        if (savedEmail.isNotBlank() && !list.contains(savedEmail)) {
+            list.add(0, savedEmail)
+        }
+        emailAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, list)
+        binding.etUser.setAdapter(emailAdapter)
+        if (savedEmail.isNotBlank()) {
+            binding.etUser.setText(savedEmail, false)
+            binding.cbRememberEmail.isChecked = true
+        }
+    }
+
+    private fun persistEmailIfNeeded(email: String) {
+        val prefs = getSharedPreferences("login_prefs", MODE_PRIVATE)
+        val recent = LinkedHashSet(prefs.getStringSet("recent_emails", emptySet()) ?: emptySet())
+        if (email.isNotBlank()) {
+            recent.remove(email)
+            recent.add(email)
+            while (recent.size > 8) {
+                val it = recent.iterator()
+                if (it.hasNext()) {
+                    it.next()
+                    it.remove()
+                }
+            }
+        }
+        prefs.edit().putStringSet("recent_emails", recent).apply()
+        if (binding.cbRememberEmail.isChecked && email.isNotBlank()) {
+            prefs.edit().putString("saved_email", email).apply()
+        } else {
+            prefs.edit().remove("saved_email").apply()
+        }
+    }
+
     private fun loginWithApi(user: String, pass: String) {
         setLoading(true)
 
@@ -76,9 +119,12 @@ class LoginActivity : AppCompatActivity() {
                 if (response.isSuccessful && response.body() != null) {
                     val token = response.body()!!.accessToken
                     session.saveToken(token)
+                    clearCachedUiRole()
+                    NetworkModule.forceOnline()
 
                     UiNotifier.show(this@LoginActivity, "¡Bienvenido!")
 
+                    persistEmailIfNeeded(user)
                     startActivity(Intent(this@LoginActivity, HomeActivity::class.java))
                     finish()
                 } else {
@@ -94,6 +140,55 @@ class LoginActivity : AppCompatActivity() {
                 setLoading(false)
             }
         }
+    }
+
+    private fun validateExistingSession() {
+        setUiEnabled(false)
+        setLoading(true)
+        lifecycleScope.launch {
+            try {
+                val res = NetworkModule.api.me()
+                if (res.isSuccessful && res.body() != null) {
+                    startActivity(Intent(this@LoginActivity, HomeActivity::class.java))
+                    finish()
+                } else {
+                    session.clearToken()
+                    clearCachedUiRole()
+                    UiNotifier.show(this@LoginActivity, "Sesi?n inv?lida. Inicia sesi?n.")
+                }
+            } catch (e: Exception) {
+                if (hasCachedSession()) {
+                    UiNotifier.show(this@LoginActivity, "Sin conexi?n. Entrando en modo offline.")
+                    startActivity(Intent(this@LoginActivity, HomeActivity::class.java))
+                    finish()
+                } else {
+                    session.clearToken()
+                    clearCachedUiRole()
+                    UiNotifier.show(this@LoginActivity, "Sin conexi?n. Inicia sesi?n cuando haya red.")
+                }
+            } finally {
+                setUiEnabled(true)
+                setLoading(false)
+            }
+        }
+    }
+
+    private fun hasCachedSession(): Boolean {
+        val prefs = getSharedPreferences("ui_prefs", Context.MODE_PRIVATE)
+        val cachedRole = prefs.getString("cached_role", null)
+        val cachedUserId = prefs.getInt("cached_user_id", -1)
+        val cachedToken = prefs.getString("cached_token", null)
+        val token = session.getToken()
+        return !cachedRole.isNullOrBlank() && cachedUserId > 0 && !cachedToken.isNullOrBlank() && cachedToken == token
+    }
+
+    private fun clearCachedUiRole() {
+        val prefs = getSharedPreferences("ui_prefs", Context.MODE_PRIVATE)
+        prefs.edit()
+            .remove("cached_role")
+            .remove("cached_user_id")
+            .remove("cached_token")
+            .apply()
     }
 
     private fun showRegisterDialog() {
@@ -137,11 +232,14 @@ class LoginActivity : AppCompatActivity() {
                 if (response.isSuccessful && response.body() != null) {
                     val token = response.body()!!.accessToken
                     session.saveToken(token)
+                    clearCachedUiRole()
+                    NetworkModule.forceOnline()
 
                     UiNotifier.show(this@LoginActivity, "Cuenta creada")
                     dialog.dismiss()
 
                     // Ir a Home y pasar email para mostrar bienvenida
+                    persistEmailIfNeeded(email)
                     val i = Intent(this@LoginActivity, HomeActivity::class.java)
                     i.putExtra("welcome_email", email)
                     startActivity(i)

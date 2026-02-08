@@ -71,7 +71,7 @@
                         app:boxBackgroundMode="filled"
                         app:startIconDrawable="@android:drawable/ic_dialog_email">
 
-                        <com.google.android.material.textfield.TextInputEditText
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
                             android:id="@+id/etUser"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -93,6 +93,14 @@
                             android:hint="Contraseña"
                             android:inputType="textPassword" />
                     </com.google.android.material.textfield.TextInputLayout>
+
+                    <CheckBox
+                        android:id="@+id/cbRememberEmail"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Recordar email"
+                        android:textSize="12sp"
+                        android:layout_marginTop="6dp" />
 
                     <TextView
                         android:id="@+id/tvForgot"

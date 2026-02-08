@@ -140,3 +140,13 @@ Objetivo: indicar estado de conexión de forma clara y no intrusiva.
 - Barra superior fina (4dp) en todas las pantallas principales.
 - Verde cuando hay conexión, roja cuando está offline.
 - Avisos emergentes centrados cuando se pierde/restaura la conexión (sin spam).
+
+## Login: autocompletar y recordar email + validación de sesión
+
+Objetivo: mejorar UX en login y reforzar seguridad.
+
+- Autocompletado de emails usados recientemente (hasta 8).
+- Opción “Recordar email” para precargarlo en el login.
+- Validación de sesión al abrir: si hay token, se valida con `/users/me` antes de entrar.
+- Si no hay red y existe sesión válida previa (cache de usuario/rol), se permite entrar en modo offline.
+- Si no hay sesión válida previa, se mantiene en login.

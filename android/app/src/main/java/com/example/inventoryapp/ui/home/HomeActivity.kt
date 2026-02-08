@@ -64,6 +64,7 @@ class HomeActivity : AppCompatActivity() {
         NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
 
         session = SessionManager(this)
+        NetworkModule.forceOnline()
         applyTitleGradient()
 
         val isDark = prefs.getBoolean("dark_mode", false)

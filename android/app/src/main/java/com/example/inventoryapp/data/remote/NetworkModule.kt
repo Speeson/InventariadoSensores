@@ -85,6 +85,12 @@ object NetworkModule {
         }
     }
 
+    fun forceOnline() {
+        networkDown = false
+        lastProbeAt = 0L
+        _offlineState.value = false
+    }
+
     private val client: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
