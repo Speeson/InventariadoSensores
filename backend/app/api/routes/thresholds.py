@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, require_roles
+from app.api.deps import require_roles
+from app.cache.redis_cache import cache_get, cache_set, cache_invalidate_prefix, make_key
 from app.db.deps import get_db
 from app.models.enums import UserRole
 from app.repositories import threshold_repo, product_repo
@@ -16,35 +17,67 @@ class ThresholdListResponse(BaseModel):
 
 router = APIRouter(prefix="/thresholds", tags=["thresholds"])
 
-@router.get("/", response_model=ThresholdListResponse, dependencies=[Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value))])
+@router.get("/", response_model=ThresholdListResponse)
 def list_thresholds(
     db: Session = Depends(get_db),
+    user = Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value)),
     product_id: int | None = Query(None),
     location: str | None = Query(None),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
+    cache_key = make_key(
+        "thresholds:list",
+        user.id if user else None,
+        {"product_id": product_id, "location": location, "limit": limit, "offset": offset},
+    )
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached
     items, total = threshold_repo.list_thresholds(db, product_id=product_id, location=location, limit=limit, offset=offset)
-    return ThresholdListResponse(items=items, total=total, limit=limit, offset=offset)
+    payload = ThresholdListResponse(items=items, total=total, limit=limit, offset=offset)
+    cache_set(cache_key, payload, ttl_seconds=300)
+    return payload
 
-@router.get("/{threshold_id}", response_model=ThresholdResponse, dependencies=[Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value))])
-def get_threshold(threshold_id: int, db: Session = Depends(get_db)):
+@router.get("/{threshold_id}", response_model=ThresholdResponse)
+def get_threshold(
+    threshold_id: int,
+    db: Session = Depends(get_db),
+    user = Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value)),
+):
+    cache_key = make_key("thresholds:detail", user.id if user else None, {"id": threshold_id})
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached
     threshold = threshold_repo.get(db, threshold_id)
     if not threshold:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Threshold no encontrado")
+    cache_set(cache_key, threshold, ttl_seconds=300)
     return threshold
 
-@router.post("/", response_model=ThresholdResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value))])
-def create_threshold(payload: ThresholdCreate, db: Session = Depends(get_db)):
+@router.post("/", response_model=ThresholdResponse, status_code=status.HTTP_201_CREATED)
+def create_threshold(
+    payload: ThresholdCreate,
+    db: Session = Depends(get_db),
+    user = Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value)),
+):
     if not product_repo.get(db, payload.product_id):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Producto no existe")
     dup =  threshold_repo.get_by_product_and_location(db, payload.product_id, payload.location)
     if dup:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ya existe un threshold para esa ubicación")
-    return threshold_repo.create_threshold(db, product_id=payload.product_id, location=payload.location, min_quantity=payload.min_quantity)
+    threshold = threshold_repo.create_threshold(db, product_id=payload.product_id, location=payload.location, min_quantity=payload.min_quantity)
+    cache_invalidate_prefix("thresholds:list")
+    cache_invalidate_prefix("thresholds:detail")
+    return threshold
 
-@router.patch("/{threshold_id}", response_model=ThresholdResponse, dependencies=[Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value))])
-def update_threshold(threshold_id: int, payload: ThresholdUpdate, db: Session = Depends(get_db)):
+@router.patch("/{threshold_id}", response_model=ThresholdResponse)
+def update_threshold(
+    threshold_id: int,
+    payload: ThresholdUpdate,
+    db: Session = Depends(get_db),
+    user = Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value)),
+):
     threshold = threshold_repo.get(db, threshold_id)
     if not threshold:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Threshold no encontrado")
@@ -52,12 +85,21 @@ def update_threshold(threshold_id: int, payload: ThresholdUpdate, db: Session = 
         dup =  threshold_repo.get_by_product_and_location(db, threshold.product_id, payload.location)
         if dup and dup.id != threshold.id:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ya existe un threshold para esa ubicación")
-    return threshold_repo.update_threshold(db, threshold, location=payload.location, min_quantity=payload.min_quantity)
+    updated = threshold_repo.update_threshold(db, threshold, location=payload.location, min_quantity=payload.min_quantity)
+    cache_invalidate_prefix("thresholds:list")
+    cache_invalidate_prefix("thresholds:detail")
+    return updated
 
-@router.delete("/{threshold_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value))])
-def delete_threshold(threshold_id: int, db: Session = Depends(get_db)):
+@router.delete("/{threshold_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_threshold(
+    threshold_id: int,
+    db: Session = Depends(get_db),
+    user = Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value)),
+):
     threshold = threshold_repo.get(db, threshold_id)
     if not threshold:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Threshold no encontrado")
     threshold_repo.delete_threshold(db, threshold)
+    cache_invalidate_prefix("thresholds:list")
+    cache_invalidate_prefix("thresholds:detail")
     return None

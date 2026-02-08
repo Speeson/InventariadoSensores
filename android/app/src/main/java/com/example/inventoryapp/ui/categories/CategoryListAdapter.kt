@@ -3,6 +3,8 @@ package com.example.inventoryapp.ui.categories
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
+import androidx.core.content.ContextCompat
+import com.example.inventoryapp.R
 import com.example.inventoryapp.data.remote.model.CategoryResponseDto
 import com.example.inventoryapp.databinding.ItemCategoryCardBinding
 
@@ -12,7 +14,10 @@ class CategoryListAdapter(
 
     private val items = mutableListOf<CategoryResponseDto>()
 
-    inner class VH(val binding: ItemCategoryCardBinding) : RecyclerView.ViewHolder(binding.root)
+    inner class VH(val binding: ItemCategoryCardBinding) : RecyclerView.ViewHolder(binding.root) {
+        val nameColor = binding.tvName.currentTextColor
+        val metaColor = binding.tvMeta.currentTextColor
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
         val binding = ItemCategoryCardBinding.inflate(LayoutInflater.from(parent.context), parent, false)
@@ -30,6 +35,14 @@ class CategoryListAdapter(
         holder.binding.tvMeta.text = "ID: $idLabel"
         holder.binding.ivWarning.visibility =
             if (isOffline) android.view.View.VISIBLE else android.view.View.GONE
+        val offlineColor = ContextCompat.getColor(holder.itemView.context, R.color.offline_text)
+        if (isOffline) {
+            holder.binding.tvName.setTextColor(offlineColor)
+            holder.binding.tvMeta.setTextColor(offlineColor)
+        } else {
+            holder.binding.tvName.setTextColor(holder.nameColor)
+            holder.binding.tvMeta.setTextColor(holder.metaColor)
+        }
         holder.binding.root.setOnClickListener { onClick(c) }
     }
 

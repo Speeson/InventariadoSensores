@@ -17,9 +17,12 @@ import com.example.inventoryapp.R
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.PendingType
 import com.example.inventoryapp.data.local.SessionManager
+import com.example.inventoryapp.data.local.cache.CacheKeys
+import com.example.inventoryapp.data.local.cache.CacheStore
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.model.CategoryCreateDto
 import com.example.inventoryapp.data.remote.model.CategoryResponseDto
+import com.example.inventoryapp.data.remote.model.CategoryListResponseDto
 import com.example.inventoryapp.data.remote.model.CategoryUpdateDto
 import com.example.inventoryapp.databinding.ActivityCategoriesBinding
 import com.example.inventoryapp.ui.alerts.AlertsActivity
@@ -28,6 +31,7 @@ import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.GradientIconUtil
 import com.example.inventoryapp.ui.common.UiNotifier
+import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -37,6 +41,7 @@ class CategoriesActivity : AppCompatActivity() {
     private lateinit var binding: ActivityCategoriesBinding
     private lateinit var session: SessionManager
     private lateinit var adapter: CategoryListAdapter
+    private lateinit var cacheStore: CacheStore
     private var items: List<CategoryResponseDto> = emptyList()
     private val gson = Gson()
     private var currentOffset = 0
@@ -50,6 +55,7 @@ class CategoriesActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityCategoriesBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
 
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
         GradientIconUtil.applyGradient(binding.ivCreateCategoryAdd, R.drawable.add)
@@ -58,6 +64,7 @@ class CategoriesActivity : AppCompatActivity() {
 
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
         session = SessionManager(this)
+        cacheStore = CacheStore.getInstance(this)
 
         binding.btnBack.setOnClickListener { finish() }
         binding.btnAlertsQuick.setOnClickListener {
@@ -143,6 +150,7 @@ class CategoriesActivity : AppCompatActivity() {
                 if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
                 if (res.isSuccessful && res.body() != null) {
                     items = listOf(res.body()!!)
+                    cacheStore.put(CacheKeys.detail("categories", id), res.body()!!)
                     adapter.submit(items)
                     totalCount = 1
                     updatePageInfo(items.size, 0)
@@ -153,14 +161,23 @@ class CategoriesActivity : AppCompatActivity() {
                     updatePageInfo(0, 0)
                 }
             } catch (e: Exception) {
-                if (e is IOException) {
-                    UiNotifier.show(this@CategoriesActivity, "Sin conexión a Internet")
+                val cached = cacheStore.get(CacheKeys.detail("categories", id), CategoryResponseDto::class.java)
+                if (cached != null) {
+                    items = listOf(cached)
+                    adapter.submit(items)
+                    totalCount = 1
+                    updatePageInfo(items.size, 0)
+                    // Only notify on API failure; cache-first rendering stays silent.
                 } else {
-                    UiNotifier.show(this@CategoriesActivity, "Error de red: ${e.message}")
+                    if (e is IOException) {
+                        UiNotifier.show(this@CategoriesActivity, "Sin conexión a Internet")
+                    } else {
+                        UiNotifier.show(this@CategoriesActivity, "Error de red: ${e.message}")
+                    }
+                    adapter.submit(emptyList())
+                    totalCount = 0
+                    updatePageInfo(0, 0)
                 }
-                adapter.submit(emptyList())
-                totalCount = 0
-                updatePageInfo(0, 0)
             }
         }
     }
@@ -170,9 +187,27 @@ class CategoriesActivity : AppCompatActivity() {
         isLoading = true
         lifecycleScope.launch {
             try {
+                val cacheKey = CacheKeys.list(
+                    "categories",
+                    mapOf(
+                        "name" to name,
+                        "limit" to pageSize,
+                        "offset" to currentOffset
+                    )
+                )
+                val cached = cacheStore.get(cacheKey, CategoryListResponseDto::class.java)
+                if (cached != null) {
+                    val pending = if (name == null && currentOffset == 0) buildPendingCategories() else emptyList()
+                    items = pending + cached.items
+                    totalCount = cached.total
+                    adapter.submit(items)
+                    updatePageInfo(cached.items.size, pending.size)
+                    isLoading = false
+                }
                 val res = NetworkModule.api.listCategories(name = name, limit = pageSize, offset = currentOffset)
                 if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
                 if (res.isSuccessful && res.body() != null) {
+                    cacheStore.put(cacheKey, res.body()!!)
                     val pending = if (name == null && currentOffset == 0) buildPendingCategories() else emptyList()
                     items = pending + res.body()!!.items
                     totalCount = res.body()!!.total
@@ -180,19 +215,47 @@ class CategoriesActivity : AppCompatActivity() {
                     updatePageInfo(res.body()!!.items.size, pending.size)
                 } else {
                     UiNotifier.show(this@CategoriesActivity, ApiErrorFormatter.format(res.code()))
-                    totalCount = 0
-                    updatePageInfo(0, 0)
+                    val cachedOnError = cacheStore.get(cacheKey, CategoryListResponseDto::class.java)
+                    if (cachedOnError != null) {
+                        val pending = if (name == null && currentOffset == 0) buildPendingCategories() else emptyList()
+                        items = pending + cachedOnError.items
+                        totalCount = cachedOnError.total
+                        adapter.submit(items)
+                        updatePageInfo(cachedOnError.items.size, pending.size)
+                        UiNotifier.show(this@CategoriesActivity, "Mostrando categorías en cache")
+                    } else {
+                        totalCount = 0
+                        updatePageInfo(0, 0)
+                    }
                 }
             } catch (e: Exception) {
-                if (e is IOException) {
-                    UiNotifier.show(this@CategoriesActivity, "Sin conexión a Internet")
+                val cacheKey = CacheKeys.list(
+                    "categories",
+                    mapOf(
+                        "name" to name,
+                        "limit" to pageSize,
+                        "offset" to currentOffset
+                    )
+                )
+                val cachedOnError = cacheStore.get(cacheKey, CategoryListResponseDto::class.java)
+                if (cachedOnError != null) {
+                    val pending = if (name == null && currentOffset == 0) buildPendingCategories() else emptyList()
+                    items = pending + cachedOnError.items
+                    totalCount = cachedOnError.total
+                    adapter.submit(items)
+                    updatePageInfo(cachedOnError.items.size, pending.size)
+                    UiNotifier.show(this@CategoriesActivity, "Mostrando categorías en cache")
                 } else {
-                    UiNotifier.show(this@CategoriesActivity, "Error de red: ${e.message}")
+                    if (e is IOException) {
+                        UiNotifier.show(this@CategoriesActivity, "Sin conexión a Internet")
+                    } else {
+                        UiNotifier.show(this@CategoriesActivity, "Error de red: ${e.message}")
+                    }
+                    val pending = if (name == null && currentOffset == 0) buildPendingCategories() else emptyList()
+                    adapter.submit(pending)
+                    totalCount = pending.size
+                    updatePageInfo(pending.size, pending.size)
                 }
-                val pending = if (name == null && currentOffset == 0) buildPendingCategories() else emptyList()
-                adapter.submit(pending)
-                totalCount = pending.size
-                updatePageInfo(pending.size, pending.size)
             } finally {
                 isLoading = false
             }
@@ -211,6 +274,7 @@ class CategoriesActivity : AppCompatActivity() {
                 if (res.isSuccessful) {
                     binding.etCategoryName.setText("")
                     currentOffset = 0
+                    cacheStore.invalidatePrefix("categories")
                     loadCategories()
                 } else {
                     UiNotifier.show(this@CategoriesActivity, ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))
@@ -260,6 +324,7 @@ class CategoriesActivity : AppCompatActivity() {
                 if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
                 if (res.isSuccessful) {
                     currentOffset = 0
+                    cacheStore.invalidatePrefix("categories")
                     loadCategories()
                 } else {
                     UiNotifier.show(this@CategoriesActivity, ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))
@@ -281,6 +346,7 @@ class CategoriesActivity : AppCompatActivity() {
                 if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
                 if (res.isSuccessful) {
                     currentOffset = 0
+                    cacheStore.invalidatePrefix("categories")
                     loadCategories()
                 } else {
                     UiNotifier.show(this@CategoriesActivity, ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))

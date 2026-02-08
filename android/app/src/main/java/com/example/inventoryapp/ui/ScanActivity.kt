@@ -19,6 +19,7 @@ import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.databinding.ActivityScanBinding
 import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.common.UiNotifier
+import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import kotlinx.coroutines.launch
@@ -42,6 +43,7 @@ class ScanActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityScanBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
 
         
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)

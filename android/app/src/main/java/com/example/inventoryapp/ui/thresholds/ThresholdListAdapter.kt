@@ -5,6 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.example.inventoryapp.data.remote.model.ThresholdResponseDto
 import com.example.inventoryapp.databinding.ItemThresholdCardBinding
@@ -22,7 +23,12 @@ class ThresholdListAdapter(
 
     private val items = mutableListOf<ThresholdRowUi>()
 
-    inner class VH(val binding: ItemThresholdCardBinding) : RecyclerView.ViewHolder(binding.root)
+    inner class VH(val binding: ItemThresholdCardBinding) : RecyclerView.ViewHolder(binding.root) {
+        val titleColor = binding.tvTitle.currentTextColor
+        val locationColor = binding.tvLocation.currentTextColor
+        val thresholdColor = binding.tvThreshold.currentTextColor
+        val idColor = binding.tvThresholdId.currentTextColor
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
         val binding = ItemThresholdCardBinding.inflate(LayoutInflater.from(parent.context), parent, false)
@@ -43,6 +49,21 @@ class ThresholdListAdapter(
         holder.binding.tvLocation.text = "Ubicacion: ${t.location ?: "-"}"
         holder.binding.tvThreshold.text = "Umbral: ${t.minQuantity}"
         holder.binding.tvThresholdId.text = "ID $idLabel"
+
+        holder.binding.ivWarning.visibility =
+            if (isOffline) View.VISIBLE else View.GONE
+        val offlineColor = ContextCompat.getColor(holder.itemView.context, R.color.offline_text)
+        if (isOffline) {
+            holder.binding.tvTitle.setTextColor(offlineColor)
+            holder.binding.tvLocation.setTextColor(offlineColor)
+            holder.binding.tvThreshold.setTextColor(offlineColor)
+            holder.binding.tvThresholdId.setTextColor(offlineColor)
+        } else {
+            holder.binding.tvTitle.setTextColor(holder.titleColor)
+            holder.binding.tvLocation.setTextColor(holder.locationColor)
+            holder.binding.tvThreshold.setTextColor(holder.thresholdColor)
+            holder.binding.tvThresholdId.setTextColor(holder.idColor)
+        }
 
         GradientIconUtil.applyGradient(holder.binding.ivThresholdIcon, R.drawable.threshold)
 

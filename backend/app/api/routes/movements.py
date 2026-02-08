@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_roles
+from app.cache.redis_cache import cache_get, cache_set, cache_invalidate_prefix, make_key
 from app.db.deps import get_db
 from app.models.enums import Source, MovementType, UserRole
 from app.schemas.movement import MovementResponse
@@ -58,9 +59,10 @@ class MovementTransferResponse(BaseModel):
 router = APIRouter(prefix="/movements", tags=["movements"])
 
 
-@router.get("/", response_model=MovementListResponse, dependencies=[Depends(get_current_user)])
+@router.get("/", response_model=MovementListResponse)
 def list_movements(
     db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
     product_id: int | None = Query(None),
     movement_type: MovementType | None = Query(None),
     movement_source: Source | None = Query(None),
@@ -79,6 +81,26 @@ def list_movements(
     if order_dir not in {"asc", "desc"}:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="order_dir debe ser 'asc' o 'desc'")
 
+    cache_key = make_key(
+        "movements:list",
+        user.id,
+        {
+            "product_id": product_id,
+            "movement_type": movement_type,
+            "movement_source": movement_source,
+            "user_id": user_id,
+            "date_from": date_from.isoformat() if date_from else None,
+            "date_to": date_to.isoformat() if date_to else None,
+            "order_by": order_by,
+            "order_dir": order_dir,
+            "limit": limit,
+            "offset": offset,
+        },
+    )
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     items, total = movement_repo.list_movements(
         db,
         product_id=product_id,
@@ -91,7 +113,9 @@ def list_movements(
         limit=limit,
         offset=offset,
     )
-    return MovementListResponse(items=items, total=total, limit=limit, offset=offset)
+    payload = MovementListResponse(items=items, total=total, limit=limit, offset=offset)
+    cache_set(cache_key, payload, ttl_seconds=300)
+    return payload
 
 
 @router.post(
@@ -113,6 +137,11 @@ def movement_in(
             location=payload.location,
             source=payload.movement_source,
         )
+        cache_invalidate_prefix("movements:list")
+        cache_invalidate_prefix("stocks:list")
+        cache_invalidate_prefix("stocks:detail")
+        cache_invalidate_prefix("reports:top-consumed")
+        cache_invalidate_prefix("reports:turnover")
         return MovementWithStockResponse(stock=stock, movement=movement)
     except inventory_service.InventoryError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -137,6 +166,11 @@ def movement_out(
             location=payload.location,
             source=payload.movement_source,
         )
+        cache_invalidate_prefix("movements:list")
+        cache_invalidate_prefix("stocks:list")
+        cache_invalidate_prefix("stocks:detail")
+        cache_invalidate_prefix("reports:top-consumed")
+        cache_invalidate_prefix("reports:turnover")
         return MovementWithStockResponse(stock=stock, movement=movement)
     except inventory_service.InventoryError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -161,6 +195,11 @@ def movement_adjust(
             location=payload.location,
             source=payload.movement_source,
         )
+        cache_invalidate_prefix("movements:list")
+        cache_invalidate_prefix("stocks:list")
+        cache_invalidate_prefix("stocks:detail")
+        cache_invalidate_prefix("reports:top-consumed")
+        cache_invalidate_prefix("reports:turnover")
         return MovementWithStockResponse(stock=stock, movement=movement)
     except inventory_service.InventoryError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -186,6 +225,11 @@ def movement_transfer(
             to_location=payload.to_location,
             source=payload.movement_source,
         )
+        cache_invalidate_prefix("movements:list")
+        cache_invalidate_prefix("stocks:list")
+        cache_invalidate_prefix("stocks:detail")
+        cache_invalidate_prefix("reports:top-consumed")
+        cache_invalidate_prefix("reports:turnover")
         return MovementTransferResponse(
             from_stock=from_stock,
             to_stock=to_stock,

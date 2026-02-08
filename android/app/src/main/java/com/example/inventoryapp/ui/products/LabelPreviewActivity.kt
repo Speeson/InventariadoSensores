@@ -4,6 +4,8 @@ import android.content.ContentValues
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
+import android.graphics.Shader
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
@@ -21,6 +23,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.databinding.ActivityLabelPreviewBinding
 import com.example.inventoryapp.ui.common.UiNotifier
+import com.example.inventoryapp.ui.common.NetworkStatusBar
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
@@ -40,6 +43,7 @@ class LabelPreviewActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityLabelPreviewBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
 
         productId = intent.getIntExtra("product_id", 0)
         sku = intent.getStringExtra("product_sku") ?: ""
@@ -48,6 +52,7 @@ class LabelPreviewActivity : AppCompatActivity() {
         binding.btnBack.setOnClickListener { finish() }
         binding.tvTitle.text = "Etiqueta"
         binding.tvMeta.text = "SKU $sku  -  Barcode $barcode"
+        applyTitleGradient()
 
         setupWebView()
 
@@ -70,6 +75,32 @@ class LabelPreviewActivity : AppCompatActivity() {
         binding.webLabel.settings.cacheMode = WebSettings.LOAD_NO_CACHE
         binding.webLabel.clearCache(true)
         binding.webLabel.webViewClient = WebViewClient()
+    }
+
+    private fun applyTitleGradient() {
+        val titleView = binding.tvTitle
+        titleView.post {
+            val text = titleView.text?.toString().orEmpty()
+            if (text.isEmpty()) return@post
+            val width = titleView.paint.measureText(text)
+            if (width <= 0f) return@post
+            val shader = LinearGradient(
+                0f,
+                0f,
+                width,
+                0f,
+                intArrayOf(
+                    getColor(R.color.icon_grad_start),
+                    getColor(R.color.icon_grad_mid2),
+                    getColor(R.color.icon_grad_mid1),
+                    getColor(R.color.icon_grad_end)
+                ),
+                floatArrayOf(0f, 0.35f, 0.7f, 1f),
+                Shader.TileMode.CLAMP
+            )
+            titleView.paint.shader = shader
+            titleView.invalidate()
+        }
     }
 
     private fun loadLabel() {

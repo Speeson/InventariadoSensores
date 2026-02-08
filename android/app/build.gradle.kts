@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    id("kotlin-kapt")
 }
 
 val localHost = (project.findProperty("LOCAL_DEV_HOST") as String?)
@@ -72,6 +73,11 @@ dependencies {
 
     // ✅ ML Kit Barcode Scanning
     implementation("com.google.mlkit:barcode-scanning:17.2.0")
+
+    // ✅ Room (local cache)
+    implementation("androidx.room:room-runtime:2.6.1")
+    kapt("androidx.room:room-compiler:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -6,6 +6,9 @@
     <color name="icon_grad_mid1">#E6ABFF</color>
     <color name="icon_grad_mid2">#1A6DFF</color>
     <color name="icon_grad_end">#C822FF</color>
+    <color name="offline_text">#B00020</color>
+    <color name="offline_bar">#D34B4B</color>
+    <color name="online_bar">#39B36B</color>
     <color name="home_bg">#F4F8FF</color>
     <color name="toggle_idle">#EDE6FF</color>
     <color name="toggle_active">#D6C3FF</color>

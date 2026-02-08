@@ -7,6 +7,7 @@ import android.os.Bundle
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.example.inventoryapp.databinding.ActivityResultBinding
+import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.scan.ScanActivity
 import com.example.inventoryapp.ui.common.GradientIconUtil
@@ -20,6 +21,7 @@ class ResultActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityResultBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
 
         
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)

@@ -5,6 +5,13 @@
     android:layout_height="match_parent"
     android:background="@color/home_bg">
 
+    <View
+        android:id="@+id/viewNetworkBar"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:layout_gravity="top"
+        android:background="@color/online_bar" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -35,7 +42,13 @@
                 android:text="Etiqueta"
                 android:textStyle="bold"
                 android:textSize="18sp"
-                android:textColor="?attr/colorOnSurface" />
+                android:textColor="?attr/colorOnSurface"
+                android:gravity="center"
+                android:textAlignment="center" />
+
+            <View
+                android:layout_width="36dp"
+                android:layout_height="36dp" />
         </LinearLayout>
 
         <com.google.android.material.card.MaterialCardView

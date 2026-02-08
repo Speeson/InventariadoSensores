@@ -18,9 +18,14 @@ import androidx.transition.TransitionManager
 import com.example.inventoryapp.R
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.PendingType
+import com.example.inventoryapp.data.local.cache.CacheKeys
+import com.example.inventoryapp.data.local.cache.CacheStore
+import com.example.inventoryapp.data.local.cache.ProductNameCache
+import com.example.inventoryapp.data.local.cache.ProductNameItem
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.model.MovementAdjustOperationRequest
 import com.example.inventoryapp.data.remote.model.MovementOperationRequest
+import com.example.inventoryapp.data.remote.model.MovementListResponseDto
 import com.example.inventoryapp.data.remote.model.MovementResponseDto
 import com.example.inventoryapp.data.remote.model.MovementSourceDto
 import com.example.inventoryapp.data.remote.model.MovementTransferOperationRequest
@@ -31,6 +36,7 @@ import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 import com.example.inventoryapp.ui.common.GradientIconUtil
 import com.example.inventoryapp.ui.common.SendSnack
 import com.example.inventoryapp.ui.common.UiNotifier
+import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -42,6 +48,7 @@ class MovementsMenuActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMovementsMenuBinding
     private lateinit var snack: SendSnack
     private val gson = Gson()
+    private lateinit var cacheStore: CacheStore
 
     private var items: List<MovementRowUi> = emptyList()
     private var allItems: List<MovementRowUi> = emptyList()
@@ -62,6 +69,7 @@ class MovementsMenuActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMovementsMenuBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
 
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
         GradientIconUtil.applyGradient(binding.ivCreateMovementAdd, R.drawable.add)
@@ -71,6 +79,7 @@ class MovementsMenuActivity : AppCompatActivity() {
 
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
         snack = SendSnack(binding.root)
+        cacheStore = CacheStore.getInstance(this)
 
         binding.btnBack.setOnClickListener { finish() }
         binding.btnAlertsQuick.setOnClickListener {
@@ -187,6 +196,7 @@ class MovementsMenuActivity : AppCompatActivity() {
                         if (res.isSuccessful && res.body() != null) {
                             snack.showSuccess("IN OK")
                             binding.etCreateQuantity.setText("")
+                            cacheStore.invalidatePrefix("movements")
                             loadMovements(withSnack = false)
                         } else {
                             handleMovementError(res.code(), res.errorBody()?.string())
@@ -198,6 +208,7 @@ class MovementsMenuActivity : AppCompatActivity() {
                         if (res.isSuccessful && res.body() != null) {
                             snack.showSuccess("OUT OK")
                             binding.etCreateQuantity.setText("")
+                            cacheStore.invalidatePrefix("movements")
                             loadMovements(withSnack = false)
                         } else {
                             handleMovementError(res.code(), res.errorBody()?.string())
@@ -209,6 +220,7 @@ class MovementsMenuActivity : AppCompatActivity() {
                         if (res.isSuccessful && res.body() != null) {
                             snack.showSuccess("ADJUST OK")
                             binding.etCreateQuantity.setText("")
+                            cacheStore.invalidatePrefix("movements")
                             loadMovements(withSnack = false)
                         } else {
                             handleMovementError(res.code(), res.errorBody()?.string())
@@ -220,6 +232,7 @@ class MovementsMenuActivity : AppCompatActivity() {
                         if (res.isSuccessful && res.body() != null) {
                             snack.showSuccess("TRANSFER OK")
                             binding.etCreateQuantity.setText("")
+                            cacheStore.invalidatePrefix("movements")
                             loadMovements(withSnack = false)
                         } else {
                             handleMovementError(res.code(), res.errorBody()?.string())
@@ -303,6 +316,28 @@ class MovementsMenuActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
+                val cacheKey = CacheKeys.list(
+                    "movements",
+                    mapOf(
+                        "product_id" to productIdFilter,
+                        "type" to typeFilter?.name,
+                        "source" to sourceFilter?.name,
+                        "limit" to effectiveLimit,
+                        "offset" to effectiveOffset
+                    )
+                )
+                val cached = cacheStore.get(cacheKey, MovementListResponseDto::class.java)
+                if (cached != null) {
+                    val pending = if (currentOffset == 0) buildPendingRows() else emptyList()
+                    val ids = (pending.map { it.productId } + cached.items.map { it.productId }).toSet()
+                    productNamesById = resolveProductNames(ids)
+                    val mappedRemote = cached.items.map { it.toRowUi(productNamesById) }
+                    val ordered = (pending + mappedRemote).sortedByDescending { it.id }
+                    totalCount = cached.total
+                    setAllItemsAndApplyFilters(ordered)
+                    updatePageInfo(cached.items.size, pending.size)
+                    isLoading = false
+                }
                 val res = NetworkModule.api.listMovements(
                     productId = productIdFilter,
                     movementType = typeFilter,
@@ -315,6 +350,7 @@ class MovementsMenuActivity : AppCompatActivity() {
                 )
                 if (res.isSuccessful && res.body() != null) {
                     val body = res.body()!!
+                    cacheStore.put(cacheKey, body)
                     val pending = if (currentOffset == 0) buildPendingRows() else emptyList()
                     val remoteItems = body.items
                     totalCount = body.total
@@ -329,6 +365,50 @@ class MovementsMenuActivity : AppCompatActivity() {
                     if (withSnack) snack.showSuccess("Movimientos cargados")
                 } else {
                     if (withSnack) snack.showError("Error ${res.code()}: ${res.errorBody()?.string()}")
+                    val cachedOnError = cacheStore.get(cacheKey, MovementListResponseDto::class.java)
+                    if (cachedOnError != null) {
+                        val pending = if (currentOffset == 0) buildPendingRows() else emptyList()
+                        val ids = (pending.map { it.productId } + cachedOnError.items.map { it.productId }).toSet()
+                        productNamesById = resolveProductNames(ids)
+                        val mappedRemote = cachedOnError.items.map { it.toRowUi(productNamesById) }
+                        val ordered = (pending + mappedRemote).sortedByDescending { it.id }
+                        totalCount = cachedOnError.total
+                        setAllItemsAndApplyFilters(ordered)
+                        updatePageInfo(cachedOnError.items.size, pending.size)
+                        snack.showError("Mostrando movimientos en cache")
+                    } else {
+                        val pending = buildPendingRows()
+                        productNamesById = resolveProductNames(pending.map { it.productId }.toSet())
+                        val ordered = pending.sortedByDescending { it.id }
+                        totalCount = pending.size
+                        setAllItemsAndApplyFilters(ordered)
+                        updatePageInfo(ordered.size, ordered.size)
+                    }
+                }
+            } catch (e: Exception) {
+                if (withSnack) snack.showError("Error de red: ${e.message}")
+                val cacheKey = CacheKeys.list(
+                    "movements",
+                    mapOf(
+                        "product_id" to productIdFilter,
+                        "type" to typeFilter?.name,
+                        "source" to sourceFilter?.name,
+                        "limit" to effectiveLimit,
+                        "offset" to effectiveOffset
+                    )
+                )
+                val cachedOnError = cacheStore.get(cacheKey, MovementListResponseDto::class.java)
+                if (cachedOnError != null) {
+                    val pending = if (currentOffset == 0) buildPendingRows() else emptyList()
+                    val ids = (pending.map { it.productId } + cachedOnError.items.map { it.productId }).toSet()
+                    productNamesById = resolveProductNames(ids)
+                    val mappedRemote = cachedOnError.items.map { it.toRowUi(productNamesById) }
+                    val ordered = (pending + mappedRemote).sortedByDescending { it.id }
+                    totalCount = cachedOnError.total
+                    setAllItemsAndApplyFilters(ordered)
+                    updatePageInfo(cachedOnError.items.size, pending.size)
+                    snack.showError("Mostrando movimientos en cache")
+                } else {
                     val pending = buildPendingRows()
                     productNamesById = resolveProductNames(pending.map { it.productId }.toSet())
                     val ordered = pending.sortedByDescending { it.id }
@@ -336,14 +416,6 @@ class MovementsMenuActivity : AppCompatActivity() {
                     setAllItemsAndApplyFilters(ordered)
                     updatePageInfo(ordered.size, ordered.size)
                 }
-            } catch (e: Exception) {
-                if (withSnack) snack.showError("Error de red: ${e.message}")
-                val pending = buildPendingRows()
-                productNamesById = resolveProductNames(pending.map { it.productId }.toSet())
-                val ordered = pending.sortedByDescending { it.id }
-                totalCount = pending.size
-                setAllItemsAndApplyFilters(ordered)
-                updatePageInfo(ordered.size, ordered.size)
             } finally {
                 isLoading = false
                 if (pendingFilterApply) {
@@ -451,18 +523,42 @@ class MovementsMenuActivity : AppCompatActivity() {
     private suspend fun resolveProductNames(ids: Set<Int>): Map<Int, String> {
         if (ids.isEmpty()) return emptyMap()
         val resolved = mutableMapOf<Int, String>()
+        val cachedMap = getCachedProductNames()
         val listRes = runCatching { NetworkModule.api.listProducts(limit = 200, offset = 0) }.getOrNull()
         if (listRes?.isSuccessful == true && listRes.body() != null) {
-            resolved.putAll(listRes.body()!!.items.associate { it.id to it.name })
+            val items = listRes.body()!!.items
+            resolved.putAll(items.associate { it.id to it.name })
+            updateProductNameCache(items)
         }
         for (id in ids) {
             if (resolved.containsKey(id)) continue
             val singleRes = runCatching { NetworkModule.api.getProduct(id) }.getOrNull()
             if (singleRes?.isSuccessful == true && singleRes.body() != null) {
-                resolved[id] = singleRes.body()!!.name
+                val name = singleRes.body()!!.name
+                resolved[id] = name
+                updateProductNameCache(listOf(singleRes.body()!!))
+            } else {
+                cachedMap[id]?.let { resolved[id] = it }
             }
         }
+        ids.forEach { id ->
+            if (!resolved.containsKey(id)) cachedMap[id]?.let { resolved[id] = it }
+        }
         return resolved
+    }
+
+    private suspend fun getCachedProductNames(): Map<Int, String> {
+        val cached = cacheStore.get("products:names", ProductNameCache::class.java)
+        return cached?.items?.associateBy({ it.id }, { it.name }) ?: emptyMap()
+    }
+
+    private suspend fun updateProductNameCache(items: List<com.example.inventoryapp.data.remote.model.ProductResponseDto>) {
+        if (items.isEmpty()) return
+        val existing = cacheStore.get("products:names", ProductNameCache::class.java)
+        val map = existing?.items?.associateBy({ it.id }, { it.name })?.toMutableMap() ?: mutableMapOf()
+        items.forEach { p -> map[p.id] = p.name }
+        val merged = map.entries.map { ProductNameItem(it.key, it.value) }
+        cacheStore.put("products:names", ProductNameCache(merged))
     }
 
     private suspend fun resolveProductIdByName(input: String): Int? {
@@ -645,6 +741,10 @@ class MovementsMenuActivity : AppCompatActivity() {
                 val res = NetworkModule.api.listLocations(limit = 200, offset = 0)
                 if (res.isSuccessful && res.body() != null) {
                     val items = res.body()!!.items
+                    cacheStore.put(
+                        CacheKeys.list("locations", mapOf("limit" to 200, "offset" to 0)),
+                        res.body()!!
+                    )
                     val values = items.sortedBy { it.id }
                         .map { "(${it.id}) ${it.code}" }
                         .distinct()
@@ -660,9 +760,30 @@ class MovementsMenuActivity : AppCompatActivity() {
                     binding.etCreateToLocation.setOnFocusChangeListener { _, hasFocus ->
                         if (hasFocus) binding.etCreateToLocation.showDropDown()
                     }
+                    return@launch
                 }
-            } catch (_: Exception) {
-                // Silent fallback to manual input.
+            } catch (_: Exception) { }
+
+            val cached = cacheStore.get(
+                CacheKeys.list("locations", mapOf("limit" to 200, "offset" to 0)),
+                com.example.inventoryapp.data.remote.model.LocationListResponseDto::class.java
+            )
+            if (cached != null) {
+                val values = cached.items.sortedBy { it.id }
+                    .map { "(${it.id}) ${it.code}" }
+                    .distinct()
+                val allValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
+                val adapter = ArrayAdapter(this@MovementsMenuActivity, android.R.layout.simple_list_item_1, allValues)
+                binding.etCreateLocation.setAdapter(adapter)
+                binding.etCreateLocation.setOnClickListener { binding.etCreateLocation.showDropDown() }
+                binding.etCreateLocation.setOnFocusChangeListener { _, hasFocus ->
+                    if (hasFocus) binding.etCreateLocation.showDropDown()
+                }
+                binding.etCreateToLocation.setAdapter(adapter)
+                binding.etCreateToLocation.setOnClickListener { binding.etCreateToLocation.showDropDown() }
+                binding.etCreateToLocation.setOnFocusChangeListener { _, hasFocus ->
+                    if (hasFocus) binding.etCreateToLocation.showDropDown()
+                }
             }
         }
     }

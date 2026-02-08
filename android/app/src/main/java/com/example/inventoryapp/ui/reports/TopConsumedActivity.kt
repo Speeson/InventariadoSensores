@@ -11,6 +11,7 @@ import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.databinding.ActivityTopConsumedBinding
 import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.common.SendSnack
+import com.example.inventoryapp.ui.common.NetworkStatusBar
 import kotlinx.coroutines.launch
 import com.example.inventoryapp.ui.common.GradientIconUtil
 import com.example.inventoryapp.R
@@ -33,6 +34,7 @@ class TopConsumedActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityTopConsumedBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
 
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)

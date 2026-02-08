@@ -11,14 +11,18 @@ import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.OfflineSyncer
 import com.example.inventoryapp.data.local.PendingType
 import com.example.inventoryapp.data.local.SessionManager
+import com.example.inventoryapp.data.local.cache.CacheKeys
+import com.example.inventoryapp.data.local.cache.CacheStore
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.model.ProductCreateDto
 import com.example.inventoryapp.data.remote.model.ProductUpdateDto
+import com.example.inventoryapp.data.remote.model.ProductResponseDto
 import com.example.inventoryapp.databinding.ActivityProductDetailBinding
 import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.auth.LoginActivity
 import com.example.inventoryapp.ui.common.SendSnack
 import com.example.inventoryapp.ui.common.UiNotifier
+import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -29,6 +33,7 @@ class ProductDetailActivity : AppCompatActivity() {
     private lateinit var binding: ActivityProductDetailBinding
     private lateinit var session: SessionManager
     private lateinit var snack: SendSnack
+    private lateinit var cacheStore: CacheStore
 
     private val gson = Gson()
     private var productId: Int? = null
@@ -37,6 +42,7 @@ class ProductDetailActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityProductDetailBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
 
         
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
@@ -44,6 +50,7 @@ class ProductDetailActivity : AppCompatActivity() {
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
 snack = SendSnack(binding.root)
         session = SessionManager(this)
+        cacheStore = CacheStore.getInstance(this)
 
         binding.btnBack.setOnClickListener { finish() }
         binding.btnAlertsQuick.setOnClickListener {
@@ -72,6 +79,7 @@ snack = SendSnack(binding.root)
                 if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
                 if (res.isSuccessful && res.body() != null) {
                     val p = res.body()!!
+                    cacheStore.put(CacheKeys.detail("products", id), p)
                     binding.etSku.setText(p.sku)
                     binding.etName.setText(p.name)
                     binding.etBarcode.setText(p.barcode ?: "")
@@ -90,7 +98,17 @@ snack = SendSnack(binding.root)
                     }
                 }
             } catch (e: Exception) {
-                snack.showError("Error red: ${e.message}")
+                val cached = cacheStore.get(CacheKeys.detail("products", id), ProductResponseDto::class.java)
+                if (cached != null) {
+                    binding.etSku.setText(cached.sku)
+                    binding.etName.setText(cached.name)
+                    binding.etBarcode.setText(cached.barcode ?: "")
+                    binding.etCategoryId.setText(cached.categoryId.toString())
+                    binding.etSku.isEnabled = false
+                    snack.showError("Sin red. Mostrando cache")
+                } else {
+                    snack.showError("Error red: ${e.message}")
+                }
             }
         }
     }
@@ -150,6 +168,7 @@ snack = SendSnack(binding.root)
 
                     if (res.isSuccessful) {
                         snack.showSuccess("Producto actualizado")
+                        cacheStore.invalidatePrefix("products")
                     } else {
                         if (res.code() == 403) {
                             UiNotifier.showBlocking(
@@ -205,6 +224,7 @@ snack = SendSnack(binding.root)
 
                 if (res.isSuccessful) {
                     snack.showSuccess("Producto eliminado")
+                    cacheStore.invalidatePrefix("products")
                     finish()
                 } else {
                     if (res.code() == 403) {

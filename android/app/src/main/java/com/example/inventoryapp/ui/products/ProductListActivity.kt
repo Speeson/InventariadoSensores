@@ -18,7 +18,12 @@ import androidx.transition.TransitionManager
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.PendingType
 import com.example.inventoryapp.data.local.SessionManager
+import com.example.inventoryapp.data.local.cache.CacheKeys
+import com.example.inventoryapp.data.local.cache.ProductNameCache
+import com.example.inventoryapp.data.local.cache.ProductNameItem
+import com.example.inventoryapp.data.local.cache.CacheStore
 import com.example.inventoryapp.data.remote.NetworkModule
+import com.example.inventoryapp.data.remote.model.ProductListResponseDto
 import com.example.inventoryapp.data.remote.model.CategoryResponseDto
 import com.example.inventoryapp.data.remote.model.ProductCreateDto
 import com.example.inventoryapp.data.remote.model.ProductResponseDto
@@ -27,6 +32,7 @@ import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.auth.LoginActivity
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.UiNotifier
+import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.common.GradientIconUtil
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
@@ -38,6 +44,7 @@ class ProductListActivity : AppCompatActivity() {
     private lateinit var binding: ActivityProductListBinding
     private lateinit var session: SessionManager
     private lateinit var offlineQueue: OfflineQueue
+    private lateinit var cacheStore: CacheStore
     private val gson = Gson()
 
     private val products = mutableListOf<ProductResponseDto>()
@@ -60,6 +67,7 @@ class ProductListActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityProductListBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
 
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
         GradientIconUtil.applyGradient(binding.ivCreateProductAdd, R.drawable.add)
@@ -69,6 +77,7 @@ class ProductListActivity : AppCompatActivity() {
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
         session = SessionManager(this)
         offlineQueue = OfflineQueue(this)
+        cacheStore = CacheStore.getInstance(this)
 
         binding.btnBack.setOnClickListener { finish() }
         binding.btnAlertsQuick.setOnClickListener {
@@ -178,6 +187,25 @@ class ProductListActivity : AppCompatActivity() {
                 val barcodeParam = binding.etSearchBarcode.text.toString().trim().ifBlank { null }
                 val categoryParam = resolveCategoryId(binding.etSearchCategory.text.toString().trim())
 
+                val cacheKey = CacheKeys.list(
+                    "products",
+                    mapOf(
+                        "sku" to skuParam,
+                        "name" to nameParam,
+                        "barcode" to barcodeParam,
+                        "category" to categoryParam,
+                        "order_by" to "id",
+                        "order_dir" to if (sortAsc) "asc" else "desc",
+                        "limit" to effectiveLimit,
+                        "offset" to effectiveOffset
+                    )
+                )
+                val cached = cacheStore.get(cacheKey, ProductListResponseDto::class.java)
+                if (cached != null) {
+                    applyCachedProducts(cached, filtersActive)
+                    isLoading = false
+                }
+
                 val res = NetworkModule.api.listProducts(
                     sku = skuParam,
                     name = nameParam,
@@ -197,20 +225,24 @@ class ProductListActivity : AppCompatActivity() {
                     return@launch
                 }
                 if (res.isSuccessful && res.body() != null) {
+                    cacheStore.put(cacheKey, res.body()!!)
                     val pageItems = res.body()!!.items
                     if (pageItems.isEmpty() && currentOffset == 0) {
                         UiNotifier.show(this@ProductListActivity, "Sin resultados")
                     }
+                    val pending = if (!filtersActive && currentOffset == 0) buildOfflineProducts() else emptyList()
+                    val combined = pending + pageItems
                     val categoryMap = categoryCache.ifEmpty { fetchCategoryMap().also { categoryCache = it } }
-                    val rows = pageItems.map { ProductRowUi(it, categoryMap[it.categoryId]) }
+                    updateProductNameCache(pageItems)
+                    val rows = combined.map { ProductRowUi(it, categoryMap[it.categoryId]) }
                     products.clear()
-                    products.addAll(pageItems)
-                    totalCount = res.body()!!.total
+                    products.addAll(combined)
+                    totalCount = res.body()!!.total + pending.size
 
-                    allItems = pageItems
-                    setAllItemsAndApplyFilters(pageItems)
+                    allItems = combined
+                    setAllItemsAndApplyFilters(combined)
 
-                    updatePageInfo(pageItems.size)
+                    updatePageInfo(combined.size)
 
                     if (!filtersActive) {
                         adapter.submit(rows)
@@ -220,11 +252,38 @@ class ProductListActivity : AppCompatActivity() {
                 } else {
                     val err = res.errorBody()?.string()
                     UiNotifier.show(this@ProductListActivity, ApiErrorFormatter.format(res.code(), err))
-                    loadOfflineOnly()
+                    val cachedOnError = cacheStore.get(cacheKey, ProductListResponseDto::class.java)
+                    if (cachedOnError != null) {
+                        applyCachedProducts(cachedOnError, filtersActive)
+                        UiNotifier.show(this@ProductListActivity, "Mostrando productos en cache")
+                    } else {
+                        loadOfflineOnly()
+                    }
                 }
             } catch (e: Exception) {
                 UiNotifier.show(this@ProductListActivity, "Error de red: ${e.message}")
-                loadOfflineOnly()
+                val cachedFallback = cacheStore.get(
+                    CacheKeys.list(
+                        "products",
+                        mapOf(
+                            "sku" to null,
+                            "name" to null,
+                            "barcode" to null,
+                            "category" to null,
+                            "order_by" to "id",
+                            "order_dir" to if (sortAsc) "asc" else "desc",
+                            "limit" to pageSize,
+                            "offset" to currentOffset
+                        )
+                    ),
+                    ProductListResponseDto::class.java
+                )
+                if (cachedFallback != null) {
+                    applyCachedProducts(cachedFallback, hasActiveFilters())
+                    UiNotifier.show(this@ProductListActivity, "Mostrando productos en cache")
+                } else {
+                    loadOfflineOnly()
+                }
             } finally {
                 isLoading = false
                 if (pendingFilterApply) {
@@ -265,6 +324,7 @@ class ProductListActivity : AppCompatActivity() {
                     binding.etName.setText("")
                     binding.etBarcode.setText("")
                     binding.etCategory.setText("")
+                    cacheStore.invalidatePrefix("products")
                     resetAndLoad()
                 } else if (res.code() == 403) {
                     UiNotifier.showBlocking(
@@ -279,8 +339,8 @@ class ProductListActivity : AppCompatActivity() {
             } catch (e: IOException) {
                 val dto = ProductCreateDto(sku = sku, name = name, barcode = rawBarcode, categoryId = categoryId!!, active = true)
                 OfflineQueue(this@ProductListActivity).enqueue(PendingType.PRODUCT_CREATE, gson.toJson(dto))
-                UiNotifier.show(this@ProductListActivity, "Sin red. Producto guardado offline")
-                resetAndLoad()
+                    UiNotifier.show(this@ProductListActivity, "Sin red. Producto guardado offline")
+                    resetAndLoad()
             } catch (e: Exception) {
                 UiNotifier.show(this@ProductListActivity, "Error: ${e.message}")
             } finally {
@@ -426,10 +486,16 @@ class ProductListActivity : AppCompatActivity() {
         return try {
             val res = NetworkModule.api.listCategories(limit = 100, offset = 0)
             if (res.isSuccessful && res.body() != null) {
-                res.body()!!.items.associateBy({ it.id }, { it.name })
+                val items = res.body()!!.items
+                cacheStore.put(CacheKeys.list("categories", mapOf("name" to null, "order_by" to "id", "order_dir" to "asc", "limit" to 100, "offset" to 0)), res.body()!!)
+                items.associateBy({ it.id }, { it.name })
             } else emptyMap()
         } catch (_: Exception) {
-            emptyMap()
+            val cached = cacheStore.get(
+                CacheKeys.list("categories", mapOf("name" to null, "order_by" to "id", "order_dir" to "asc", "limit" to 100, "offset" to 0)),
+                com.example.inventoryapp.data.remote.model.CategoryListResponseDto::class.java
+            )
+            cached?.items?.associateBy({ it.id }, { it.name }) ?: emptyMap()
         }
     }
 
@@ -439,6 +505,7 @@ class ProductListActivity : AppCompatActivity() {
                 val res = NetworkModule.api.listCategories(limit = 100, offset = 0)
                 if (res.isSuccessful && res.body() != null) {
                     val items = res.body()!!.items.sortedBy { it.id }
+                    cacheStore.put(CacheKeys.list("categories", mapOf("name" to null, "order_by" to "id", "order_dir" to "asc", "limit" to 100, "offset" to 0)), res.body()!!)
                     val values = items.map { "(${it.id}) ${it.name}" }
                     val withBlank = listOf("") + values
                     val adapter = ArrayAdapter(this@ProductListActivity, android.R.layout.simple_list_item_1, withBlank)
@@ -455,9 +522,32 @@ class ProductListActivity : AppCompatActivity() {
 
                     categoryCache = items.associateBy({ it.id }, { it.name })
                     categoryIdByName = items.associateBy({ it.name.lowercase() }, { it.id })
+                    return@launch
                 }
-            } catch (_: Exception) {
-                // Silent fallback
+            } catch (_: Exception) { }
+
+            val cached = cacheStore.get(
+                CacheKeys.list("categories", mapOf("name" to null, "order_by" to "id", "order_dir" to "asc", "limit" to 100, "offset" to 0)),
+                com.example.inventoryapp.data.remote.model.CategoryListResponseDto::class.java
+            )
+            if (cached != null) {
+                val items = cached.items.sortedBy { it.id }
+                val values = items.map { "(${it.id}) ${it.name}" }
+                val withBlank = listOf("") + values
+                val adapter = ArrayAdapter(this@ProductListActivity, android.R.layout.simple_list_item_1, withBlank)
+                binding.etCategory.setAdapter(adapter)
+                binding.etCategory.setOnClickListener { binding.etCategory.showDropDown() }
+                binding.etCategory.setOnFocusChangeListener { _, hasFocus ->
+                    if (hasFocus) binding.etCategory.showDropDown()
+                }
+                binding.etSearchCategory.setAdapter(adapter)
+                binding.etSearchCategory.setOnClickListener { binding.etSearchCategory.showDropDown() }
+                binding.etSearchCategory.setOnFocusChangeListener { _, hasFocus ->
+                    if (hasFocus) binding.etSearchCategory.showDropDown()
+                }
+
+                categoryCache = items.associateBy({ it.id }, { it.name })
+                categoryIdByName = items.associateBy({ it.name.lowercase() }, { it.id })
             }
         }
     }
@@ -580,6 +670,20 @@ class ProductListActivity : AppCompatActivity() {
         }
     }
 
+    private fun applyCachedProducts(cached: ProductListResponseDto, filtersActive: Boolean) {
+        val pending = if (!filtersActive && currentOffset == 0) buildOfflineProducts() else emptyList()
+        val pageItems = cached.items
+        val combined = pending + pageItems
+        updateProductNameCache(pageItems)
+        products.clear()
+        products.addAll(combined)
+        totalCount = cached.total + pending.size
+        allItems = combined
+        setAllItemsAndApplyFilters(combined)
+        updatePageInfo(combined.size)
+        // Only notify on API failure; cache-first rendering stays silent.
+    }
+
     private fun buildOfflineProducts(): List<ProductResponseDto> {
         val pending = offlineQueue.getAll().filter { it.type == PendingType.PRODUCT_CREATE }
         return pending.mapIndexedNotNull { index, p ->
@@ -595,6 +699,17 @@ class ProductListActivity : AppCompatActivity() {
                 createdAt = "offline",
                 updatedAt = "offline"
             )
+        }
+    }
+
+    private fun updateProductNameCache(items: List<ProductResponseDto>) {
+        if (items.isEmpty()) return
+        lifecycleScope.launch {
+            val existing = cacheStore.get("products:names", ProductNameCache::class.java)
+            val map = existing?.items?.associateBy({ it.id }, { it.name })?.toMutableMap() ?: mutableMapOf()
+            items.forEach { p -> map[p.id] = p.name }
+            val merged = map.entries.map { ProductNameItem(it.key, it.value) }
+            cacheStore.put("products:names", ProductNameCache(merged))
         }
     }
 

@@ -46,6 +46,18 @@ class EventAdapter(
         holder.tvDate.text = item.createdAt
         holder.ivPending.visibility = if (item.isPending) View.VISIBLE else View.GONE
         holder.ivWarning.visibility = if (item.isPending) View.VISIBLE else View.GONE
+        val offlineColor = ContextCompat.getColor(holder.itemView.context, R.color.offline_text)
+        if (item.isPending) {
+            holder.tvTitle.setTextColor(offlineColor)
+            holder.tvIdBadge.setTextColor(offlineColor)
+            holder.tvMeta.setTextColor(offlineColor)
+            holder.tvDate.setTextColor(offlineColor)
+        } else {
+            holder.tvTitle.setTextColor(holder.titleColor)
+            holder.tvIdBadge.setTextColor(holder.idBadgeColor)
+            holder.tvMeta.setTextColor(holder.metaColor)
+            holder.tvDate.setTextColor(holder.dateColor)
+        }
         holder.ivPending.setOnClickListener {
             if (item.isPending) onPendingClick(item)
         }
@@ -62,5 +74,9 @@ class EventAdapter(
         val ivPending: ImageView = view.findViewById(R.id.ivEventPending)
         val ivWarning: ImageView = view.findViewById(R.id.ivWarning)
         val ivIcon: ImageView = view.findViewById(R.id.ivIcon)
+        val titleColor: Int = tvTitle.currentTextColor
+        val idBadgeColor: Int = tvIdBadge.currentTextColor
+        val metaColor: Int = tvMeta.currentTextColor
+        val dateColor: Int = tvDate.currentTextColor
     }
 }

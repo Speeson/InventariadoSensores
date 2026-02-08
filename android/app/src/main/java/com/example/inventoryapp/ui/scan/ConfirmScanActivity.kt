@@ -19,6 +19,7 @@ import com.example.inventoryapp.data.repository.remote.ScanSendResult
 import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.movements.ResultActivity
 import com.example.inventoryapp.ui.common.SendSnack
+import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import com.example.inventoryapp.ui.common.GradientIconUtil
@@ -43,6 +44,7 @@ class ConfirmScanActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityConfirmScanBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
 
         
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)

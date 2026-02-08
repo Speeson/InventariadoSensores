@@ -5,6 +5,13 @@
     android:layout_height="match_parent"
     android:background="@color/home_bg">
 
+    <View
+        android:id="@+id/viewNetworkBar"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:layout_gravity="top"
+        android:background="@color/online_bar" />
+
     <LinearLayout
         android:id="@+id/scrollEvents"
         android:layout_width="match_parent"

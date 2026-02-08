@@ -3,6 +3,8 @@ package com.example.inventoryapp.ui.stock
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
+import androidx.core.content.ContextCompat
+import com.example.inventoryapp.R
 import com.example.inventoryapp.data.remote.model.StockResponseDto
 import com.example.inventoryapp.databinding.ItemStockCardBinding
 
@@ -13,7 +15,12 @@ class StockListAdapter(
     private val items = mutableListOf<StockResponseDto>()
     private var productNameById: Map<Int, String> = emptyMap()
 
-    inner class VH(val binding: ItemStockCardBinding) : RecyclerView.ViewHolder(binding.root)
+    inner class VH(val binding: ItemStockCardBinding) : RecyclerView.ViewHolder(binding.root) {
+        val idColor = binding.tvStockId.currentTextColor
+        val titleColor = binding.tvTitle.currentTextColor
+        val locationColor = binding.tvLocation.currentTextColor
+        val metaColor = binding.tvMeta.currentTextColor
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
         val binding = ItemStockCardBinding.inflate(LayoutInflater.from(parent.context), parent, false)
@@ -34,6 +41,18 @@ class StockListAdapter(
         holder.binding.tvMeta.text = "Cantidad: ${s.quantity}"
         holder.binding.ivWarning.visibility =
             if (isOffline) android.view.View.VISIBLE else android.view.View.GONE
+        val offlineColor = ContextCompat.getColor(holder.itemView.context, R.color.offline_text)
+        if (isOffline) {
+            holder.binding.tvStockId.setTextColor(offlineColor)
+            holder.binding.tvTitle.setTextColor(offlineColor)
+            holder.binding.tvLocation.setTextColor(offlineColor)
+            holder.binding.tvMeta.setTextColor(offlineColor)
+        } else {
+            holder.binding.tvStockId.setTextColor(holder.idColor)
+            holder.binding.tvTitle.setTextColor(holder.titleColor)
+            holder.binding.tvLocation.setTextColor(holder.locationColor)
+            holder.binding.tvMeta.setTextColor(holder.metaColor)
+        }
         holder.binding.root.setOnClickListener { onClick(s) }
     }
 

@@ -33,7 +33,12 @@ class ProductListAdapter(
     private val items = mutableListOf<ProductRowUi>()
     private var gradientIcon: Bitmap? = null
 
-    inner class VH(val binding: ItemProductCardBinding) : RecyclerView.ViewHolder(binding.root)
+    inner class VH(val binding: ItemProductCardBinding) : RecyclerView.ViewHolder(binding.root) {
+        val nameColor = binding.tvName.currentTextColor
+        val detailsColor = binding.tvDetails.currentTextColor
+        val idLabelColor = binding.tvProductIdLabel.currentTextColor
+        val idValueColor = binding.tvProductIdValue.currentTextColor
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
         val binding = ItemProductCardBinding.inflate(LayoutInflater.from(parent.context), parent, false)
@@ -58,6 +63,18 @@ class ProductListAdapter(
         val isOffline = p.id < 0 || p.name.contains("(offline)", ignoreCase = true)
         holder.binding.ivOfflineAlert.visibility =
             if (isOffline) android.view.View.VISIBLE else android.view.View.GONE
+        val offlineColor = ContextCompat.getColor(holder.itemView.context, R.color.offline_text)
+        if (isOffline) {
+            holder.binding.tvName.setTextColor(offlineColor)
+            holder.binding.tvDetails.setTextColor(offlineColor)
+            holder.binding.tvProductIdLabel.setTextColor(offlineColor)
+            holder.binding.tvProductIdValue.setTextColor(offlineColor)
+        } else {
+            holder.binding.tvName.setTextColor(holder.nameColor)
+            holder.binding.tvDetails.setTextColor(holder.detailsColor)
+            holder.binding.tvProductIdLabel.setTextColor(holder.idLabelColor)
+            holder.binding.tvProductIdValue.setTextColor(holder.idValueColor)
+        }
         val barcode = p.barcode?.trim()
         holder.binding.btnCopyBarcode.visibility =
             if (barcode.isNullOrBlank()) android.view.View.GONE else android.view.View.VISIBLE

@@ -38,6 +38,7 @@ import kotlinx.coroutines.launch
 import com.example.inventoryapp.ui.categories.CategoriesActivity
 import com.example.inventoryapp.ui.thresholds.ThresholdsActivity
 import com.example.inventoryapp.ui.alerts.AlertsActivity
+import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.common.SystemAlertManager
@@ -60,6 +61,7 @@ class HomeActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityHomeBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
 
         session = SessionManager(this)
         applyTitleGradient()

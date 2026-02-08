@@ -13,14 +13,20 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.OfflineSyncer
 import com.example.inventoryapp.data.local.PendingType
+import com.example.inventoryapp.data.local.cache.CacheKeys
+import com.example.inventoryapp.data.local.cache.CacheStore
+import com.example.inventoryapp.data.local.cache.ProductNameCache
+import com.example.inventoryapp.data.local.cache.ProductNameItem
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.model.StockCreateDto
+import com.example.inventoryapp.data.remote.model.StockListResponseDto
 import com.example.inventoryapp.data.remote.model.StockResponseDto
 import com.example.inventoryapp.data.remote.model.StockUpdateDto
 import com.example.inventoryapp.databinding.ActivityStockBinding
 import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.common.SendSnack
 import com.example.inventoryapp.ui.common.UiNotifier
+import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -36,6 +42,7 @@ class StockActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityStockBinding
     private lateinit var snack: SendSnack
+    private lateinit var cacheStore: CacheStore
 
     private val gson = Gson()
     private var items: List<StockResponseDto> = emptyList()
@@ -54,6 +61,7 @@ class StockActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityStockBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
 
         
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
@@ -63,6 +71,7 @@ class StockActivity : AppCompatActivity() {
         
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
         snack = SendSnack(binding.root)
+        cacheStore = CacheStore.getInstance(this)
 
         binding.btnBack.setOnClickListener { finish() }
         binding.btnAlertsQuick.setOnClickListener {
@@ -139,8 +148,26 @@ class StockActivity : AppCompatActivity() {
                 val effectiveLimit = if (filtersActive) 100 else pageSize
                 val effectiveOffset = if (filtersActive) 0 else currentOffset
                 if (filtersActive) currentOffset = 0
+                val cacheKey = CacheKeys.list(
+                    "stocks",
+                    mapOf(
+                        "limit" to effectiveLimit,
+                        "offset" to effectiveOffset
+                    )
+                )
+                val cached = cacheStore.get(cacheKey, StockListResponseDto::class.java)
+                if (cached != null) {
+                    val pending = buildPendingStocks()
+                    val ordered = (pending + cached.items).sortedBy { it.id }
+                    productNameById = resolveProductNames(ordered)
+                    totalCount = cached.total
+                    setAllItemsAndApplyFilters(ordered)
+                    updatePageInfo(cached.items.size, pending.size)
+                    isLoading = false
+                }
                 val res = NetworkModule.api.listStocks(limit = effectiveLimit, offset = effectiveOffset)
                 if (res.isSuccessful && res.body() != null) {
+                    cacheStore.put(cacheKey, res.body()!!)
                     val pending = buildPendingStocks()
                     val pageItems = res.body()!!.items
                     totalCount = res.body()!!.total
@@ -149,12 +176,23 @@ class StockActivity : AppCompatActivity() {
                     setAllItemsAndApplyFilters(ordered)
                     updatePageInfo(pageItems.size, pending.size)
                 } else {
-                    val pending = buildPendingStocks()
-                    val ordered = pending.sortedBy { it.id }
-                    productNameById = resolveProductNames(ordered)
-                    totalCount = pending.size
-                    setAllItemsAndApplyFilters(ordered)
-                    updatePageInfo(ordered.size, ordered.size)
+                    val cachedOnError = cacheStore.get(cacheKey, StockListResponseDto::class.java)
+                    if (cachedOnError != null) {
+                        val pending = buildPendingStocks()
+                        val ordered = (pending + cachedOnError.items).sortedBy { it.id }
+                        productNameById = resolveProductNames(ordered)
+                        totalCount = cachedOnError.total
+                        setAllItemsAndApplyFilters(ordered)
+                        updatePageInfo(cachedOnError.items.size, pending.size)
+                        snack.showError("Mostrando stock en cache")
+                    } else {
+                        val pending = buildPendingStocks()
+                        val ordered = pending.sortedBy { it.id }
+                        productNameById = resolveProductNames(ordered)
+                        totalCount = pending.size
+                        setAllItemsAndApplyFilters(ordered)
+                        updatePageInfo(ordered.size, ordered.size)
+                    }
                     if (res.code() == 403) {
                         UiNotifier.showBlocking(
                             this@StockActivity,
@@ -167,16 +205,34 @@ class StockActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
-                val pending = buildPendingStocks()
-                val ordered = pending.sortedBy { it.id }
-                productNameById = resolveProductNames(ordered)
-                totalCount = pending.size
-                setAllItemsAndApplyFilters(ordered)
-                updatePageInfo(ordered.size, ordered.size)
-                if (e is IOException) {
-                    snack.showError("Sin conexi?n a Internet")
+                val cacheKey = CacheKeys.list(
+                    "stocks",
+                    mapOf(
+                        "limit" to if (hasActiveFilters()) 100 else pageSize,
+                        "offset" to if (hasActiveFilters()) 0 else currentOffset
+                    )
+                )
+                val cachedOnError = cacheStore.get(cacheKey, StockListResponseDto::class.java)
+                if (cachedOnError != null) {
+                    val pending = buildPendingStocks()
+                    val ordered = (pending + cachedOnError.items).sortedBy { it.id }
+                    productNameById = resolveProductNames(ordered)
+                    totalCount = cachedOnError.total
+                    setAllItemsAndApplyFilters(ordered)
+                    updatePageInfo(cachedOnError.items.size, pending.size)
+                    snack.showError("Mostrando stock en cache")
                 } else {
-                    snack.showError("? Error de red: ${e.message}")
+                    val pending = buildPendingStocks()
+                    val ordered = pending.sortedBy { it.id }
+                    productNameById = resolveProductNames(ordered)
+                    totalCount = pending.size
+                    setAllItemsAndApplyFilters(ordered)
+                    updatePageInfo(ordered.size, ordered.size)
+                    if (e is IOException) {
+                        snack.showError("Sin conexi?n a Internet")
+                    } else {
+                        snack.showError("? Error de red: ${e.message}")
+                    }
                 }
             } finally {
                 isLoading = false
@@ -249,21 +305,46 @@ class StockActivity : AppCompatActivity() {
         if (ids.isEmpty()) return emptyMap()
 
         val resolved = mutableMapOf<Int, String>()
+        val cachedMap = getCachedProductNames()
 
         val productRes = runCatching { NetworkModule.api.listProducts(limit = 200, offset = 0) }.getOrNull()
         if (productRes?.isSuccessful == true && productRes.body() != null) {
-            resolved.putAll(productRes.body()!!.items.associate { it.id to it.name })
+            val items = productRes.body()!!.items
+            resolved.putAll(items.associate { it.id to it.name })
+            updateProductNameCache(items)
         }
 
         for (id in ids) {
             if (resolved.containsKey(id)) continue
             val singleRes = runCatching { NetworkModule.api.getProduct(id) }.getOrNull()
             if (singleRes?.isSuccessful == true && singleRes.body() != null) {
-                resolved[id] = singleRes.body()!!.name
+                val name = singleRes.body()!!.name
+                resolved[id] = name
+                updateProductNameCache(listOf(singleRes.body()!!))
+            } else {
+                cachedMap[id]?.let { resolved[id] = it }
             }
         }
 
+        ids.forEach { id ->
+            if (!resolved.containsKey(id)) cachedMap[id]?.let { resolved[id] = it }
+        }
+
         return resolved
+    }
+
+    private suspend fun getCachedProductNames(): Map<Int, String> {
+        val cached = cacheStore.get("products:names", ProductNameCache::class.java)
+        return cached?.items?.associateBy({ it.id }, { it.name }) ?: emptyMap()
+    }
+
+    private suspend fun updateProductNameCache(items: List<com.example.inventoryapp.data.remote.model.ProductResponseDto>) {
+        if (items.isEmpty()) return
+        val existing = cacheStore.get("products:names", ProductNameCache::class.java)
+        val map = existing?.items?.associateBy({ it.id }, { it.name })?.toMutableMap() ?: mutableMapOf()
+        items.forEach { p -> map[p.id] = p.name }
+        val merged = map.entries.map { ProductNameItem(it.key, it.value) }
+        cacheStore.put("products:names", ProductNameCache(merged))
     }
 
     private fun createStock() {
@@ -287,6 +368,7 @@ class StockActivity : AppCompatActivity() {
                 if (res.isSuccessful) {
                     snack.showSuccess("✅ Stock creado")
                     binding.etQuantity.setText("")
+                    cacheStore.invalidatePrefix("stocks")
                     loadStocks()
                 } else {
                     if (res.code() == 403) {
@@ -354,6 +436,7 @@ class StockActivity : AppCompatActivity() {
                 val res = NetworkModule.api.updateStock(stockId, body)
                 if (res.isSuccessful) {
                     snack.showSuccess("✅ Stock actualizado")
+                    cacheStore.invalidatePrefix("stocks")
                     loadStocks()
                 } else {                    if (res.code() == 403) {
                         UiNotifier.showBlocking(
@@ -410,6 +493,10 @@ class StockActivity : AppCompatActivity() {
                 val res = NetworkModule.api.listLocations(limit = 200, offset = 0)
                 if (res.isSuccessful && res.body() != null) {
                     val items = res.body()!!.items
+                    cacheStore.put(
+                        CacheKeys.list("locations", mapOf("limit" to 200, "offset" to 0)),
+                        res.body()!!
+                    )
                     val values = items.sortedBy { it.id }
                         .map { "(${it.id}) ${it.code}" }
                         .distinct()
@@ -425,9 +512,30 @@ class StockActivity : AppCompatActivity() {
                     binding.etSearchLocation.setOnFocusChangeListener { _, hasFocus ->
                         if (hasFocus) binding.etSearchLocation.showDropDown()
                     }
+                    return@launch
                 }
-            } catch (_: Exception) {
-                // Silent fallback to manual input.
+            } catch (_: Exception) { }
+
+            val cached = cacheStore.get(
+                CacheKeys.list("locations", mapOf("limit" to 200, "offset" to 0)),
+                com.example.inventoryapp.data.remote.model.LocationListResponseDto::class.java
+            )
+            if (cached != null) {
+                val values = cached.items.sortedBy { it.id }
+                    .map { "(${it.id}) ${it.code}" }
+                    .distinct()
+                val allValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
+                val adapter = ArrayAdapter(this@StockActivity, android.R.layout.simple_list_item_1, allValues)
+                binding.etLocation.setAdapter(adapter)
+                binding.etLocation.setOnClickListener { binding.etLocation.showDropDown() }
+                binding.etLocation.setOnFocusChangeListener { _, hasFocus ->
+                    if (hasFocus) binding.etLocation.showDropDown()
+                }
+                binding.etSearchLocation.setAdapter(adapter)
+                binding.etSearchLocation.setOnClickListener { binding.etSearchLocation.showDropDown() }
+                binding.etSearchLocation.setOnFocusChangeListener { _, hasFocus ->
+                    if (hasFocus) binding.etSearchLocation.showDropDown()
+                }
             }
         }
     }

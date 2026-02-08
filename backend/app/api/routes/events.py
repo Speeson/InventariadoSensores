@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.tasks import process_event
 from app.api.deps import get_current_user
+from app.cache.redis_cache import cache_get, cache_set, cache_invalidate_prefix, make_key
 from app.db.deps import get_db
 from app.models.enums import EventType
 from app.models.user import User
@@ -21,9 +22,10 @@ class EventListResponse(BaseModel):
 router = APIRouter(prefix="/events", tags=["events"])
 
 
-@router.get("/", response_model=EventListResponse, dependencies=[Depends(get_current_user)])
+@router.get("/", response_model=EventListResponse)
 def list_events(
     db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
     event_type: EventType | None = Query(None),
     product_id: int | None = Query(None),
     processed: bool | None = Query(None),
@@ -36,6 +38,22 @@ def list_events(
         raise HTTPException(status_code=400, detail="order_by debe ser 'created_at'")
     if order_dir not in {"asc", "desc"}:
         raise HTTPException(status_code=400, detail="order_dir debe ser 'asc' o 'desc'")
+    cache_key = make_key(
+        "events:list",
+        user.id,
+        {
+            "event_type": event_type,
+            "product_id": product_id,
+            "processed": processed,
+            "order_by": order_by,
+            "order_dir": order_dir,
+            "limit": limit,
+            "offset": offset,
+        },
+    )
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached
     items, total = event_repo.list_events(
         db,
         event_type=event_type,
@@ -45,7 +63,9 @@ def list_events(
         limit=limit,
         offset=offset,
     )
-    return EventListResponse(items=items, total=total, limit=limit, offset=offset)
+    payload = EventListResponse(items=items, total=total, limit=limit, offset=offset)
+    cache_set(cache_key, payload, ttl_seconds=300)
+    return payload
 
 
 @router.post(
@@ -110,4 +130,5 @@ def create_event(
             detail=f"No se pudo encolar el evento: {exc}",
         )
 
+    cache_invalidate_prefix("events:list")
     return event

@@ -2,6 +2,7 @@ from datetime import datetime, date, time
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from app.api.deps import require_roles
+from app.cache.redis_cache import cache_get, cache_set, make_key
 from app.db.deps import get_db
 from app.models.enums import UserRole
 from app.repositories import report_repo
@@ -15,10 +16,10 @@ router = APIRouter(prefix="/reports", tags=["reports"])
 @router.get(
     "/top-consumed",
     response_model=TopConsumedResponse,
-    dependencies=[Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value))],
 )
 def top_consumed(
     db: Session = Depends(get_db),
+    user = Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value)),
     date_from: date | None = Query(None, description="YYYY-MM-DD"),
     date_to: date | None = Query(None, description="YYYY-MM-DD"),
     location: str | None = Query(None),
@@ -36,6 +37,22 @@ def top_consumed(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="order_dir debe ser 'asc' o 'desc'",
         )
+
+    cache_key = make_key(
+        "reports:top-consumed",
+        user.id if user else None,
+        {
+            "date_from": date_from.isoformat() if date_from else None,
+            "date_to": date_to.isoformat() if date_to else None,
+            "location": location,
+            "order_dir": order_dir,
+            "limit": limit,
+            "offset": offset,
+        },
+    )
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached
 
     dt_from = datetime.combine(date_from, time.min) if date_from else None
     dt_to = datetime.combine(date_to, time.max) if date_to else None
@@ -53,7 +70,9 @@ def top_consumed(
         TopConsumedItem(product_id=r.product_id, sku=r.sku, name=r.name, total_out=r.total_out)
         for r in rows
     ]
-    return TopConsumedResponse(items=items, total=total, limit=limit, offset=offset)
+    payload = TopConsumedResponse(items=items, total=total, limit=limit, offset=offset)
+    cache_set(cache_key, payload, ttl_seconds=300)
+    return payload
 
 
 
@@ -62,10 +81,10 @@ def top_consumed(
 @router.get(
     "/turnover",
     response_model=TurnoverResponse,
-    dependencies=[Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value))],
 )
 def turnover_report(
     db: Session = Depends(get_db),
+    user = Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value)),
     date_from: date | None = Query(None, description="YYYY-MM-DD"),
     date_to: date | None = Query(None, description="YYYY-MM-DD"),
     location: str | None = Query(None),
@@ -83,6 +102,22 @@ def turnover_report(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="order_dir debe ser 'asc' o 'desc'",
         )
+
+    cache_key = make_key(
+        "reports:turnover",
+        user.id if user else None,
+        {
+            "date_from": date_from.isoformat() if date_from else None,
+            "date_to": date_to.isoformat() if date_to else None,
+            "location": location,
+            "order_dir": order_dir,
+            "limit": limit,
+            "offset": offset,
+        },
+    )
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached
 
     dt_from = datetime.combine(date_from, time.min) if date_from else None
     dt_to = datetime.combine(date_to, time.max) if date_to else None
@@ -111,4 +146,6 @@ def turnover_report(
         )
         for r in rows
     ]
-    return TurnoverResponse(items=items, total=total, limit=limit, offset=offset)
+    payload = TurnoverResponse(items=items, total=total, limit=limit, offset=offset)
+    cache_set(cache_key, payload, ttl_seconds=300)
+    return payload

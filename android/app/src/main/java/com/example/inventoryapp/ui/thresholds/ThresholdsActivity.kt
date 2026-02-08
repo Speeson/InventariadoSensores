@@ -10,14 +10,18 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.PendingType
 import com.example.inventoryapp.data.local.SessionManager
+import com.example.inventoryapp.data.local.cache.CacheKeys
+import com.example.inventoryapp.data.local.cache.CacheStore
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.model.ThresholdCreateDto
+import com.example.inventoryapp.data.remote.model.ThresholdListResponseDto
 import com.example.inventoryapp.data.remote.model.ThresholdResponseDto
 import com.example.inventoryapp.data.remote.model.ThresholdUpdateDto
 import com.example.inventoryapp.databinding.ActivityThresholdsBinding
 import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.UiNotifier
+import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.auth.LoginActivity
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
@@ -38,6 +42,7 @@ class ThresholdsActivity : AppCompatActivity() {
     private lateinit var binding: ActivityThresholdsBinding
     private lateinit var session: SessionManager
     private lateinit var adapter: ThresholdListAdapter
+    private lateinit var cacheStore: CacheStore
     private var items: List<ThresholdResponseDto> = emptyList()
     private val gson = Gson()
     private var productNameById: Map<Int, String> = emptyMap()
@@ -53,6 +58,7 @@ class ThresholdsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityThresholdsBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
 
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
         GradientIconUtil.applyGradient(binding.ivCreateThresholdAdd, R.drawable.add)
@@ -61,6 +67,7 @@ class ThresholdsActivity : AppCompatActivity() {
 
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
         session = SessionManager(this)
+        cacheStore = CacheStore.getInstance(this)
 
         binding.btnBack.setOnClickListener { finish() }
         binding.btnAlertsQuick.setOnClickListener {
@@ -182,9 +189,30 @@ class ThresholdsActivity : AppCompatActivity() {
                 val effectiveLimit = if (filtersActive) 200 else pageSize
                 val effectiveOffset = if (filtersActive) 0 else currentOffset
                 if (filtersActive) currentOffset = 0
+                val cacheKey = CacheKeys.list(
+                    "thresholds",
+                    mapOf(
+                        "product_id" to productId,
+                        "location" to location,
+                        "limit" to effectiveLimit,
+                        "offset" to effectiveOffset
+                    )
+                )
+                val cached = cacheStore.get(cacheKey, ThresholdListResponseDto::class.java)
+                if (cached != null) {
+                    val pending = buildPendingThresholds()
+                    items = pending + cached.items
+                    totalCount = cached.total
+                    productNameById = fetchProductNames(items.map { it.productId }.toSet())
+                    val rows = items.map { ThresholdRowUi(it, productNameById[it.productId]) }
+                    adapter.submit(rows)
+                    updatePageInfo(rows.size)
+                    isLoading = false
+                }
                 val res = NetworkModule.api.listThresholds(productId = productId, location = location, limit = effectiveLimit, offset = effectiveOffset)
                 if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
                 if (res.isSuccessful && res.body() != null) {
+                    cacheStore.put(cacheKey, res.body()!!)
                     val pending = buildPendingThresholds()
                     items = pending + res.body()!!.items
                     totalCount = res.body()!!.total
@@ -198,17 +226,49 @@ class ThresholdsActivity : AppCompatActivity() {
                     }
                 } else {
                     UiNotifier.show(this@ThresholdsActivity, ApiErrorFormatter.format(res.code()))
+                    val cachedOnError = cacheStore.get(cacheKey, ThresholdListResponseDto::class.java)
+                    if (cachedOnError != null) {
+                        val pending = buildPendingThresholds()
+                        items = pending + cachedOnError.items
+                        totalCount = cachedOnError.total
+                        productNameById = fetchProductNames(items.map { it.productId }.toSet())
+                        val rows = items.map { ThresholdRowUi(it, productNameById[it.productId]) }
+                        adapter.submit(rows)
+                        updatePageInfo(rows.size)
+                        UiNotifier.show(this@ThresholdsActivity, "Mostrando thresholds en cache")
+                    }
                 }
             } catch (e: Exception) {
-                val pending = buildPendingThresholds()
-                productNameById = fetchProductNames(pending.map { it.productId }.toSet())
-                val rows = pending.map { ThresholdRowUi(it, productNameById[it.productId]) }
-                adapter.submit(rows)
-                updatePageInfo(rows.size)
-                if (e is IOException) {
-                    UiNotifier.show(this@ThresholdsActivity, "Sin conexion a Internet")
+                val cacheKey = CacheKeys.list(
+                    "thresholds",
+                    mapOf(
+                        "product_id" to productId,
+                        "location" to location,
+                        "limit" to if (hasActiveFilters()) 200 else pageSize,
+                        "offset" to if (hasActiveFilters()) 0 else currentOffset
+                    )
+                )
+                val cachedOnError = cacheStore.get(cacheKey, ThresholdListResponseDto::class.java)
+                if (cachedOnError != null) {
+                    val pending = buildPendingThresholds()
+                    items = pending + cachedOnError.items
+                    totalCount = cachedOnError.total
+                    productNameById = fetchProductNames(items.map { it.productId }.toSet())
+                    val rows = items.map { ThresholdRowUi(it, productNameById[it.productId]) }
+                    adapter.submit(rows)
+                    updatePageInfo(rows.size)
+                    UiNotifier.show(this@ThresholdsActivity, "Mostrando thresholds en cache")
                 } else {
-                    UiNotifier.show(this@ThresholdsActivity, "Error de red: ${e.message}")
+                    val pending = buildPendingThresholds()
+                    productNameById = fetchProductNames(pending.map { it.productId }.toSet())
+                    val rows = pending.map { ThresholdRowUi(it, productNameById[it.productId]) }
+                    adapter.submit(rows)
+                    updatePageInfo(rows.size)
+                    if (e is IOException) {
+                        UiNotifier.show(this@ThresholdsActivity, "Sin conexion a Internet")
+                    } else {
+                        UiNotifier.show(this@ThresholdsActivity, "Error de red: ${e.message}")
+                    }
                 }
             } finally {
                 isLoading = false
@@ -240,6 +300,7 @@ class ThresholdsActivity : AppCompatActivity() {
                     binding.etProductId.setText("")
                     binding.etLocation.setText("")
                     binding.etMinQty.setText("")
+                    cacheStore.invalidatePrefix("thresholds")
                     loadThresholds()
                 } else {
                     UiNotifier.show(this@ThresholdsActivity, ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))
@@ -302,6 +363,7 @@ class ThresholdsActivity : AppCompatActivity() {
                 )
                 if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
                 if (res.isSuccessful) {
+                    cacheStore.invalidatePrefix("thresholds")
                     loadThresholds()
                 } else {
                     UiNotifier.show(this@ThresholdsActivity, ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))
@@ -322,6 +384,7 @@ class ThresholdsActivity : AppCompatActivity() {
                 val res = NetworkModule.api.deleteThreshold(id)
                 if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
                 if (res.isSuccessful) {
+                    cacheStore.invalidatePrefix("thresholds")
                     loadThresholds()
                 } else {
                     UiNotifier.show(this@ThresholdsActivity, ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))
@@ -495,6 +558,10 @@ class ThresholdsActivity : AppCompatActivity() {
                 val res = NetworkModule.api.listLocations(limit = 200, offset = 0)
                 if (res.isSuccessful && res.body() != null) {
                     val items = res.body()!!.items
+                    cacheStore.put(
+                        CacheKeys.list("locations", mapOf("limit" to 200, "offset" to 0)),
+                        res.body()!!
+                    )
                     val values = items.sortedBy { it.id }
                         .map { "(${it.id}) ${it.code}" }
                         .distinct()
@@ -510,9 +577,30 @@ class ThresholdsActivity : AppCompatActivity() {
                     binding.etSearchLocation.setOnFocusChangeListener { _, hasFocus ->
                         if (hasFocus) binding.etSearchLocation.showDropDown()
                     }
+                    return@launch
                 }
-            } catch (_: Exception) {
-                // Silent fallback to manual input.
+            } catch (_: Exception) { }
+
+            val cached = cacheStore.get(
+                CacheKeys.list("locations", mapOf("limit" to 200, "offset" to 0)),
+                com.example.inventoryapp.data.remote.model.LocationListResponseDto::class.java
+            )
+            if (cached != null) {
+                val values = cached.items.sortedBy { it.id }
+                    .map { "(${it.id}) ${it.code}" }
+                    .distinct()
+                val allValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
+                val adapter = ArrayAdapter(this@ThresholdsActivity, android.R.layout.simple_list_item_1, allValues)
+                binding.etLocation.setAdapter(adapter)
+                binding.etLocation.setOnClickListener { binding.etLocation.showDropDown() }
+                binding.etLocation.setOnFocusChangeListener { _, hasFocus ->
+                    if (hasFocus) binding.etLocation.showDropDown()
+                }
+                binding.etSearchLocation.setAdapter(adapter)
+                binding.etSearchLocation.setOnClickListener { binding.etSearchLocation.showDropDown() }
+                binding.etSearchLocation.setOnFocusChangeListener { _, hasFocus ->
+                    if (hasFocus) binding.etSearchLocation.showDropDown()
+                }
             }
         }
     }

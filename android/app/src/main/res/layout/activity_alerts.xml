@@ -5,6 +5,12 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
+    <View
+        android:id="@+id/viewNetworkBar"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:background="@color/online_bar" />
+
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"

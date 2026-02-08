@@ -14,8 +14,11 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.PendingType
 import com.example.inventoryapp.data.local.SessionManager
+import com.example.inventoryapp.data.local.cache.CacheKeys
+import com.example.inventoryapp.data.local.cache.CacheStore
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.model.EventCreateDto
+import com.example.inventoryapp.data.remote.model.EventListResponseDto
 import com.example.inventoryapp.data.remote.model.EventResponseDto
 import com.example.inventoryapp.data.remote.model.EventTypeDto
 import com.example.inventoryapp.data.repository.remote.EventRepository
@@ -24,6 +27,7 @@ import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.auth.LoginActivity
 import com.example.inventoryapp.ui.common.SendSnack
 import com.example.inventoryapp.ui.common.UiNotifier
+import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -40,6 +44,7 @@ class EventsActivity : AppCompatActivity() {
     private lateinit var binding: ActivityEventsBinding
     private lateinit var session: SessionManager
     private lateinit var snack: SendSnack
+    private lateinit var cacheStore: CacheStore
 
     private val gson = Gson()
     private val repo = EventRepository()
@@ -58,6 +63,7 @@ class EventsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityEventsBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
 
         
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
@@ -70,6 +76,7 @@ class EventsActivity : AppCompatActivity() {
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
 snack = SendSnack(binding.root)
         session = SessionManager(this)
+        cacheStore = CacheStore.getInstance(this)
 
         binding.btnBack.setOnClickListener { finish() }
         binding.btnAlertsQuick.setOnClickListener {
@@ -183,6 +190,7 @@ snack = SendSnack(binding.root)
                 if (res.isSuccess) {
                     snack.showSuccess("OK: Evento creado")
                     binding.etDelta.setText("")
+                    cacheStore.invalidatePrefix("events")
                     loadEvents(withSnack = false)
                 } else {
                     val ex = res.exceptionOrNull()
@@ -319,6 +327,10 @@ snack = SendSnack(binding.root)
                 val res = NetworkModule.api.listLocations(limit = 200, offset = 0)
                 if (res.isSuccessful && res.body() != null) {
                     val items = res.body()!!.items
+                    cacheStore.put(
+                        CacheKeys.list("locations", mapOf("limit" to 200, "offset" to 0)),
+                        res.body()!!
+                    )
                     val values = items.sortedBy { it.id }
                         .map { "(${it.id}) ${it.code}" }
                         .distinct()
@@ -329,9 +341,25 @@ snack = SendSnack(binding.root)
                     binding.etLocation.setOnFocusChangeListener { _, hasFocus ->
                         if (hasFocus) binding.etLocation.showDropDown()
                     }
+                    return@launch
                 }
-            } catch (_: Exception) {
-                // Silent fallback to manual input.
+            } catch (_: Exception) { }
+
+            val cached = cacheStore.get(
+                CacheKeys.list("locations", mapOf("limit" to 200, "offset" to 0)),
+                com.example.inventoryapp.data.remote.model.LocationListResponseDto::class.java
+            )
+            if (cached != null) {
+                val values = cached.items.sortedBy { it.id }
+                    .map { "(${it.id}) ${it.code}" }
+                    .distinct()
+                val allValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
+                val adapter = ArrayAdapter(this@EventsActivity, android.R.layout.simple_list_item_1, allValues)
+                binding.etLocation.setAdapter(adapter)
+                binding.etLocation.setOnClickListener { binding.etLocation.showDropDown() }
+                binding.etLocation.setOnFocusChangeListener { _, hasFocus ->
+                    if (hasFocus) binding.etLocation.showDropDown()
+                }
             }
         }
     }
@@ -361,12 +389,35 @@ snack = SendSnack(binding.root)
                 val effectiveLimit = if (filtersActive) 100 else pageSize
                 val effectiveOffset = if (filtersActive) 0 else currentOffset
                 if (filtersActive) currentOffset = 0
+                val cacheKey = CacheKeys.list(
+                    "events",
+                    mapOf(
+                        "limit" to effectiveLimit,
+                        "offset" to effectiveOffset
+                    )
+                )
+                val cached = cacheStore.get(cacheKey, EventListResponseDto::class.java)
+                if (cached != null) {
+                    val pendingItems = buildPendingRows()
+                    val allProductIds = mutableSetOf<Int>()
+                    cached.items.forEach { allProductIds.add(it.productId) }
+                    pendingItems.forEach { allProductIds.add(it.productId) }
+                    val productNames = fetchProductNames(allProductIds)
+                    val cachedRows = cached.items.map { it.toRowUi(productNames) }
+                    val pendingWithNames = pendingItems.map { it.copy(productName = productNames[it.productId]) }
+                    val ordered = (pendingWithNames + cachedRows).sortedByDescending { it.id }
+                    totalCount = cached.total + pendingItems.size
+                    setAllItemsAndApplyFilters(ordered)
+                    updatePageInfo(cached.items.size, pendingItems.size)
+                    isLoading = false
+                }
                 val res = repo.listEvents(limit = effectiveLimit, offset = effectiveOffset)
                 if (res.isSuccess) {
                     val body = res.getOrNull()!!
+                    cacheStore.put(cacheKey, body)
                     val remoteEvents = body.items
-                    totalCount = body.total
                     val pendingItems = buildPendingRows()
+                    totalCount = body.total + pendingItems.size
                     val allProductIds = mutableSetOf<Int>()
                     remoteEvents.forEach { allProductIds.add(it.productId) }
                     pendingItems.forEach { allProductIds.add(it.productId) }
@@ -387,13 +438,29 @@ snack = SendSnack(binding.root)
                             snack.showError("Error: ${ex?.message ?: "sin detalle"}")
                         }
                     }
-                    val pendingItems = buildPendingRows()
-                    val productNames = fetchProductNames(pendingItems.map { it.productId }.toSet())
-                    val pendingWithNames = pendingItems.map { it.copy(productName = productNames[it.productId]) }
-                    val ordered = pendingWithNames.sortedByDescending { it.id }
-                    totalCount = pendingItems.size
-                    setAllItemsAndApplyFilters(ordered)
-                    updatePageInfo(ordered.size, ordered.size)
+                    val cachedOnError = cacheStore.get(cacheKey, EventListResponseDto::class.java)
+                    if (cachedOnError != null) {
+                        val pendingItems = buildPendingRows()
+                        val allProductIds = mutableSetOf<Int>()
+                        cachedOnError.items.forEach { allProductIds.add(it.productId) }
+                        pendingItems.forEach { allProductIds.add(it.productId) }
+                        val productNames = fetchProductNames(allProductIds)
+                        val cachedRows = cachedOnError.items.map { it.toRowUi(productNames) }
+                        val pendingWithNames = pendingItems.map { it.copy(productName = productNames[it.productId]) }
+                        val ordered = (pendingWithNames + cachedRows).sortedByDescending { it.id }
+                        totalCount = cachedOnError.total + pendingItems.size
+                        setAllItemsAndApplyFilters(ordered)
+                        updatePageInfo(cachedOnError.items.size, pendingItems.size)
+                        snack.showError("Mostrando eventos en cache")
+                    } else {
+                        val pendingItems = buildPendingRows()
+                        val productNames = fetchProductNames(pendingItems.map { it.productId }.toSet())
+                        val pendingWithNames = pendingItems.map { it.copy(productName = productNames[it.productId]) }
+                        val ordered = pendingWithNames.sortedByDescending { it.id }
+                        totalCount = pendingItems.size
+                        setAllItemsAndApplyFilters(ordered)
+                        updatePageInfo(ordered.size, ordered.size)
+                    }
                 }
             } catch (e: Exception) {
                 if (withSnack) {
@@ -403,13 +470,36 @@ snack = SendSnack(binding.root)
                         snack.showError("Error de red: ${e.message}")
                     }
                 }
-                val pendingItems = buildPendingRows()
-                val productNames = fetchProductNames(pendingItems.map { it.productId }.toSet())
-                val pendingWithNames = pendingItems.map { it.copy(productName = productNames[it.productId]) }
-                val ordered = pendingWithNames.sortedByDescending { it.id }
-                totalCount = pendingItems.size
-                setAllItemsAndApplyFilters(ordered)
-                updatePageInfo(ordered.size, ordered.size)
+                val cacheKey = CacheKeys.list(
+                    "events",
+                    mapOf(
+                        "limit" to if (hasActiveFilters()) 100 else pageSize,
+                        "offset" to if (hasActiveFilters()) 0 else currentOffset
+                    )
+                )
+                val cachedOnError = cacheStore.get(cacheKey, EventListResponseDto::class.java)
+                if (cachedOnError != null) {
+                    val pendingItems = buildPendingRows()
+                    val allProductIds = mutableSetOf<Int>()
+                    cachedOnError.items.forEach { allProductIds.add(it.productId) }
+                    pendingItems.forEach { allProductIds.add(it.productId) }
+                    val productNames = fetchProductNames(allProductIds)
+                    val cachedRows = cachedOnError.items.map { it.toRowUi(productNames) }
+                    val pendingWithNames = pendingItems.map { it.copy(productName = productNames[it.productId]) }
+                    val ordered = (pendingWithNames + cachedRows).sortedByDescending { it.id }
+                    totalCount = cachedOnError.total + pendingItems.size
+                    setAllItemsAndApplyFilters(ordered)
+                    updatePageInfo(cachedOnError.items.size, pendingItems.size)
+                    snack.showError("Mostrando eventos en cache")
+                } else {
+                    val pendingItems = buildPendingRows()
+                    val productNames = fetchProductNames(pendingItems.map { it.productId }.toSet())
+                    val pendingWithNames = pendingItems.map { it.copy(productName = productNames[it.productId]) }
+                    val ordered = pendingWithNames.sortedByDescending { it.id }
+                    totalCount = pendingItems.size
+                    setAllItemsAndApplyFilters(ordered)
+                    updatePageInfo(ordered.size, ordered.size)
+                }
             }
             isLoading = false
             if (pendingFilterApply) {
@@ -553,17 +643,31 @@ snack = SendSnack(binding.root)
 
     private suspend fun fetchProductNames(ids: Set<Int>): Map<Int, String> {
         val out = mutableMapOf<Int, String>()
+        val cachedMap = getCachedProductNames()
+        var networkFailed = false
         ids.forEach { id ->
-            try {
-                val res = NetworkModule.api.getProduct(id)
-                if (res.isSuccessful && res.body() != null) {
-                    out[id] = res.body()!!.name
+            if (!networkFailed) {
+                try {
+                    val res = NetworkModule.api.getProduct(id)
+                    if (res.isSuccessful && res.body() != null) {
+                        out[id] = res.body()!!.name
+                        return@forEach
+                    }
+                } catch (_: Exception) {
+                    networkFailed = true
                 }
-            } catch (_: Exception) {
-                // Keep fallback labels if lookup fails.
             }
+            cachedMap[id]?.let { out[id] = it }
+        }
+        ids.forEach { id ->
+            if (!out.containsKey(id)) cachedMap[id]?.let { out[id] = it }
         }
         return out
+    }
+
+    private suspend fun getCachedProductNames(): Map<Int, String> {
+        val cached = cacheStore.get("products:names", com.example.inventoryapp.data.local.cache.ProductNameCache::class.java)
+        return cached?.items?.associateBy({ it.id }, { it.name }) ?: emptyMap()
     }
 
     private fun setAllItemsAndApplyFilters(ordered: List<EventRowUi>) {

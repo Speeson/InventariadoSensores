@@ -3,6 +3,8 @@ package com.example.inventoryapp.ui.movements
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
+import androidx.core.content.ContextCompat
+import com.example.inventoryapp.R
 import com.example.inventoryapp.databinding.ItemMovementCardBinding
 
 data class MovementRow(
@@ -18,7 +20,13 @@ class MovementsListAdapter : RecyclerView.Adapter<MovementsListAdapter.VH>() {
 
     private val items = mutableListOf<MovementRow>()
 
-    inner class VH(val binding: ItemMovementCardBinding) : RecyclerView.ViewHolder(binding.root)
+    inner class VH(val binding: ItemMovementCardBinding) : RecyclerView.ViewHolder(binding.root) {
+        val typeColor = binding.tvTypeTag.currentTextColor
+        val idColor = binding.tvMovementId.currentTextColor
+        val titleColor = binding.tvTitle.currentTextColor
+        val metaColor = binding.tvMeta.currentTextColor
+        val subColor = binding.tvSub.currentTextColor
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
         val binding = ItemMovementCardBinding.inflate(LayoutInflater.from(parent.context), parent, false)
@@ -45,6 +53,20 @@ class MovementsListAdapter : RecyclerView.Adapter<MovementsListAdapter.VH>() {
         holder.binding.ivIcon.alpha = if (row.isPending) 0.7f else 1.0f
         holder.binding.ivWarning.visibility =
             if (row.isPending) android.view.View.VISIBLE else android.view.View.GONE
+        val offlineColor = ContextCompat.getColor(holder.itemView.context, R.color.offline_text)
+        if (row.isPending) {
+            holder.binding.tvTypeTag.setTextColor(offlineColor)
+            holder.binding.tvMovementId.setTextColor(offlineColor)
+            holder.binding.tvTitle.setTextColor(offlineColor)
+            holder.binding.tvMeta.setTextColor(offlineColor)
+            holder.binding.tvSub.setTextColor(offlineColor)
+        } else {
+            holder.binding.tvTypeTag.setTextColor(holder.typeColor)
+            holder.binding.tvMovementId.setTextColor(holder.idColor)
+            holder.binding.tvTitle.setTextColor(holder.titleColor)
+            holder.binding.tvMeta.setTextColor(holder.metaColor)
+            holder.binding.tvSub.setTextColor(holder.subColor)
+        }
     }
 
     fun submit(newItems: List<MovementRow>) {

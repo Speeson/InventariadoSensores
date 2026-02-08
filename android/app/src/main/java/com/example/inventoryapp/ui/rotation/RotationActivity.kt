@@ -16,6 +16,7 @@ import com.example.inventoryapp.databinding.ActivityRotationBinding
 import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.auth.LoginActivity
 import com.example.inventoryapp.ui.common.SendSnack
+import com.example.inventoryapp.ui.common.NetworkStatusBar
 import kotlinx.coroutines.launch
 import com.example.inventoryapp.ui.common.GradientIconUtil
 import android.graphics.drawable.GradientDrawable
@@ -41,6 +42,7 @@ class RotationActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityRotationBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
 
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
         GradientIconUtil.applyGradient(binding.ivSearchRotation, R.drawable.search)

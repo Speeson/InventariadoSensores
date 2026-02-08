@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_roles
+from app.cache.redis_cache import cache_get, cache_set, cache_invalidate_prefix, make_key
 from app.db.deps import get_db
 from app.models.enums import UserRole
 from app.repositories import product_repo
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 @router.get("/", response_model=ProductListResponse, dependencies=[Depends(get_current_user)])
 def list_products(
     db: Session = Depends(get_db),
+    user=Depends(get_current_user),
     sku: str | None = Query(None),
     name: str | None = Query(None),
     barcode: str | None = Query(None),
@@ -42,6 +44,25 @@ def list_products(
         raise HTTPException(status_code=400, detail=f"order_by debe ser uno de {sorted(allowed_order)}")
     if order_dir not in {"asc", "desc"}:
         raise HTTPException(status_code=400, detail="order_dir debe ser 'asc' o 'desc'")
+    cache_key = make_key(
+        "products:list",
+        user.id if user else None,
+        {
+            "sku": sku,
+            "name": name,
+            "barcode": barcode,
+            "category_id": category_id,
+            "active": active,
+            "order_by": order_by,
+            "order_dir": order_dir,
+            "limit": limit,
+            "offset": offset,
+        },
+    )
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     items, total = product_repo.list_products(
         db,
         sku=sku,
@@ -54,14 +75,21 @@ def list_products(
         limit=limit,
         offset=offset,
     )
-    return ProductListResponse(items=items, total=total, limit=limit, offset=offset)
+    payload = ProductListResponse(items=items, total=total, limit=limit, offset=offset)
+    cache_set(cache_key, payload, ttl_seconds=300)
+    return payload
 
 
 @router.get("/{product_id}", response_model=ProductResponse, dependencies=[Depends(get_current_user)])
-def get_product(product_id: int, db: Session = Depends(get_db)):
+def get_product(product_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)):
+    cache_key = make_key("products:detail", user.id if user else None, {"id": product_id})
+    cached = cache_get(cache_key)
+    if cached is not None:
+        return cached
     product = product_repo.get(db, product_id)
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
+    cache_set(cache_key, product, ttl_seconds=300)
     return product
 
 
@@ -138,6 +166,8 @@ def update_product(product_id: int, payload: ProductUpdate, db: Session = Depend
                 )
             except Exception:
                 logger.exception("No se pudo regenerar la etiqueta para producto %s", product.id)
+    cache_invalidate_prefix("products:list")
+    cache_invalidate_prefix("products:detail")
     return product
 
 
@@ -156,6 +186,8 @@ def delete_product(product_id: int, db: Session = Depends(get_db)):
         label_path.unlink()
     except OSError:
         pass
+    cache_invalidate_prefix("products:list")
+    cache_invalidate_prefix("products:detail")
     return None
 
 

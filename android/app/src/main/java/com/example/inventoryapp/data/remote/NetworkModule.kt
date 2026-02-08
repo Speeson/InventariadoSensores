@@ -9,9 +9,11 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.io.IOException
-import java.net.SocketTimeoutException
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import com.example.inventoryapp.data.local.SystemAlertType
-import com.example.inventoryapp.data.local.SystemAlertStore
 import com.example.inventoryapp.ui.common.SystemAlertManager
 import com.example.inventoryapp.ui.common.ActivityTracker
 import com.example.inventoryapp.ui.common.UiNotifier
@@ -53,12 +55,52 @@ object NetworkModule {
         level = HttpLoggingInterceptor.Level.BODY
     }
 
-    @Volatile private var lastNetworkPopupAt: Long = 0L
+    @Volatile private var networkDown = false
+    @Volatile private var lastProbeAt: Long = 0L
+    private const val OFFLINE_PROBE_MS = 10_000L
+    private val _offlineState = MutableStateFlow(false)
+    val offlineState: StateFlow<Boolean> = _offlineState.asStateFlow()
+
+    private fun notifyNetworkDownOnce() {
+        if (networkDown) return
+        networkDown = true
+        _offlineState.value = true
+        val activity = ActivityTracker.getCurrent()
+        if (activity != null) {
+            activity.runOnUiThread {
+                UiNotifier.showCentered(activity, "Conexión perdida. Trabajando en modo offline.")
+            }
+        }
+    }
+
+    private fun notifyNetworkUpOnce() {
+        if (!networkDown) return
+        networkDown = false
+        _offlineState.value = false
+        val activity = ActivityTracker.getCurrent()
+        if (activity != null) {
+            activity.runOnUiThread {
+                UiNotifier.showCentered(activity, "Conexión restablecida.")
+            }
+        }
+    }
 
     private val client: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
+            .connectTimeout(3, TimeUnit.SECONDS)
+            .readTimeout(6, TimeUnit.SECONDS)
+            .writeTimeout(6, TimeUnit.SECONDS)
+            .callTimeout(8, TimeUnit.SECONDS)
             .addInterceptor { chain ->
+                if (networkDown) {
+                    val now = System.currentTimeMillis()
+                    val allowProbe = now - lastProbeAt >= OFFLINE_PROBE_MS
+                    if (!allowProbe) {
+                        throw IOException("Offline mode")
+                    }
+                    lastProbeAt = now
+                }
                 val session = SessionManager(appContext)
                 val token = session.getToken()
 
@@ -70,6 +112,7 @@ object NetworkModule {
 
                 try {
                     val response = chain.proceed(req)
+                    notifyNetworkUpOnce()
                     if (response.code >= 500) {
                         SystemAlertManager.record(
                             appContext,
@@ -98,30 +141,7 @@ object NetworkModule {
                     }
                     response
                 } catch (e: IOException) {
-                    if (e is SocketTimeoutException) {
-                        val store = SystemAlertStore(appContext)
-                        if (store.shouldRecord(SystemAlertType.TIMEOUT, "timeout", 30_000L)) {
-                            store.rememberLast(SystemAlertType.TIMEOUT, "timeout")
-                            val activity = ActivityTracker.getCurrent()
-                            if (activity != null) {
-                                activity.runOnUiThread {
-                                    UiNotifier.show(activity, "Timeout de conexión. Intenta de nuevo.")
-                                }
-                            }
-                        }
-                    } else {
-                        val now = System.currentTimeMillis()
-                        if (now - lastNetworkPopupAt > 30_000L) {
-                            lastNetworkPopupAt = now
-                            SystemAlertManager.record(
-                                appContext,
-                                SystemAlertType.NETWORK,
-                                "Sin conexión",
-                                "Se perdió la conexión. Reconectando...",
-                                blocking = true
-                            )
-                        }
-                    }
+                    notifyNetworkDownOnce()
                     throw e
                 }
             }

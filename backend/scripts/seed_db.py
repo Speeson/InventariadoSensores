@@ -236,7 +236,8 @@ def run_seed(generate_labels: bool = False):
             return user_ids[index % len(user_ids)]
 
         now = datetime.utcnow()
-        movements = [
+        if db.query(Movement).first() is None:
+            movements = [
             {
                 "product_id": products[0].id,
                 "quantity": 6,
@@ -465,17 +466,19 @@ def run_seed(generate_labels: bool = False):
                 "location_id": locations["Laboratorio I+D"].id,
                 "created_at": now - timedelta(days=6),
             },
-        ]
-        for movement in movements:
-            if "delta" not in movement:
-                qty = movement["quantity"]
-                mtype = movement["movement_type"]
-                if mtype == MovementType.OUT:
-                    movement["delta"] = -qty
-                else:
-                    movement["delta"] = qty
-            get_or_create(Movement, **movement)
-        db.commit()
+            ]
+            for movement in movements:
+                if "delta" not in movement:
+                    qty = movement["quantity"]
+                    mtype = movement["movement_type"]
+                    if mtype == MovementType.OUT:
+                        movement["delta"] = -qty
+                    else:
+                        movement["delta"] = qty
+                get_or_create(Movement, **movement)
+            db.commit()
+        else:
+            print("Seed: movimientos ya existen, se omite")
 
         audit_logs = [
             {
