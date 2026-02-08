@@ -17,6 +17,7 @@ import retrofit2.http.PATCH
 import retrofit2.http.Path
 import retrofit2.http.Query
 import okhttp3.ResponseBody
+import okhttp3.MultipartBody
 import com.example.inventoryapp.data.remote.model.EventCreateDto
 import com.example.inventoryapp.data.remote.model.EventListResponseDto
 import com.example.inventoryapp.data.remote.model.EventResponseDto
@@ -32,6 +33,11 @@ import com.example.inventoryapp.data.remote.model.ThresholdUpdateDto
 import com.example.inventoryapp.data.remote.model.AlertListResponseDto
 import com.example.inventoryapp.data.remote.model.AlertResponseDto
 import com.example.inventoryapp.data.remote.model.AlertStatusDto
+import com.example.inventoryapp.data.remote.model.ImportSummaryResponseDto
+import com.example.inventoryapp.data.remote.model.ImportReviewListResponseDto
+import com.example.inventoryapp.data.remote.model.BasicOkDto
+import retrofit2.http.Multipart
+import retrofit2.http.Part
 
 
 
@@ -245,6 +251,40 @@ interface InventoryApi {
 
     @POST("alerts/{alert_id}/ack")
     suspend fun ackAlert(@Path("alert_id") alertId: Int): Response<AlertResponseDto>
+
+    @Multipart
+    @POST("imports/events/csv")
+    suspend fun importEventsCsv(
+        @Part file: MultipartBody.Part,
+        @Query("dry_run") dryRun: Boolean = true,
+        @Query("fuzzy_threshold") fuzzyThreshold: Double = 0.9
+    ): Response<ImportSummaryResponseDto>
+
+    @Multipart
+    @POST("imports/transfers/csv")
+    suspend fun importTransfersCsv(
+        @Part file: MultipartBody.Part,
+        @Query("dry_run") dryRun: Boolean = true,
+        @Query("fuzzy_threshold") fuzzyThreshold: Double = 0.9
+    ): Response<ImportSummaryResponseDto>
+
+    @GET("imports/reviews")
+    suspend fun listImportReviews(
+        @Query("batch_id") batchId: Int? = null,
+        @Query("kind") kind: String? = null,
+        @Query("limit") limit: Int = 50,
+        @Query("offset") offset: Int = 0
+    ): Response<ImportReviewListResponseDto>
+
+    @POST("imports/reviews/{review_id}/approve")
+    suspend fun approveImportReview(
+        @Path("review_id") reviewId: Int
+    ): Response<BasicOkDto>
+
+    @POST("imports/reviews/{review_id}/reject")
+    suspend fun rejectImportReview(
+        @Path("review_id") reviewId: Int
+    ): Response<BasicOkDto>
 }
 
 

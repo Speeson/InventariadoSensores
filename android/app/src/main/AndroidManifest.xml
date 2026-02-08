@@ -45,6 +45,7 @@
         <activity android:name=".ui.alerts.AlertsActivity" />
         <activity android:name=".ui.stock.StockActivity" />
         <activity android:name=".ui.movements.ResultActivity" />
+        <activity android:name=".ui.imports.ImportsActivity" />
         <activity android:name=".ui.home.HomeActivity" />
         <activity android:name=".MainActivity" />
 

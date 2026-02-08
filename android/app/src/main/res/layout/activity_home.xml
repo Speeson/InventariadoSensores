@@ -397,9 +397,8 @@
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/btnThresholds"
                         android:layout_width="0dp"
-                        android:layout_height="96dp"
-                        android:layout_columnSpan="2"
-                        android:layout_columnWeight="2"
+                        android:layout_height="112dp"
+                        android:layout_columnWeight="1"
                         android:layout_margin="6dp"
                         android:clickable="true"
                         android:focusable="true"
@@ -414,19 +413,51 @@
                             android:padding="12dp">
                             <ImageView
                                 android:id="@+id/ivThresholdsIcon"
-                                android:layout_width="36dp"
-                                android:layout_height="36dp"
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
                                 android:src="@drawable/umbral"
                                 android:contentDescription="@null" />
                             <TextView
                                 android:id="@+id/tvThresholdsLabel"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Thresholds / Umbrales"
+                                android:text="Thresholds"
                                 android:textStyle="bold"
                                 android:textSize="14sp"
                                 android:textColor="?attr/colorOnSurface"
-                                android:layout_marginTop="6dp" />
+                                android:layout_marginTop="8dp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/btnImports"
+                        android:layout_width="0dp"
+                        android:layout_height="112dp"
+                        android:layout_columnWeight="1"
+                        android:layout_margin="6dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="2dp">
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical"
+                            android:gravity="center">
+                            <ImageView
+                                android:id="@+id/ivImportsIcon"
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:src="@drawable/addfile"
+                                android:contentDescription="@null" />
+                            <TextView
+                                android:id="@+id/tvImportsLabel"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Importar CSV"
+                                android:textStyle="bold"
+                                android:layout_marginTop="8dp" />
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 

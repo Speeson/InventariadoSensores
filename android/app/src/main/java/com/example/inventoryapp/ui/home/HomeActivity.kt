@@ -44,6 +44,7 @@ import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.common.SystemAlertManager
 import com.example.inventoryapp.data.local.SystemAlertType
 import com.example.inventoryapp.data.remote.model.AlertStatusDto
+import com.example.inventoryapp.ui.imports.ImportsActivity
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.navigation.NavigationView
@@ -175,6 +176,13 @@ class HomeActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
             startActivity(Intent(this, ThresholdsActivity::class.java))
+        }
+        binding.btnImports.setOnClickListener {
+            if (!canAccessRestricted()) {
+                UiNotifier.show(this@HomeActivity, "Solo admin/manager")
+                return@setOnClickListener
+            }
+            startActivity(Intent(this, ImportsActivity::class.java))
         }
         binding.btnAlertsQuick.setOnClickListener {
             startActivity(Intent(this, AlertsActivity::class.java))
@@ -452,10 +460,18 @@ class HomeActivity : AppCompatActivity() {
                 R.drawable.umbral,
                 restricted = false
             )
+            setRestrictedCardState(
+                binding.btnImports,
+                binding.ivImportsIcon,
+                binding.tvImportsLabel,
+                R.drawable.addfile,
+                restricted = false
+            )
             binding.btnRotation.visibility = android.view.View.VISIBLE
             binding.btnReports.visibility = android.view.View.VISIBLE
             binding.btnCategories.visibility = android.view.View.VISIBLE
             binding.btnThresholds.visibility = android.view.View.VISIBLE
+            binding.btnImports.visibility = android.view.View.VISIBLE
             return
         }
 
@@ -464,6 +480,7 @@ class HomeActivity : AppCompatActivity() {
             binding.btnReports.visibility = android.view.View.GONE
             binding.btnCategories.visibility = android.view.View.GONE
             binding.btnThresholds.visibility = android.view.View.GONE
+            binding.btnImports.visibility = android.view.View.GONE
             return
         }
 
@@ -471,6 +488,7 @@ class HomeActivity : AppCompatActivity() {
         binding.btnReports.visibility = android.view.View.VISIBLE
         binding.btnCategories.visibility = android.view.View.VISIBLE
         binding.btnThresholds.visibility = android.view.View.VISIBLE
+        binding.btnImports.visibility = android.view.View.VISIBLE
 
         setRestrictedCardState(
             binding.btnRotation,
@@ -498,6 +516,13 @@ class HomeActivity : AppCompatActivity() {
             binding.ivThresholdsIcon,
             binding.tvThresholdsLabel,
             R.drawable.umbral,
+            restricted = true
+        )
+        setRestrictedCardState(
+            binding.btnImports,
+            binding.ivImportsIcon,
+            binding.tvImportsLabel,
+            R.drawable.addfile,
             restricted = true
         )
     }
@@ -734,6 +759,7 @@ private fun confirmLogout() {
         setGradientImage(binding.ivRotationIcon, R.drawable.rotation)
         setGradientImage(binding.ivReportsIcon, R.drawable.reports)
         setGradientImage(binding.ivThresholdsIcon, R.drawable.umbral)
+        setGradientImage(binding.ivImportsIcon, R.drawable.addfile)
 
         applyGradientToMenu(binding.navViewMain)
         applyGradientToMenu(binding.navViewBottom)

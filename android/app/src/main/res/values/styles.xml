@@ -1,0 +1,5 @@
+<resources>
+    <style name="TextAppearance.ImportTabs" parent="TextAppearance.Material3.LabelLarge">
+        <item name="android:textSize">13sp</item>
+    </style>
+</resources>
