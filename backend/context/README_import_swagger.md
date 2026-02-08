@@ -48,6 +48,7 @@ Endpoint:
 
 Archivo:
 - `backend/context/import_samples/transfers_sample.csv`
+- `backend/context/import_samples/transfers_sample_errors.csv`
 
 ## 6) Aprobar o rechazar una review
 1. `GET /imports/reviews`
@@ -64,4 +65,31 @@ Después de aprobar:
 ## Archivos de ejemplo
 - `backend/context/import_samples/events_sample.csv`
 - `backend/context/import_samples/events_sample_review.csv`
+- `backend/context/import_samples/events_sample_errors.csv`
 - `backend/context/import_samples/transfers_sample.csv`
+
+## CSV con errores (validaciones críticas)
+Para probar validaciones, usa:
+- `POST /imports/events/csv?dry_run=true`
+- Archivo: `backend/context/import_samples/events_sample_errors.csv`
+
+Errores cubiertos:
+- SKU vacío
+- Barcode vacío
+- `category_id` inexistente
+- `location_id` inexistente
+- Cantidad negativa en IN
+- ADJUST con 0
+- OUT con stock insuficiente
+
+## CSV de transferencias con errores
+Para probar validaciones en transferencias:
+- `POST /imports/transfers/csv?dry_run=true`
+- Archivo: `backend/context/import_samples/transfers_sample_errors.csv`
+
+Errores cubiertos:
+- Origen y destino iguales
+- `from_location_id` inexistente
+- `to_location_id` inexistente
+- Cantidad 0
+- Cantidad negativa
