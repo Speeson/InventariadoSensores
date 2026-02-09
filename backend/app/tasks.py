@@ -7,11 +7,12 @@ from app.models.event import Event
 from app.models.product import Product
 from app.models.movement import Movement
 from app.models.alert import Alert
-from app.models.enums import AlertStatus
+from app.models.enums import AlertStatus, AlertType
 from app.models.location import Location
 from app.services.notification_service import send_low_stock_email
 from app.models.stock import Stock
 from app.models.stock_threshold import StockThreshold
+from app.repositories import alert_repo
 
 # Numero maximo de intentos para reintentar una tarea en caso de error retryable
 MAX_RETRIES = 3
@@ -53,20 +54,18 @@ def scan_low_stock() -> dict:
             if existing:
                 continue
 
-            alert = Alert(
+            alert_repo.create_alert(
+                db,
                 stock_id=stock.id,
                 quantity=stock.quantity,
                 min_quantity=threshold.min_quantity,
-                alert_status=AlertStatus.PENDING,
+                alert_type=AlertType.LOW_STOCK,
+                status=AlertStatus.PENDING,
             )
-            db.add(alert)
             created += 1
             to_notify.append(
                 (stock.product_id, product.name, location.code, stock.quantity, threshold.min_quantity)
             )
-
-        if created:
-            db.commit()
 
     if to_notify:
         for product_id, product_name, location_code, quantity, min_quantity in to_notify:

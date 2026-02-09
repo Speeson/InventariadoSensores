@@ -5,7 +5,9 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.alert import Alert
-from app.models.enums import AlertStatus
+from app.models.enums import AlertStatus, AlertType
+from app.schemas.alert import AlertResponse
+from app.ws.alerts_ws import publish_alert
 from app.models.stock import Stock
 from app.models.location import Location
 
@@ -22,6 +24,7 @@ def list_alerts(
     location: str | None = None,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
+    alert_types: set[AlertType] | None = None,
     limit: int = 50,
     offset: int = 0,
 ) -> Tuple[Iterable[Alert], int]:
@@ -33,6 +36,8 @@ def list_alerts(
     filters = []
     if status is not None:
         filters.append(Alert.alert_status == status)
+    if alert_types is not None:
+        filters.append(Alert.alert_type.in_(alert_types))
     if product_id is not None:
         filters.append(Stock.product_id == product_id)
     if location is not None:
@@ -49,23 +54,39 @@ def list_alerts(
     return items, total
 
 
+def get_active_by_type(db: Session, stock_id: int, alert_type: AlertType) -> Alert | None:
+    return db.scalar(
+        select(Alert).where(
+            Alert.stock_id == stock_id,
+            Alert.alert_type == alert_type,
+            Alert.alert_status.in_([AlertStatus.PENDING, AlertStatus.ACK]),
+        )
+    )
+
+
 def create_alert(
     db: Session,
     *,
-    stock_id: int,
+    stock_id: int | None,
     quantity: int,
     min_quantity: int,
+    alert_type: AlertType = AlertType.LOW_STOCK,
     status: AlertStatus = AlertStatus.PENDING,
 ) -> Alert:
     alert = Alert(
         stock_id=stock_id,
         quantity=quantity,
         min_quantity=min_quantity,
+        alert_type=alert_type,
         alert_status=status,
     )
     db.add(alert)
     db.commit()
     db.refresh(alert)
+    try:
+        publish_alert(AlertResponse.model_validate(alert))
+    except Exception:
+        pass
     return alert
 
 

@@ -8,6 +8,7 @@ from app.db.deps import get_db
 from app.models.enums import UserRole
 from app.repositories import stock_repo, product_repo
 from app.schemas.stock import StockResponse, StockUpdate, StockCreate
+from app.services import inventory_service
 
 
 class StockListResponse(BaseModel):
@@ -120,6 +121,7 @@ def update_stock(stock_id: int, payload: StockUpdate, db: Session = Depends(get_
     if not stock:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Stock no encontrado")
 
+    old_quantity = stock.quantity
     new_quantity = payload.quantity if payload.quantity is not None else stock.quantity
     new_location = payload.location if payload.location is not None else stock.location
 
@@ -132,6 +134,7 @@ def update_stock(stock_id: int, payload: StockUpdate, db: Session = Depends(get_
         stock = stock_repo.update_stock_location(db, stock, new_location)
     if payload.quantity is not None:
         stock = stock_repo.update_stock_quantity(db, stock, new_quantity)
+        inventory_service.maybe_create_alerts_for_stock_update(db, stock=stock, old_quantity=old_quantity)
     cache_invalidate_prefix("stocks:list")
     cache_invalidate_prefix("stocks:detail")
     return stock

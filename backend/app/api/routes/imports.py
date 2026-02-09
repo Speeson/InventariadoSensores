@@ -16,8 +16,8 @@ from app.models import ImportBatch, ImportError, ImportReview
 from app.models.category import Category
 from app.models.location import Location
 from app.models.product import Product
-from app.models.enums import Source, UserRole
-from app.repositories import category_repo, product_repo
+from app.models.enums import Source, UserRole, AlertType, AlertStatus
+from app.repositories import category_repo, product_repo, alert_repo
 from app.services import inventory_service
 from app.models.user import User
 
@@ -507,6 +507,16 @@ def import_events_csv(
         cache_invalidate_prefix("reports:top-consumed")
         cache_invalidate_prefix("reports:turnover")
 
+    if not dry_run and (error_rows > 0 or review_rows > 0):
+        alert_repo.create_alert(
+            db,
+            stock_id=None,
+            quantity=error_rows + review_rows,
+            min_quantity=0,
+            alert_type=AlertType.IMPORT_ISSUES,
+            status=AlertStatus.PENDING,
+        )
+
     return ImportSummaryResponse(
         batch_id=batch.id,
         dry_run=dry_run,
@@ -678,6 +688,16 @@ def import_transfers_csv(
         cache_invalidate_prefix("products:list")
         cache_invalidate_prefix("reports:top-consumed")
         cache_invalidate_prefix("reports:turnover")
+
+    if not dry_run and (error_rows > 0 or review_rows > 0):
+        alert_repo.create_alert(
+            db,
+            stock_id=None,
+            quantity=error_rows + review_rows,
+            min_quantity=0,
+            alert_type=AlertType.IMPORT_ISSUES,
+            status=AlertStatus.PENDING,
+        )
 
     return ImportSummaryResponse(
         batch_id=batch.id,

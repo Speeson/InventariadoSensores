@@ -36,13 +36,23 @@ object NetworkModule {
             || "google_sdk" == Build.PRODUCT
     }
 
-    private fun baseUrl(): String {
-        val host = if (isEmulator()) {
+    private fun resolveHost(): String {
+        return if (isEmulator()) {
             "10.0.2.2"
         } else {
             getCustomHost()?.ifBlank { null } ?: BuildConfig.LOCAL_DEV_HOST
         }
+    }
+
+    private fun baseUrl(): String {
+        val host = resolveHost()
         return "http://$host:8000/"
+    }
+
+    fun buildWsUrl(path: String): String {
+        val host = resolveHost()
+        val normalized = if (path.startsWith("/")) path else "/$path"
+        return "ws://$host:8000$normalized"
     }
 
     private lateinit var appContext: Context

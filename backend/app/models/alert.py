@@ -2,16 +2,17 @@ from sqlalchemy import Integer, String, Boolean, DateTime, Enum, ForeignKey, fun
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 from datetime import datetime
-from app.models.enums import AlertStatus
+from app.models.enums import AlertStatus, AlertType
 
 class Alert(Base):
     __tablename__ = "alerts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    stock_id: Mapped[int] = mapped_column(ForeignKey("stocks.id"), nullable=False)
+    stock_id: Mapped[int | None] = mapped_column(ForeignKey("stocks.id"), nullable=True)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     min_quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     alert_status: Mapped[AlertStatus] = mapped_column(Enum(AlertStatus), nullable=False, default=AlertStatus.PENDING)
+    alert_type: Mapped[AlertType] = mapped_column(Enum(AlertType), nullable=False, default=AlertType.LOW_STOCK)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

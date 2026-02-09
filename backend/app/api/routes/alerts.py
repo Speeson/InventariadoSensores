@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_roles
 from app.db.deps import get_db
-from app.models.enums import AlertStatus, UserRole
+from app.models.enums import AlertStatus, UserRole, AlertType
 from app.models.user import User
 from app.repositories import alert_repo
 from app.schemas.alert import AlertResponse
@@ -32,9 +32,14 @@ def list_alerts(
     date_to: datetime | None = Query(None),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    user: User = Depends(get_current_user),
 ):
     if date_from and date_to and date_from > date_to:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="date_from no puede ser mayor que date_to")
+
+    allowed_types = None
+    if user.role == UserRole.USER:
+        allowed_types = {AlertType.LOW_STOCK, AlertType.OUT_OF_STOCK}
 
     items, total = alert_repo.list_alerts(
         db,
@@ -43,6 +48,7 @@ def list_alerts(
         location=location,
         date_from=date_from,
         date_to=date_to,
+        alert_types=allowed_types,
         limit=limit,
         offset=offset,
     )
@@ -67,3 +73,4 @@ def ack_alert(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="La alerta ya esta resuelta")
 
     return alert_repo.ack_alert(db, alert, user_id=user.id)
+

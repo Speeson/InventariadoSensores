@@ -3,12 +3,15 @@ import uuid
 
 from sqlalchemy.orm import Session
 
-from app.models.enums import Source, MovementType
+from app.models.enums import Source, MovementType, AlertType, AlertStatus
 from app.models.product import Product
 from app.models.location import Location
 from app.models.stock import Stock
 from app.models.movement import Movement
-from app.repositories import product_repo, stock_repo, movement_repo, location_repo
+from app.repositories import product_repo, stock_repo, movement_repo, location_repo, alert_repo
+from app.models.stock_threshold import StockThreshold
+from sqlalchemy import select
+import os
 
 
 class InventoryError(Exception):
@@ -33,6 +36,76 @@ def _get_or_create_stock(db: Session, product_id: int, location: str) -> Stock:
     if stock:
         return stock
     return stock_repo.create_stock(db, product_id=product_id, location=location, quantity=0)
+
+
+def _get_threshold(db: Session, product_id: int, location_id: int) -> StockThreshold | None:
+    threshold = db.scalar(
+        select(StockThreshold).where(
+            StockThreshold.product_id == product_id,
+            StockThreshold.location_id == location_id,
+        )
+    )
+    if threshold:
+        return threshold
+    return db.scalar(
+        select(StockThreshold).where(
+            StockThreshold.product_id == product_id,
+            StockThreshold.location_id.is_(None),
+        )
+    )
+
+
+def _maybe_create_alerts(
+    db: Session,
+    *,
+    stock: Stock,
+    delta: int,
+    include_large_movement: bool = True,
+) -> None:
+    # Stock agotado
+    if stock.quantity == 0:
+        existing = alert_repo.get_active_by_type(db, stock.id, AlertType.OUT_OF_STOCK)
+        if not existing:
+            alert_repo.create_alert(
+                db,
+                stock_id=stock.id,
+                quantity=stock.quantity,
+                min_quantity=0,
+                alert_type=AlertType.OUT_OF_STOCK,
+                status=AlertStatus.PENDING,
+            )
+
+    # Stock bajo
+    threshold = _get_threshold(db, stock.product_id, stock.location_id)
+    if threshold and stock.quantity < threshold.min_quantity:
+        existing = alert_repo.get_active_by_type(db, stock.id, AlertType.LOW_STOCK)
+        if not existing:
+            alert_repo.create_alert(
+                db,
+                stock_id=stock.id,
+                quantity=stock.quantity,
+                min_quantity=threshold.min_quantity,
+                alert_type=AlertType.LOW_STOCK,
+                status=AlertStatus.PENDING,
+            )
+
+    # Movimiento grande
+    if include_large_movement:
+        limit = int(os.getenv("LARGE_MOVEMENT_THRESHOLD", "50"))
+        if abs(delta) >= limit:
+            alert_repo.create_alert(
+                db,
+                stock_id=stock.id,
+                quantity=abs(delta),
+                min_quantity=0,
+                alert_type=AlertType.LARGE_MOVEMENT,
+                status=AlertStatus.PENDING,
+            )
+
+
+def maybe_create_alerts_for_stock_update(db: Session, *, stock: Stock, old_quantity: int) -> None:
+    delta = stock.quantity - old_quantity
+    _maybe_create_alerts(db, stock=stock, delta=delta)
 
 
 def _get_location_or_fail_by_id(db: Session, location_id: int) -> Location:
@@ -79,6 +152,7 @@ def increase_stock(
         movement_source=source,
         location_id=location_id,
     )
+    _maybe_create_alerts(db, stock=updated_stock, delta=quantity)
     return updated_stock, movement
 
 
@@ -109,6 +183,7 @@ def decrease_stock(
         movement_source=source,
         location_id=location_id,
     )
+    _maybe_create_alerts(db, stock=updated_stock, delta=-quantity)
     return updated_stock, movement
 
 
@@ -143,6 +218,7 @@ def adjust_stock(
         movement_source=source,
         location_id=location_id,
     )
+    _maybe_create_alerts(db, stock=updated_stock, delta=quantity)
     return updated_stock, movement
 
 
@@ -215,6 +291,17 @@ def transfer_stock(
     db.refresh(out_movement)
     db.refresh(in_movement)
 
+    _maybe_create_alerts(db, stock=from_stock, delta=-quantity, include_large_movement=True)
+    _maybe_create_alerts(db, stock=to_stock, delta=quantity, include_large_movement=False)
+    alert_repo.create_alert(
+        db,
+        stock_id=to_stock.id,
+        quantity=quantity,
+        min_quantity=0,
+        alert_type=AlertType.TRANSFER_COMPLETE,
+        status=AlertStatus.PENDING,
+    )
+
     return from_stock, to_stock, out_movement, in_movement
 
 
@@ -242,6 +329,7 @@ def increase_stock_by_location_id(
         movement_source=source,
         location_id=location_id,
     )
+    _maybe_create_alerts(db, stock=updated_stock, delta=quantity)
     return updated_stock, movement
 
 
@@ -272,6 +360,7 @@ def decrease_stock_by_location_id(
         movement_source=source,
         location_id=location_id,
     )
+    _maybe_create_alerts(db, stock=updated_stock, delta=-quantity)
     return updated_stock, movement
 
 
@@ -303,6 +392,7 @@ def adjust_stock_by_location_id(
         movement_source=source,
         location_id=location_id,
     )
+    _maybe_create_alerts(db, stock=updated_stock, delta=quantity)
     return updated_stock, movement
 
 
@@ -377,5 +467,16 @@ def transfer_stock_by_location_id(
     db.refresh(to_stock)
     db.refresh(out_movement)
     db.refresh(in_movement)
+
+    _maybe_create_alerts(db, stock=from_stock, delta=-quantity, include_large_movement=True)
+    _maybe_create_alerts(db, stock=to_stock, delta=quantity, include_large_movement=False)
+    alert_repo.create_alert(
+        db,
+        stock_id=to_stock.id,
+        quantity=quantity,
+        min_quantity=0,
+        alert_type=AlertType.TRANSFER_COMPLETE,
+        status=AlertStatus.PENDING,
+    )
 
     return from_stock, to_stock, out_movement, in_movement

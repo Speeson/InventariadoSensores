@@ -34,7 +34,11 @@ if [ "$ROLE" = "api" ]; then
   fi
 
   echo "Iniciando Uvicorn..."
-  exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+  if [ "${UVICORN_RELOAD:-0}" = "1" ]; then
+    exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+  else
+    exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+  fi
 elif [ "$ROLE" = "worker" ]; then
   echo "Iniciando Celery worker..."
   WORKER_OPTS=""

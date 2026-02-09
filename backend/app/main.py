@@ -9,6 +9,9 @@ import redis
 from app.db.session import SessionLocal
 
 from app.api.routes import auth, users, products, stocks, movements, events, alerts, categories, thresholds, reports, locations, imports
+from app.api.routes import ws_alerts
+from app.ws.alerts_ws import start_redis_listener
+import asyncio
 
 app = FastAPI(title="Sistema Inventariado Sensores")
 
@@ -40,6 +43,7 @@ app.include_router(thresholds.router)
 app.include_router(reports.router)
 app.include_router(locations.router)
 app.include_router(imports.router)
+app.include_router(ws_alerts.router)
 
 
 
@@ -84,3 +88,8 @@ def health():
     payload = {"status": status, "checks": details}
     status_code = 200 if not failures else 503
     return JSONResponse(payload, status_code=status_code)
+
+
+@app.on_event("startup")
+async def startup_ws_listener():
+    asyncio.create_task(start_redis_listener())

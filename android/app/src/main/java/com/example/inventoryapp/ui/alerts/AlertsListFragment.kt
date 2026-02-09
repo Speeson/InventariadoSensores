@@ -15,8 +15,10 @@ import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.local.EventAlertDismissStore
 import com.example.inventoryapp.data.local.SystemAlertStore
 import com.example.inventoryapp.data.remote.NetworkModule
+import com.example.inventoryapp.data.remote.AlertsWebSocketManager
 import com.example.inventoryapp.data.remote.model.AlertResponseDto
 import com.example.inventoryapp.data.remote.model.AlertStatusDto
+import com.example.inventoryapp.data.remote.model.AlertTypeDto
 import com.example.inventoryapp.data.remote.model.EventResponseDto
 import com.example.inventoryapp.databinding.FragmentAlertsListBinding
 import com.example.inventoryapp.ui.auth.LoginActivity
@@ -103,6 +105,7 @@ class AlertsListFragment : Fragment() {
         loadSystemAlerts()
         loadAlerts()
         loadFailedEvents()
+        observeWebSocketAlerts()
     }
 
     override fun onDestroyView() {
@@ -153,9 +156,13 @@ class AlertsListFragment : Fragment() {
                 if (res.isSuccessful && res.body() != null) {
                     val items = res.body()!!.items
                     val rows = enrichAlerts(items)
+                        .filter { isAlertVisibleForUser(it.alert) }
+                        .sortedWith(
+                            compareBy<AlertRowUi> { statusWeight(it.alert.alertStatus) }
+                                .thenByDescending { it.alert.id }
+                        )
                     alertAdapter.submit(rows)
                     binding.tvBackendAlertsEmpty.visibility = if (rows.isEmpty()) View.VISIBLE else View.GONE
-                    maybeShowCenteredAlert(rows)
                 } else {
                     snack.showError(ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))
                 }
@@ -195,7 +202,7 @@ class AlertsListFragment : Fragment() {
 
     private fun showAlertActions(row: AlertRowUi) {
         val alert = row.alert
-        val productLabel = row.productName ?: "Producto ${alert.stockId}"
+        val productLabel = row.productName ?: (alert.stockId?.let { "Producto $it" } ?: "Importación")
         val locationLabel = row.location ?: "N/D"
         val message = "Producto: $productLabel\n" +
             "Cantidad: ${alert.quantity}\n" +
@@ -268,13 +275,16 @@ class AlertsListFragment : Fragment() {
             var productName: String? = null
             var location: String? = null
             try {
-                val stockRes = NetworkModule.api.getStock(alert.stockId)
-                if (stockRes.isSuccessful && stockRes.body() != null) {
-                    val stock = stockRes.body()!!
-                    location = stock.location
-                    val productRes = NetworkModule.api.getProduct(stock.productId)
-                    if (productRes.isSuccessful && productRes.body() != null) {
-                        productName = productRes.body()!!.name
+                val stockId = alert.stockId
+                if (stockId != null) {
+                    val stockRes = NetworkModule.api.getStock(stockId)
+                    if (stockRes.isSuccessful && stockRes.body() != null) {
+                        val stock = stockRes.body()!!
+                        location = stock.location
+                        val productRes = NetworkModule.api.getProduct(stock.productId)
+                        if (productRes.isSuccessful && productRes.body() != null) {
+                            productName = productRes.body()!!.name
+                        }
                     }
                 }
             } catch (_: Exception) {
@@ -284,26 +294,27 @@ class AlertsListFragment : Fragment() {
         }
     }
 
-    private fun maybeShowCenteredAlert(rows: List<AlertRowUi>) {
-        val pending = rows.firstOrNull { it.alert.alertStatus == AlertStatusDto.PENDING } ?: return
-        val prefs = requireContext().getSharedPreferences("alert_popup", 0)
-        val lastId = prefs.getInt("last_alert_id", -1)
-        if (pending.alert.id == lastId) return
+    private fun observeWebSocketAlerts() {
+        viewLifecycleOwner.lifecycleScope.launchWhenStarted {
+            AlertsWebSocketManager.alerts.collect {
+                loadAlerts()
+            }
+        }
+    }
 
-        val productLabel = pending.productName ?: "Producto ${pending.alert.stockId}"
-        val locationLabel = pending.location ?: "N/D"
-        val message = "Stock bajo: $productLabel\n" +
-            "Cantidad: ${pending.alert.quantity}\n" +
-            "Umbral: ${pending.alert.minQuantity}\n" +
-            "Location: $locationLabel"
+    private fun statusWeight(status: AlertStatusDto): Int {
+        return when (status) {
+            AlertStatusDto.PENDING -> 0
+            AlertStatusDto.RESOLVED -> 1
+            AlertStatusDto.ACK -> 2
+        }
+    }
 
-        AlertDialog.Builder(requireContext())
-            .setTitle("Alerta de stock")
-            .setMessage(message)
-            .setPositiveButton("OK", null)
-            .show()
-
-        prefs.edit().putInt("last_alert_id", pending.alert.id).apply()
+    private fun isAlertVisibleForUser(alert: AlertResponseDto): Boolean {
+        val prefs = requireContext().getSharedPreferences("ui_prefs", 0)
+        val role = prefs.getString("cached_role", null) ?: return true
+        if (!role.equals("USER", ignoreCase = true)) return true
+        return alert.alertType == AlertTypeDto.LOW_STOCK || alert.alertType == AlertTypeDto.OUT_OF_STOCK
     }
 
     private fun EventResponseDto.toRowUi(): EventRowUi {

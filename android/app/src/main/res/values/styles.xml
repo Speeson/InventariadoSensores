@@ -2,4 +2,9 @@
     <style name="TextAppearance.ImportTabs" parent="TextAppearance.Material3.LabelLarge">
         <item name="android:textSize">13sp</item>
     </style>
+
+    <style name="AlertPopupAnimation">
+        <item name="android:windowEnterAnimation">@anim/alert_popup_in</item>
+        <item name="android:windowExitAnimation">@anim/alert_popup_out</item>
+    </style>
 </resources>

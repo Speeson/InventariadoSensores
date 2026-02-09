@@ -244,3 +244,22 @@ Archivos clave:
 Notas:
 - El import usa `fuzzy_threshold` (default `0.9`) para sugerir duplicados.
 - Las transferencias se aplican como **dos movimientos** con el mismo `transfer_id`.
+
+## Alertas en tiempo real (WebSocket)
+
+Objetivo: notificar alertas en vivo sin cambiar de pantalla.
+
+Backend:
+- WebSocket: `ws://<host>:8000/ws/alerts?token=JWT`
+- Las alertas se emiten en tiempo real desde `alert_repo.create_alert` (stock bajo/agotado, movimiento grande, transferencia completa, import con errores).
+- Para Docker: **no usar `--reload`** en Uvicorn (rompe WS). Se controla con `UVICORN_RELOAD=0/1` en `backend/entrypoint.sh`.
+
+Frontend (Android):
+- Cliente WS activo y reconexiÃ³n automÃ¡tica al volver al foreground.
+- Popup centrado con tÃ­tulo, detalles e icono segÃºn tipo:
+  - Stock bajo (amarillo), Stock agotado (rojo), Transferencia completa (verde), Movimiento grande (violeta), ImportaciÃ³n con errores (azul).
+- Auto-cierre a los 10s si no se cierra manualmente.
+- Tarjeta flotante con sombreado, fondo atenuado (dim) y animaciÃ³n de entrada/salida.
+- Color de tarjeta segÃºn tipo de alerta + animaciÃ³n pulse en el icono.
+- Colas de alertas: si llegan varias, se muestran una a una con contador "1 de N".
+- Badge de notificaciones se refresca en tiempo real al recibir alertas WS.

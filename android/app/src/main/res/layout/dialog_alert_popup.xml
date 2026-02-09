@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="24dp"
+    android:foregroundGravity="center">
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardAlertPopup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="18dp"
+        app:cardElevation="10dp"
+        app:cardUseCompatPadding="true"
+        app:cardBackgroundColor="@android:color/white">
+
+        <LinearLayout
+            android:id="@+id/layoutAlertPopup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp"
+            android:gravity="center">
+
+            <ImageView
+                android:id="@+id/ivAlertIcon"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:contentDescription="@string/app_name"
+                android:scaleType="centerInside"
+                android:layout_marginBottom="12dp" />
+
+            <TextView
+                android:id="@+id/tvAlertTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textStyle="bold"
+                android:textSize="18sp"
+                android:textColor="@android:color/black"
+                android:gravity="center"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:id="@+id/tvAlertCounter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textStyle="bold"
+                android:textSize="13sp"
+                android:textColor="#666666"
+                android:gravity="center"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/tvAlertMessage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:textColor="@android:color/black"
+                android:gravity="center"
+                android:layout_marginBottom="16dp" />
+
+            <Button
+                android:id="@+id/btnAlertClose"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="OK" />
+
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+</FrameLayout>

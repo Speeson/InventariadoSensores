@@ -5,13 +5,19 @@ import android.app.Activity
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatDelegate
 import com.example.inventoryapp.data.remote.NetworkModule
+import com.example.inventoryapp.data.remote.AlertsWebSocketManager
 import com.example.inventoryapp.ui.common.ActivityTracker
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
+import android.widget.TextView
+import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 
 class InventoryApp : Application() {
     override fun onCreate() {
         super.onCreate()
         NetworkModule.init(this)
         NetworkModule.forceOnline()
+        AlertsWebSocketManager.connect(this)
         val prefs = getSharedPreferences("ui_prefs", MODE_PRIVATE)
         val isDark = prefs.getBoolean("dark_mode", false)
         AppCompatDelegate.setDefaultNightMode(
@@ -28,6 +34,12 @@ class InventoryApp : Application() {
 
             override fun onActivityResumed(activity: Activity) {
                 ActivityTracker.setCurrent(activity)
+                AlertsWebSocketManager.connect(this@InventoryApp)
+                val badge = activity.findViewById<TextView>(R.id.tvAlertsBadge)
+                val owner = activity as? LifecycleOwner
+                if (badge != null && owner != null) {
+                    AlertsBadgeUtil.refresh(owner.lifecycleScope, badge)
+                }
             }
 
             override fun onActivityPaused(activity: Activity) {}

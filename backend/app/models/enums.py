@@ -42,3 +42,10 @@ class AlertStatus(enum.Enum):
     RESOLVED = "RESOLVED"
     ACK = "ACK"
     PENDING = "PENDING"
+
+class AlertType(enum.Enum):
+    LOW_STOCK = "LOW_STOCK"
+    OUT_OF_STOCK = "OUT_OF_STOCK"
+    LARGE_MOVEMENT = "LARGE_MOVEMENT"
+    TRANSFER_COMPLETE = "TRANSFER_COMPLETE"
+    IMPORT_ISSUES = "IMPORT_ISSUES"

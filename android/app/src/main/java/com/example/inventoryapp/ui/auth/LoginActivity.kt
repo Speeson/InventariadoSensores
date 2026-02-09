@@ -9,6 +9,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.remote.NetworkModule
+import com.example.inventoryapp.data.remote.AlertsWebSocketManager
 import com.example.inventoryapp.data.remote.RegisterRequest
 import com.example.inventoryapp.databinding.ActivityLoginBinding
 import com.example.inventoryapp.ui.common.UiNotifier
@@ -121,6 +122,7 @@ class LoginActivity : AppCompatActivity() {
                     session.saveToken(token)
                     clearCachedUiRole()
                     NetworkModule.forceOnline()
+                    AlertsWebSocketManager.connect(this@LoginActivity)
 
                     UiNotifier.show(this@LoginActivity, "¡Bienvenido!")
 
@@ -234,6 +236,7 @@ class LoginActivity : AppCompatActivity() {
                     session.saveToken(token)
                     clearCachedUiRole()
                     NetworkModule.forceOnline()
+                    AlertsWebSocketManager.connect(this@LoginActivity)
 
                     UiNotifier.show(this@LoginActivity, "Cuenta creada")
                     dialog.dismiss()

@@ -237,7 +237,6 @@ class HomeActivity : AppCompatActivity() {
         lifecycleScope.launch {
             ensureValidSession()
             updateDrawerHeader()
-            loadAndShowStockAlertPopup()
             updateAlertsBadge()
 
             val report = OfflineSyncer.flush(this@HomeActivity)
@@ -555,50 +554,6 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
-    private suspend fun loadAndShowStockAlertPopup() {
-        try {
-            val res = NetworkModule.api.listAlerts(status = AlertStatusDto.PENDING, limit = 1, offset = 0)
-            if (!res.isSuccessful || res.body() == null) return
-            val alert = res.body()!!.items.firstOrNull() ?: return
-
-            val prefs = getSharedPreferences("alert_popup", MODE_PRIVATE)
-            val lastId = prefs.getInt("last_alert_id", -1)
-            if (alert.id == lastId) return
-
-            var productName: String? = null
-            var location: String? = null
-            try {
-                val stockRes = NetworkModule.api.getStock(alert.stockId)
-                if (stockRes.isSuccessful && stockRes.body() != null) {
-                    val stock = stockRes.body()!!
-                    location = stock.location
-                    val productRes = NetworkModule.api.getProduct(stock.productId)
-                    if (productRes.isSuccessful && productRes.body() != null) {
-                        productName = productRes.body()!!.name
-                    }
-                }
-            } catch (_: Exception) {
-                // Keep fallback labels if lookup fails.
-            }
-
-            val productLabel = productName ?: "Producto ${alert.stockId}"
-            val locationLabel = location ?: "N/D"
-            val message = "Stock bajo: $productLabel\n" +
-                "Cantidad: ${alert.quantity}\n" +
-                "Umbral: ${alert.minQuantity}\n" +
-                "Location: $locationLabel"
-
-            AlertDialog.Builder(this@HomeActivity)
-                .setTitle("Alerta de stock")
-                .setMessage(message)
-                .setPositiveButton("OK", null)
-                .show()
-
-            prefs.edit().putInt("last_alert_id", alert.id).apply()
-        } catch (_: Exception) {
-            // Silent if offline or API error.
-        }
-    }
 
     private suspend fun updateAlertsBadge() {
         try {
