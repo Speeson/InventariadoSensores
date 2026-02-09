@@ -133,6 +133,14 @@ Android (Room + cache-first):
 - Resolución de nombres de producto en offline para eventos/stock/movimientos.
 - Indicador “offline” en tarjetas: icono + color de texto.
 
+Comportamiento de la caché local (Room / SQLite):
+- Persistencia: la caché local se guarda en SQLite usando Room en el fichero `app_cache.db` (almacenamiento interno de la app). Los datos **persisten entre sesiones** (reinicio de la app o del dispositivo) hasta que se borren explícitamente, el usuario limpie los datos de la app o desinstale la aplicación.
+- Límite de entradas (`maxEntries`): `CacheStore.put` llama a `dao.prune(maxEntries)` después de insertar. Por defecto `maxEntries = 500` (ver `CacheStore.put`) — cuando se supera ese número se eliminan las entradas más antiguas (por `updatedAt`) para mantener el límite.
+- Invalidación: se puede invalidar por prefijo con `CacheStore.invalidatePrefix(prefix)` que ejecuta `deleteByPrefix` en la tabla `cache_entries`.
+- Comportamiento al insertar: cada `put` actualiza `updatedAt` a `System.currentTimeMillis()` y reemplaza entradas por `key` (estrategia REPLACE). Inmediatamente después se aplica `prune` para recortar el tamaño.
+- Opciones de cambio: si se desea que la caché no persista entre sesiones, se podría usar `Room.inMemoryDatabaseBuilder(...)` en lugar de `databaseBuilder`. No hay expiración temporal automática por antigüedad (TTL) implementada actualmente; podría añadirse si se quiere borrar entradas más antiguas que X días.
+
+
 ## Indicador visual Online/Offline
 
 Objetivo: indicar estado de conexión de forma clara y no intrusiva.
