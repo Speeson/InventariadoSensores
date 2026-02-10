@@ -37,6 +37,7 @@ class OfflineQueue(context: Context) {
 
     private val prefs = context.getSharedPreferences("offline_queue", Context.MODE_PRIVATE)
     private val gson = Gson()
+    private val appContext = context.applicationContext
 
     private val pendingKey = "pending_items"
     private val failedKey = "failed_items"
@@ -45,6 +46,7 @@ class OfflineQueue(context: Context) {
         val all = getAll().toMutableList()
         all.add(PendingRequest(type, payloadJson))
         savePending(all)
+        OfflineSyncScheduler.scheduleOneTime(appContext)
     }
 
     fun getAll(): List<PendingRequest> {

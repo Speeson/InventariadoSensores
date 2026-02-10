@@ -286,3 +286,17 @@ Infra:
 - Credenciales backend en `backend/credentials/firebase-service-account.json`.
 - Docker: monta credenciales y exporta `FCM_CREDENTIALS_JSON=/app/credentials/firebase-service-account.json`.
 - `.gitignore` en `backend/credentials/` para no subir JSON a git.
+
+## WorkManager (sync offline en background)
+
+Objetivo: enviar la cola offline aunque la app estÃ© cerrada, con reintentos y restricciones de red.
+
+Android:
+- Dependencia: `androidx.work:work-runtime-ktx`.
+- Worker `OfflineSyncWorker` llama a `OfflineSyncer.flush()` y registra `SystemAlert` cuando hay envÃ­os o motivo de parada.
+- Periodic work cada 15 minutos (mÃ­nimo permitido) con `NetworkType.CONNECTED`.
+- One‑time work al iniciar la app para vaciar la cola cuanto antes.
+- Al encolar un pendiente offline, se programa un one‑time adicional (si hay red) para intentar vaciar la cola pronto.
+- Backoff exponencial en reintentos (`10s` base).
+- En mÃ³vil (no emulador) el worker se eleva a foreground si hay permiso de notificaciones, para aumentar fiabilidad.
+- NotificaciÃ³n del worker: canal `offline_sync` con texto “Sincronizando pendientes”.

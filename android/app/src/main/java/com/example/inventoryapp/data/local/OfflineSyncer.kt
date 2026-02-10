@@ -162,7 +162,45 @@ object OfflineSyncer {
             }
             PendingType.PRODUCT_CREATE -> {
                 val dto = gson.fromJson(req.payloadJson, ProductCreateDto::class.java)
-                NetworkModule.api.createProduct(dto)
+                // Evitar 409 si el producto ya fue creado en un intento anterior
+                val existing = try {
+                    val bySku = if (!dto.sku.isNullOrBlank()) {
+                        NetworkModule.api.listProducts(sku = dto.sku, limit = 1, offset = 0)
+                    } else null
+                    val byBarcode = if (!dto.barcode.isNullOrBlank()) {
+                        NetworkModule.api.listProducts(barcode = dto.barcode, limit = 1, offset = 0)
+                    } else null
+                    val skuHit = bySku?.isSuccessful == true && (bySku.body()?.items?.isNotEmpty() == true)
+                    val barHit = byBarcode?.isSuccessful == true && (byBarcode.body()?.items?.isNotEmpty() == true)
+                    skuHit || barHit
+                } catch (_: Exception) {
+                    false
+                }
+                if (existing) {
+                    return SendResult.Success
+                }
+                val created = NetworkModule.api.createProduct(dto)
+                if (created.code() == 409) {
+                    val existsNow = try {
+                        val checkSku = if (!dto.sku.isNullOrBlank()) {
+                            NetworkModule.api.listProducts(sku = dto.sku, limit = 1, offset = 0)
+                        } else null
+                        val checkBarcode = if (!dto.barcode.isNullOrBlank()) {
+                            NetworkModule.api.listProducts(barcode = dto.barcode, limit = 1, offset = 0)
+                        } else null
+                        val skuHit = checkSku?.isSuccessful == true && (checkSku.body()?.items?.isNotEmpty() == true)
+                        val barHit = checkBarcode?.isSuccessful == true && (checkBarcode.body()?.items?.isNotEmpty() == true)
+                        skuHit || barHit
+                    } catch (_: Exception) {
+                        false
+                    }
+                    return if (existsNow) {
+                        SendResult.Success
+                    } else {
+                        SendResult.TransientFailure(409, "409 pero no visible en listado")
+                    }
+                }
+                created
             }
             PendingType.PRODUCT_UPDATE -> {
                 val payload = gson.fromJson(req.payloadJson, ProductUpdatePayload::class.java)
@@ -182,7 +220,26 @@ object OfflineSyncer {
             }
             PendingType.STOCK_CREATE -> {
                 val dto = gson.fromJson(req.payloadJson, StockCreateDto::class.java)
-                NetworkModule.api.createStock(dto)
+                val existing = try {
+                    val res = NetworkModule.api.listStocks(
+                        productId = dto.productId,
+                        location = dto.location,
+                        limit = 1,
+                        offset = 0
+                    )
+                    res.isSuccessful && (res.body()?.items?.isNotEmpty() == true)
+                } catch (_: Exception) {
+                    false
+                }
+                if (existing) {
+                    return SendResult.Success
+                }
+                val created = NetworkModule.api.createStock(dto)
+                if (created.code() == 400) {
+                    // "Ya existe stock para esta ubicación" -> considerar éxito
+                    return SendResult.Success
+                }
+                created
             }
             PendingType.STOCK_UPDATE -> {
                 val payload = gson.fromJson(req.payloadJson, StockUpdatePayload::class.java)

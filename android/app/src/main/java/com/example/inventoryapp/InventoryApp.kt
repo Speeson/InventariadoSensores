@@ -12,6 +12,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import android.widget.TextView
 import com.example.inventoryapp.ui.common.AlertsBadgeUtil
+import com.example.inventoryapp.data.local.OfflineSyncScheduler
 
 class InventoryApp : Application() {
     override fun onCreate() {
@@ -20,6 +21,7 @@ class InventoryApp : Application() {
         NetworkModule.forceOnline()
         AlertsWebSocketManager.connect(this)
         FcmTokenManager.sync(this)
+        scheduleOfflineSync()
         val prefs = getSharedPreferences("ui_prefs", MODE_PRIVATE)
         val isDark = prefs.getBoolean("dark_mode", false)
         AppCompatDelegate.setDefaultNightMode(
@@ -49,5 +51,10 @@ class InventoryApp : Application() {
             override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
             override fun onActivityDestroyed(activity: Activity) {}
         })
+    }
+
+    private fun scheduleOfflineSync() {
+        OfflineSyncScheduler.schedulePeriodic(this)
+        OfflineSyncScheduler.scheduleOneTime(this)
     }
 }
