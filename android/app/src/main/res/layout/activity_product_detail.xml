@@ -145,6 +145,7 @@
                             android:layout_height="wrap_content"
                             android:hint="Código de barras"
                             android:inputType="number"
+                            android:maxLength="13"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />
                     </com.google.android.material.textfield.TextInputLayout>

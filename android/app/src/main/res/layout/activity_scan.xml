@@ -179,7 +179,8 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:hint="Introduce el código manual"
-                            android:inputType="text"
+                            android:inputType="number"
+                            android:maxLength="13"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />
                     </com.google.android.material.textfield.TextInputLayout>
