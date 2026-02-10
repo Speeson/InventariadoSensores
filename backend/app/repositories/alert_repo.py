@@ -9,8 +9,10 @@ from app.models.enums import AlertStatus, AlertType
 from app.schemas.alert import AlertResponse
 from app.ws.alerts_ws import publish_alert
 from app.services import fcm_service
+from app.services.notification_service import send_stock_alert_email
 from app.models.stock import Stock
 from app.models.location import Location
+from app.models.product import Product
 
 
 def get(db: Session, alert_id: int) -> Alert | None:
@@ -88,6 +90,32 @@ def create_alert(
         publish_alert(AlertResponse.model_validate(alert))
     except Exception:
         pass
+    if alert.alert_type in (AlertType.LOW_STOCK, AlertType.OUT_OF_STOCK) and alert.stock_id is not None:
+        try:
+            row = db.execute(
+                select(Stock, Location, Product)
+                .join(Location, Stock.location_id == Location.id)
+                .join(Product, Stock.product_id == Product.id)
+                .where(Stock.id == alert.stock_id)
+            ).first()
+            if row:
+                stock, location, product = row
+                sent = send_stock_alert_email(
+                    alert_type=alert.alert_type,
+                    product_id=product.id,
+                    product_name=product.name,
+                    location=location.code,
+                    quantity=alert.quantity,
+                    min_quantity=alert.min_quantity,
+                )
+                if sent:
+                    alert.notification_sent = True
+                    alert.notification_sent_at = datetime.utcnow()
+                    alert.notification_channel = "email"
+                    db.add(alert)
+                    db.commit()
+        except Exception:
+            pass
     try:
         fcm_service.send_alert_push(db, alert)
     except Exception:
