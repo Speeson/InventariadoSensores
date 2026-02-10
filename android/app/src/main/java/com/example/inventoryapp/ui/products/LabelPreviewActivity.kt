@@ -403,12 +403,17 @@ class LabelPreviewActivity : AppCompatActivity() {
 
     private fun checkRoleForRegenerate() {
         binding.btnRegenerate.visibility = android.view.View.GONE
+        binding.btnPrint.visibility = android.view.View.GONE
+        binding.btnSaveNiimbot.visibility = android.view.View.GONE
+        binding.ivPrintLock.visibility = android.view.View.GONE
+        binding.ivNiimbotLock.visibility = android.view.View.GONE
         lifecycleScope.launch {
             try {
                 val res = NetworkModule.api.me()
                 if (res.isSuccessful && res.body() != null) {
                     val role = res.body()!!.role.uppercase()
                     applyRegenerateVisibility(role)
+                    applyPrintVisibility(role)
                 }
             } catch (_: Exception) {
                 // leave hidden
@@ -445,6 +450,40 @@ class LabelPreviewActivity : AppCompatActivity() {
         )
         binding.btnRegenerate.compoundDrawablePadding = 12
     }
+
+    private fun applyPrintVisibility(role: String) {
+        if (role == "MANAGER" || role == "ADMIN") {
+            binding.btnPrint.visibility = android.view.View.VISIBLE
+            binding.btnSaveNiimbot.visibility = android.view.View.VISIBLE
+            binding.ivPrintLock.visibility = android.view.View.GONE
+            binding.ivNiimbotLock.visibility = android.view.View.GONE
+            binding.btnPrint.isEnabled = true
+            binding.btnSaveNiimbot.isEnabled = true
+            binding.btnPrint.alpha = 1.0f
+            binding.btnSaveNiimbot.alpha = 1.0f
+            return
+        }
+
+        val prefs = getSharedPreferences("ui_prefs", MODE_PRIVATE)
+        val showRestricted = prefs.getBoolean("show_restricted_cards", false)
+        if (!showRestricted) {
+            binding.btnPrint.visibility = android.view.View.GONE
+            binding.btnSaveNiimbot.visibility = android.view.View.GONE
+            binding.ivPrintLock.visibility = android.view.View.GONE
+            binding.ivNiimbotLock.visibility = android.view.View.GONE
+            return
+        }
+
+        binding.btnPrint.visibility = android.view.View.VISIBLE
+        binding.btnSaveNiimbot.visibility = android.view.View.VISIBLE
+        binding.btnPrint.isEnabled = false
+        binding.btnSaveNiimbot.isEnabled = false
+        binding.btnPrint.alpha = 0.6f
+        binding.btnSaveNiimbot.alpha = 0.6f
+        binding.ivPrintLock.visibility = android.view.View.VISIBLE
+        binding.ivNiimbotLock.visibility = android.view.View.VISIBLE
+    }
+
 
     private fun saveToDownloads(filename: String, mime: String, bytes: ByteArray): Boolean {
         return try {

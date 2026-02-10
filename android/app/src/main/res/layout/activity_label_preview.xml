@@ -143,28 +143,54 @@
                     android:layout_marginTop="8dp"
                     android:orientation="horizontal">
 
-                    <ImageButton
-                        android:id="@+id/btnPrint"
+                    <FrameLayout
                         android:layout_width="0dp"
                         android:layout_height="64dp"
-                        android:layout_weight="1"
-                        android:background="@drawable/bg_button_soft_purple"
-                        android:contentDescription="@null"
-                        android:scaleType="centerInside"
-                        android:src="@drawable/print"
-                        android:padding="10dp" />
+                        android:layout_weight="1">
 
-                    <ImageButton
-                        android:id="@+id/btnSaveNiimbot"
+                        <ImageButton
+                            android:id="@+id/btnPrint"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="@drawable/bg_button_soft_purple"
+                            android:contentDescription="@null"
+                            android:scaleType="centerInside"
+                            android:src="@drawable/print"
+                            android:padding="10dp" />
+
+                        <ImageView
+                            android:id="@+id/ivPrintLock"
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_lock"
+                            android:visibility="gone" />
+                    </FrameLayout>
+
+                    <FrameLayout
                         android:layout_width="0dp"
                         android:layout_height="64dp"
                         android:layout_weight="1"
-                        android:layout_marginStart="8dp"
-                        android:background="@drawable/bg_button_soft_purple"
-                        android:contentDescription="@null"
-                        android:scaleType="centerInside"
-                        android:src="@drawable/niimbot"
-                        android:padding="10dp" />
+                        android:layout_marginStart="8dp">
+
+                        <ImageButton
+                            android:id="@+id/btnSaveNiimbot"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="@drawable/bg_button_soft_purple"
+                            android:contentDescription="@null"
+                            android:scaleType="centerInside"
+                            android:src="@drawable/niimbot"
+                            android:padding="10dp" />
+
+                        <ImageView
+                            android:id="@+id/ivNiimbotLock"
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:layout_gravity="center"
+                            android:src="@drawable/ic_lock"
+                            android:visibility="gone" />
+                    </FrameLayout>
                 </LinearLayout>
 
             </LinearLayout>
