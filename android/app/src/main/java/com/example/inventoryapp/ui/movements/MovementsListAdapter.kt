@@ -22,7 +22,8 @@ class MovementsListAdapter : RecyclerView.Adapter<MovementsListAdapter.VH>() {
 
     inner class VH(val binding: ItemMovementCardBinding) : RecyclerView.ViewHolder(binding.root) {
         val typeColor = binding.tvTypeTag.currentTextColor
-        val idColor = binding.tvMovementId.currentTextColor
+        val idLabelColor = binding.tvMovementIdLabel.currentTextColor
+        val idValueColor = binding.tvMovementIdValue.currentTextColor
         val titleColor = binding.tvTitle.currentTextColor
         val metaColor = binding.tvMeta.currentTextColor
         val subColor = binding.tvSub.currentTextColor
@@ -38,7 +39,8 @@ class MovementsListAdapter : RecyclerView.Adapter<MovementsListAdapter.VH>() {
     override fun onBindViewHolder(holder: VH, position: Int) {
         val row = items[position]
         holder.binding.tvTypeTag.text = row.type
-        holder.binding.tvMovementId.text = if (row.movementId < 0) "ID offline" else "ID ${row.movementId}"
+        val isOffline = row.movementId < 0
+        holder.binding.tvMovementIdValue.text = if (isOffline) "offline" else row.movementId.toString()
         holder.binding.tvTitle.text = row.title
         holder.binding.tvMeta.text = row.meta
         holder.binding.tvSub.text = row.sub
@@ -56,13 +58,15 @@ class MovementsListAdapter : RecyclerView.Adapter<MovementsListAdapter.VH>() {
         val offlineColor = ContextCompat.getColor(holder.itemView.context, R.color.offline_text)
         if (row.isPending) {
             holder.binding.tvTypeTag.setTextColor(offlineColor)
-            holder.binding.tvMovementId.setTextColor(offlineColor)
+            holder.binding.tvMovementIdLabel.setTextColor(offlineColor)
+            holder.binding.tvMovementIdValue.setTextColor(offlineColor)
             holder.binding.tvTitle.setTextColor(offlineColor)
             holder.binding.tvMeta.setTextColor(offlineColor)
             holder.binding.tvSub.setTextColor(offlineColor)
         } else {
             holder.binding.tvTypeTag.setTextColor(holder.typeColor)
-            holder.binding.tvMovementId.setTextColor(holder.idColor)
+            holder.binding.tvMovementIdLabel.setTextColor(holder.idLabelColor)
+            holder.binding.tvMovementIdValue.setTextColor(holder.idValueColor)
             holder.binding.tvTitle.setTextColor(holder.titleColor)
             holder.binding.tvMeta.setTextColor(holder.metaColor)
             holder.binding.tvSub.setTextColor(holder.subColor)

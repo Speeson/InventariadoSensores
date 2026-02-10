@@ -44,7 +44,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:gravity="center"
-                android:text="Rotaciones"
+                android:text="Traslados"
                 android:textStyle="bold"
                 android:textSize="22sp"
                 android:textColor="?attr/colorOnSurface" />
@@ -271,7 +271,7 @@
                     android:background="@drawable/bg_button_soft_purple"
                     android:backgroundTint="@null"
                     app:backgroundTint="@null"
-                    android:text="Recargar rotaciones"
+                    android:text="Recargar traslados"
                     android:textAllCaps="false"
                     android:textColor="@android:color/white"
                     android:textStyle="bold"

@@ -27,7 +27,8 @@ class ThresholdListAdapter(
         val titleColor = binding.tvTitle.currentTextColor
         val locationColor = binding.tvLocation.currentTextColor
         val thresholdColor = binding.tvThreshold.currentTextColor
-        val idColor = binding.tvThresholdId.currentTextColor
+        val idLabelColor = binding.tvThresholdIdLabel.currentTextColor
+        val idValueColor = binding.tvThresholdIdValue.currentTextColor
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
@@ -48,7 +49,7 @@ class ThresholdListAdapter(
         holder.binding.tvTitle.text = "Producto: $productLabel$titleSuffix"
         holder.binding.tvLocation.text = "Ubicacion: ${t.location ?: "-"}"
         holder.binding.tvThreshold.text = "Umbral: ${t.minQuantity}"
-        holder.binding.tvThresholdId.text = "ID $idLabel"
+        holder.binding.tvThresholdIdValue.text = idLabel
 
         holder.binding.ivWarning.visibility =
             if (isOffline) View.VISIBLE else View.GONE
@@ -57,12 +58,14 @@ class ThresholdListAdapter(
             holder.binding.tvTitle.setTextColor(offlineColor)
             holder.binding.tvLocation.setTextColor(offlineColor)
             holder.binding.tvThreshold.setTextColor(offlineColor)
-            holder.binding.tvThresholdId.setTextColor(offlineColor)
+            holder.binding.tvThresholdIdLabel.setTextColor(offlineColor)
+            holder.binding.tvThresholdIdValue.setTextColor(offlineColor)
         } else {
             holder.binding.tvTitle.setTextColor(holder.titleColor)
             holder.binding.tvLocation.setTextColor(holder.locationColor)
             holder.binding.tvThreshold.setTextColor(holder.thresholdColor)
-            holder.binding.tvThresholdId.setTextColor(holder.idColor)
+            holder.binding.tvThresholdIdLabel.setTextColor(holder.idLabelColor)
+            holder.binding.tvThresholdIdValue.setTextColor(holder.idValueColor)
         }
 
         GradientIconUtil.applyGradient(holder.binding.ivThresholdIcon, R.drawable.threshold)

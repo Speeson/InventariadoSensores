@@ -80,7 +80,11 @@ object NetworkModule {
         if (activity != null) {
             activity.runOnUiThread {
                 if (shouldShowOfflineNotice(activity)) {
-                    UiNotifier.showCentered(activity, "Conexión perdida. Trabajando en modo offline.")
+                    UiNotifier.showBlockingTimed(
+                        activity,
+                        "Sin conexión. Trabajando en modo offline.",
+                        R.drawable.offline
+                    )
                 }
             }
         }
@@ -93,7 +97,11 @@ object NetworkModule {
         val activity = ActivityTracker.getCurrent()
         if (activity != null) {
             activity.runOnUiThread {
-                UiNotifier.showCentered(activity, "Conexión restablecida.")
+                UiNotifier.showBlockingTimed(
+                    activity,
+                    "Conexión restablecida.",
+                    R.drawable.online
+                )
             }
         }
     }
@@ -159,6 +167,15 @@ object NetworkModule {
                             message
                         )
                     } else if (response.code == 401) {
+                        val session = SessionManager(appContext)
+                        val token = session.getToken()
+                        val expired = token.isNullOrBlank() || session.isTokenExpired(token)
+                        if (!expired) {
+                            // Backend no disponible o no valida sesión: conservar token y permitir modo offline
+                            response.close()
+                            notifyNetworkDownOnce()
+                            throw IOException("Auth check unavailable (offline)")
+                        }
                         SystemAlertManager.record(
                             appContext,
                             SystemAlertType.AUTH_EXPIRED,
@@ -166,7 +183,7 @@ object NetworkModule {
                             "Sesión caducada. Inicia sesión.",
                             blocking = false
                         )
-                        SessionManager(appContext).clearToken()
+                        session.clearToken()
                         val activity = ActivityTracker.getCurrent()
                         if (activity != null) {
                             activity.runOnUiThread {

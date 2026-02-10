@@ -32,6 +32,7 @@ import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.GradientIconUtil
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.common.NetworkStatusBar
+import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -267,11 +268,23 @@ class CategoriesActivity : AppCompatActivity() {
         if (name.isBlank()) { binding.etCategoryName.error = "Nombre requerido"; return }
 
         binding.btnCreateCategory.isEnabled = false
+        val loading = CreateUiFeedback.showLoading(this, "categoría")
         lifecycleScope.launch {
+            var loadingHandled = false
             try {
                 val res = NetworkModule.api.createCategory(CategoryCreateDto(name))
                 if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
                 if (res.isSuccessful) {
+                    val created = res.body()
+                    val details = if (created != null) {
+                        "ID: ${created.id}\nNombre: ${created.name}"
+                    } else {
+                        "Nombre: $name"
+                    }
+                    loadingHandled = true
+                    loading.dismissThen {
+                        CreateUiFeedback.showCreatedPopup(this@CategoriesActivity, "Categoría creada", details)
+                    }
                     binding.etCategoryName.setText("")
                     currentOffset = 0
                     cacheStore.invalidatePrefix("categories")
@@ -282,39 +295,70 @@ class CategoriesActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 if (e is IOException) {
                     OfflineQueue(this@CategoriesActivity).enqueue(PendingType.CATEGORY_CREATE, gson.toJson(CategoryCreateDto(name)))
-                    UiNotifier.show(this@CategoriesActivity, "Sin conexión. Categoría guardada offline")
+                    loadingHandled = true
+                    loading.dismissThen {
+                        CreateUiFeedback.showCreatedPopup(
+                            this@CategoriesActivity,
+                            "Categoría creada (offline)",
+                            "Nombre: $name (offline)",
+                            accentColorRes = R.color.offline_text
+                        )
+                    }
                     currentOffset = 0
                     loadCategories()
                 } else {
                     UiNotifier.show(this@CategoriesActivity, "Error de red: ${e.message}")
                 }
             } finally {
+                if (!loadingHandled) {
+                    loading.dismiss()
+                }
                 binding.btnCreateCategory.isEnabled = true
             }
         }
     }
 
     private fun showEditDialog(category: CategoryResponseDto) {
-        val input = android.widget.EditText(this).apply {
-            setText(category.name)
+        val view = layoutInflater.inflate(R.layout.dialog_edit_category, null)
+        val title = view.findViewById<android.widget.TextView>(R.id.tvEditCategoryTitle)
+        val nameInput = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etEditCategoryName)
+        val btnSave = view.findViewById<android.widget.Button>(R.id.btnEditCategorySave)
+        val btnDelete = view.findViewById<android.widget.Button>(R.id.btnEditCategoryDelete)
+        val btnClose = view.findViewById<android.widget.ImageButton>(R.id.btnEditCategoryClose)
+
+        title.text = "Editar: ${category.name} (ID ${category.id})"
+        nameInput.setText(category.name)
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(view)
+            .create()
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        btnSave.setOnClickListener {
+            val newName = nameInput.text?.toString()?.trim().orEmpty()
+            if (newName.isBlank()) {
+                nameInput.error = "Nombre requerido"
+                return@setOnClickListener
+            }
+            updateCategory(category.id, newName)
+            dialog.dismiss()
         }
 
-        AlertDialog.Builder(this)
-            .setTitle("Editar categoría #${category.id}")
-            .setView(input)
-            .setNegativeButton("Cancelar", null)
-            .setNeutralButton("Eliminar") { _, _ ->
-                deleteCategory(category.id)
-            }
-            .setPositiveButton("Guardar") { _, _ ->
-                val newName = input.text.toString().trim()
-                if (newName.isBlank()) {
-                    UiNotifier.show(this, "Nombre requerido")
-                } else {
-                    updateCategory(category.id, newName)
+        btnDelete.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("Eliminar categoría")
+                .setMessage("¿Seguro que quieres eliminar esta categoría?")
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Eliminar") { _, _ ->
+                    deleteCategory(category.id)
+                    dialog.dismiss()
                 }
-            }
-            .show()
+                .show()
+        }
+
+        btnClose.setOnClickListener { dialog.dismiss() }
+
+        dialog.show()
     }
 
     private fun updateCategory(id: Int, name: String) {
@@ -499,6 +543,7 @@ class CategoriesActivity : AppCompatActivity() {
     }
 
     private fun goToLogin() {
+        if (!session.isTokenExpired()) return
         val i = Intent(this, LoginActivity::class.java)
         i.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(i)

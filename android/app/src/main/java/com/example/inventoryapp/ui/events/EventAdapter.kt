@@ -27,7 +27,7 @@ class EventAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
         holder.tvTitle.text = "Evento"
-        holder.tvIdBadge.text = "${item.id}"
+        holder.tvIdValue.text = "${item.id}"
         val productLabel = item.productName ?: "Producto ${item.productId}"
         holder.tvMeta.text = "${item.eventType} | $productLabel | delta=${item.delta} | src=${item.source}"
         val status = item.status
@@ -49,12 +49,14 @@ class EventAdapter(
         val offlineColor = ContextCompat.getColor(holder.itemView.context, R.color.offline_text)
         if (item.isPending) {
             holder.tvTitle.setTextColor(offlineColor)
-            holder.tvIdBadge.setTextColor(offlineColor)
+            holder.tvIdLabel.setTextColor(offlineColor)
+            holder.tvIdValue.setTextColor(offlineColor)
             holder.tvMeta.setTextColor(offlineColor)
             holder.tvDate.setTextColor(offlineColor)
         } else {
             holder.tvTitle.setTextColor(holder.titleColor)
-            holder.tvIdBadge.setTextColor(holder.idBadgeColor)
+            holder.tvIdLabel.setTextColor(holder.idLabelColor)
+            holder.tvIdValue.setTextColor(holder.idValueColor)
             holder.tvMeta.setTextColor(holder.metaColor)
             holder.tvDate.setTextColor(holder.dateColor)
         }
@@ -67,7 +69,8 @@ class EventAdapter(
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val tvTitle: TextView = view.findViewById(R.id.tvEventTitle)
-        val tvIdBadge: TextView = view.findViewById(R.id.tvEventIdBadge)
+        val tvIdLabel: TextView = view.findViewById(R.id.tvEventIdLabel)
+        val tvIdValue: TextView = view.findViewById(R.id.tvEventIdValue)
         val tvMeta: TextView = view.findViewById(R.id.tvEventMeta)
         val tvStatus: TextView = view.findViewById(R.id.tvEventStatus)
         val tvDate: TextView = view.findViewById(R.id.tvEventDate)
@@ -75,7 +78,8 @@ class EventAdapter(
         val ivWarning: ImageView = view.findViewById(R.id.ivWarning)
         val ivIcon: ImageView = view.findViewById(R.id.ivIcon)
         val titleColor: Int = tvTitle.currentTextColor
-        val idBadgeColor: Int = tvIdBadge.currentTextColor
+        val idLabelColor: Int = tvIdLabel.currentTextColor
+        val idValueColor: Int = tvIdValue.currentTextColor
         val metaColor: Int = tvMeta.currentTextColor
         val dateColor: Int = tvDate.currentTextColor
     }

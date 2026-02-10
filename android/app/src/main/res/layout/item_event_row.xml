@@ -17,9 +17,9 @@
 
         <LinearLayout
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:orientation="vertical"
-            android:gravity="center_horizontal"
+            android:gravity="center"
             android:layout_marginEnd="12dp">
 
             <ImageView
@@ -30,15 +30,25 @@
                 android:src="@drawable/events" />
 
             <TextView
-                android:id="@+id/tvEventIdBadge"
+                android:id="@+id/tvEventIdLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:background="@drawable/bg_event_id_badge"
-                android:text="1"
-                android:textColor="#1A1A1A"
-                android:textSize="12sp"
-                android:textStyle="bold" />
+                android:text="ID"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:includeFontPadding="false" />
+
+            <TextView
+                android:id="@+id/tvEventIdValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:includeFontPadding="false" />
         </LinearLayout>
 
         <LinearLayout

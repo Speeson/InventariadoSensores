@@ -27,7 +27,7 @@ class RotationAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
-        holder.tvMovementId.text = "ID ${item.movementId}"
+        holder.tvMovementIdValue.text = item.movementId.toString()
         holder.tvProduct.text = "Producto: ${item.name}"
         holder.tvSkuQty.text = "SKU: ${item.sku} - Cantidad: ${formatQuantity(item.quantity)} uds."
         holder.tvFrom.text = "Origen: ${item.fromLocation}"
@@ -40,7 +40,7 @@ class RotationAdapter(
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val ivIcon: ImageView = view.findViewById(R.id.ivRotationIcon)
-        val tvMovementId: TextView = view.findViewById(R.id.tvRotationMovementId)
+        val tvMovementIdValue: TextView = view.findViewById(R.id.tvRotationMovementIdValue)
         val tvProduct: TextView = view.findViewById(R.id.tvRotationProduct)
         val tvSkuQty: TextView = view.findViewById(R.id.tvRotationSkuQty)
         val tvFrom: TextView = view.findViewById(R.id.tvRotationFrom)

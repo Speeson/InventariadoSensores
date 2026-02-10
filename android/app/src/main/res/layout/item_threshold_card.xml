@@ -17,9 +17,9 @@
 
         <LinearLayout
             android:layout_width="60dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:orientation="vertical"
-            android:gravity="center_horizontal">
+            android:gravity="center">
 
             <ImageView
                 android:id="@+id/ivThresholdIcon"
@@ -29,14 +29,25 @@
                 android:src="@drawable/threshold" />
 
             <TextView
-                android:id="@+id/tvThresholdId"
+                android:id="@+id/tvThresholdIdLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:text="ID 0"
-                android:textSize="12sp"
+                android:text="ID"
+                android:textSize="11sp"
                 android:textStyle="bold"
-                android:textColor="?attr/colorOnSurface" />
+                android:textColor="?attr/colorOnSurface"
+                android:includeFontPadding="false" />
+
+            <TextView
+                android:id="@+id/tvThresholdIdValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface"
+                android:includeFontPadding="false" />
         </LinearLayout>
 
         <LinearLayout

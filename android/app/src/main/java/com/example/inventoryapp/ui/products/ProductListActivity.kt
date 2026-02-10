@@ -9,7 +9,9 @@ import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.ImageButton
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -17,6 +19,7 @@ import androidx.transition.AutoTransition
 import androidx.transition.TransitionManager
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.PendingType
+import com.example.inventoryapp.data.local.OfflineSyncer
 import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.local.cache.CacheKeys
 import com.example.inventoryapp.data.local.cache.ProductNameCache
@@ -27,6 +30,7 @@ import com.example.inventoryapp.data.remote.model.ProductListResponseDto
 import com.example.inventoryapp.data.remote.model.CategoryResponseDto
 import com.example.inventoryapp.data.remote.model.ProductCreateDto
 import com.example.inventoryapp.data.remote.model.ProductResponseDto
+import com.example.inventoryapp.data.remote.model.ProductUpdateDto
 import com.example.inventoryapp.databinding.ActivityProductListBinding
 import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.auth.LoginActivity
@@ -34,6 +38,7 @@ import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.common.GradientIconUtil
+import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -86,9 +91,7 @@ class ProductListActivity : AppCompatActivity() {
 
         adapter = ProductListAdapter(
             onClick = { p ->
-                val i = Intent(this, ProductDetailActivity::class.java)
-                i.putExtra("product_id", p.id)
-                startActivity(i)
+                showEditDialog(p)
             },
             onLabelClick = { p ->
                 val i = Intent(this, LabelPreviewActivity::class.java)
@@ -220,8 +223,10 @@ class ProductListActivity : AppCompatActivity() {
                 if (res.code() == 401) {
                     UiNotifier.show(this@ProductListActivity, ApiErrorFormatter.format(401))
                     loadOfflineOnly()
-                    session.clearToken()
-                    goToLogin()
+                    if (session.isTokenExpired()) {
+                        session.clearToken()
+                        goToLogin()
+                    }
                     return@launch
                 }
                 if (res.isSuccessful && res.body() != null) {
@@ -310,16 +315,33 @@ class ProductListActivity : AppCompatActivity() {
         if (categoryId == null) { binding.etCategory.error = "Categoría requerida"; return }
 
         binding.btnCreateProduct.isEnabled = false
-        UiNotifier.show(this, "Enviando producto...")
+        val loading = CreateUiFeedback.showLoading(this, "producto")
 
         lifecycleScope.launch {
+            var loadingHandled = false
             try {
                 val dto = ProductCreateDto(sku = sku, name = name, barcode = rawBarcode, categoryId = categoryId, active = true)
                 val res = NetworkModule.api.createProduct(dto)
-                if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
+                if (res.code() == 401) {
+                    if (session.isTokenExpired()) {
+                        session.clearToken()
+                        goToLogin()
+                    }
+                    return@launch
+                }
 
                 if (res.isSuccessful && res.body() != null) {
-                    UiNotifier.show(this@ProductListActivity, "Producto creado")
+                    val created = res.body()!!
+                    val categoryLabel = categoryCache[created.categoryId]?.let { "(${created.categoryId}) $it" }
+                        ?: created.categoryId.toString()
+                    loadingHandled = true
+                    loading.dismissThen {
+                        CreateUiFeedback.showCreatedPopup(
+                            this@ProductListActivity,
+                            "Producto creado",
+                            "ID: ${created.id}\nSKU: ${created.sku}\nNombre: ${created.name}\nBarcode: ${created.barcode ?: "-"}\nCategoría: $categoryLabel"
+                        )
+                    }
                     binding.etSku.setText("")
                     binding.etName.setText("")
                     binding.etBarcode.setText("")
@@ -339,12 +361,214 @@ class ProductListActivity : AppCompatActivity() {
             } catch (e: IOException) {
                 val dto = ProductCreateDto(sku = sku, name = name, barcode = rawBarcode, categoryId = categoryId!!, active = true)
                 OfflineQueue(this@ProductListActivity).enqueue(PendingType.PRODUCT_CREATE, gson.toJson(dto))
-                    UiNotifier.show(this@ProductListActivity, "Sin red. Producto guardado offline")
-                    resetAndLoad()
+                loadingHandled = true
+                loading.dismissThen {
+                    CreateUiFeedback.showCreatedPopup(
+                        this@ProductListActivity,
+                        "Producto creado (offline)",
+                        "SKU: ${dto.sku}\nNombre: ${dto.name}\nBarcode: ${dto.barcode}\nCategoría: ${dto.categoryId} (offline)",
+                        accentColorRes = R.color.offline_text
+                    )
+                }
+                resetAndLoad()
             } catch (e: Exception) {
                 UiNotifier.show(this@ProductListActivity, "Error: ${e.message}")
             } finally {
+                if (!loadingHandled) {
+                    loading.dismiss()
+                }
                 binding.btnCreateProduct.isEnabled = true
+            }
+        }
+    }
+
+    private fun showEditDialog(product: ProductResponseDto) {
+        val view = layoutInflater.inflate(R.layout.dialog_edit_product, null)
+        val title = view.findViewById<android.widget.TextView>(R.id.tvEditProductTitle)
+        val skuInput = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etEditProductSku)
+        val nameInput = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etEditProductName)
+        val barcodeInput = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etEditProductBarcode)
+        val categoryInput = view.findViewById<com.google.android.material.textfield.MaterialAutoCompleteTextView>(R.id.etEditProductCategory)
+        val btnSave = view.findViewById<android.widget.Button>(R.id.btnEditProductSave)
+        val btnDelete = view.findViewById<android.widget.Button>(R.id.btnEditProductDelete)
+        val btnClose = view.findViewById<ImageButton>(R.id.btnEditProductClose)
+        val isOffline = product.id < 0
+
+        title.text = if (isOffline) {
+            "Editar: ${product.name} (offline)"
+        } else {
+            "Editar: ${product.name} (ID ${product.id})"
+        }
+        skuInput.setText(product.sku)
+        nameInput.setText(product.name)
+        barcodeInput.setText(product.barcode ?: "")
+
+        val categoryLabel = categoryCache[product.categoryId]?.let { "(${product.categoryId}) $it" }
+            ?: product.categoryId.toString()
+        categoryInput.setText(categoryLabel, false)
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(view)
+            .create()
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        val values = buildCategoryDropdownValues()
+        val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, values)
+        categoryInput.setAdapter(adapter)
+        categoryInput.setOnClickListener { categoryInput.showDropDown() }
+        categoryInput.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) categoryInput.showDropDown()
+        }
+
+        if (isOffline) {
+            nameInput.isEnabled = false
+            barcodeInput.isEnabled = false
+            categoryInput.isEnabled = false
+            btnSave.isEnabled = false
+            btnDelete.text = "Eliminar offline"
+        }
+
+        btnSave.setOnClickListener {
+            val newName = nameInput.text?.toString()?.trim().orEmpty()
+            val rawBarcode = barcodeInput.text?.toString()?.trim().orEmpty()
+            val barcode = rawBarcode.ifBlank { null }
+            val categoryId = resolveCategoryId(categoryInput.text?.toString().orEmpty().trim())
+
+            if (newName.isBlank()) {
+                nameInput.error = "Nombre requerido"
+                return@setOnClickListener
+            }
+            if (rawBarcode.isNotBlank() && !rawBarcode.matches(Regex("^\\d{13}$"))) {
+                barcodeInput.error = "Barcode debe tener 13 dígitos"
+                return@setOnClickListener
+            }
+            if (categoryId == null) {
+                categoryInput.error = "Categoría requerida"
+                return@setOnClickListener
+            }
+
+            updateProduct(product.id, ProductUpdateDto(name = newName, barcode = barcode, categoryId = categoryId))
+            dialog.dismiss()
+        }
+
+        btnDelete.setOnClickListener {
+            val titleText = if (isOffline) "Eliminar producto offline" else "Eliminar producto"
+            val bodyText = if (isOffline) {
+                "Se eliminará de la cola offline para que no se sincronice. ¿Continuar?"
+            } else {
+                "¿Seguro que quieres eliminar este producto?"
+            }
+            AlertDialog.Builder(this)
+                .setTitle(titleText)
+                .setMessage(bodyText)
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Eliminar") { _, _ ->
+                    if (isOffline) {
+                        val removed = removeOfflineProduct(product)
+                        if (removed) {
+                            UiNotifier.show(this@ProductListActivity, "Producto offline eliminado")
+                            resetAndLoad()
+                        } else {
+                            UiNotifier.show(this@ProductListActivity, "No se pudo eliminar de la cola offline")
+                        }
+                    } else {
+                        deleteProduct(product.id)
+                    }
+                    dialog.dismiss()
+                }
+                .show()
+        }
+
+        btnClose.setOnClickListener { dialog.dismiss() }
+
+        dialog.show()
+    }
+
+    private fun removeOfflineProduct(product: ProductResponseDto): Boolean {
+        val pending = offlineQueue.getAll().toMutableList()
+        val idx = pending.indexOfFirst { req ->
+            if (req.type != PendingType.PRODUCT_CREATE) return@indexOfFirst false
+            val dto = runCatching { gson.fromJson(req.payloadJson, ProductCreateDto::class.java) }.getOrNull()
+                ?: return@indexOfFirst false
+            dto.sku == product.sku &&
+                dto.name == product.name.replace(" (offline)", "") &&
+                dto.barcode == (product.barcode ?: "") &&
+                dto.categoryId == product.categoryId
+        }
+        if (idx < 0) return false
+        pending.removeAt(idx)
+        offlineQueue.saveAll(pending)
+        return true
+    }
+
+    private fun updateProduct(id: Int, body: ProductUpdateDto) {
+        lifecycleScope.launch {
+            try {
+                val res = NetworkModule.api.updateProduct(id, body)
+                if (res.code() == 401) {
+                    if (session.isTokenExpired()) {
+                        session.clearToken()
+                        goToLogin()
+                    }
+                    return@launch
+                }
+                if (res.isSuccessful) {
+                    UiNotifier.show(this@ProductListActivity, "Producto actualizado")
+                    cacheStore.invalidatePrefix("products")
+                    resetAndLoad()
+                } else if (res.code() == 403) {
+                    UiNotifier.showBlocking(
+                        this@ProductListActivity,
+                        "Permisos insuficientes",
+                        "No tienes permisos para editar productos.",
+                        com.example.inventoryapp.R.drawable.ic_lock
+                    )
+                } else {
+                    UiNotifier.show(this@ProductListActivity, "Error ${res.code()}: ${res.errorBody()?.string()}")
+                }
+            } catch (e: IOException) {
+                val payload = OfflineSyncer.ProductUpdatePayload(id, body)
+                OfflineQueue(this@ProductListActivity).enqueue(PendingType.PRODUCT_UPDATE, gson.toJson(payload))
+                UiNotifier.show(this@ProductListActivity, "Sin conexión. Actualización guardada offline")
+                resetAndLoad()
+            } catch (e: Exception) {
+                UiNotifier.show(this@ProductListActivity, "Error: ${e.message}")
+            }
+        }
+    }
+
+    private fun deleteProduct(id: Int) {
+        lifecycleScope.launch {
+            try {
+                val res = NetworkModule.api.deleteProduct(id)
+                if (res.code() == 401) {
+                    if (session.isTokenExpired()) {
+                        session.clearToken()
+                        goToLogin()
+                    }
+                    return@launch
+                }
+                if (res.isSuccessful) {
+                    UiNotifier.show(this@ProductListActivity, "Producto eliminado")
+                    cacheStore.invalidatePrefix("products")
+                    resetAndLoad()
+                } else if (res.code() == 403) {
+                    UiNotifier.showBlocking(
+                        this@ProductListActivity,
+                        "Permisos insuficientes",
+                        "No tienes permisos para eliminar productos.",
+                        com.example.inventoryapp.R.drawable.ic_lock
+                    )
+                } else {
+                    UiNotifier.show(this@ProductListActivity, "Error ${res.code()}: ${res.errorBody()?.string()}")
+                }
+            } catch (e: IOException) {
+                val payload = OfflineSyncer.ProductDeletePayload(id)
+                OfflineQueue(this@ProductListActivity).enqueue(PendingType.PRODUCT_DELETE, gson.toJson(payload))
+                UiNotifier.show(this@ProductListActivity, "Sin conexión. Eliminado guardado offline")
+                resetAndLoad()
+            } catch (e: Exception) {
+                UiNotifier.show(this@ProductListActivity, "Error: ${e.message}")
             }
         }
     }
@@ -552,6 +776,14 @@ class ProductListActivity : AppCompatActivity() {
         }
     }
 
+    private fun buildCategoryDropdownValues(): List<String> {
+        if (categoryCache.isNotEmpty()) {
+            val values = categoryCache.entries.sortedBy { it.key }.map { "(${it.key}) ${it.value}" }
+            return listOf("") + values
+        }
+        return listOf("")
+    }
+
     private fun resolveCategoryId(input: String): Int? {
         val trimmed = input.trim()
         if (trimmed.isBlank()) return null
@@ -714,6 +946,7 @@ class ProductListActivity : AppCompatActivity() {
     }
 
     private fun goToLogin() {
+        if (!session.isTokenExpired()) return
         val i = Intent(this, LoginActivity::class.java)
         i.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(i)

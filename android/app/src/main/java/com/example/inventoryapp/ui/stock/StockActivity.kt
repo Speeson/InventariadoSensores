@@ -27,6 +27,7 @@ import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.common.SendSnack
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.common.NetworkStatusBar
+import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -360,13 +361,24 @@ class StockActivity : AppCompatActivity() {
         val dto = StockCreateDto(productId = productId, location = location, quantity = quantity)
 
         binding.btnCreate.isEnabled = false
-        snack.showSending("Enviando stock...")
+        val loading = CreateUiFeedback.showLoading(this, "stock")
 
         lifecycleScope.launch {
+            var loadingHandled = false
             try {
                 val res = NetworkModule.api.createStock(dto)
                 if (res.isSuccessful) {
-                    snack.showSuccess("✅ Stock creado")
+                    val created = res.body()
+                    val name = productNameById[productId] ?: productId.toString()
+                    val details = if (created != null) {
+                        "ID: ${created.id}\nProducto: $name\nUbicación: ${created.location}\nCantidad: ${created.quantity}"
+                    } else {
+                        "Producto: $name\nUbicación: $location\nCantidad: $quantity"
+                    }
+                    loadingHandled = true
+                    loading.dismissThen {
+                        CreateUiFeedback.showCreatedPopup(this@StockActivity, "Stock creado", details)
+                    }
                     binding.etQuantity.setText("")
                     cacheStore.invalidatePrefix("stocks")
                     loadStocks()
@@ -394,38 +406,73 @@ class StockActivity : AppCompatActivity() {
 
             } catch (e: IOException) {
                 OfflineQueue(this@StockActivity).enqueue(PendingType.STOCK_CREATE, gson.toJson(dto))
-                snack.showQueuedOffline("Sin conexión. Stock guardado offline")
+                val name = productNameById[productId] ?: productId.toString()
+                loadingHandled = true
+                loading.dismissThen {
+                    CreateUiFeedback.showCreatedPopup(
+                        this@StockActivity,
+                        "Stock creado (offline)",
+                        "Producto: $name\nUbicación: $location\nCantidad: $quantity (offline)",
+                        accentColorRes = R.color.offline_text
+                    )
+                }
                 loadStocks()
 
             } catch (e: Exception) {
                 snack.showError("❌ Error: ${e.message}")
             } finally {
+                if (!loadingHandled) {
+                    loading.dismiss()
+                }
                 binding.btnCreate.isEnabled = true
             }
         }
     }
 
     private fun showEditDialog(stock: StockResponseDto) {
-        val inputQty = android.widget.EditText(this).apply {
-            inputType = android.text.InputType.TYPE_CLASS_NUMBER
-            setText(stock.quantity.toString())
-            hint = "Nueva quantity"
+        val view = layoutInflater.inflate(R.layout.dialog_edit_stock, null)
+        val title = view.findViewById<android.widget.TextView>(R.id.tvEditStockTitle)
+        val meta = view.findViewById<android.widget.TextView>(R.id.tvEditStockMeta)
+        val qtyInput = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etEditStockQty)
+        val btnSave = view.findViewById<android.widget.Button>(R.id.btnEditStockSave)
+        val btnDelete = view.findViewById<android.widget.Button>(R.id.btnEditStockDelete)
+        val btnClose = view.findViewById<android.widget.ImageButton>(R.id.btnEditStockClose)
+
+        val productName = productNameById[stock.productId] ?: "Producto ${stock.productId}"
+        title.text = "Editar: $productName (ID ${stock.id})"
+        meta.text = "Ubicación: ${stock.location}"
+        qtyInput.setText(stock.quantity.toString())
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(view)
+            .create()
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        btnSave.setOnClickListener {
+            val newQty = qtyInput.text?.toString()?.toIntOrNull()
+            if (newQty == null || newQty < 0) {
+                qtyInput.error = "Cantidad inválida"
+                return@setOnClickListener
+            }
+            updateStock(stock.id, StockUpdateDto(quantity = newQty))
+            dialog.dismiss()
         }
 
-        AlertDialog.Builder(this)
-            .setTitle("Editar stock #${stock.id}")
-            .setMessage("prod=${stock.productId} | loc=${stock.location}\nCambia quantity:")
-            .setView(inputQty)
-            .setNegativeButton("Cancelar", null)
-            .setPositiveButton("Guardar") { _, _ ->
-                val newQty = inputQty.text.toString().toIntOrNull()
-                if (newQty == null || newQty < 0) {
-                    snack.showError("❌ Quantity inválida")
-                    return@setPositiveButton
+        btnDelete.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("Vaciar stock")
+                .setMessage("Se pondrá la cantidad a 0. ¿Continuar?")
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Vaciar") { _, _ ->
+                    updateStock(stock.id, StockUpdateDto(quantity = 0))
+                    dialog.dismiss()
                 }
-                updateStock(stock.id, StockUpdateDto(quantity = newQty))
-            }
-            .show()
+                .show()
+        }
+
+        btnClose.setOnClickListener { dialog.dismiss() }
+
+        dialog.show()
     }
 
     private fun updateStock(stockId: Int, body: StockUpdateDto) {

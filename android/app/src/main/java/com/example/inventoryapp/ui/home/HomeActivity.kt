@@ -57,6 +57,7 @@ class HomeActivity : AppCompatActivity() {
     private var currentRole: String? = null
     private val prefs by lazy { getSharedPreferences("ui_prefs", MODE_PRIVATE) }
     private var gradientIconCache: MutableMap<Int, Bitmap> = mutableMapOf()
+    private var offlineNoticeShown = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -135,9 +136,11 @@ class HomeActivity : AppCompatActivity() {
                     val res = NetworkModule.api.me()
                     if (res.code() == 401) {
                         UiNotifier.show(this@HomeActivity, ApiErrorFormatter.format(401))
-                        session.clearToken()
-                        clearCachedRole()
-                        goToLogin()
+                        if (session.isTokenExpired()) {
+                            session.clearToken()
+                            clearCachedRole()
+                            goToLogin()
+                        }
                         return@launch
                     }
                     if (res.isSuccessful && res.body() != null) {
@@ -273,6 +276,13 @@ class HomeActivity : AppCompatActivity() {
                 )
             }
         }
+        lifecycleScope.launch {
+            NetworkModule.offlineState.collect { offline ->
+                if (!offline) {
+                    offlineNoticeShown = false
+                }
+            }
+        }
     }
 
 
@@ -358,8 +368,10 @@ class HomeActivity : AppCompatActivity() {
                         .show()
                 } else if (res.code() == 401) {
                     UiNotifier.show(this@HomeActivity, ApiErrorFormatter.format(401))
-                    session.clearToken()
-                    goToLogin()
+                    if (session.isTokenExpired()) {
+                        session.clearToken()
+                        goToLogin()
+                    }
                 } else {
                     AlertDialog.Builder(this@HomeActivity)
                         .setTitle("Mi perfil")
@@ -383,15 +395,16 @@ class HomeActivity : AppCompatActivity() {
             val res = NetworkModule.api.me()
             if (res.code() == 401) {
                 UiNotifier.show(this@HomeActivity, ApiErrorFormatter.format(401))
-                session.clearToken()
-                clearCachedRole()
-                goToLogin()
+                if (session.isTokenExpired()) {
+                    session.clearToken()
+                    clearCachedRole()
+                    goToLogin()
+                }
             } else if (res.code() >= 500) {
                 UiNotifier.show(this@HomeActivity, ApiErrorFormatter.format(res.code()))
             }
         } catch (_: Exception) {
-            UiNotifier.showBlockingTimed(this@HomeActivity, "Sin conexión. No se puede validar la sesión.", R.drawable.offline)
-            goToLogin()
+            // Global offline notice handled by NetworkModule
         }
     }
 
@@ -599,6 +612,7 @@ private fun confirmLogout() {
     }
 
     private fun goToLogin() {
+        if (!session.isTokenExpired()) return
         val i = Intent(this, LoginActivity::class.java)
         i.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(i)

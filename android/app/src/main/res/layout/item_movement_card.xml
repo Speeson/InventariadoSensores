@@ -17,10 +17,10 @@
 
         <LinearLayout
             android:layout_width="72dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_marginEnd="12dp"
             android:orientation="vertical"
-            android:gravity="center_horizontal">
+            android:gravity="center">
 
             <TextView
                 android:id="@+id/tvTypeTag"
@@ -40,12 +40,24 @@
                 android:src="@drawable/ic_status" />
 
             <TextView
-                android:id="@+id/tvMovementId"
+                android:id="@+id/tvMovementIdLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:text="ID"
                 android:textSize="11sp"
+                android:textStyle="bold"
                 android:textColor="?attr/colorOnSurface"
-                android:alpha="0.7" />
+                android:includeFontPadding="false" />
+
+            <TextView
+                android:id="@+id/tvMovementIdValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface"
+                android:includeFontPadding="false" />
         </LinearLayout>
 
         <LinearLayout

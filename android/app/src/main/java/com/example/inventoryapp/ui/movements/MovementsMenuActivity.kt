@@ -37,6 +37,7 @@ import com.example.inventoryapp.ui.common.GradientIconUtil
 import com.example.inventoryapp.ui.common.SendSnack
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.common.NetworkStatusBar
+import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -179,9 +180,10 @@ class MovementsMenuActivity : AppCompatActivity() {
         }
 
         binding.btnCreateMovement.isEnabled = false
-        snack.showSending("Enviando movimiento...")
+        val loading = CreateUiFeedback.showLoading(this, "movimiento")
 
         lifecycleScope.launch {
+            var loadingHandled = false
             try {
                 val productId = productInput.toIntOrNull() ?: resolveProductIdByName(productInput)
                 if (productId == null) {
@@ -194,7 +196,13 @@ class MovementsMenuActivity : AppCompatActivity() {
                         val dto = MovementOperationRequest(productId, quantity!!, location, source)
                         val res = NetworkModule.api.movementIn(dto)
                         if (res.isSuccessful && res.body() != null) {
-                            snack.showSuccess("IN OK")
+                            val body = res.body()!!
+                            val productLabel = productNamesById[productId] ?: productId.toString()
+                            val details = "ID: ${body.movement.id}\nTipo: IN\nProducto: $productLabel\nCantidad: ${body.movement.quantity}\nUbicación: ${body.movement.location ?: location}"
+                            loadingHandled = true
+                            loading.dismissThen {
+                                CreateUiFeedback.showCreatedPopup(this@MovementsMenuActivity, "Movimiento creado", details)
+                            }
                             binding.etCreateQuantity.setText("")
                             cacheStore.invalidatePrefix("movements")
                             loadMovements(withSnack = false)
@@ -206,7 +214,13 @@ class MovementsMenuActivity : AppCompatActivity() {
                         val dto = MovementOperationRequest(productId, quantity!!, location, source)
                         val res = NetworkModule.api.movementOut(dto)
                         if (res.isSuccessful && res.body() != null) {
-                            snack.showSuccess("OUT OK")
+                            val body = res.body()!!
+                            val productLabel = productNamesById[productId] ?: productId.toString()
+                            val details = "ID: ${body.movement.id}\nTipo: OUT\nProducto: $productLabel\nCantidad: ${body.movement.quantity}\nUbicación: ${body.movement.location ?: location}"
+                            loadingHandled = true
+                            loading.dismissThen {
+                                CreateUiFeedback.showCreatedPopup(this@MovementsMenuActivity, "Movimiento creado", details)
+                            }
                             binding.etCreateQuantity.setText("")
                             cacheStore.invalidatePrefix("movements")
                             loadMovements(withSnack = false)
@@ -218,7 +232,13 @@ class MovementsMenuActivity : AppCompatActivity() {
                         val dto = MovementAdjustOperationRequest(productId, quantity!!, location, source)
                         val res = NetworkModule.api.movementAdjust(dto)
                         if (res.isSuccessful && res.body() != null) {
-                            snack.showSuccess("ADJUST OK")
+                            val body = res.body()!!
+                            val productLabel = productNamesById[productId] ?: productId.toString()
+                            val details = "ID: ${body.movement.id}\nTipo: ADJUST\nProducto: $productLabel\nDelta: ${body.movement.delta ?: quantity}\nUbicación: ${body.movement.location ?: location}"
+                            loadingHandled = true
+                            loading.dismissThen {
+                                CreateUiFeedback.showCreatedPopup(this@MovementsMenuActivity, "Movimiento creado", details)
+                            }
                             binding.etCreateQuantity.setText("")
                             cacheStore.invalidatePrefix("movements")
                             loadMovements(withSnack = false)
@@ -230,7 +250,13 @@ class MovementsMenuActivity : AppCompatActivity() {
                         val dto = MovementTransferOperationRequest(productId, quantity!!, location, toLocation, source)
                         val res = NetworkModule.api.movementTransfer(dto)
                         if (res.isSuccessful && res.body() != null) {
-                            snack.showSuccess("TRANSFER OK")
+                            val body = res.body()!!
+                            val productLabel = productNamesById[productId] ?: productId.toString()
+                            val details = "Transfer ID: ${body.outMovement.transferId ?: "-"}\nProducto: $productLabel\nCantidad: ${body.outMovement.quantity}\nOrigen: ${body.outMovement.location ?: location}\nDestino: ${body.inMovement.location ?: toLocation}"
+                            loadingHandled = true
+                            loading.dismissThen {
+                                CreateUiFeedback.showCreatedPopup(this@MovementsMenuActivity, "Transferencia creada", details)
+                            }
                             binding.etCreateQuantity.setText("")
                             cacheStore.invalidatePrefix("movements")
                             loadMovements(withSnack = false)
@@ -241,11 +267,28 @@ class MovementsMenuActivity : AppCompatActivity() {
                 }
             } catch (e: IOException) {
                 enqueueOffline(type, productInput, quantity, location, toLocation, source)
-                snack.showQueuedOffline("Sin red. Guardado offline para reenviar.")
+                val label = if (productInput.isBlank()) "-" else productInput
+                val details = when (type) {
+                    "TRANSFER" -> "Producto: $label\nCantidad: ${quantity ?: 0}\nOrigen: $location\nDestino: $toLocation (offline)"
+                    "ADJUST" -> "Producto: $label\nDelta: ${quantity ?: 0}\nUbicación: $location (offline)"
+                    else -> "Producto: $label\nCantidad: ${quantity ?: 0}\nUbicación: $location (offline)"
+                }
+                loadingHandled = true
+                loading.dismissThen {
+                    CreateUiFeedback.showCreatedPopup(
+                        this@MovementsMenuActivity,
+                        "Movimiento creado (offline)",
+                        details,
+                        accentColorRes = R.color.offline_text
+                    )
+                }
                 loadMovements(withSnack = false)
             } catch (e: Exception) {
                 snack.showError("Error: ${e.message}")
             } finally {
+                if (!loadingHandled) {
+                    loading.dismiss()
+                }
                 binding.btnCreateMovement.isEnabled = true
             }
         }

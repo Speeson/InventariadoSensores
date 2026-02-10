@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="24dp"
+    android:background="#55000000">
+
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        app:cardCornerRadius="18dp"
+        app:cardElevation="6dp"
+        app:cardBackgroundColor="?attr/colorSurface"
+        app:strokeWidth="1dp"
+        app:strokeColor="#1A000000">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="18dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tvEditCategoryTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Editar categoria"
+                    android:textStyle="bold"
+                    android:textSize="18sp"
+                    android:textColor="?attr/colorOnSurface" />
+
+                <ImageButton
+                    android:id="@+id/btnEditCategoryClose"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:background="@android:color/transparent"
+                    android:contentDescription="Cerrar"
+                    android:scaleType="centerInside"
+                    android:src="@drawable/close" />
+            </LinearLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                app:boxBackgroundMode="outline">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etEditCategoryName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Nombre"
+                    android:inputType="text"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnEditCategorySave"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_button_gradient"
+                    android:backgroundTint="@null"
+                    app:backgroundTint="@null"
+                    android:text="Guardar"
+                    android:textAllCaps="false"
+                    android:textColor="@android:color/white"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:paddingVertical="10dp" />
+
+                <Space
+                    android:layout_width="10dp"
+                    android:layout_height="0dp" />
+
+                <Button
+                    android:id="@+id/btnEditCategoryDelete"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_button_danger"
+                    android:backgroundTint="@null"
+                    app:backgroundTint="@null"
+                    android:text="Eliminar"
+                    android:textAllCaps="false"
+                    android:textColor="@android:color/white"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:paddingVertical="10dp" />
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+</FrameLayout>

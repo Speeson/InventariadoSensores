@@ -23,7 +23,7 @@
             android:layout_height="match_parent"
             android:layout_marginEnd="10dp"
             android:orientation="vertical"
-            android:gravity="top|center_horizontal">
+            android:gravity="center">
 
             <ImageView
                 android:id="@+id/ivIcon"
@@ -49,6 +49,7 @@
                 android:layout_height="wrap_content"
                 android:text="0"
                 android:textSize="11sp"
+                android:textStyle="bold"
                 android:textColor="?attr/colorOnSurface"
                 android:includeFontPadding="false" />
         </LinearLayout>

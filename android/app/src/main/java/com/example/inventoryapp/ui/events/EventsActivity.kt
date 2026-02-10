@@ -28,6 +28,7 @@ import com.example.inventoryapp.ui.auth.LoginActivity
 import com.example.inventoryapp.ui.common.SendSnack
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.common.NetworkStatusBar
+import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -182,13 +183,21 @@ snack = SendSnack(binding.root)
         )
 
         binding.btnCreateEvent.isEnabled = false
-        snack.showSending("Enviando evento...")
+        val loading = CreateUiFeedback.showLoading(this, "evento")
 
         lifecycleScope.launch {
+            var loadingHandled = false
             try {
                 val res = repo.createEvent(dto)
                 if (res.isSuccess) {
-                    snack.showSuccess("OK: Evento creado")
+                    val created = res.getOrNull()!!
+                    val productName = getCachedProductNames()[created.productId]
+                    val productLabel = productName?.let { "$it (${created.productId})" } ?: created.productId.toString()
+                    val details = "ID: ${created.id}\nTipo: ${created.eventType}\nProducto: $productLabel\nCantidad: ${created.delta}\nUbicación: $location"
+                    loadingHandled = true
+                    loading.dismissThen {
+                        CreateUiFeedback.showCreatedPopup(this@EventsActivity, "Evento creado", details)
+                    }
                     binding.etDelta.setText("")
                     cacheStore.invalidatePrefix("events")
                     loadEvents(withSnack = false)
@@ -196,7 +205,15 @@ snack = SendSnack(binding.root)
                     val ex = res.exceptionOrNull()
                     if (ex is IOException) {
                         OfflineQueue(this@EventsActivity).enqueue(PendingType.EVENT_CREATE, gson.toJson(dto))
-                        snack.showQueuedOffline("Sin conexión. Evento guardado offline")
+                        loadingHandled = true
+                        loading.dismissThen {
+                            CreateUiFeedback.showCreatedPopup(
+                                this@EventsActivity,
+                                "Evento creado (offline)",
+                                "Tipo: ${dto.eventType}\nProducto: ${dto.productId}\nCantidad: ${dto.delta}\nUbicación: ${dto.location} (offline)",
+                                accentColorRes = R.color.offline_text
+                            )
+                        }
                         loadEvents(withSnack = false)
                     } else {
                         if (isForbidden(ex)) {
@@ -213,11 +230,22 @@ snack = SendSnack(binding.root)
                 }
             } catch (e: IOException) {
                 OfflineQueue(this@EventsActivity).enqueue(PendingType.EVENT_CREATE, gson.toJson(dto))
-                snack.showQueuedOffline("Sin conexión. Evento guardado offline")
+                loadingHandled = true
+                loading.dismissThen {
+                    CreateUiFeedback.showCreatedPopup(
+                        this@EventsActivity,
+                        "Evento creado (offline)",
+                        "Tipo: ${dto.eventType}\nProducto: ${dto.productId}\nCantidad: ${dto.delta}\nUbicación: ${dto.location} (offline)",
+                        accentColorRes = R.color.offline_text
+                    )
+                }
                 loadEvents(withSnack = false)
             } catch (e: Exception) {
                 snack.showError("Error: ${e.message}")
             } finally {
+                if (!loadingHandled) {
+                    loading.dismiss()
+                }
                 binding.btnCreateEvent.isEnabled = true
             }
         }
@@ -796,6 +824,7 @@ snack = SendSnack(binding.root)
     }
 
     private fun goToLogin() {
+        if (!session.isTokenExpired()) return
         val i = Intent(this, LoginActivity::class.java)
         i.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(i)
