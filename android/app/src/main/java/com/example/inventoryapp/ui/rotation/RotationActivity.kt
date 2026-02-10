@@ -17,6 +17,7 @@ import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.auth.LoginActivity
 import com.example.inventoryapp.ui.common.SendSnack
 import com.example.inventoryapp.ui.common.NetworkStatusBar
+import com.example.inventoryapp.ui.common.UiNotifier
 import kotlinx.coroutines.launch
 import com.example.inventoryapp.ui.common.GradientIconUtil
 import android.graphics.drawable.GradientDrawable
@@ -127,7 +128,7 @@ class RotationActivity : AppCompatActivity() {
                     finish()
                 }
             } catch (e: Exception) {
-                snack.showError("Error de conexi�n: ${e.message}")
+                snack.showError(UiNotifier.buildConnectionMessage(this@RotationActivity, e.message))
                 finish()
             }
         }
@@ -196,7 +197,7 @@ class RotationActivity : AppCompatActivity() {
                 if (withSnack) snack.showSuccess("OK: Rotaci�n cargada")
 
             } catch (e: Exception) {
-                snack.showError("Error de red: ${e.message}")
+                snack.showError(UiNotifier.buildConnectionMessage(this@RotationActivity, e.message))
             }
         }
     }
@@ -403,3 +404,4 @@ class RotationActivity : AppCompatActivity() {
         finish()
     }
 }
+

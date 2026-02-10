@@ -18,6 +18,7 @@ import com.example.inventoryapp.ui.common.SystemAlertManager
 import com.example.inventoryapp.ui.common.ActivityTracker
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.auth.LoginActivity
+import com.example.inventoryapp.R
 import android.content.Intent
 
 object NetworkModule {
@@ -78,7 +79,9 @@ object NetworkModule {
         val activity = ActivityTracker.getCurrent()
         if (activity != null) {
             activity.runOnUiThread {
-                UiNotifier.showCentered(activity, "Conexión perdida. Trabajando en modo offline.")
+                if (shouldShowOfflineNotice(activity)) {
+                    UiNotifier.showCentered(activity, "Conexión perdida. Trabajando en modo offline.")
+                }
             }
         }
     }
@@ -99,6 +102,18 @@ object NetworkModule {
         networkDown = false
         lastProbeAt = 0L
         _offlineState.value = false
+    }
+
+    private fun shouldShowOfflineNotice(activity: android.app.Activity): Boolean {
+        if (activity is LoginActivity) return false
+        val session = SessionManager(appContext)
+        val token = session.getToken()
+        if (token.isNullOrBlank()) return false
+        if (session.isTokenExpired(token)) return false
+        val prefs = appContext.getSharedPreferences("ui_prefs", Context.MODE_PRIVATE)
+        val role = prefs.getString("cached_role", null)
+        val userId = prefs.getInt("cached_user_id", -1)
+        return !role.isNullOrBlank() && userId > 0
     }
 
     private val client: OkHttpClient by lazy {
@@ -148,13 +163,14 @@ object NetworkModule {
                             appContext,
                             SystemAlertType.AUTH_EXPIRED,
                             "Sesión caducada",
-                            "Tu sesión ha expirado. Inicia sesión de nuevo.",
+                            "Sesión caducada. Inicia sesión.",
                             blocking = false
                         )
                         SessionManager(appContext).clearToken()
                         val activity = ActivityTracker.getCurrent()
                         if (activity != null) {
                             activity.runOnUiThread {
+                                UiNotifier.showBlockingTimed(activity, "Sesión caducada. Inicia sesión.", R.drawable.expired)
                                 val i = Intent(activity, LoginActivity::class.java)
                                 i.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                                 activity.startActivity(i)

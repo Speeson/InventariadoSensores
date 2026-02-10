@@ -78,6 +78,13 @@ class HomeActivity : AppCompatActivity() {
             goToLogin()
             return
         }
+        if (session.isTokenExpired()) {
+            session.clearToken()
+            clearCachedRole()
+            UiNotifier.showBlockingTimed(this@HomeActivity, "Sesión caducada. Inicia sesión.", R.drawable.expired)
+            goToLogin()
+            return
+        }
         syncCachedRoleWithToken()
 
         setSupportActionBar(binding.toolbar)
@@ -149,7 +156,7 @@ class HomeActivity : AppCompatActivity() {
                         UiNotifier.show(this@HomeActivity, ApiErrorFormatter.format(res.code()))
                     }
                 } catch (e: Exception) {
-                    UiNotifier.show(this@HomeActivity, "Error de conexión: ${e.message}")
+                UiNotifier.showConnectionError(this@HomeActivity, e.message)
                 }
             }
         }
@@ -301,11 +308,11 @@ class HomeActivity : AppCompatActivity() {
                         .show()
                 }
             } catch (e: Exception) {
+                val msg = UiNotifier.buildConnectionMessage(this@HomeActivity, e.message)
                 AlertDialog.Builder(this@HomeActivity)
                     .setTitle("Estado del sistema")
                     .setMessage(
-                        "No se pudo conectar ❌\n" +
-                                "${e.message}\n" +
+                        "$msg\n" +
                                 "Pendientes offline: $pending\n" +
                                 "Pendientes con error: $failed"
                     )
@@ -363,7 +370,7 @@ class HomeActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 AlertDialog.Builder(this@HomeActivity)
                     .setTitle("Mi perfil")
-                    .setMessage("Error de conexión ❌\n${e.message}")
+                    .setMessage(UiNotifier.buildConnectionMessage(this@HomeActivity, e.message))
                     .setPositiveButton("OK", null)
                     .show()
             }
@@ -383,7 +390,8 @@ class HomeActivity : AppCompatActivity() {
                 UiNotifier.show(this@HomeActivity, ApiErrorFormatter.format(res.code()))
             }
         } catch (_: Exception) {
-            // Si no hay red, no forzamos logout
+            UiNotifier.showBlockingTimed(this@HomeActivity, "Sin conexión. No se puede validar la sesión.", R.drawable.offline)
+            goToLogin()
         }
     }
 

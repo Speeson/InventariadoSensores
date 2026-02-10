@@ -6,7 +6,7 @@ object ApiErrorFormatter {
         val detailLower = detail?.lowercase() ?: ""
         return when (code) {
             400 -> "Solicitud inválida"
-            401 -> "Sesión caducada. Inicia sesión de nuevo."
+            401 -> "Sesión caducada. Inicia sesión."
             403 -> "Permisos insuficientes"
             404 -> {
                 when {

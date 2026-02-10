@@ -2,14 +2,21 @@ package com.example.inventoryapp.ui.common
 
 import android.app.Activity
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import android.os.Handler
+import android.os.Looper
+import android.view.LayoutInflater
 import android.view.Gravity
 import android.view.View
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import com.example.inventoryapp.R
 import com.google.android.material.snackbar.Snackbar
 import androidx.appcompat.app.AlertDialog
+import android.content.Context
+import com.example.inventoryapp.BuildConfig
 
 object UiNotifier {
 
@@ -31,6 +38,39 @@ object UiNotifier {
         builder.show()
     }
 
+    fun showBlockingTimed(
+        activity: Activity,
+        message: String,
+        iconRes: Int,
+        timeoutMs: Long = 10_000L
+    ) {
+        val view = LayoutInflater.from(activity).inflate(R.layout.dialog_important_notice, null)
+        val icon = view.findViewById<ImageView>(R.id.noticeIcon)
+        val text = view.findViewById<TextView>(R.id.noticeMessage)
+        icon.setImageResource(iconRes)
+        text.text = message
+
+        val dialog = AlertDialog.Builder(activity)
+            .setView(view)
+            .create()
+
+        val handler = Handler(Looper.getMainLooper())
+        val dismissRunnable = Runnable {
+            if (dialog.isShowing) {
+                dialog.dismiss()
+            }
+        }
+        dialog.setOnDismissListener {
+            handler.removeCallbacks(dismissRunnable)
+        }
+        dialog.show()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        view.findViewById<android.widget.Button>(R.id.noticeAccept)?.setOnClickListener {
+            dialog.dismiss()
+        }
+        handler.postDelayed(dismissRunnable, timeoutMs)
+    }
+
     fun showCentered(activity: Activity, message: String, duration: Int = Toast.LENGTH_SHORT) {
         val toast = Toast.makeText(activity, message, duration)
         toast.setGravity(Gravity.CENTER, 0, 0)
@@ -49,5 +89,26 @@ object UiNotifier {
         val text = view.findViewById<TextView>(com.google.android.material.R.id.snackbar_text)
         text.setTextColor(Color.WHITE)
         text.maxLines = 4
+    }
+
+    fun showConnectionError(activity: Activity, detail: String? = null, allowTechnical: Boolean = true) {
+        show(activity, buildConnectionMessage(activity, detail, allowTechnical))
+    }
+
+    fun buildConnectionMessage(context: Context, detail: String? = null, allowTechnical: Boolean = true): String {
+        val friendly = "No se pudo conectar. Revisa la IP o la red."
+        if (detail.isNullOrBlank()) return friendly
+        return if (allowTechnical && shouldShowTechnical(context)) {
+            "Error de conexión: $detail"
+        } else {
+            friendly
+        }
+    }
+
+    private fun shouldShowTechnical(context: Context): Boolean {
+        if (BuildConfig.DEBUG) return true
+        val prefs = context.getSharedPreferences("ui_prefs", Context.MODE_PRIVATE)
+        val role = prefs.getString("cached_role", null)
+        return role.equals("ADMIN", ignoreCase = true)
     }
 }

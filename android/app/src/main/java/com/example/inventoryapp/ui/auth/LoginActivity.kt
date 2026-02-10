@@ -35,6 +35,12 @@ class LoginActivity : AppCompatActivity() {
         setupEmailAutocomplete()
         NetworkModule.forceOnline()
 
+        if (session.isTokenExpired()) {
+            session.clearToken()
+            clearCachedUiRole()
+            UiNotifier.showBlockingTimed(this@LoginActivity, "Sesión caducada. Inicia sesión.", R.drawable.expired)
+        }
+
         // Si ya hay token, validar contra la API antes de entrar.
         if (!session.getToken().isNullOrBlank()) {
             validateExistingSession()
@@ -140,7 +146,7 @@ class LoginActivity : AppCompatActivity() {
                     UiNotifier.show(this@LoginActivity, errorMsg)
                 }
             } catch (e: Exception) {
-                UiNotifier.show(this@LoginActivity, "Error de conexión: ${e.message}")
+                UiNotifier.showConnectionError(this@LoginActivity, e.message, allowTechnical = false)
             } finally {
                 setLoading(false)
             }
@@ -160,19 +166,10 @@ class LoginActivity : AppCompatActivity() {
                 } else {
                     session.clearToken()
                     clearCachedUiRole()
-                    UiNotifier.show(this@LoginActivity, "Sesi?n inv?lida. Inicia sesi?n.")
+                    UiNotifier.showBlockingTimed(this@LoginActivity, "Sesión caducada. Inicia sesión.", R.drawable.expired)
                 }
             } catch (e: Exception) {
-                if (hasCachedSession()) {
-                    UiNotifier.show(this@LoginActivity, "Sin conexi?n. Entrando en modo offline.")
-                    startActivity(Intent(this@LoginActivity, HomeActivity::class.java))
-                    finish()
-                    FcmTokenManager.sync(this@LoginActivity)
-                } else {
-                    session.clearToken()
-                    clearCachedUiRole()
-                    UiNotifier.show(this@LoginActivity, "Sin conexi?n. Inicia sesi?n cuando haya red.")
-                }
+                UiNotifier.showBlockingTimed(this@LoginActivity, "Sin conexión. No se puede validar la sesión.", R.drawable.offline)
             } finally {
                 setUiEnabled(true)
                 setLoading(false)
@@ -261,7 +258,7 @@ class LoginActivity : AppCompatActivity() {
                     UiNotifier.show(this@LoginActivity, msg)
                 }
             } catch (e: Exception) {
-                UiNotifier.show(this@LoginActivity, "Error de conexión: ${e.message}")
+                UiNotifier.showConnectionError(this@LoginActivity, e.message, allowTechnical = false)
             } finally {
                 setUiEnabled(true)
             }
