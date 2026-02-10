@@ -33,6 +33,7 @@ import com.example.inventoryapp.data.remote.model.ThresholdUpdateDto
 import com.example.inventoryapp.data.remote.model.AlertListResponseDto
 import com.example.inventoryapp.data.remote.model.AlertResponseDto
 import com.example.inventoryapp.data.remote.model.AlertStatusDto
+import com.example.inventoryapp.data.remote.model.FcmTokenRequest
 import com.example.inventoryapp.data.remote.model.ImportSummaryResponseDto
 import com.example.inventoryapp.data.remote.model.ImportReviewListResponseDto
 import com.example.inventoryapp.data.remote.model.BasicOkDto
@@ -251,6 +252,9 @@ interface InventoryApi {
 
     @POST("alerts/{alert_id}/ack")
     suspend fun ackAlert(@Path("alert_id") alertId: Int): Response<AlertResponseDto>
+
+    @POST("users/fcm-token")
+    suspend fun registerFcmToken(@Body payload: FcmTokenRequest): Response<Unit>
 
     @Multipart
     @POST("imports/events/csv")

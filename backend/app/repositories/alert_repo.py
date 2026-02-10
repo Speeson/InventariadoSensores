@@ -8,6 +8,7 @@ from app.models.alert import Alert
 from app.models.enums import AlertStatus, AlertType
 from app.schemas.alert import AlertResponse
 from app.ws.alerts_ws import publish_alert
+from app.services import fcm_service
 from app.models.stock import Stock
 from app.models.location import Location
 
@@ -85,6 +86,10 @@ def create_alert(
     db.refresh(alert)
     try:
         publish_alert(AlertResponse.model_validate(alert))
+    except Exception:
+        pass
+    try:
+        fcm_service.send_alert_push(db, alert)
     except Exception:
         pass
     return alert

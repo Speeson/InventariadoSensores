@@ -41,8 +41,11 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       CELERY_TIMEZONE: UTC
+      FCM_CREDENTIALS_JSON: /app/credentials/firebase-service-account.json
     ports:
       - "8000:8000"
+    volumes:
+      - ./credentials:/app/credentials:ro
 
   worker:
     build:
@@ -70,6 +73,9 @@ services:
       SMTP_FROM: ${SMTP_FROM:-}
       SMTP_TO: ${SMTP_TO:-}
       SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
+      FCM_CREDENTIALS_JSON: /app/credentials/firebase-service-account.json
+    volumes:
+      - ./credentials:/app/credentials:ro
 
   beat:
     build:

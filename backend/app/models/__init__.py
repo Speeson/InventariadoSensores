@@ -11,3 +11,4 @@ from .location import Location
 from .import_batch import ImportBatch
 from .import_error import ImportError
 from .import_review import ImportReview
+from .fcm_token import FcmToken

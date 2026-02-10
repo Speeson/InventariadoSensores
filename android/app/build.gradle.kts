@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     id("kotlin-kapt")
+    id("com.google.gms.google-services")
 }
 
 val localHost = (project.findProperty("LOCAL_DEV_HOST") as String?)
@@ -78,6 +79,9 @@ dependencies {
     implementation("androidx.room:room-runtime:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
+
+    // ✅ Firebase Messaging
+    implementation("com.google.firebase:firebase-messaging:24.0.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

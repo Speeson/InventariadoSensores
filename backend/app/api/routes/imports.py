@@ -18,6 +18,7 @@ from app.models.location import Location
 from app.models.product import Product
 from app.models.enums import Source, UserRole, AlertType, AlertStatus
 from app.repositories import category_repo, product_repo, alert_repo
+from app.services import fcm_service
 from app.services import inventory_service
 from app.models.user import User
 
@@ -516,6 +517,13 @@ def import_events_csv(
             alert_type=AlertType.IMPORT_ISSUES,
             status=AlertStatus.PENDING,
         )
+    if not dry_run:
+        fcm_service.send_import_completed_push(
+            db,
+            total_rows=total_rows,
+            error_rows=error_rows,
+            review_rows=review_rows,
+        )
 
     return ImportSummaryResponse(
         batch_id=batch.id,
@@ -697,6 +705,13 @@ def import_transfers_csv(
             min_quantity=0,
             alert_type=AlertType.IMPORT_ISSUES,
             status=AlertStatus.PENDING,
+        )
+    if not dry_run:
+        fcm_service.send_import_completed_push(
+            db,
+            total_rows=total_rows,
+            error_rows=error_rows,
+            review_rows=review_rows,
         )
 
     return ImportSummaryResponse(

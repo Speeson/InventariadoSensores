@@ -6,6 +6,7 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatDelegate
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.AlertsWebSocketManager
+import com.example.inventoryapp.data.remote.FcmTokenManager
 import com.example.inventoryapp.ui.common.ActivityTracker
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
@@ -18,6 +19,7 @@ class InventoryApp : Application() {
         NetworkModule.init(this)
         NetworkModule.forceOnline()
         AlertsWebSocketManager.connect(this)
+        FcmTokenManager.sync(this)
         val prefs = getSharedPreferences("ui_prefs", MODE_PRIVATE)
         val isDark = prefs.getBoolean("dark_mode", false)
         AppCompatDelegate.setDefaultNightMode(

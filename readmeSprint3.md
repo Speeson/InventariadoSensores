@@ -263,3 +263,26 @@ Frontend (Android):
 - Color de tarjeta segÃºn tipo de alerta + animaciÃ³n pulse en el icono.
 - Colas de alertas: si llegan varias, se muestran una a una con contador "1 de N".
 - Badge de notificaciones se refresca en tiempo real al recibir alertas WS.
+
+## Firebase Cloud Messaging (FCM)
+
+Objetivo: push notifications cuando la app estÃ¡ en background o cerrada.
+
+Backend:
+- Tabla `fcm_tokens` (user_id, token, device_id, platform).
+- Endpoint `POST /users/fcm-token` para registrar/actualizar token.
+- Envio FCM al crear alertas:
+  - Stock bajo, Stock agotado, Movimiento grande, ImportaciÃ³n con errores.
+- ImportaciÃ³n completada: push si `total_rows` >= `IMPORT_COMPLETED_PUSH_MIN_ROWS` (default 50).
+- Requiere credenciales Firebase: `FCM_CREDENTIALS_JSON=/path/service-account.json`.
+
+Android:
+- Firebase Messaging integrado (`firebase-messaging`).
+- Registro automÃ¡tico de token al login y en refresh (`onNewToken`).
+- Servicio `FcmService` muestra notificaciÃ³n del sistema.
+- Requiere `google-services.json` en `android/app/`.
+
+Infra:
+- Credenciales backend en `backend/credentials/firebase-service-account.json`.
+- Docker: monta credenciales y exporta `FCM_CREDENTIALS_JSON=/app/credentials/firebase-service-account.json`.
+- `.gitignore` en `backend/credentials/` para no subir JSON a git.

@@ -10,6 +10,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.AlertsWebSocketManager
+import com.example.inventoryapp.data.remote.FcmTokenManager
 import com.example.inventoryapp.data.remote.RegisterRequest
 import com.example.inventoryapp.databinding.ActivityLoginBinding
 import com.example.inventoryapp.ui.common.UiNotifier
@@ -123,6 +124,8 @@ class LoginActivity : AppCompatActivity() {
                     clearCachedUiRole()
                     NetworkModule.forceOnline()
                     AlertsWebSocketManager.connect(this@LoginActivity)
+                    FcmTokenManager.sync(this@LoginActivity)
+                    FcmTokenManager.sync(this@LoginActivity)
 
                     UiNotifier.show(this@LoginActivity, "¡Bienvenido!")
 
@@ -153,6 +156,7 @@ class LoginActivity : AppCompatActivity() {
                 if (res.isSuccessful && res.body() != null) {
                     startActivity(Intent(this@LoginActivity, HomeActivity::class.java))
                     finish()
+                    FcmTokenManager.sync(this@LoginActivity)
                 } else {
                     session.clearToken()
                     clearCachedUiRole()
@@ -163,6 +167,7 @@ class LoginActivity : AppCompatActivity() {
                     UiNotifier.show(this@LoginActivity, "Sin conexi?n. Entrando en modo offline.")
                     startActivity(Intent(this@LoginActivity, HomeActivity::class.java))
                     finish()
+                    FcmTokenManager.sync(this@LoginActivity)
                 } else {
                     session.clearToken()
                     clearCachedUiRole()
