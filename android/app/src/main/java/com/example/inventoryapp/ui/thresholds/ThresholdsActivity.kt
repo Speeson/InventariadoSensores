@@ -265,9 +265,7 @@ class ThresholdsActivity : AppCompatActivity() {
                     adapter.submit(rows)
                     updatePageInfo(rows.size)
                     if (e is IOException) {
-                        UiNotifier.show(this@ThresholdsActivity, "Sin conexion a Internet")
                     } else {
-                        UiNotifier.show(this@ThresholdsActivity, "Error de red: ${e.message}")
                     }
                 }
             } finally {
@@ -312,7 +310,6 @@ class ThresholdsActivity : AppCompatActivity() {
                     UiNotifier.show(this@ThresholdsActivity, "Sin conexion. Threshold guardado offline")
                     loadThresholds()
                 } else {
-                    UiNotifier.show(this@ThresholdsActivity, "Error de red: ${e.message}")
                 }
             } finally {
                 binding.btnCreate.isEnabled = true
@@ -370,9 +367,7 @@ class ThresholdsActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 if (e is IOException) {
-                    UiNotifier.show(this@ThresholdsActivity, "Sin conexion a Internet")
                 } else {
-                    UiNotifier.show(this@ThresholdsActivity, "Error de red: ${e.message}")
                 }
             }
         }
@@ -391,9 +386,7 @@ class ThresholdsActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 if (e is IOException) {
-                    UiNotifier.show(this@ThresholdsActivity, "Sin conexion a Internet")
                 } else {
-                    UiNotifier.show(this@ThresholdsActivity, "Error de red: ${e.message}")
                 }
             }
         }
@@ -654,3 +647,4 @@ class ThresholdsActivity : AppCompatActivity() {
         finish()
     }
 }
+

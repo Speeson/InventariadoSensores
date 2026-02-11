@@ -1,4 +1,4 @@
-﻿package com.example.inventoryapp.ui.categories
+package com.example.inventoryapp.ui.categories
 
 import android.content.Intent
 import android.graphics.drawable.GradientDrawable
@@ -171,9 +171,7 @@ class CategoriesActivity : AppCompatActivity() {
                     // Only notify on API failure; cache-first rendering stays silent.
                 } else {
                     if (e is IOException) {
-                        UiNotifier.show(this@CategoriesActivity, "Sin conexión a Internet")
                     } else {
-                        UiNotifier.show(this@CategoriesActivity, "Error de red: ${e.message}")
                     }
                     adapter.submit(emptyList())
                     totalCount = 0
@@ -223,7 +221,7 @@ class CategoriesActivity : AppCompatActivity() {
                         totalCount = cachedOnError.total
                         adapter.submit(items)
                         updatePageInfo(cachedOnError.items.size, pending.size)
-                        UiNotifier.show(this@CategoriesActivity, "Mostrando categorías en cache")
+                        UiNotifier.show(this@CategoriesActivity, "Mostrando categor�as en cache")
                     } else {
                         totalCount = 0
                         updatePageInfo(0, 0)
@@ -245,12 +243,10 @@ class CategoriesActivity : AppCompatActivity() {
                     totalCount = cachedOnError.total
                     adapter.submit(items)
                     updatePageInfo(cachedOnError.items.size, pending.size)
-                    UiNotifier.show(this@CategoriesActivity, "Mostrando categorías en cache")
+                    UiNotifier.show(this@CategoriesActivity, "Mostrando categor�as en cache")
                 } else {
                     if (e is IOException) {
-                        UiNotifier.show(this@CategoriesActivity, "Sin conexión a Internet")
                     } else {
-                        UiNotifier.show(this@CategoriesActivity, "Error de red: ${e.message}")
                     }
                     val pending = if (name == null && currentOffset == 0) buildPendingCategories() else emptyList()
                     adapter.submit(pending)
@@ -268,7 +264,7 @@ class CategoriesActivity : AppCompatActivity() {
         if (name.isBlank()) { binding.etCategoryName.error = "Nombre requerido"; return }
 
         binding.btnCreateCategory.isEnabled = false
-        val loading = CreateUiFeedback.showLoading(this, "categoría")
+        val loading = CreateUiFeedback.showLoading(this, "categor�a")
         lifecycleScope.launch {
             var loadingHandled = false
             try {
@@ -283,7 +279,7 @@ class CategoriesActivity : AppCompatActivity() {
                     }
                     loadingHandled = true
                     loading.dismissThen {
-                        CreateUiFeedback.showCreatedPopup(this@CategoriesActivity, "Categoría creada", details)
+                        CreateUiFeedback.showCreatedPopup(this@CategoriesActivity, "Categor�a creada", details)
                     }
                     binding.etCategoryName.setText("")
                     currentOffset = 0
@@ -299,7 +295,7 @@ class CategoriesActivity : AppCompatActivity() {
                     loading.dismissThen {
                         CreateUiFeedback.showCreatedPopup(
                             this@CategoriesActivity,
-                            "Categoría creada (offline)",
+                            "Categor�a creada (offline)",
                             "Nombre: $name (offline)",
                             accentColorRes = R.color.offline_text
                         )
@@ -307,7 +303,6 @@ class CategoriesActivity : AppCompatActivity() {
                     currentOffset = 0
                     loadCategories()
                 } else {
-                    UiNotifier.show(this@CategoriesActivity, "Error de red: ${e.message}")
                 }
             } finally {
                 if (!loadingHandled) {
@@ -346,8 +341,8 @@ class CategoriesActivity : AppCompatActivity() {
 
         btnDelete.setOnClickListener {
             AlertDialog.Builder(this)
-                .setTitle("Eliminar categoría")
-                .setMessage("¿Seguro que quieres eliminar esta categoría?")
+                .setTitle("Eliminar categor�a")
+                .setMessage("�Seguro que quieres eliminar esta categor�a?")
                 .setNegativeButton("Cancelar", null)
                 .setPositiveButton("Eliminar") { _, _ ->
                     deleteCategory(category.id)
@@ -375,9 +370,7 @@ class CategoriesActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 if (e is IOException) {
-                    UiNotifier.show(this@CategoriesActivity, "Sin conexión a Internet")
                 } else {
-                    UiNotifier.show(this@CategoriesActivity, "Error de red: ${e.message}")
                 }
             }
         }
@@ -397,9 +390,7 @@ class CategoriesActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 if (e is IOException) {
-                    UiNotifier.show(this@CategoriesActivity, "Sin conexión a Internet")
                 } else {
-                    UiNotifier.show(this@CategoriesActivity, "Error de red: ${e.message}")
                 }
             }
         }
@@ -411,7 +402,7 @@ class CategoriesActivity : AppCompatActivity() {
             val dto = runCatching { gson.fromJson(p.payloadJson, CategoryCreateDto::class.java) }.getOrNull()
             CategoryResponseDto(
                 id = -1 - index,
-                name = dto?.name ?: "Categoría offline",
+                name = dto?.name ?: "Categor�a offline",
                 createdAt = "offline",
                 updatedAt = null
             )
@@ -550,3 +541,4 @@ class CategoriesActivity : AppCompatActivity() {
         finish()
     }
 }
+

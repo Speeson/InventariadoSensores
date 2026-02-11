@@ -230,9 +230,7 @@ class StockActivity : AppCompatActivity() {
                     setAllItemsAndApplyFilters(ordered)
                     updatePageInfo(ordered.size, ordered.size)
                     if (e is IOException) {
-                        snack.showError("Sin conexi?n a Internet")
                     } else {
-                        snack.showError("? Error de red: ${e.message}")
                     }
                 }
             } finally {
@@ -770,3 +768,4 @@ class StockActivity : AppCompatActivity() {
         imm.hideSoftInputFromWindow(view.windowToken, 0)
     }
 }
+

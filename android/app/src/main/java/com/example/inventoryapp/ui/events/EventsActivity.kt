@@ -495,7 +495,6 @@ snack = SendSnack(binding.root)
                     if (e is IOException) {
                         snack.showError("Sin conexión a Internet")
                     } else {
-                        snack.showError("Error de red: ${e.message}")
                     }
                 }
                 val cacheKey = CacheKeys.list(
@@ -831,3 +830,5 @@ snack = SendSnack(binding.root)
         finish()
     }
 }
+
+

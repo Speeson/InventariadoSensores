@@ -266,7 +266,6 @@ class ProductListActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
-                UiNotifier.show(this@ProductListActivity, "Error de red: ${e.message}")
                 val cachedFallback = cacheStore.get(
                     CacheKeys.list(
                         "products",
@@ -898,7 +897,6 @@ class ProductListActivity : AppCompatActivity() {
         if (items.isNotEmpty()) {
             UiNotifier.show(this@ProductListActivity, "Mostrando productos offline")
         } else {
-            UiNotifier.show(this@ProductListActivity, "Sin conexi?n y sin productos offline")
         }
     }
 
@@ -953,3 +951,4 @@ class ProductListActivity : AppCompatActivity() {
         finish()
     }
 }
+
