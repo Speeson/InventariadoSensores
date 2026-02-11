@@ -19,6 +19,7 @@ class InventoryApp : Application() {
         super.onCreate()
         NetworkModule.init(this)
         NetworkModule.forceOnline()
+        NetworkModule.startHealthPing()
         AlertsWebSocketManager.connect(this)
         FcmTokenManager.sync(this)
         scheduleOfflineSync()

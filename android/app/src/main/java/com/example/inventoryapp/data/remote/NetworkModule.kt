@@ -10,6 +10,12 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,6 +31,7 @@ object NetworkModule {
 
     private const val PREFS_NAME = "network_prefs"
     private const val KEY_CUSTOM_HOST = "custom_host"
+    private const val HEALTH_PING_MS = 15_000L
 
     private fun isEmulator(): Boolean {
         return Build.FINGERPRINT.startsWith("generic")
@@ -57,9 +64,22 @@ object NetworkModule {
     }
 
     private lateinit var appContext: Context
+    private val healthScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    @Volatile private var healthPingStarted = false
 
     fun init(context: Context) {
         appContext = context.applicationContext
+    }
+
+    fun startHealthPing() {
+        if (healthPingStarted) return
+        healthPingStarted = true
+        healthScope.launch {
+            while (isActive) {
+                delay(HEALTH_PING_MS)
+                pingHealthOnce()
+            }
+        }
     }
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
@@ -110,6 +130,27 @@ object NetworkModule {
         networkDown = false
         lastProbeAt = 0L
         _offlineState.value = false
+    }
+
+    private suspend fun pingHealthOnce() {
+        if (!::appContext.isInitialized) return
+        val session = SessionManager(appContext)
+        val token = session.getToken()
+        if (token.isNullOrBlank() || session.isTokenExpired(token)) return
+        val prefs = appContext.getSharedPreferences("ui_prefs", Context.MODE_PRIVATE)
+        val role = prefs.getString("cached_role", null)
+        val userId = prefs.getInt("cached_user_id", -1)
+        if (role.isNullOrBlank() || userId <= 0) return
+        try {
+            val res = api.health()
+            if (res.isSuccessful) {
+                notifyNetworkUpOnce()
+            } else {
+                notifyNetworkDownOnce()
+            }
+        } catch (_: Exception) {
+            notifyNetworkDownOnce()
+        }
     }
 
     private fun shouldShowOfflineNotice(activity: android.app.Activity): Boolean {
