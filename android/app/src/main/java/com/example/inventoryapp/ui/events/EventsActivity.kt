@@ -64,6 +64,9 @@ class EventsActivity : AppCompatActivity() {
     private var filteredItems: List<EventRowUi> = emptyList()
     private var filteredOffset = 0
     private var pendingFilterApply = false
+    private var bulkProductNamesCache: Map<Int, String>? = null
+    private var bulkProductNamesCacheAtMs: Long = 0L
+    private val bulkProductNamesCacheTtlMs = 30_000L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -90,7 +93,10 @@ snack = SendSnack(binding.root)
         }
 
         binding.btnCreateEvent.setOnClickListener { createEvent() }
-        binding.btnRefresh.setOnClickListener { loadEvents(withSnack = true) }
+        binding.btnRefresh.setOnClickListener {
+            invalidateBulkProductNamesCache()
+            loadEvents(withSnack = true)
+        }
         binding.layoutCreateEventHeader.setOnClickListener { toggleCreateEventForm() }
         binding.layoutSearchEventHeader.setOnClickListener { toggleSearchForm() }
         binding.btnSearchEvents.setOnClickListener {
@@ -439,6 +445,7 @@ snack = SendSnack(binding.root)
                 val effectiveOffset = if (filtersActive) 0 else currentOffset
                 if (filtersActive) currentOffset = 0
                 val pendingTotalCount = pendingEventsCount()
+                val cachedRemoteTotal = resolveCachedRemoteTotal(effectiveLimit)
                 val cacheKey = CacheKeys.list(
                     "events",
                     mapOf(
@@ -450,7 +457,6 @@ snack = SendSnack(binding.root)
                 if (cached != null) {
                     val pendingItems = pendingRowsForPage(
                         offset = effectiveOffset,
-                        remoteItemsCount = cached.items.size,
                         remoteTotal = cached.total,
                         filtersActive = filtersActive
                     )
@@ -472,7 +478,6 @@ snack = SendSnack(binding.root)
                     val remoteEvents = body.items
                     val pendingItems = pendingRowsForPage(
                         offset = effectiveOffset,
-                        remoteItemsCount = remoteEvents.size,
                         remoteTotal = body.total,
                         filtersActive = filtersActive
                     )
@@ -506,7 +511,6 @@ snack = SendSnack(binding.root)
                     if (cachedOnError != null) {
                         val pendingItems = pendingRowsForPage(
                             offset = effectiveOffset,
-                            remoteItemsCount = cachedOnError.items.size,
                             remoteTotal = cachedOnError.total,
                             filtersActive = filtersActive
                         )
@@ -524,11 +528,15 @@ snack = SendSnack(binding.root)
                             postLoadingNotice = cacheNoticePopupAction()
                         }
                     } else {
-                        val pendingItems = buildPendingRows()
+                        val pendingItems = pendingRowsForPage(
+                            offset = effectiveOffset,
+                            remoteTotal = cachedRemoteTotal,
+                            filtersActive = filtersActive
+                        )
                         val productNames = fetchProductNames(pendingItems.map { it.productId }.toSet())
                         val pendingWithNames = pendingItems.map { it.copy(productName = productNames[it.productId]) }
                         val ordered = pendingWithNames.sortedByDescending { it.id }
-                        totalCount = pendingTotalCount
+                        totalCount = cachedRemoteTotal + pendingTotalCount
                         setAllItemsAndApplyFilters(ordered)
                         updatePageInfo(ordered.size, ordered.size)
                     }
@@ -539,11 +547,13 @@ snack = SendSnack(binding.root)
                 }
                 val filtersActive = hasActiveFilters()
                 val effectiveOffset = if (filtersActive) 0 else currentOffset
+                val effectiveLimit = if (filtersActive) 100 else pageSize
                 val pendingTotalCount = pendingEventsCount()
+                val cachedRemoteTotal = resolveCachedRemoteTotal(effectiveLimit)
                 val cacheKey = CacheKeys.list(
                     "events",
                     mapOf(
-                        "limit" to if (filtersActive) 100 else pageSize,
+                        "limit" to effectiveLimit,
                         "offset" to effectiveOffset
                     )
                 )
@@ -551,7 +561,6 @@ snack = SendSnack(binding.root)
                 if (cachedOnError != null) {
                     val pendingItems = pendingRowsForPage(
                         offset = effectiveOffset,
-                        remoteItemsCount = cachedOnError.items.size,
                         remoteTotal = cachedOnError.total,
                         filtersActive = filtersActive
                     )
@@ -569,11 +578,15 @@ snack = SendSnack(binding.root)
                         postLoadingNotice = cacheNoticePopupAction()
                     }
                 } else {
-                    val pendingItems = buildPendingRows()
+                    val pendingItems = pendingRowsForPage(
+                        offset = effectiveOffset,
+                        remoteTotal = cachedRemoteTotal,
+                        filtersActive = filtersActive
+                    )
                     val productNames = fetchProductNames(pendingItems.map { it.productId }.toSet())
                     val pendingWithNames = pendingItems.map { it.copy(productName = productNames[it.productId]) }
                     val ordered = pendingWithNames.sortedByDescending { it.id }
-                    totalCount = pendingTotalCount
+                    totalCount = cachedRemoteTotal + pendingTotalCount
                     setAllItemsAndApplyFilters(ordered)
                     updatePageInfo(ordered.size, ordered.size)
                 }
@@ -684,26 +697,44 @@ snack = SendSnack(binding.root)
 
     private fun pendingRowsForPage(
         offset: Int,
-        remoteItemsCount: Int,
         remoteTotal: Int,
         filtersActive: Boolean
     ): List<EventRowUi> {
-        if (!shouldAppendPendingToCurrentPage(offset, remoteItemsCount, remoteTotal, filtersActive)) {
-            return emptyList()
-        }
-        return buildPendingRows()
+        val pendingAll = buildPendingRows()
+        if (pendingAll.isEmpty()) return emptyList()
+        if (filtersActive) return pendingAll
+
+        val startInPending = (offset - remoteTotal).coerceAtLeast(0)
+        if (startInPending >= pendingAll.size) return emptyList()
+        val endInPending = (offset + pageSize - remoteTotal)
+            .coerceAtMost(pendingAll.size)
+            .coerceAtLeast(startInPending)
+        return pendingAll.subList(startInPending, endInPending)
     }
 
-    private fun shouldAppendPendingToCurrentPage(
-        offset: Int,
-        remoteItemsCount: Int,
-        remoteTotal: Int,
-        filtersActive: Boolean
-    ): Boolean {
-        if (filtersActive) return true
-        if (remoteTotal <= 0) return true
-        val shownRemote = (offset + remoteItemsCount).coerceAtMost(remoteTotal)
-        return shownRemote >= remoteTotal
+    private suspend fun resolveCachedRemoteTotal(limit: Int): Int {
+        val keyAtStart = CacheKeys.list(
+            "events",
+            mapOf(
+                "limit" to limit,
+                "offset" to 0
+            )
+        )
+        val cachedAtStart = cacheStore.get(keyAtStart, EventListResponseDto::class.java)
+        if (cachedAtStart != null) return cachedAtStart.total
+
+        if (limit != pageSize) {
+            val keyDefault = CacheKeys.list(
+                "events",
+                mapOf(
+                    "limit" to pageSize,
+                    "offset" to 0
+                )
+            )
+            val cachedDefault = cacheStore.get(keyDefault, EventListResponseDto::class.java)
+            if (cachedDefault != null) return cachedDefault.total
+        }
+        return 0
     }
 
     private fun cacheNoticePopupAction(): () -> Unit {
@@ -772,8 +803,13 @@ snack = SendSnack(binding.root)
     private suspend fun fetchProductNames(ids: Set<Int>): Map<Int, String> {
         val out = mutableMapOf<Int, String>()
         val cachedMap = getCachedProductNames()
+        val bulkNames = getOrFetchBulkProductNames()
+        ids.forEach { id ->
+            bulkNames[id]?.let { out[id] = it }
+        }
         var networkFailed = false
         ids.forEach { id ->
+            if (out.containsKey(id)) return@forEach
             if (!networkFailed) {
                 try {
                     val res = NetworkModule.api.getProduct(id)
@@ -791,6 +827,34 @@ snack = SendSnack(binding.root)
             if (!out.containsKey(id)) cachedMap[id]?.let { out[id] = it }
         }
         return out
+    }
+
+    private suspend fun getOrFetchBulkProductNames(): Map<Int, String> {
+        val now = System.currentTimeMillis()
+        val cached = bulkProductNamesCache
+        if (cached != null && (now - bulkProductNamesCacheAtMs) < bulkProductNamesCacheTtlMs) {
+            return cached
+        }
+        val listRes = runCatching {
+            NetworkModule.api.listProducts(
+                orderBy = "id",
+                orderDir = "asc",
+                limit = 100,
+                offset = 0
+            )
+        }.getOrNull()
+        if (listRes?.isSuccessful == true && listRes.body() != null) {
+            val map = listRes.body()!!.items.associate { it.id to it.name }
+            bulkProductNamesCache = map
+            bulkProductNamesCacheAtMs = now
+            return map
+        }
+        return emptyMap()
+    }
+
+    private fun invalidateBulkProductNamesCache() {
+        bulkProductNamesCache = null
+        bulkProductNamesCacheAtMs = 0L
     }
 
     private suspend fun getCachedProductNames(): Map<Int, String> {

@@ -65,6 +65,9 @@ class StockActivity : AppCompatActivity() {
     private var filteredItems: List<StockResponseDto> = emptyList()
     private var filteredOffset = 0
     private var pendingFilterApply = false
+    private var bulkProductNamesCache: Map<Int, String>? = null
+    private var bulkProductNamesCacheAtMs: Long = 0L
+    private val bulkProductNamesCacheTtlMs = 30_000L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -88,7 +91,10 @@ class StockActivity : AppCompatActivity() {
         }
 
         binding.btnCreate.setOnClickListener { createStock() }
-        binding.btnRefresh.setOnClickListener { loadStocks(withSnack = true) }
+        binding.btnRefresh.setOnClickListener {
+            invalidateBulkProductNamesCache()
+            loadStocks(withSnack = true)
+        }
         binding.layoutCreateStockHeader.setOnClickListener { toggleCreateStockForm() }
         binding.layoutSearchStockHeader.setOnClickListener { toggleSearchForm() }
         binding.btnSearchStock.setOnClickListener {
@@ -177,6 +183,7 @@ class StockActivity : AppCompatActivity() {
                 val effectiveOffset = if (filtersActive) 0 else currentOffset
                 if (filtersActive) currentOffset = 0
                 val pendingTotalCount = pendingStocksCount()
+                val cachedRemoteTotal = resolveCachedRemoteTotal(effectiveLimit)
                 val cacheKey = CacheKeys.list(
                     "stocks",
                     mapOf(
@@ -188,11 +195,10 @@ class StockActivity : AppCompatActivity() {
                 if (cached != null) {
                     val pending = pendingStocksForPage(
                         offset = effectiveOffset,
-                        remoteItemsCount = cached.items.size,
                         remoteTotal = cached.total,
                         filtersActive = filtersActive
                     )
-                    val ordered = (pending + cached.items).sortedBy { it.id }
+                    val ordered = cached.items + pending
                     productNameById = resolveProductNames(ordered)
                     totalCount = cached.total + pendingTotalCount
                     setAllItemsAndApplyFilters(ordered)
@@ -203,13 +209,12 @@ class StockActivity : AppCompatActivity() {
                     cacheStore.put(cacheKey, res.body()!!)
                     val pending = pendingStocksForPage(
                         offset = effectiveOffset,
-                        remoteItemsCount = res.body()!!.items.size,
                         remoteTotal = res.body()!!.total,
                         filtersActive = filtersActive
                     )
                     val pageItems = res.body()!!.items
                     totalCount = res.body()!!.total + pendingTotalCount
-                    val ordered = (pending + pageItems).sortedBy { it.id }
+                    val ordered = pageItems + pending
                     productNameById = resolveProductNames(ordered)
                     setAllItemsAndApplyFilters(ordered)
                     updatePageInfo(ordered.size, pending.size)
@@ -228,11 +233,10 @@ class StockActivity : AppCompatActivity() {
                     if (cachedOnError != null) {
                         val pending = pendingStocksForPage(
                             offset = effectiveOffset,
-                            remoteItemsCount = cachedOnError.items.size,
                             remoteTotal = cachedOnError.total,
                             filtersActive = filtersActive
                         )
-                        val ordered = (pending + cachedOnError.items).sortedBy { it.id }
+                        val ordered = cachedOnError.items + pending
                         productNameById = resolveProductNames(ordered)
                         totalCount = cachedOnError.total + pendingTotalCount
                         setAllItemsAndApplyFilters(ordered)
@@ -243,10 +247,14 @@ class StockActivity : AppCompatActivity() {
                             showStockCacheNoticeOnce()
                         }
                     } else {
-                        val pending = buildPendingStocks()
-                        val ordered = pending.sortedBy { it.id }
+                        val pending = pendingStocksForPage(
+                            offset = effectiveOffset,
+                            remoteTotal = cachedRemoteTotal,
+                            filtersActive = filtersActive
+                        )
+                        val ordered = pending
                         productNameById = resolveProductNames(ordered)
-                        totalCount = pendingTotalCount
+                        totalCount = cachedRemoteTotal + pendingTotalCount
                         setAllItemsAndApplyFilters(ordered)
                         updatePageInfo(ordered.size, ordered.size)
                     }
@@ -264,11 +272,13 @@ class StockActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 val filtersActive = hasActiveFilters()
                 val effectiveOffset = if (filtersActive) 0 else currentOffset
+                val effectiveLimit = if (filtersActive) 100 else pageSize
                 val pendingTotalCount = pendingStocksCount()
+                val cachedRemoteTotal = resolveCachedRemoteTotal(effectiveLimit)
                 val cacheKey = CacheKeys.list(
                     "stocks",
                     mapOf(
-                        "limit" to if (filtersActive) 100 else pageSize,
+                        "limit" to effectiveLimit,
                         "offset" to effectiveOffset
                     )
                 )
@@ -276,11 +286,10 @@ class StockActivity : AppCompatActivity() {
                 if (cachedOnError != null) {
                     val pending = pendingStocksForPage(
                         offset = effectiveOffset,
-                        remoteItemsCount = cachedOnError.items.size,
                         remoteTotal = cachedOnError.total,
                         filtersActive = filtersActive
                     )
-                    val ordered = (pending + cachedOnError.items).sortedBy { it.id }
+                    val ordered = cachedOnError.items + pending
                     productNameById = resolveProductNames(ordered)
                     totalCount = cachedOnError.total + pendingTotalCount
                     setAllItemsAndApplyFilters(ordered)
@@ -291,10 +300,14 @@ class StockActivity : AppCompatActivity() {
                         showStockCacheNoticeOnce()
                     }
                 } else {
-                    val pending = buildPendingStocks()
-                    val ordered = pending.sortedBy { it.id }
+                    val pending = pendingStocksForPage(
+                        offset = effectiveOffset,
+                        remoteTotal = cachedRemoteTotal,
+                        filtersActive = filtersActive
+                    )
+                    val ordered = pending
                     productNameById = resolveProductNames(ordered)
-                    totalCount = pendingTotalCount
+                    totalCount = cachedRemoteTotal + pendingTotalCount
                     setAllItemsAndApplyFilters(ordered)
                     updatePageInfo(ordered.size, ordered.size)
                     if (e is IOException) {
@@ -383,12 +396,9 @@ class StockActivity : AppCompatActivity() {
 
         val resolved = mutableMapOf<Int, String>()
         val cachedMap = getCachedProductNames()
-
-        val productRes = runCatching { NetworkModule.api.listProducts(limit = 200, offset = 0) }.getOrNull()
-        if (productRes?.isSuccessful == true && productRes.body() != null) {
-            val items = productRes.body()!!.items
-            resolved.putAll(items.associate { it.id to it.name })
-            updateProductNameCache(items)
+        val bulkNames = getOrFetchBulkProductNames()
+        ids.forEach { id ->
+            bulkNames[id]?.let { resolved[id] = it }
         }
 
         for (id in ids) {
@@ -408,6 +418,36 @@ class StockActivity : AppCompatActivity() {
         }
 
         return resolved
+    }
+
+    private suspend fun getOrFetchBulkProductNames(): Map<Int, String> {
+        val now = System.currentTimeMillis()
+        val cached = bulkProductNamesCache
+        if (cached != null && (now - bulkProductNamesCacheAtMs) < bulkProductNamesCacheTtlMs) {
+            return cached
+        }
+        val productRes = runCatching {
+            NetworkModule.api.listProducts(
+                orderBy = "id",
+                orderDir = "asc",
+                limit = 100,
+                offset = 0
+            )
+        }.getOrNull()
+        if (productRes?.isSuccessful == true && productRes.body() != null) {
+            val items = productRes.body()!!.items
+            val map = items.associate { it.id to it.name }
+            bulkProductNamesCache = map
+            bulkProductNamesCacheAtMs = now
+            updateProductNameCache(items)
+            return map
+        }
+        return emptyMap()
+    }
+
+    private fun invalidateBulkProductNamesCache() {
+        bulkProductNamesCache = null
+        bulkProductNamesCacheAtMs = 0L
     }
 
     private suspend fun getCachedProductNames(): Map<Int, String> {
@@ -633,28 +673,47 @@ class StockActivity : AppCompatActivity() {
         return OfflineQueue(this).getAll().count { it.type == PendingType.STOCK_CREATE }
     }
 
+    private suspend fun resolveCachedRemoteTotal(limit: Int): Int {
+        val keyAtStart = CacheKeys.list(
+            "stocks",
+            mapOf(
+                "limit" to limit,
+                "offset" to 0
+            )
+        )
+        val cachedAtStart = cacheStore.get(keyAtStart, StockListResponseDto::class.java)
+        if (cachedAtStart != null) return cachedAtStart.total
+
+        if (limit != pageSize) {
+            val keyDefault = CacheKeys.list(
+                "stocks",
+                mapOf(
+                    "limit" to pageSize,
+                    "offset" to 0
+                )
+            )
+            val cachedDefault = cacheStore.get(keyDefault, StockListResponseDto::class.java)
+            if (cachedDefault != null) return cachedDefault.total
+        }
+        return 0
+    }
+
     private fun pendingStocksForPage(
         offset: Int,
-        remoteItemsCount: Int,
         remoteTotal: Int,
         filtersActive: Boolean
     ): List<StockResponseDto> {
-        if (!shouldAppendPendingToCurrentPage(offset, remoteItemsCount, remoteTotal, filtersActive)) {
-            return emptyList()
-        }
-        return buildPendingStocks()
-    }
+        val pendingAll = buildPendingStocks()
+        if (pendingAll.isEmpty()) return emptyList()
+        if (filtersActive) return pendingAll
 
-    private fun shouldAppendPendingToCurrentPage(
-        offset: Int,
-        remoteItemsCount: Int,
-        remoteTotal: Int,
-        filtersActive: Boolean
-    ): Boolean {
-        if (filtersActive) return true
-        if (remoteTotal <= 0) return true
-        val shownRemote = (offset + remoteItemsCount).coerceAtMost(remoteTotal)
-        return shownRemote >= remoteTotal
+        // Pending offline items are appended after the remote total and paged with the same page size.
+        val startInPending = (offset - remoteTotal).coerceAtLeast(0)
+        if (startInPending >= pendingAll.size) return emptyList()
+        val endInPending = (offset + pageSize - remoteTotal)
+            .coerceAtMost(pendingAll.size)
+            .coerceAtLeast(startInPending)
+        return pendingAll.subList(startInPending, endInPending)
     }
 
     private fun setupLocationDropdown() {

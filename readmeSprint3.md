@@ -300,3 +300,27 @@ Android:
 - Backoff exponencial en reintentos (`10s` base).
 - En mÃ³vil (no emulador) el worker se eleva a foreground si hay permiso de notificaciones, para aumentar fiabilidad.
 - NotificaciÃ³n del worker: canal `offline_sync` con texto “Sincronizando pendientes”.
+
+## Optimizaciones aplicadas (requisito Sprint 3)
+
+Objetivo: mejorar rendimiento, estabilidad y UX en escenarios con paginación + modo offline.
+
+- Paginación offline consistente en listados con creación local:
+  - Aplicado en: Eventos, Stock, Productos, Categorías, Thresholds y Movimientos.
+  - Los pendientes offline se tratan como registros al final del total remoto (no se apilan en la página actual).
+  - Se pagina por `offset/limit` también en offline (incluida última página).
+  - Si falta cache de una página, se usa `remoteTotal` cacheado de `offset=0` para evitar saltos de contador y páginas vacías.
+
+- Reducción de llamadas repetidas a productos (resolución de nombres):
+  - Ajuste de query para evitar 422: `order_by=id`, `order_dir=asc`, `limit=100`.
+  - Cache en memoria con TTL corto (30s) para mapa `productId -> name` en:
+    - Stock
+    - Movimientos
+    - Eventos
+    - Thresholds
+  - Invalidación explícita al pulsar “Recargar”.
+  - Resultado: menos `GET /products/...` repetidos y menor riesgo de bloqueos “No responde”.
+
+- Robustez del modo debug offline:
+  - Failsafe en Login: al entrar en `LoginActivity`, se desactiva `manual offline` para evitar bloqueo de acceso.
+  - En Home, no se fuerza logout por expiración cuando `manual offline` está activo.

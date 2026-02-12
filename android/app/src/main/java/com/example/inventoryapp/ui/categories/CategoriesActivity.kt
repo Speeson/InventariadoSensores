@@ -1,5 +1,4 @@
 package com.example.inventoryapp.ui.categories
-
 import android.content.Intent
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
@@ -16,7 +15,6 @@ import androidx.transition.TransitionManager
 import com.example.inventoryapp.R
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.PendingType
-import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.local.cache.CacheKeys
 import com.example.inventoryapp.data.local.cache.CacheStore
 import com.example.inventoryapp.data.remote.NetworkModule
@@ -26,7 +24,6 @@ import com.example.inventoryapp.data.remote.model.CategoryListResponseDto
 import com.example.inventoryapp.data.remote.model.CategoryUpdateDto
 import com.example.inventoryapp.databinding.ActivityCategoriesBinding
 import com.example.inventoryapp.ui.alerts.AlertsActivity
-import com.example.inventoryapp.ui.auth.LoginActivity
 import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.GradientIconUtil
@@ -36,11 +33,8 @@ import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.io.IOException
-
 class CategoriesActivity : AppCompatActivity() {
-
     private lateinit var binding: ActivityCategoriesBinding
-    private lateinit var session: SessionManager
     private lateinit var adapter: CategoryListAdapter
     private lateinit var cacheStore: CacheStore
     private var items: List<CategoryResponseDto> = emptyList()
@@ -51,33 +45,26 @@ class CategoriesActivity : AppCompatActivity() {
     private var isLoading = false
     private var searchName: String? = null
     private var searchId: Int? = null
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityCategoriesBinding.inflate(layoutInflater)
         setContentView(binding.root)
         NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
-
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
         GradientIconUtil.applyGradient(binding.ivCreateCategoryAdd, R.drawable.add)
         GradientIconUtil.applyGradient(binding.ivCreateCategorySearch, R.drawable.search)
         applyCategoriesTitleGradient()
-
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
-        session = SessionManager(this)
         cacheStore = CacheStore.getInstance(this)
-
         binding.btnBack.setOnClickListener { finish() }
         binding.btnAlertsQuick.setOnClickListener {
             startActivity(Intent(this, AlertsActivity::class.java))
         }
-
         adapter = CategoryListAdapter { category ->
             showEditDialog(category)
         }
         binding.rvCategories.layoutManager = LinearLayoutManager(this)
         binding.rvCategories.adapter = adapter
-
         binding.layoutCreateCategoryHeader.setOnClickListener { toggleCreateForm() }
         binding.layoutSearchCategoryHeader.setOnClickListener { toggleSearchForm() }
         binding.btnCreateCategory.setOnClickListener { createCategory() }
@@ -105,17 +92,14 @@ class CategoriesActivity : AppCompatActivity() {
             loadCategories(withSnack = false)
             binding.rvCategories.scrollToPosition(0)
         }
-
         applyPagerButtonStyle(binding.btnPrevPageCategories, enabled = false)
         applyPagerButtonStyle(binding.btnNextPageCategories, enabled = false)
     }
-
     override fun onResume() {
         super.onResume()
         currentOffset = 0
         loadCategories()
     }
-
     private fun applySearch() {
         val raw = binding.etSearchQuery.text.toString().trim()
         if (raw.isBlank()) {
@@ -135,7 +119,6 @@ class CategoriesActivity : AppCompatActivity() {
             loadCategories(name = raw, withSnack = false)
         }
     }
-
     private fun clearSearch() {
         searchId = null
         searchName = null
@@ -143,12 +126,11 @@ class CategoriesActivity : AppCompatActivity() {
         currentOffset = 0
         loadCategories()
     }
-
     private fun getById(id: Int) {
         lifecycleScope.launch {
             try {
                 val res = NetworkModule.api.getCategory(id)
-                if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
+                if (res.code() == 401) { return@launch }
                 if (res.isSuccessful && res.body() != null) {
                     items = listOf(res.body()!!)
                     cacheStore.put(CacheKeys.detail("categories", id), res.body()!!)
@@ -180,12 +162,14 @@ class CategoriesActivity : AppCompatActivity() {
             }
         }
     }
-
     private fun loadCategories(name: String? = searchName, withSnack: Boolean = false) {
         if (isLoading) return
         isLoading = true
         lifecycleScope.launch {
             try {
+                val includePending = name == null
+                val pendingTotalCount = if (includePending) pendingCategoriesCount() else 0
+                val cachedRemoteTotal = resolveCachedRemoteTotal(name)
                 val cacheKey = CacheKeys.list(
                     "categories",
                     mapOf(
@@ -196,38 +180,60 @@ class CategoriesActivity : AppCompatActivity() {
                 )
                 val cached = cacheStore.get(cacheKey, CategoryListResponseDto::class.java)
                 if (cached != null) {
-                    val pending = if (name == null && currentOffset == 0) buildPendingCategories() else emptyList()
-                    items = pending + cached.items
-                    totalCount = cached.total
+                    val pending = pendingCategoriesForPage(
+                        offset = currentOffset,
+                        remoteTotal = cached.total,
+                        includePending = includePending
+                    )
+                    items = cached.items + pending
+                    totalCount = cached.total + pendingTotalCount
                     adapter.submit(items)
-                    updatePageInfo(cached.items.size, pending.size)
+                    updatePageInfo(items.size, pending.size)
                     isLoading = false
                 }
                 val res = NetworkModule.api.listCategories(name = name, limit = pageSize, offset = currentOffset)
-                if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
+                if (res.code() == 401) { return@launch }
                 if (res.isSuccessful && res.body() != null) {
                     cacheStore.put(cacheKey, res.body()!!)
-                    val pending = if (name == null && currentOffset == 0) buildPendingCategories() else emptyList()
-                    items = pending + res.body()!!.items
-                    totalCount = res.body()!!.total
+                    val pending = pendingCategoriesForPage(
+                        offset = currentOffset,
+                        remoteTotal = res.body()!!.total,
+                        includePending = includePending
+                    )
+                    items = res.body()!!.items + pending
+                    totalCount = res.body()!!.total + pendingTotalCount
                     adapter.submit(items)
-                    updatePageInfo(res.body()!!.items.size, pending.size)
+                    updatePageInfo(items.size, pending.size)
                 } else {
                     UiNotifier.show(this@CategoriesActivity, ApiErrorFormatter.format(res.code()))
                     val cachedOnError = cacheStore.get(cacheKey, CategoryListResponseDto::class.java)
                     if (cachedOnError != null) {
-                        val pending = if (name == null && currentOffset == 0) buildPendingCategories() else emptyList()
-                        items = pending + cachedOnError.items
-                        totalCount = cachedOnError.total
+                        val pending = pendingCategoriesForPage(
+                            offset = currentOffset,
+                            remoteTotal = cachedOnError.total,
+                            includePending = includePending
+                        )
+                        items = cachedOnError.items + pending
+                        totalCount = cachedOnError.total + pendingTotalCount
                         adapter.submit(items)
-                        updatePageInfo(cachedOnError.items.size, pending.size)
-                        UiNotifier.show(this@CategoriesActivity, "Mostrando categorÌas en cache")
+                        updatePageInfo(items.size, pending.size)
+                        UiNotifier.show(this@CategoriesActivity, "Mostrando categor√≠as en cach√©")
                     } else {
-                        totalCount = 0
-                        updatePageInfo(0, 0)
+                        val pending = pendingCategoriesForPage(
+                            offset = currentOffset,
+                            remoteTotal = cachedRemoteTotal,
+                            includePending = includePending
+                        )
+                        items = pending
+                        adapter.submit(items)
+                        totalCount = cachedRemoteTotal + pendingTotalCount
+                        updatePageInfo(items.size, items.size)
                     }
                 }
             } catch (e: Exception) {
+                val includePending = name == null
+                val pendingTotalCount = if (includePending) pendingCategoriesCount() else 0
+                val cachedRemoteTotal = resolveCachedRemoteTotal(name)
                 val cacheKey = CacheKeys.list(
                     "categories",
                     mapOf(
@@ -238,19 +244,24 @@ class CategoriesActivity : AppCompatActivity() {
                 )
                 val cachedOnError = cacheStore.get(cacheKey, CategoryListResponseDto::class.java)
                 if (cachedOnError != null) {
-                    val pending = if (name == null && currentOffset == 0) buildPendingCategories() else emptyList()
-                    items = pending + cachedOnError.items
-                    totalCount = cachedOnError.total
+                    val pending = pendingCategoriesForPage(
+                        offset = currentOffset,
+                        remoteTotal = cachedOnError.total,
+                        includePending = includePending
+                    )
+                    items = cachedOnError.items + pending
+                    totalCount = cachedOnError.total + pendingTotalCount
                     adapter.submit(items)
-                    updatePageInfo(cachedOnError.items.size, pending.size)
-                    UiNotifier.show(this@CategoriesActivity, "Mostrando categorÌas en cache")
+                    updatePageInfo(items.size, pending.size)
+                    UiNotifier.show(this@CategoriesActivity, "Mostrando categor√≠as en cach√©")
                 } else {
-                    if (e is IOException) {
-                    } else {
-                    }
-                    val pending = if (name == null && currentOffset == 0) buildPendingCategories() else emptyList()
+                    val pending = pendingCategoriesForPage(
+                        offset = currentOffset,
+                        remoteTotal = cachedRemoteTotal,
+                        includePending = includePending
+                    )
                     adapter.submit(pending)
-                    totalCount = pending.size
+                    totalCount = cachedRemoteTotal + pendingTotalCount
                     updatePageInfo(pending.size, pending.size)
                 }
             } finally {
@@ -258,18 +269,16 @@ class CategoriesActivity : AppCompatActivity() {
             }
         }
     }
-
     private fun createCategory() {
         val name = binding.etCategoryName.text.toString().trim()
         if (name.isBlank()) { binding.etCategoryName.error = "Nombre requerido"; return }
-
         binding.btnCreateCategory.isEnabled = false
-        val loading = CreateUiFeedback.showLoading(this, "categorÌa")
+        val loading = CreateUiFeedback.showLoading(this, "categor√≠a")
         lifecycleScope.launch {
             var loadingHandled = false
             try {
                 val res = NetworkModule.api.createCategory(CategoryCreateDto(name))
-                if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
+                if (res.code() == 401) { return@launch }
                 if (res.isSuccessful) {
                     val created = res.body()
                     val details = if (created != null) {
@@ -279,7 +288,7 @@ class CategoriesActivity : AppCompatActivity() {
                     }
                     loadingHandled = true
                     loading.dismissThen {
-                        CreateUiFeedback.showCreatedPopup(this@CategoriesActivity, "CategorÌa creada", details)
+                        CreateUiFeedback.showCreatedPopup(this@CategoriesActivity, "Categor√≠a creada", details)
                     }
                     binding.etCategoryName.setText("")
                     currentOffset = 0
@@ -295,7 +304,7 @@ class CategoriesActivity : AppCompatActivity() {
                     loading.dismissThen {
                         CreateUiFeedback.showCreatedPopup(
                             this@CategoriesActivity,
-                            "CategorÌa creada (offline)",
+                            "Categor√≠a creada (offline)",
                             "Nombre: $name (offline)",
                             accentColorRes = R.color.offline_text
                         )
@@ -312,7 +321,6 @@ class CategoriesActivity : AppCompatActivity() {
             }
         }
     }
-
     private fun showEditDialog(category: CategoryResponseDto) {
         val view = layoutInflater.inflate(R.layout.dialog_edit_category, null)
         val title = view.findViewById<android.widget.TextView>(R.id.tvEditCategoryTitle)
@@ -320,15 +328,12 @@ class CategoriesActivity : AppCompatActivity() {
         val btnSave = view.findViewById<android.widget.Button>(R.id.btnEditCategorySave)
         val btnDelete = view.findViewById<android.widget.Button>(R.id.btnEditCategoryDelete)
         val btnClose = view.findViewById<android.widget.ImageButton>(R.id.btnEditCategoryClose)
-
         title.text = "Editar: ${category.name} (ID ${category.id})"
         nameInput.setText(category.name)
-
         val dialog = AlertDialog.Builder(this)
             .setView(view)
             .create()
         dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
-
         btnSave.setOnClickListener {
             val newName = nameInput.text?.toString()?.trim().orEmpty()
             if (newName.isBlank()) {
@@ -338,11 +343,10 @@ class CategoriesActivity : AppCompatActivity() {
             updateCategory(category.id, newName)
             dialog.dismiss()
         }
-
         btnDelete.setOnClickListener {
             AlertDialog.Builder(this)
-                .setTitle("Eliminar categorÌa")
-                .setMessage("øSeguro que quieres eliminar esta categorÌa?")
+                .setTitle("Eliminar categor√≠a")
+                .setMessage("¬øSeguro que quieres eliminar esta categor√≠a?")
                 .setNegativeButton("Cancelar", null)
                 .setPositiveButton("Eliminar") { _, _ ->
                     deleteCategory(category.id)
@@ -350,17 +354,14 @@ class CategoriesActivity : AppCompatActivity() {
                 }
                 .show()
         }
-
         btnClose.setOnClickListener { dialog.dismiss() }
-
         dialog.show()
     }
-
     private fun updateCategory(id: Int, name: String) {
         lifecycleScope.launch {
             try {
                 val res = NetworkModule.api.updateCategory(id, CategoryUpdateDto(name = name))
-                if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
+                if (res.code() == 401) { return@launch }
                 if (res.isSuccessful) {
                     currentOffset = 0
                     cacheStore.invalidatePrefix("categories")
@@ -375,12 +376,11 @@ class CategoriesActivity : AppCompatActivity() {
             }
         }
     }
-
     private fun deleteCategory(id: Int) {
         lifecycleScope.launch {
             try {
                 val res = NetworkModule.api.deleteCategory(id)
-                if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
+                if (res.code() == 401) { return@launch }
                 if (res.isSuccessful) {
                     currentOffset = 0
                     cacheStore.invalidatePrefix("categories")
@@ -395,20 +395,48 @@ class CategoriesActivity : AppCompatActivity() {
             }
         }
     }
-
     private fun buildPendingCategories(): List<CategoryResponseDto> {
         val pending = OfflineQueue(this).getAll().filter { it.type == PendingType.CATEGORY_CREATE }
         return pending.mapIndexed { index, p ->
             val dto = runCatching { gson.fromJson(p.payloadJson, CategoryCreateDto::class.java) }.getOrNull()
             CategoryResponseDto(
                 id = -1 - index,
-                name = dto?.name ?: "CategorÌa offline",
+                name = dto?.name ?: "Categor√≠a offline",
                 createdAt = "offline",
                 updatedAt = null
             )
         }
     }
-
+    private fun pendingCategoriesCount(): Int {
+        return OfflineQueue(this).getAll().count { it.type == PendingType.CATEGORY_CREATE }
+    }
+    private fun pendingCategoriesForPage(
+        offset: Int,
+        remoteTotal: Int,
+        includePending: Boolean
+    ): List<CategoryResponseDto> {
+        if (!includePending) return emptyList()
+        val pendingAll = buildPendingCategories()
+        if (pendingAll.isEmpty()) return emptyList()
+        val startInPending = (offset - remoteTotal).coerceAtLeast(0)
+        if (startInPending >= pendingAll.size) return emptyList()
+        val endInPending = (offset + pageSize - remoteTotal)
+            .coerceAtMost(pendingAll.size)
+            .coerceAtLeast(startInPending)
+        return pendingAll.subList(startInPending, endInPending)
+    }
+    private suspend fun resolveCachedRemoteTotal(name: String?): Int {
+        val keyAtStart = CacheKeys.list(
+            "categories",
+            mapOf(
+                "name" to name,
+                "limit" to pageSize,
+                "offset" to 0
+            )
+        )
+        val cachedAtStart = cacheStore.get(keyAtStart, CategoryListResponseDto::class.java)
+        return cachedAtStart?.total ?: 0
+    }
     private fun updatePageInfo(pageSizeLoaded: Int, pendingCount: Int) {
         if (searchId != null) {
             binding.tvCategoriesPageInfo.text = "Mostrando ${items.size} / ${items.size}"
@@ -432,7 +460,6 @@ class CategoriesActivity : AppCompatActivity() {
         applyPagerButtonStyle(binding.btnPrevPageCategories, prevEnabled)
         applyPagerButtonStyle(binding.btnNextPageCategories, nextEnabled)
     }
-
     private fun applyPagerButtonStyle(button: Button, enabled: Boolean) {
         button.backgroundTintList = null
         if (!enabled) {
@@ -461,7 +488,6 @@ class CategoriesActivity : AppCompatActivity() {
         button.background = drawable
         button.setTextColor(ContextCompat.getColor(this, android.R.color.white))
     }
-
     private fun toggleCreateForm() {
         TransitionManager.beginDelayedTransition(binding.scrollCategories, AutoTransition().setDuration(180))
         val isVisible = binding.layoutCreateCategoryContent.visibility == View.VISIBLE
@@ -475,7 +501,6 @@ class CategoriesActivity : AppCompatActivity() {
             setToggleActive(binding.layoutCreateCategoryHeader)
         }
     }
-
     private fun toggleSearchForm() {
         TransitionManager.beginDelayedTransition(binding.scrollCategories, AutoTransition().setDuration(180))
         val isVisible = binding.layoutSearchCategoryContent.visibility == View.VISIBLE
@@ -489,7 +514,6 @@ class CategoriesActivity : AppCompatActivity() {
             setToggleActive(binding.layoutSearchCategoryHeader)
         }
     }
-
     private fun setToggleActive(active: View?) {
         if (active === binding.layoutCreateCategoryHeader) {
             binding.layoutCreateCategoryHeader.setBackgroundResource(R.drawable.bg_toggle_active)
@@ -502,13 +526,11 @@ class CategoriesActivity : AppCompatActivity() {
             binding.layoutSearchCategoryHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
         }
     }
-
     private fun hideKeyboard() {
         val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager ?: return
         val view = currentFocus ?: binding.root
         imm.hideSoftInputFromWindow(view.windowToken, 0)
     }
-
     private fun applyCategoriesTitleGradient() {
         val title = binding.tvCategoriesTitle
         title.post {
@@ -532,13 +554,4 @@ class CategoriesActivity : AppCompatActivity() {
             title.invalidate()
         }
     }
-
-    private fun goToLogin() {
-        if (!session.isTokenExpired()) return
-        val i = Intent(this, LoginActivity::class.java)
-        i.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(i)
-        finish()
-    }
 }
-

@@ -20,7 +20,6 @@ import androidx.transition.TransitionManager
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.PendingType
 import com.example.inventoryapp.data.local.OfflineSyncer
-import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.local.cache.CacheKeys
 import com.example.inventoryapp.data.local.cache.ProductNameCache
 import com.example.inventoryapp.data.local.cache.ProductNameItem
@@ -33,7 +32,6 @@ import com.example.inventoryapp.data.remote.model.ProductResponseDto
 import com.example.inventoryapp.data.remote.model.ProductUpdateDto
 import com.example.inventoryapp.databinding.ActivityProductListBinding
 import com.example.inventoryapp.ui.alerts.AlertsActivity
-import com.example.inventoryapp.ui.auth.LoginActivity
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.common.NetworkStatusBar
@@ -47,7 +45,6 @@ import android.graphics.drawable.GradientDrawable
 class ProductListActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityProductListBinding
-    private lateinit var session: SessionManager
     private lateinit var offlineQueue: OfflineQueue
     private lateinit var cacheStore: CacheStore
     private val gson = Gson()
@@ -80,7 +77,6 @@ class ProductListActivity : AppCompatActivity() {
         applyProductsTitleGradient()
 
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
-        session = SessionManager(this)
         offlineQueue = OfflineQueue(this)
         cacheStore = CacheStore.getInstance(this)
 
@@ -178,34 +174,49 @@ class ProductListActivity : AppCompatActivity() {
         if (withSnack) UiNotifier.show(this, "Cargando productos...")
 
         lifecycleScope.launch {
-            try {
-                val filtersActive = hasActiveFilters()
-                val effectiveLimit = if (filtersActive) 100 else pageSize
-                val effectiveOffset = if (filtersActive) 0 else currentOffset
-                if (filtersActive) currentOffset = 0
+            val filtersActive = hasActiveFilters()
+            val effectiveLimit = if (filtersActive) 100 else pageSize
+            val effectiveOffset = if (filtersActive) 0 else currentOffset
+            if (filtersActive) currentOffset = 0
 
-                val searchNameOrId = binding.etSearchProduct.text.toString().trim()
-                val nameParam = if (searchNameOrId.isNotBlank() && searchNameOrId.toIntOrNull() == null) searchNameOrId else null
-                val skuParam = binding.etSearchSku.text.toString().trim().ifBlank { null }
-                val barcodeParam = binding.etSearchBarcode.text.toString().trim().ifBlank { null }
-                val categoryParam = resolveCategoryId(binding.etSearchCategory.text.toString().trim())
+            val searchNameOrId = binding.etSearchProduct.text.toString().trim()
+            val nameParam = if (searchNameOrId.isNotBlank() && searchNameOrId.toIntOrNull() == null) searchNameOrId else null
+            val skuParam = binding.etSearchSku.text.toString().trim().ifBlank { null }
+            val barcodeParam = binding.etSearchBarcode.text.toString().trim().ifBlank { null }
+            val categoryParam = resolveCategoryId(binding.etSearchCategory.text.toString().trim())
+            val pendingAll = if (!filtersActive) buildOfflineProducts() else emptyList()
+            val pendingTotalCount = pendingAll.size
+            val cachedRemoteTotal = resolveCachedRemoteProductsTotal(
+                skuParam = skuParam,
+                nameParam = nameParam,
+                barcodeParam = barcodeParam,
+                categoryParam = categoryParam,
+                effectiveLimit = effectiveLimit
+            )
 
-                val cacheKey = CacheKeys.list(
-                    "products",
-                    mapOf(
-                        "sku" to skuParam,
-                        "name" to nameParam,
-                        "barcode" to barcodeParam,
-                        "category" to categoryParam,
-                        "order_by" to "id",
-                        "order_dir" to if (sortAsc) "asc" else "desc",
-                        "limit" to effectiveLimit,
-                        "offset" to effectiveOffset
-                    )
+            val cacheKey = CacheKeys.list(
+                "products",
+                mapOf(
+                    "sku" to skuParam,
+                    "name" to nameParam,
+                    "barcode" to barcodeParam,
+                    "category" to categoryParam,
+                    "order_by" to "id",
+                    "order_dir" to if (sortAsc) "asc" else "desc",
+                    "limit" to effectiveLimit,
+                    "offset" to effectiveOffset
                 )
+            )
+            try {
                 val cached = cacheStore.get(cacheKey, ProductListResponseDto::class.java)
                 if (cached != null) {
-                    applyCachedProducts(cached, filtersActive)
+                    applyCachedProducts(
+                        cached = cached,
+                        filtersActive = filtersActive,
+                        effectiveOffset = effectiveOffset,
+                        pendingAll = pendingAll,
+                        pendingTotalCount = pendingTotalCount
+                    )
                     isLoading = false
                 }
 
@@ -220,29 +231,26 @@ class ProductListActivity : AppCompatActivity() {
                     offset = effectiveOffset
                 )
 
-                if (res.code() == 401) {
-                    UiNotifier.show(this@ProductListActivity, ApiErrorFormatter.format(401))
-                    loadOfflineOnly()
-                    if (session.isTokenExpired()) {
-                        session.clearToken()
-                        goToLogin()
-                    }
-                    return@launch
-                }
+                if (res.code() == 401) return@launch
                 if (res.isSuccessful && res.body() != null) {
                     cacheStore.put(cacheKey, res.body()!!)
                     val pageItems = res.body()!!.items
                     if (pageItems.isEmpty() && currentOffset == 0) {
                         UiNotifier.show(this@ProductListActivity, "Sin resultados")
                     }
-                    val pending = if (!filtersActive && currentOffset == 0) buildOfflineProducts() else emptyList()
-                    val combined = pending + pageItems
+                    val pending = pendingProductsForPage(
+                        offset = effectiveOffset,
+                        remoteTotal = res.body()!!.total,
+                        filtersActive = filtersActive,
+                        pendingAll = pendingAll
+                    )
+                    val combined = pageItems + pending
                     val categoryMap = categoryCache.ifEmpty { fetchCategoryMap().also { categoryCache = it } }
                     updateProductNameCache(pageItems)
                     val rows = combined.map { ProductRowUi(it, categoryMap[it.categoryId]) }
                     products.clear()
                     products.addAll(combined)
-                    totalCount = res.body()!!.total + pending.size
+                    totalCount = res.body()!!.total + pendingTotalCount
 
                     allItems = combined
                     setAllItemsAndApplyFilters(combined)
@@ -259,34 +267,53 @@ class ProductListActivity : AppCompatActivity() {
                     UiNotifier.show(this@ProductListActivity, ApiErrorFormatter.format(res.code(), err))
                     val cachedOnError = cacheStore.get(cacheKey, ProductListResponseDto::class.java)
                     if (cachedOnError != null) {
-                        applyCachedProducts(cachedOnError, filtersActive)
+                        applyCachedProducts(
+                            cached = cachedOnError,
+                            filtersActive = filtersActive,
+                            effectiveOffset = effectiveOffset,
+                            pendingAll = pendingAll,
+                            pendingTotalCount = pendingTotalCount
+                        )
                         UiNotifier.show(this@ProductListActivity, "Mostrando productos en cache")
                     } else {
-                        loadOfflineOnly()
+                        val pending = pendingProductsForPage(
+                            offset = effectiveOffset,
+                            remoteTotal = cachedRemoteTotal,
+                            filtersActive = filtersActive,
+                            pendingAll = pendingAll
+                        )
+                        products.clear()
+                        products.addAll(pending)
+                        totalCount = cachedRemoteTotal + pendingTotalCount
+                        allItems = pending
+                        setAllItemsAndApplyFilters(pending)
+                        updatePageInfo(pending.size)
                     }
                 }
             } catch (e: Exception) {
-                val cachedFallback = cacheStore.get(
-                    CacheKeys.list(
-                        "products",
-                        mapOf(
-                            "sku" to null,
-                            "name" to null,
-                            "barcode" to null,
-                            "category" to null,
-                            "order_by" to "id",
-                            "order_dir" to if (sortAsc) "asc" else "desc",
-                            "limit" to pageSize,
-                            "offset" to currentOffset
-                        )
-                    ),
-                    ProductListResponseDto::class.java
-                )
+                val cachedFallback = cacheStore.get(cacheKey, ProductListResponseDto::class.java)
                 if (cachedFallback != null) {
-                    applyCachedProducts(cachedFallback, hasActiveFilters())
+                    applyCachedProducts(
+                        cached = cachedFallback,
+                        filtersActive = filtersActive,
+                        effectiveOffset = effectiveOffset,
+                        pendingAll = pendingAll,
+                        pendingTotalCount = pendingTotalCount
+                    )
                     UiNotifier.show(this@ProductListActivity, "Mostrando productos en cache")
                 } else {
-                    loadOfflineOnly()
+                    val pending = pendingProductsForPage(
+                        offset = effectiveOffset,
+                        remoteTotal = cachedRemoteTotal,
+                        filtersActive = filtersActive,
+                        pendingAll = pendingAll
+                    )
+                    products.clear()
+                    products.addAll(pending)
+                    totalCount = cachedRemoteTotal + pendingTotalCount
+                    allItems = pending
+                    setAllItemsAndApplyFilters(pending)
+                    updatePageInfo(pending.size)
                 }
             } finally {
                 isLoading = false
@@ -321,13 +348,7 @@ class ProductListActivity : AppCompatActivity() {
             try {
                 val dto = ProductCreateDto(sku = sku, name = name, barcode = rawBarcode, categoryId = categoryId, active = true)
                 val res = NetworkModule.api.createProduct(dto)
-                if (res.code() == 401) {
-                    if (session.isTokenExpired()) {
-                        session.clearToken()
-                        goToLogin()
-                    }
-                    return@launch
-                }
+                if (res.code() == 401) return@launch
 
                 if (res.isSuccessful && res.body() != null) {
                     val created = res.body()!!
@@ -504,13 +525,7 @@ class ProductListActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val res = NetworkModule.api.updateProduct(id, body)
-                if (res.code() == 401) {
-                    if (session.isTokenExpired()) {
-                        session.clearToken()
-                        goToLogin()
-                    }
-                    return@launch
-                }
+                if (res.code() == 401) return@launch
                 if (res.isSuccessful) {
                     UiNotifier.show(this@ProductListActivity, "Producto actualizado")
                     cacheStore.invalidatePrefix("products")
@@ -540,13 +555,7 @@ class ProductListActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val res = NetworkModule.api.deleteProduct(id)
-                if (res.code() == 401) {
-                    if (session.isTokenExpired()) {
-                        session.clearToken()
-                        goToLogin()
-                    }
-                    return@launch
-                }
+                if (res.code() == 401) return@launch
                 if (res.isSuccessful) {
                     UiNotifier.show(this@ProductListActivity, "Producto eliminado")
                     cacheStore.invalidatePrefix("products")
@@ -900,18 +909,88 @@ class ProductListActivity : AppCompatActivity() {
         }
     }
 
-    private fun applyCachedProducts(cached: ProductListResponseDto, filtersActive: Boolean) {
-        val pending = if (!filtersActive && currentOffset == 0) buildOfflineProducts() else emptyList()
+    private fun applyCachedProducts(
+        cached: ProductListResponseDto,
+        filtersActive: Boolean,
+        effectiveOffset: Int,
+        pendingAll: List<ProductResponseDto>,
+        pendingTotalCount: Int
+    ) {
+        val pending = pendingProductsForPage(
+            offset = effectiveOffset,
+            remoteTotal = cached.total,
+            filtersActive = filtersActive,
+            pendingAll = pendingAll
+        )
         val pageItems = cached.items
-        val combined = pending + pageItems
+        val combined = pageItems + pending
         updateProductNameCache(pageItems)
         products.clear()
         products.addAll(combined)
-        totalCount = cached.total + pending.size
+        totalCount = cached.total + pendingTotalCount
         allItems = combined
         setAllItemsAndApplyFilters(combined)
         updatePageInfo(combined.size)
         // Only notify on API failure; cache-first rendering stays silent.
+    }
+
+    private fun pendingProductsForPage(
+        offset: Int,
+        remoteTotal: Int,
+        filtersActive: Boolean,
+        pendingAll: List<ProductResponseDto>
+    ): List<ProductResponseDto> {
+        if (filtersActive) return emptyList()
+        if (pendingAll.isEmpty()) return emptyList()
+        val startInPending = (offset - remoteTotal).coerceAtLeast(0)
+        if (startInPending >= pendingAll.size) return emptyList()
+        val endInPending = (offset + pageSize - remoteTotal)
+            .coerceAtMost(pendingAll.size)
+            .coerceAtLeast(startInPending)
+        return pendingAll.subList(startInPending, endInPending)
+    }
+
+    private suspend fun resolveCachedRemoteProductsTotal(
+        skuParam: String?,
+        nameParam: String?,
+        barcodeParam: String?,
+        categoryParam: Int?,
+        effectiveLimit: Int
+    ): Int {
+        val keyAtStart = CacheKeys.list(
+            "products",
+            mapOf(
+                "sku" to skuParam,
+                "name" to nameParam,
+                "barcode" to barcodeParam,
+                "category" to categoryParam,
+                "order_by" to "id",
+                "order_dir" to if (sortAsc) "asc" else "desc",
+                "limit" to effectiveLimit,
+                "offset" to 0
+            )
+        )
+        val cachedAtStart = cacheStore.get(keyAtStart, ProductListResponseDto::class.java)
+        if (cachedAtStart != null) return cachedAtStart.total
+
+        if (effectiveLimit != pageSize) {
+            val keyDefault = CacheKeys.list(
+                "products",
+                mapOf(
+                    "sku" to skuParam,
+                    "name" to nameParam,
+                    "barcode" to barcodeParam,
+                    "category" to categoryParam,
+                    "order_by" to "id",
+                    "order_dir" to if (sortAsc) "asc" else "desc",
+                    "limit" to pageSize,
+                    "offset" to 0
+                )
+            )
+            val cachedDefault = cacheStore.get(keyDefault, ProductListResponseDto::class.java)
+            if (cachedDefault != null) return cachedDefault.total
+        }
+        return 0
     }
 
     private fun buildOfflineProducts(): List<ProductResponseDto> {
@@ -943,12 +1022,5 @@ class ProductListActivity : AppCompatActivity() {
         }
     }
 
-    private fun goToLogin() {
-        if (!session.isTokenExpired()) return
-        val i = Intent(this, LoginActivity::class.java)
-        i.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(i)
-        finish()
-    }
 }
 

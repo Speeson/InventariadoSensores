@@ -10,6 +10,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -28,6 +29,7 @@ import com.example.inventoryapp.R
 import android.content.Intent
 
 object NetworkModule {
+    const val EXTRA_AUTH_EXPIRED_NOTIFIED = "auth_expired_notified"
 
     private const val PREFS_NAME = "network_prefs"
     private const val KEY_CUSTOM_HOST = "custom_host"
@@ -90,6 +92,7 @@ object NetworkModule {
     @Volatile private var networkDown = false
     @Volatile private var lastProbeAt: Long = 0L
     private const val OFFLINE_PROBE_MS = 10_000L
+    private val authRedirectInProgress = AtomicBoolean(false)
     private val _offlineState = MutableStateFlow(false)
     val offlineState: StateFlow<Boolean> = _offlineState.asStateFlow()
 
@@ -135,6 +138,10 @@ object NetworkModule {
         networkDown = false
         lastProbeAt = 0L
         _offlineState.value = false
+    }
+
+    fun resetAuthRedirectGuard() {
+        authRedirectInProgress.set(false)
     }
 
     fun isManualOffline(): Boolean {
@@ -245,11 +252,19 @@ object NetworkModule {
                             message
                         )
                     } else if (response.code == 401) {
+                        val path = response.request.url.encodedPath
+                        if (path.startsWith("/auth/")) {
+                            return@addInterceptor response
+                        }
+                        if (!authRedirectInProgress.compareAndSet(false, true)) {
+                            return@addInterceptor response
+                        }
                         val session = SessionManager(appContext)
                         val token = session.getToken()
                         val expired = token.isNullOrBlank() || session.isTokenExpired(token)
                         if (!expired) {
                             // Backend no disponible o no valida sesión: conservar token y permitir modo offline
+                            authRedirectInProgress.set(false)
                             response.close()
                             notifyNetworkDownOnce()
                             throw IOException("Auth check unavailable (offline)")
@@ -265,8 +280,8 @@ object NetworkModule {
                         val activity = ActivityTracker.getCurrent()
                         if (activity != null) {
                             activity.runOnUiThread {
-                                UiNotifier.showBlockingTimed(activity, "Sesión caducada. Inicia sesión.", R.drawable.expired)
                                 val i = Intent(activity, LoginActivity::class.java)
+                                i.putExtra(EXTRA_AUTH_EXPIRED_NOTIFIED, true)
                                 i.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                                 activity.startActivity(i)
                                 activity.finish()

@@ -9,12 +9,10 @@ import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.model.MovementTypeDto
 import com.example.inventoryapp.databinding.ActivityRotationBinding
 import com.example.inventoryapp.ui.alerts.AlertsActivity
-import com.example.inventoryapp.ui.auth.LoginActivity
 import com.example.inventoryapp.ui.common.SendSnack
 import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.common.UiNotifier
@@ -30,7 +28,6 @@ import android.view.inputmethod.InputMethodManager
 class RotationActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityRotationBinding
-    private lateinit var session: SessionManager
     private lateinit var snack: SendSnack
     private lateinit var adapter: RotationAdapter
 
@@ -51,7 +48,6 @@ class RotationActivity : AppCompatActivity() {
 
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
         snack = SendSnack(binding.root)
-        session = SessionManager(this)
 
         binding.btnBack.setOnClickListener { finish() }
         binding.btnAlertsQuick.setOnClickListener {
@@ -105,11 +101,7 @@ class RotationActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val res = NetworkModule.api.me()
-                if (res.code() == 401) {
-                    session.clearToken()
-                    goToLogin()
-                    return@launch
-                }
+                if (res.code() == 401) return@launch
                 if (res.isSuccessful && res.body() != null) {
                     val role = res.body()!!.role
                     if (role == "MANAGER" || role == "ADMIN") {
@@ -142,11 +134,7 @@ class RotationActivity : AppCompatActivity() {
                 val movRes = NetworkModule.api.listMovements(limit = 100, offset = 0)
                 val prodRes = NetworkModule.api.listProducts(limit = 100, offset = 0)
 
-                if (movRes.code() == 401 || prodRes.code() == 401) {
-                    session.clearToken()
-                    goToLogin()
-                    return@launch
-                }
+                if (movRes.code() == 401 || prodRes.code() == 401) return@launch
 
                 if (movRes.code() == 403 || prodRes.code() == 403) {
                     com.example.inventoryapp.ui.common.UiNotifier.showBlocking(
@@ -397,12 +385,5 @@ class RotationActivity : AppCompatActivity() {
         imm.hideSoftInputFromWindow(view.windowToken, 0)
     }
 
-    private fun goToLogin() {
-        if (!session.isTokenExpired()) return
-        val i = Intent(this, LoginActivity::class.java)
-        i.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(i)
-        finish()
-    }
 }
 

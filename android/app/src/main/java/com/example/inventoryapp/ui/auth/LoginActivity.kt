@@ -33,12 +33,30 @@ class LoginActivity : AppCompatActivity() {
 
         session = SessionManager(this)
         setupEmailAutocomplete()
-        NetworkModule.forceOnline()
+        // Failsafe: avoid being locked out of login if debug offline was left enabled.
+        NetworkModule.setManualOffline(false)
 
-        if (session.isTokenExpired()) {
+        val token = session.getToken()
+        val alreadyNotified = intent.getBooleanExtra(NetworkModule.EXTRA_AUTH_EXPIRED_NOTIFIED, false)
+        if (alreadyNotified) {
+            UiNotifier.showBlockingTimed(
+                this@LoginActivity,
+                "Sesión caducada. Inicia sesión.",
+                R.drawable.expired,
+                timeoutMs = 20_000L
+            )
+        }
+        if (!token.isNullOrBlank() && session.isTokenExpired(token)) {
             session.clearToken()
             clearCachedUiRole()
-            UiNotifier.showBlockingTimed(this@LoginActivity, "Sesión caducada. Inicia sesión.", R.drawable.expired)
+            if (!alreadyNotified) {
+                UiNotifier.showBlockingTimed(
+                    this@LoginActivity,
+                    "Sesión caducada. Inicia sesión.",
+                    R.drawable.expired,
+                    timeoutMs = 20_000L
+                )
+            }
         }
 
         // Si ya hay token, validar contra la API antes de entrar.
@@ -128,6 +146,7 @@ class LoginActivity : AppCompatActivity() {
                     val token = response.body()!!.accessToken
                     session.saveToken(token)
                     clearCachedUiRole()
+                    NetworkModule.resetAuthRedirectGuard()
                     NetworkModule.forceOnline()
                     AlertsWebSocketManager.connect(this@LoginActivity)
                     FcmTokenManager.sync(this@LoginActivity)
@@ -160,6 +179,7 @@ class LoginActivity : AppCompatActivity() {
             try {
                 val res = NetworkModule.api.me()
                 if (res.isSuccessful && res.body() != null) {
+                    NetworkModule.resetAuthRedirectGuard()
                     startActivity(Intent(this@LoginActivity, HomeActivity::class.java))
                     finish()
                     FcmTokenManager.sync(this@LoginActivity)
@@ -237,6 +257,7 @@ class LoginActivity : AppCompatActivity() {
                     val token = response.body()!!.accessToken
                     session.saveToken(token)
                     clearCachedUiRole()
+                    NetworkModule.resetAuthRedirectGuard()
                     NetworkModule.forceOnline()
                     AlertsWebSocketManager.connect(this@LoginActivity)
 

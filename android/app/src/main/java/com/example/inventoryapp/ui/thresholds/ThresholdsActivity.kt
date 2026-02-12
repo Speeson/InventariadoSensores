@@ -9,7 +9,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.PendingType
-import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.local.cache.CacheKeys
 import com.example.inventoryapp.data.local.cache.CacheStore
 import com.example.inventoryapp.data.remote.NetworkModule
@@ -22,7 +21,6 @@ import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.common.NetworkStatusBar
-import com.example.inventoryapp.ui.auth.LoginActivity
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import java.io.IOException
@@ -40,7 +38,6 @@ import android.widget.Button
 class ThresholdsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityThresholdsBinding
-    private lateinit var session: SessionManager
     private lateinit var adapter: ThresholdListAdapter
     private lateinit var cacheStore: CacheStore
     private var items: List<ThresholdResponseDto> = emptyList()
@@ -53,6 +50,9 @@ class ThresholdsActivity : AppCompatActivity() {
     private var filteredItems: List<ThresholdResponseDto> = emptyList()
     private var filteredOffset = 0
     private var pendingFilterApply = false
+    private var bulkProductNamesCache: Map<Int, String>? = null
+    private var bulkProductNamesCacheAtMs: Long = 0L
+    private val bulkProductNamesCacheTtlMs = 30_000L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,7 +66,6 @@ class ThresholdsActivity : AppCompatActivity() {
         applyThresholdTitleGradient()
 
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
-        session = SessionManager(this)
         cacheStore = CacheStore.getInstance(this)
 
         binding.btnBack.setOnClickListener { finish() }
@@ -81,7 +80,10 @@ class ThresholdsActivity : AppCompatActivity() {
         binding.rvThresholds.adapter = adapter
 
         binding.btnCreate.setOnClickListener { createThreshold() }
-        binding.btnRefresh.setOnClickListener { loadThresholds() }
+        binding.btnRefresh.setOnClickListener {
+            invalidateBulkProductNamesCache()
+            loadThresholds()
+        }
         binding.layoutCreateThresholdHeader.setOnClickListener { toggleCreateForm() }
         binding.layoutSearchThresholdHeader.setOnClickListener { toggleSearchForm() }
         binding.btnSearch.setOnClickListener {
@@ -189,6 +191,9 @@ class ThresholdsActivity : AppCompatActivity() {
                 val effectiveLimit = if (filtersActive) 200 else pageSize
                 val effectiveOffset = if (filtersActive) 0 else currentOffset
                 if (filtersActive) currentOffset = 0
+                val pendingAll = buildPendingThresholds()
+                val pendingTotalCount = pendingAll.size
+                val cachedRemoteTotal = resolveCachedThresholdsRemoteTotal(productId, location, effectiveLimit)
                 val cacheKey = CacheKeys.list(
                     "thresholds",
                     mapOf(
@@ -200,9 +205,14 @@ class ThresholdsActivity : AppCompatActivity() {
                 )
                 val cached = cacheStore.get(cacheKey, ThresholdListResponseDto::class.java)
                 if (cached != null) {
-                    val pending = buildPendingThresholds()
-                    items = pending + cached.items
-                    totalCount = cached.total
+                    val pending = pendingThresholdsForPage(
+                        offset = effectiveOffset,
+                        remoteTotal = cached.total,
+                        filtersActive = filtersActive,
+                        pendingAll = pendingAll
+                    )
+                    items = cached.items + pending
+                    totalCount = cached.total + pendingTotalCount
                     productNameById = fetchProductNames(items.map { it.productId }.toSet())
                     val rows = items.map { ThresholdRowUi(it, productNameById[it.productId]) }
                     adapter.submit(rows)
@@ -210,12 +220,17 @@ class ThresholdsActivity : AppCompatActivity() {
                     isLoading = false
                 }
                 val res = NetworkModule.api.listThresholds(productId = productId, location = location, limit = effectiveLimit, offset = effectiveOffset)
-                if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
+                if (res.code() == 401) { return@launch }
                 if (res.isSuccessful && res.body() != null) {
                     cacheStore.put(cacheKey, res.body()!!)
-                    val pending = buildPendingThresholds()
-                    items = pending + res.body()!!.items
-                    totalCount = res.body()!!.total
+                    val pending = pendingThresholdsForPage(
+                        offset = effectiveOffset,
+                        remoteTotal = res.body()!!.total,
+                        filtersActive = filtersActive,
+                        pendingAll = pendingAll
+                    )
+                    items = res.body()!!.items + pending
+                    totalCount = res.body()!!.total + pendingTotalCount
                     productNameById = fetchProductNames(items.map { it.productId }.toSet())
                     val rows = items.map { ThresholdRowUi(it, productNameById[it.productId]) }
                     if (hasActiveFilters() || pendingFilterApply) {
@@ -228,9 +243,14 @@ class ThresholdsActivity : AppCompatActivity() {
                     UiNotifier.show(this@ThresholdsActivity, ApiErrorFormatter.format(res.code()))
                     val cachedOnError = cacheStore.get(cacheKey, ThresholdListResponseDto::class.java)
                     if (cachedOnError != null) {
-                        val pending = buildPendingThresholds()
-                        items = pending + cachedOnError.items
-                        totalCount = cachedOnError.total
+                        val pending = pendingThresholdsForPage(
+                            offset = effectiveOffset,
+                            remoteTotal = cachedOnError.total,
+                            filtersActive = filtersActive,
+                            pendingAll = pendingAll
+                        )
+                        items = cachedOnError.items + pending
+                        totalCount = cachedOnError.total + pendingTotalCount
                         productNameById = fetchProductNames(items.map { it.productId }.toSet())
                         val rows = items.map { ThresholdRowUi(it, productNameById[it.productId]) }
                         adapter.submit(rows)
@@ -250,19 +270,40 @@ class ThresholdsActivity : AppCompatActivity() {
                 )
                 val cachedOnError = cacheStore.get(cacheKey, ThresholdListResponseDto::class.java)
                 if (cachedOnError != null) {
-                    val pending = buildPendingThresholds()
-                    items = pending + cachedOnError.items
-                    totalCount = cachedOnError.total
+                    val filtersActive = hasActiveFilters()
+                    val pendingAll = buildPendingThresholds()
+                    val pendingTotalCount = pendingAll.size
+                    val effectiveOffset = if (filtersActive) 0 else currentOffset
+                    val pending = pendingThresholdsForPage(
+                        offset = effectiveOffset,
+                        remoteTotal = cachedOnError.total,
+                        filtersActive = filtersActive,
+                        pendingAll = pendingAll
+                    )
+                    items = cachedOnError.items + pending
+                    totalCount = cachedOnError.total + pendingTotalCount
                     productNameById = fetchProductNames(items.map { it.productId }.toSet())
                     val rows = items.map { ThresholdRowUi(it, productNameById[it.productId]) }
                     adapter.submit(rows)
                     updatePageInfo(rows.size)
                     UiNotifier.show(this@ThresholdsActivity, "Mostrando thresholds en cache")
                 } else {
-                    val pending = buildPendingThresholds()
+                    val filtersActive = hasActiveFilters()
+                    val effectiveOffset = if (filtersActive) 0 else currentOffset
+                    val effectiveLimit = if (filtersActive) 200 else pageSize
+                    val pendingAll = buildPendingThresholds()
+                    val pendingTotalCount = pendingAll.size
+                    val cachedRemoteTotal = resolveCachedThresholdsRemoteTotal(productId, location, effectiveLimit)
+                    val pending = pendingThresholdsForPage(
+                        offset = effectiveOffset,
+                        remoteTotal = cachedRemoteTotal,
+                        filtersActive = filtersActive,
+                        pendingAll = pendingAll
+                    )
                     productNameById = fetchProductNames(pending.map { it.productId }.toSet())
                     val rows = pending.map { ThresholdRowUi(it, productNameById[it.productId]) }
                     adapter.submit(rows)
+                    totalCount = cachedRemoteTotal + pendingTotalCount
                     updatePageInfo(rows.size)
                     if (e is IOException) {
                     } else {
@@ -293,7 +334,7 @@ class ThresholdsActivity : AppCompatActivity() {
                 val res = NetworkModule.api.createThreshold(
                     ThresholdCreateDto(productId = productId, location = location, minQuantity = minQty)
                 )
-                if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
+                if (res.code() == 401) { return@launch }
                 if (res.isSuccessful) {
                     binding.etProductId.setText("")
                     binding.etLocation.setText("")
@@ -358,7 +399,7 @@ class ThresholdsActivity : AppCompatActivity() {
                     id,
                     ThresholdUpdateDto(location = location, minQuantity = minQty)
                 )
-                if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
+                if (res.code() == 401) { return@launch }
                 if (res.isSuccessful) {
                     cacheStore.invalidatePrefix("thresholds")
                     loadThresholds()
@@ -377,7 +418,7 @@ class ThresholdsActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 val res = NetworkModule.api.deleteThreshold(id)
-                if (res.code() == 401) { session.clearToken(); goToLogin(); return@launch }
+                if (res.code() == 401) { return@launch }
                 if (res.isSuccessful) {
                     cacheStore.invalidatePrefix("thresholds")
                     loadThresholds()
@@ -408,9 +449,62 @@ class ThresholdsActivity : AppCompatActivity() {
         }
     }
 
+    private fun pendingThresholdsForPage(
+        offset: Int,
+        remoteTotal: Int,
+        filtersActive: Boolean,
+        pendingAll: List<ThresholdResponseDto>
+    ): List<ThresholdResponseDto> {
+        if (pendingAll.isEmpty()) return emptyList()
+        if (filtersActive) return pendingAll
+        val startInPending = (offset - remoteTotal).coerceAtLeast(0)
+        if (startInPending >= pendingAll.size) return emptyList()
+        val endInPending = (offset + pageSize - remoteTotal)
+            .coerceAtMost(pendingAll.size)
+            .coerceAtLeast(startInPending)
+        return pendingAll.subList(startInPending, endInPending)
+    }
+
+    private suspend fun resolveCachedThresholdsRemoteTotal(
+        productId: Int?,
+        location: String?,
+        effectiveLimit: Int
+    ): Int {
+        val keyAtStart = CacheKeys.list(
+            "thresholds",
+            mapOf(
+                "product_id" to productId,
+                "location" to location,
+                "limit" to effectiveLimit,
+                "offset" to 0
+            )
+        )
+        val cachedAtStart = cacheStore.get(keyAtStart, ThresholdListResponseDto::class.java)
+        if (cachedAtStart != null) return cachedAtStart.total
+        if (effectiveLimit != pageSize) {
+            val keyDefault = CacheKeys.list(
+                "thresholds",
+                mapOf(
+                    "product_id" to productId,
+                    "location" to location,
+                    "limit" to pageSize,
+                    "offset" to 0
+                )
+            )
+            val cachedDefault = cacheStore.get(keyDefault, ThresholdListResponseDto::class.java)
+            if (cachedDefault != null) return cachedDefault.total
+        }
+        return 0
+    }
+
     private suspend fun fetchProductNames(ids: Set<Int>): Map<Int, String> {
         val out = mutableMapOf<Int, String>()
+        val bulkNames = getOrFetchBulkProductNames()
         ids.forEach { id ->
+            bulkNames[id]?.let { out[id] = it }
+        }
+        ids.forEach { id ->
+            if (out.containsKey(id)) return@forEach
             try {
                 val res = NetworkModule.api.getProduct(id)
                 if (res.isSuccessful && res.body() != null) {
@@ -421,6 +515,34 @@ class ThresholdsActivity : AppCompatActivity() {
             }
         }
         return out
+    }
+
+    private suspend fun getOrFetchBulkProductNames(): Map<Int, String> {
+        val now = System.currentTimeMillis()
+        val cached = bulkProductNamesCache
+        if (cached != null && (now - bulkProductNamesCacheAtMs) < bulkProductNamesCacheTtlMs) {
+            return cached
+        }
+        val listRes = runCatching {
+            NetworkModule.api.listProducts(
+                orderBy = "id",
+                orderDir = "asc",
+                limit = 100,
+                offset = 0
+            )
+        }.getOrNull()
+        if (listRes?.isSuccessful == true && listRes.body() != null) {
+            val map = listRes.body()!!.items.associate { it.id to it.name }
+            bulkProductNamesCache = map
+            bulkProductNamesCacheAtMs = now
+            return map
+        }
+        return emptyMap()
+    }
+
+    private fun invalidateBulkProductNamesCache() {
+        bulkProductNamesCache = null
+        bulkProductNamesCacheAtMs = 0L
     }
 
     private fun resolveProductIdByName(input: String): Int? {
@@ -639,12 +761,5 @@ class ThresholdsActivity : AppCompatActivity() {
         imm.hideSoftInputFromWindow(view.windowToken, 0)
     }
 
-    private fun goToLogin() {
-        if (!session.isTokenExpired()) return
-        val i = Intent(this, LoginActivity::class.java)
-        i.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(i)
-        finish()
-    }
 }
 

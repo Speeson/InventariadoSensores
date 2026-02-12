@@ -1,6 +1,5 @@
 package com.example.inventoryapp.ui.alerts
 
-import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -11,7 +10,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
-import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.local.EventAlertDismissStore
 import com.example.inventoryapp.data.local.SystemAlertStore
 import com.example.inventoryapp.data.remote.NetworkModule
@@ -21,7 +19,6 @@ import com.example.inventoryapp.data.remote.model.AlertStatusDto
 import com.example.inventoryapp.data.remote.model.AlertTypeDto
 import com.example.inventoryapp.data.remote.model.EventResponseDto
 import com.example.inventoryapp.databinding.FragmentAlertsListBinding
-import com.example.inventoryapp.ui.auth.LoginActivity
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.SendSnack
 import com.example.inventoryapp.ui.common.UiNotifier
@@ -34,7 +31,6 @@ class AlertsListFragment : Fragment() {
     private var _binding: FragmentAlertsListBinding? = null
     private val binding get() = _binding!!
 
-    private lateinit var session: SessionManager
     private lateinit var snack: SendSnack
     private lateinit var alertAdapter: AlertListAdapter
     private lateinit var failedEventAdapter: EventAdapter
@@ -54,7 +50,6 @@ class AlertsListFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        session = SessionManager(requireContext())
         snack = SendSnack(binding.root)
         systemStore = SystemAlertStore(requireContext())
         dismissedStore = EventAlertDismissStore(requireContext())
@@ -146,12 +141,7 @@ class AlertsListFragment : Fragment() {
         lifecycleScope.launch {
             try {
                 val res = NetworkModule.api.listAlerts(limit = 50, offset = 0)
-                if (res.code() == 401) {
-                    UiNotifier.show(requireActivity(), ApiErrorFormatter.format(401))
-                    session.clearToken()
-                    goToLogin()
-                    return@launch
-                }
+                if (res.code() == 401) return@launch
 
                 if (res.isSuccessful && res.body() != null) {
                     val items = res.body()!!.items
@@ -176,12 +166,7 @@ class AlertsListFragment : Fragment() {
         lifecycleScope.launch {
             try {
                 val res = NetworkModule.api.listEvents(limit = 100, offset = 0)
-                if (res.code() == 401) {
-                    UiNotifier.show(requireActivity(), ApiErrorFormatter.format(401))
-                    session.clearToken()
-                    goToLogin()
-                    return@launch
-                }
+                if (res.code() == 401) return@launch
 
                 if (res.isSuccessful && res.body() != null) {
                     val rows = res.body()!!.items
@@ -229,12 +214,7 @@ class AlertsListFragment : Fragment() {
         lifecycleScope.launch {
             try {
                 val res = NetworkModule.api.ackAlert(alertId)
-                if (res.code() == 401) {
-                    UiNotifier.show(requireActivity(), ApiErrorFormatter.format(401))
-                    session.clearToken()
-                    goToLogin()
-                    return@launch
-                }
+                if (res.code() == 401) return@launch
 
                 if (res.isSuccessful) {
                     snack.showSuccess("Alerta marcada como vista")
@@ -333,12 +313,4 @@ class AlertsListFragment : Fragment() {
         )
     }
 
-    private fun goToLogin() {
-        val session = SessionManager(requireContext())
-        if (!session.isTokenExpired()) return
-        val i = Intent(requireContext(), LoginActivity::class.java)
-        i.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(i)
-        requireActivity().finish()
-    }
 }

@@ -63,6 +63,9 @@ class MovementsMenuActivity : AppCompatActivity() {
     private var filteredItems: List<MovementRowUi> = emptyList()
     private var filteredOffset = 0
     private var pendingFilterApply = false
+    private var bulkProductNamesCache: Map<Int, String>? = null
+    private var bulkProductNamesCacheAtMs: Long = 0L
+    private val bulkProductNamesCacheTtlMs = 30_000L
 
     private var quantityHint: String = "Cantidad"
 
@@ -107,7 +110,10 @@ class MovementsMenuActivity : AppCompatActivity() {
             hideKeyboard()
             clearSearchFilters()
         }
-        binding.btnRefreshMovements.setOnClickListener { loadMovements(withSnack = true) }
+        binding.btnRefreshMovements.setOnClickListener {
+            invalidateBulkProductNamesCache()
+            loadMovements(withSnack = true)
+        }
 
         binding.btnPrevPageMovements.setOnClickListener {
             if (hasActiveFilters()) {
@@ -356,8 +362,16 @@ class MovementsMenuActivity : AppCompatActivity() {
         val productIdFilter = productRaw.toIntOrNull()
         val typeFilter = parseTypeForApi(binding.etSearchType.text.toString())
         val sourceFilter = parseSourceForApi(binding.etSearchSource.text.toString())
+        val pendingAll = buildPendingRows()
+        val pendingTotalCount = pendingAll.size
 
         lifecycleScope.launch {
+            val cachedRemoteTotal = resolveCachedMovementsRemoteTotal(
+                productIdFilter = productIdFilter,
+                typeFilter = typeFilter?.name,
+                sourceFilter = sourceFilter?.name,
+                effectiveLimit = effectiveLimit
+            )
             try {
                 val cacheKey = CacheKeys.list(
                     "movements",
@@ -371,14 +385,19 @@ class MovementsMenuActivity : AppCompatActivity() {
                 )
                 val cached = cacheStore.get(cacheKey, MovementListResponseDto::class.java)
                 if (cached != null) {
-                    val pending = if (currentOffset == 0) buildPendingRows() else emptyList()
+                    val pending = pendingMovementsForPage(
+                        offset = effectiveOffset,
+                        remoteTotal = cached.total,
+                        filtersActive = filtersActive,
+                        pendingAll = pendingAll
+                    )
                     val ids = (pending.map { it.productId } + cached.items.map { it.productId }).toSet()
                     productNamesById = resolveProductNames(ids)
                     val mappedRemote = cached.items.map { it.toRowUi(productNamesById) }
                     val ordered = (pending + mappedRemote).sortedByDescending { it.id }
-                    totalCount = cached.total
+                    totalCount = cached.total + pendingTotalCount
                     setAllItemsAndApplyFilters(ordered)
-                    updatePageInfo(cached.items.size, pending.size)
+                    updatePageInfo(ordered.size, pending.size)
                     isLoading = false
                 }
                 val res = NetworkModule.api.listMovements(
@@ -394,9 +413,14 @@ class MovementsMenuActivity : AppCompatActivity() {
                 if (res.isSuccessful && res.body() != null) {
                     val body = res.body()!!
                     cacheStore.put(cacheKey, body)
-                    val pending = if (currentOffset == 0) buildPendingRows() else emptyList()
+                    val pending = pendingMovementsForPage(
+                        offset = effectiveOffset,
+                        remoteTotal = body.total,
+                        filtersActive = filtersActive,
+                        pendingAll = pendingAll
+                    )
                     val remoteItems = body.items
-                    totalCount = body.total
+                    totalCount = body.total + pendingTotalCount
 
                     val ids = (pending.map { it.productId } + remoteItems.map { it.productId }).toSet()
                     productNamesById = resolveProductNames(ids)
@@ -404,26 +428,36 @@ class MovementsMenuActivity : AppCompatActivity() {
                     val mappedRemote = remoteItems.map { it.toRowUi(productNamesById) }
                     val ordered = (pending + mappedRemote).sortedByDescending { it.id }
                     setAllItemsAndApplyFilters(ordered)
-                    updatePageInfo(remoteItems.size, pending.size)
+                    updatePageInfo(ordered.size, pending.size)
                     if (withSnack) snack.showSuccess("Movimientos cargados")
                 } else {
                     if (withSnack) snack.showError("Error ${res.code()}: ${res.errorBody()?.string()}")
                     val cachedOnError = cacheStore.get(cacheKey, MovementListResponseDto::class.java)
                     if (cachedOnError != null) {
-                        val pending = if (currentOffset == 0) buildPendingRows() else emptyList()
+                        val pending = pendingMovementsForPage(
+                            offset = effectiveOffset,
+                            remoteTotal = cachedOnError.total,
+                            filtersActive = filtersActive,
+                            pendingAll = pendingAll
+                        )
                         val ids = (pending.map { it.productId } + cachedOnError.items.map { it.productId }).toSet()
                         productNamesById = resolveProductNames(ids)
                         val mappedRemote = cachedOnError.items.map { it.toRowUi(productNamesById) }
                         val ordered = (pending + mappedRemote).sortedByDescending { it.id }
-                        totalCount = cachedOnError.total
+                        totalCount = cachedOnError.total + pendingTotalCount
                         setAllItemsAndApplyFilters(ordered)
-                        updatePageInfo(cachedOnError.items.size, pending.size)
+                        updatePageInfo(ordered.size, pending.size)
                         snack.showError("Mostrando movimientos en cache")
                     } else {
-                        val pending = buildPendingRows()
+                        val pending = pendingMovementsForPage(
+                            offset = effectiveOffset,
+                            remoteTotal = cachedRemoteTotal,
+                            filtersActive = filtersActive,
+                            pendingAll = pendingAll
+                        )
                         productNamesById = resolveProductNames(pending.map { it.productId }.toSet())
                         val ordered = pending.sortedByDescending { it.id }
-                        totalCount = pending.size
+                        totalCount = cachedRemoteTotal + pendingTotalCount
                         setAllItemsAndApplyFilters(ordered)
                         updatePageInfo(ordered.size, ordered.size)
                     }
@@ -442,20 +476,30 @@ class MovementsMenuActivity : AppCompatActivity() {
                 )
                 val cachedOnError = cacheStore.get(cacheKey, MovementListResponseDto::class.java)
                 if (cachedOnError != null) {
-                    val pending = if (currentOffset == 0) buildPendingRows() else emptyList()
+                    val pending = pendingMovementsForPage(
+                        offset = effectiveOffset,
+                        remoteTotal = cachedOnError.total,
+                        filtersActive = filtersActive,
+                        pendingAll = pendingAll
+                    )
                     val ids = (pending.map { it.productId } + cachedOnError.items.map { it.productId }).toSet()
                     productNamesById = resolveProductNames(ids)
                     val mappedRemote = cachedOnError.items.map { it.toRowUi(productNamesById) }
                     val ordered = (pending + mappedRemote).sortedByDescending { it.id }
-                    totalCount = cachedOnError.total
+                    totalCount = cachedOnError.total + pendingTotalCount
                     setAllItemsAndApplyFilters(ordered)
-                    updatePageInfo(cachedOnError.items.size, pending.size)
+                    updatePageInfo(ordered.size, pending.size)
                     snack.showError("Mostrando movimientos en cache")
                 } else {
-                    val pending = buildPendingRows()
+                    val pending = pendingMovementsForPage(
+                        offset = effectiveOffset,
+                        remoteTotal = cachedRemoteTotal,
+                        filtersActive = filtersActive,
+                        pendingAll = pendingAll
+                    )
                     productNamesById = resolveProductNames(pending.map { it.productId }.toSet())
                     val ordered = pending.sortedByDescending { it.id }
-                    totalCount = pending.size
+                    totalCount = cachedRemoteTotal + pendingTotalCount
                     setAllItemsAndApplyFilters(ordered)
                     updatePageInfo(ordered.size, ordered.size)
                 }
@@ -563,15 +607,64 @@ class MovementsMenuActivity : AppCompatActivity() {
         return out
     }
 
+    private fun pendingMovementsForPage(
+        offset: Int,
+        remoteTotal: Int,
+        filtersActive: Boolean,
+        pendingAll: List<MovementRowUi>
+    ): List<MovementRowUi> {
+        if (pendingAll.isEmpty()) return emptyList()
+        if (filtersActive) return pendingAll
+        val startInPending = (offset - remoteTotal).coerceAtLeast(0)
+        if (startInPending >= pendingAll.size) return emptyList()
+        val endInPending = (offset + pageSize - remoteTotal)
+            .coerceAtMost(pendingAll.size)
+            .coerceAtLeast(startInPending)
+        return pendingAll.subList(startInPending, endInPending)
+    }
+
+    private suspend fun resolveCachedMovementsRemoteTotal(
+        productIdFilter: Int?,
+        typeFilter: String?,
+        sourceFilter: String?,
+        effectiveLimit: Int
+    ): Int {
+        val keyAtStart = CacheKeys.list(
+            "movements",
+            mapOf(
+                "product_id" to productIdFilter,
+                "type" to typeFilter,
+                "source" to sourceFilter,
+                "limit" to effectiveLimit,
+                "offset" to 0
+            )
+        )
+        val cachedAtStart = cacheStore.get(keyAtStart, MovementListResponseDto::class.java)
+        if (cachedAtStart != null) return cachedAtStart.total
+        if (effectiveLimit != pageSize) {
+            val keyDefault = CacheKeys.list(
+                "movements",
+                mapOf(
+                    "product_id" to productIdFilter,
+                    "type" to typeFilter,
+                    "source" to sourceFilter,
+                    "limit" to pageSize,
+                    "offset" to 0
+                )
+            )
+            val cachedDefault = cacheStore.get(keyDefault, MovementListResponseDto::class.java)
+            if (cachedDefault != null) return cachedDefault.total
+        }
+        return 0
+    }
+
     private suspend fun resolveProductNames(ids: Set<Int>): Map<Int, String> {
         if (ids.isEmpty()) return emptyMap()
         val resolved = mutableMapOf<Int, String>()
         val cachedMap = getCachedProductNames()
-        val listRes = runCatching { NetworkModule.api.listProducts(limit = 200, offset = 0) }.getOrNull()
-        if (listRes?.isSuccessful == true && listRes.body() != null) {
-            val items = listRes.body()!!.items
-            resolved.putAll(items.associate { it.id to it.name })
-            updateProductNameCache(items)
+        val bulkNames = getOrFetchBulkProductNames()
+        ids.forEach { id ->
+            bulkNames[id]?.let { resolved[id] = it }
         }
         for (id in ids) {
             if (resolved.containsKey(id)) continue
@@ -588,6 +681,36 @@ class MovementsMenuActivity : AppCompatActivity() {
             if (!resolved.containsKey(id)) cachedMap[id]?.let { resolved[id] = it }
         }
         return resolved
+    }
+
+    private suspend fun getOrFetchBulkProductNames(): Map<Int, String> {
+        val now = System.currentTimeMillis()
+        val cached = bulkProductNamesCache
+        if (cached != null && (now - bulkProductNamesCacheAtMs) < bulkProductNamesCacheTtlMs) {
+            return cached
+        }
+        val listRes = runCatching {
+            NetworkModule.api.listProducts(
+                orderBy = "id",
+                orderDir = "asc",
+                limit = 100,
+                offset = 0
+            )
+        }.getOrNull()
+        if (listRes?.isSuccessful == true && listRes.body() != null) {
+            val items = listRes.body()!!.items
+            val map = items.associate { it.id to it.name }
+            bulkProductNamesCache = map
+            bulkProductNamesCacheAtMs = now
+            updateProductNameCache(items)
+            return map
+        }
+        return emptyMap()
+    }
+
+    private fun invalidateBulkProductNamesCache() {
+        bulkProductNamesCache = null
+        bulkProductNamesCacheAtMs = 0L
     }
 
     private suspend fun getCachedProductNames(): Map<Int, String> {

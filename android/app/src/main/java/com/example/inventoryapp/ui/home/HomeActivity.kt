@@ -79,7 +79,7 @@ class HomeActivity : AppCompatActivity() {
             goToLogin()
             return
         }
-        if (session.isTokenExpired()) {
+        if (session.isTokenExpired() && !NetworkModule.isManualOffline()) {
             session.clearToken()
             clearCachedRole()
             UiNotifier.showBlockingTimed(this@HomeActivity, "Sesión caducada. Inicia sesión.", R.drawable.expired)
@@ -134,15 +134,7 @@ class HomeActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 try {
                     val res = NetworkModule.api.me()
-                    if (res.code() == 401) {
-                        UiNotifier.show(this@HomeActivity, ApiErrorFormatter.format(401))
-                        if (session.isTokenExpired()) {
-                            session.clearToken()
-                            clearCachedRole()
-                            goToLogin()
-                        }
-                        return@launch
-                    }
+                    if (res.code() == 401) return@launch
                     if (res.isSuccessful && res.body() != null) {
                         val role = res.body()!!.role
                         if (role == "MANAGER" || role == "ADMIN") {
@@ -374,13 +366,7 @@ class HomeActivity : AppCompatActivity() {
                         .setMessage("Email: ${me.email}\nRol: ${me.role}\nID: ${me.id}")
                         .setPositiveButton("OK", null)
                         .show()
-                } else if (res.code() == 401) {
-                    UiNotifier.show(this@HomeActivity, ApiErrorFormatter.format(401))
-                    if (session.isTokenExpired()) {
-                        session.clearToken()
-                        goToLogin()
-                    }
-                } else {
+                } else if (res.code() != 401) {
                     AlertDialog.Builder(this@HomeActivity)
                         .setTitle("Mi perfil")
                         .setMessage("Error ${res.code()} ❌")
@@ -401,14 +387,7 @@ class HomeActivity : AppCompatActivity() {
     private suspend fun ensureValidSession() {
         try {
             val res = NetworkModule.api.me()
-            if (res.code() == 401) {
-                UiNotifier.show(this@HomeActivity, ApiErrorFormatter.format(401))
-                if (session.isTokenExpired()) {
-                    session.clearToken()
-                    clearCachedRole()
-                    goToLogin()
-                }
-            } else if (res.code() >= 500) {
+            if (res.code() >= 500) {
                 UiNotifier.show(this@HomeActivity, ApiErrorFormatter.format(res.code()))
             }
         } catch (_: Exception) {
