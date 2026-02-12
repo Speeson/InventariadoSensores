@@ -21,6 +21,17 @@ import android.content.Context
 import com.example.inventoryapp.BuildConfig
 
 object UiNotifier {
+    private fun canShowDialog(activity: Activity): Boolean {
+        return !activity.isFinishing && !activity.isDestroyed
+    }
+
+    private fun dismissSafely(dialog: Dialog) {
+        runCatching {
+            if (dialog.isShowing) {
+                dialog.dismiss()
+            }
+        }
+    }
 
     fun show(activity: Activity, message: String, duration: Int = Snackbar.LENGTH_LONG) {
         val root = activity.findViewById<View>(android.R.id.content)
@@ -46,6 +57,8 @@ object UiNotifier {
         iconRes: Int,
         timeoutMs: Long = 10_000L
     ) {
+        if (!canShowDialog(activity)) return
+
         val view = LayoutInflater.from(activity).inflate(R.layout.dialog_important_notice, null)
         val icon = view.findViewById<ImageView>(R.id.noticeIcon)
         val text = view.findViewById<TextView>(R.id.noticeMessage)
@@ -58,14 +71,16 @@ object UiNotifier {
 
         val handler = Handler(Looper.getMainLooper())
         val dismissRunnable = Runnable {
-            if (dialog.isShowing) {
-                dialog.dismiss()
-            }
+            dismissSafely(dialog)
         }
         dialog.setOnDismissListener {
             handler.removeCallbacks(dismissRunnable)
         }
-        dialog.show()
+        val wasShown = runCatching {
+            dialog.show()
+            true
+        }.getOrDefault(false)
+        if (!wasShown) return
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         dialog.window?.setLayout(
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -73,7 +88,7 @@ object UiNotifier {
         )
         dialog.window?.setGravity(Gravity.CENTER)
         view.findViewById<android.widget.Button>(R.id.noticeAccept)?.setOnClickListener {
-            dialog.dismiss()
+            dismissSafely(dialog)
         }
         handler.postDelayed(dismissRunnable, timeoutMs)
     }

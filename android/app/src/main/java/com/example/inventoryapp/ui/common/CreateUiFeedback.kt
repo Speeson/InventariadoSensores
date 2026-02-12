@@ -16,6 +16,17 @@ import com.example.inventoryapp.R
 import java.util.concurrent.atomic.AtomicLong
 
 object CreateUiFeedback {
+    private fun canShowDialog(activity: Activity): Boolean {
+        return !activity.isFinishing && !activity.isDestroyed
+    }
+
+    private fun dismissSafely(dialog: AlertDialog) {
+        runCatching {
+            if (dialog.isShowing) {
+                dialog.dismiss()
+            }
+        }
+    }
 
     class LoadingHandle internal constructor(
         private val dialog: AlertDialog,
@@ -31,9 +42,7 @@ object CreateUiFeedback {
             val elapsed = SystemClock.elapsedRealtime() - shownAtMs
             val waitMs = (minCycleMs.get() - elapsed).coerceAtLeast(0)
             handler.postDelayed({
-                if (dialog.isShowing) {
-                    dialog.dismiss()
-                }
+                CreateUiFeedback.dismissSafely(dialog)
             }, waitMs)
         }
 
@@ -43,9 +52,7 @@ object CreateUiFeedback {
             val elapsed = SystemClock.elapsedRealtime() - shownAtMs
             val waitMs = (minCycleMs.get() - elapsed).coerceAtLeast(0)
             handler.postDelayed({
-                if (dialog.isShowing) {
-                    dialog.dismiss()
-                }
+                CreateUiFeedback.dismissSafely(dialog)
                 onDismiss()
             }, waitMs)
         }
@@ -69,7 +76,9 @@ object CreateUiFeedback {
             .setCancelable(false)
             .create()
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        dialog.show()
+        if (canShowDialog(activity)) {
+            runCatching { dialog.show() }
+        }
         return LoadingHandle(dialog, minCycleMs, SystemClock.elapsedRealtime(), Handler(Looper.getMainLooper()))
     }
 
@@ -96,7 +105,9 @@ object CreateUiFeedback {
             .setCancelable(false)
             .create()
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        dialog.show()
+        if (canShowDialog(activity)) {
+            runCatching { dialog.show() }
+        }
         return LoadingHandle(dialog, minCycleMs, SystemClock.elapsedRealtime(), Handler(Looper.getMainLooper()))
     }
 
@@ -127,7 +138,9 @@ object CreateUiFeedback {
             .setCancelable(false)
             .create()
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        dialog.show()
+        if (canShowDialog(activity)) {
+            runCatching { dialog.show() }
+        }
         return LoadingHandle(dialog, minCycleMs, SystemClock.elapsedRealtime(), Handler(Looper.getMainLooper()))
     }
 
@@ -138,6 +151,8 @@ object CreateUiFeedback {
         autoDismissMs: Long = 2800L,
         accentColorRes: Int? = null
     ) {
+        if (!canShowDialog(activity)) return
+
         val view = LayoutInflater.from(activity).inflate(R.layout.dialog_create_success, null)
         val titleView = view.findViewById<TextView>(R.id.tvSuccessTitle)
         val detailsView = view.findViewById<TextView>(R.id.tvSuccessDetails)
@@ -163,12 +178,16 @@ object CreateUiFeedback {
             .setView(view)
             .create()
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        dialog.show()
+        val wasShown = runCatching {
+            dialog.show()
+            true
+        }.getOrDefault(false)
+        if (!wasShown) return
 
-        view.setOnClickListener { dialog.dismiss() }
+        view.setOnClickListener { dismissSafely(dialog) }
         if (autoDismissMs > 0) {
             Handler(Looper.getMainLooper()).postDelayed({
-                if (dialog.isShowing) dialog.dismiss()
+                dismissSafely(dialog)
             }, autoDismissMs)
         }
     }

@@ -56,13 +56,23 @@
                 android:shadowRadius="2" />
         </LinearLayout>
 
-        <Button
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/noticeAccept"
             android:layout_width="wrap_content"
-            android:layout_height="36dp"
+            android:layout_height="40dp"
             android:layout_gravity="center_horizontal"
             android:minWidth="136dp"
+            android:minHeight="0dp"
             android:background="@drawable/bg_button_soft_purple"
+            android:backgroundTint="@null"
+            android:elevation="0dp"
+            android:foreground="@null"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:paddingTop="0dp"
+            android:paddingBottom="0dp"
+            android:stateListAnimator="@null"
+            android:translationZ="0dp"
             android:text="Aceptar"
             android:textAllCaps="false"
             android:textColor="@android:color/white" />
