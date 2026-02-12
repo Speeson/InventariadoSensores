@@ -294,10 +294,12 @@ class LoginActivity : AppCompatActivity() {
             .setNegativeButton("Cancelar", null)
             .setNeutralButton("Limpiar") { _, _ ->
                 NetworkModule.setCustomHost(null)
+                NetworkModule.setManualOffline(false)
                 UiNotifier.show(this, "Servidor restablecido")
             }
             .setPositiveButton("Guardar") { _, _ ->
                 NetworkModule.setCustomHost(input.text.toString())
+                NetworkModule.setManualOffline(false)
                 UiNotifier.show(this, "Servidor actualizado")
             }
             .show()

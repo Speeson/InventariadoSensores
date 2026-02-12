@@ -31,6 +31,7 @@ object NetworkModule {
 
     private const val PREFS_NAME = "network_prefs"
     private const val KEY_CUSTOM_HOST = "custom_host"
+    private const val KEY_MANUAL_OFFLINE = "manual_offline"
     private const val HEALTH_PING_MS = 5_000L
 
     private fun isEmulator(): Boolean {
@@ -127,13 +128,45 @@ object NetworkModule {
     }
 
     fun forceOnline() {
+        if (isManualOffline()) {
+            notifyNetworkDownOnce()
+            return
+        }
         networkDown = false
         lastProbeAt = 0L
         _offlineState.value = false
     }
 
+    fun isManualOffline(): Boolean {
+        if (!::appContext.isInitialized) return false
+        val prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_MANUAL_OFFLINE, false)
+    }
+
+    fun setManualOffline(enabled: Boolean) {
+        if (!::appContext.isInitialized) return
+        val prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_MANUAL_OFFLINE, enabled).apply()
+        if (enabled) {
+            notifyNetworkDownOnce()
+        } else {
+            lastProbeAt = 0L
+            notifyNetworkUpOnce()
+        }
+    }
+
+    fun toggleManualOffline(): Boolean {
+        val next = !isManualOffline()
+        setManualOffline(next)
+        return next
+    }
+
     private suspend fun pingHealthOnce() {
         if (!::appContext.isInitialized) return
+        if (isManualOffline()) {
+            notifyNetworkDownOnce()
+            return
+        }
         val session = SessionManager(appContext)
         val token = session.getToken()
         if (token.isNullOrBlank() || session.isTokenExpired(token)) return
@@ -173,6 +206,10 @@ object NetworkModule {
             .writeTimeout(6, TimeUnit.SECONDS)
             .callTimeout(8, TimeUnit.SECONDS)
             .addInterceptor { chain ->
+                if (isManualOffline()) {
+                    notifyNetworkDownOnce()
+                    throw IOException("Manual offline mode")
+                }
                 if (networkDown) {
                     val now = System.currentTimeMillis()
                     val allowProbe = now - lastProbeAt >= OFFLINE_PROBE_MS

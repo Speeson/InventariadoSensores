@@ -213,7 +213,14 @@ class HomeActivity : AppCompatActivity() {
 
         binding.navViewBottom.setNavigationItemSelectedListener { item ->
             if (item.itemId == R.id.nav_settings) {
-                UiNotifier.show(this, "Ajustes (próximamente)")
+                val enabled = NetworkModule.toggleManualOffline()
+                updateDebugOfflineMenuItem()
+                val msg = if (enabled) {
+                    "Modo debug offline activado"
+                } else {
+                    "Modo debug offline desactivado"
+                }
+                UiNotifier.show(this, msg)
                 binding.drawerLayout.closeDrawer(GravityCompat.START)
                 return@setNavigationItemSelectedListener true
             }
@@ -230,6 +237,7 @@ class HomeActivity : AppCompatActivity() {
         }
 
         updateThemeMenuItem()
+        updateDebugOfflineMenuItem()
         applyGradientIcons()
         applyCachedRoleToToggle()
         showThemeLoaderIfNeeded()
@@ -606,6 +614,7 @@ private fun confirmLogout() {
     }
 
     private fun logout() {
+        NetworkModule.setManualOffline(false)
         session.clearToken()
         clearCachedRole()
         goToLogin()
@@ -661,6 +670,16 @@ private fun confirmLogout() {
         } else {
             item.title = "Tema oscuro"
             item.setIcon(R.drawable.ic_moon)
+        }
+    }
+
+    private fun updateDebugOfflineMenuItem() {
+        val item = binding.navViewBottom.menu.findItem(R.id.nav_settings)
+        val enabled = NetworkModule.isManualOffline()
+        item.title = if (enabled) {
+            "Simular API offline: ON"
+        } else {
+            "Simular API offline: OFF"
         }
     }
 
