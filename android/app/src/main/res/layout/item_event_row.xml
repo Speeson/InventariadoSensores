@@ -71,21 +71,12 @@
                     android:textStyle="bold" />
 
                 <ImageView
-                    android:id="@+id/ivWarning"
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
-                    android:layout_marginStart="6dp"
-                    android:contentDescription="Aviso"
-                    android:src="@drawable/ic_error_red"
-                    android:visibility="gone" />
-
-                <ImageView
                     android:id="@+id/ivEventPending"
                     android:layout_width="20dp"
                     android:layout_height="20dp"
+                    android:layout_marginStart="6dp"
                     android:contentDescription="Pendiente"
-                    android:src="@android:drawable/ic_dialog_alert"
-                    android:tint="@android:color/holo_red_dark"
+                    android:src="@drawable/sync"
                     android:visibility="gone" />
             </LinearLayout>
 

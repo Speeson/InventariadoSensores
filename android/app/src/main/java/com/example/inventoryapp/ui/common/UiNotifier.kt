@@ -8,6 +8,8 @@ import android.os.Looper
 import android.view.LayoutInflater
 import android.view.Gravity
 import android.view.View
+import android.view.WindowManager
+import android.app.Dialog
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
@@ -50,9 +52,9 @@ object UiNotifier {
         icon.setImageResource(iconRes)
         text.text = message
 
-        val dialog = AlertDialog.Builder(activity)
-            .setView(view)
-            .create()
+        val dialog = Dialog(activity)
+        dialog.setContentView(view)
+        dialog.setCancelable(true)
 
         val handler = Handler(Looper.getMainLooper())
         val dismissRunnable = Runnable {
@@ -65,6 +67,11 @@ object UiNotifier {
         }
         dialog.show()
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT
+        )
+        dialog.window?.setGravity(Gravity.CENTER)
         view.findViewById<android.widget.Button>(R.id.noticeAccept)?.setOnClickListener {
             dialog.dismiss()
         }

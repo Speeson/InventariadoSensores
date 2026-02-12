@@ -77,7 +77,7 @@ class AlertsListFragment : Fragment() {
         binding.rvSystemAlerts.adapter = systemAdapter
         attachSystemSwipe()
 
-        failedEventAdapter = EventAdapter(emptyList()) { }
+        failedEventAdapter = EventAdapter(emptyList())
         binding.rvFailedEvents.layoutManager = LinearLayoutManager(requireContext())
         binding.rvFailedEvents.adapter = failedEventAdapter
 

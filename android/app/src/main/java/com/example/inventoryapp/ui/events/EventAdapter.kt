@@ -5,13 +5,13 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.appcompat.widget.TooltipCompat
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.example.inventoryapp.R
 
 class EventAdapter(
-    private var items: List<EventRowUi>,
-    private val onPendingClick: (EventRowUi) -> Unit
+    private var items: List<EventRowUi>
 ) : RecyclerView.Adapter<EventAdapter.ViewHolder>() {
 
     fun submit(list: List<EventRowUi>) {
@@ -45,7 +45,10 @@ class EventAdapter(
 
         holder.tvDate.text = item.createdAt
         holder.ivPending.visibility = if (item.isPending) View.VISIBLE else View.GONE
-        holder.ivWarning.visibility = if (item.isPending) View.VISIBLE else View.GONE
+        holder.ivPending.setImageResource(R.drawable.sync)
+        val pendingTooltip = item.pendingMessage ?: "Guardado en modo offline, pendiente de sincronización"
+        TooltipCompat.setTooltipText(holder.ivPending, if (item.isPending) pendingTooltip else null)
+        holder.ivPending.contentDescription = if (item.isPending) pendingTooltip else "Pendiente"
         val offlineColor = ContextCompat.getColor(holder.itemView.context, R.color.offline_text)
         if (item.isPending) {
             holder.tvTitle.setTextColor(offlineColor)
@@ -60,9 +63,7 @@ class EventAdapter(
             holder.tvMeta.setTextColor(holder.metaColor)
             holder.tvDate.setTextColor(holder.dateColor)
         }
-        holder.ivPending.setOnClickListener {
-            if (item.isPending) onPendingClick(item)
-        }
+        holder.ivPending.setOnClickListener(null)
     }
 
     override fun getItemCount(): Int = items.size
@@ -75,7 +76,6 @@ class EventAdapter(
         val tvStatus: TextView = view.findViewById(R.id.tvEventStatus)
         val tvDate: TextView = view.findViewById(R.id.tvEventDate)
         val ivPending: ImageView = view.findViewById(R.id.ivEventPending)
-        val ivWarning: ImageView = view.findViewById(R.id.ivWarning)
         val ivIcon: ImageView = view.findViewById(R.id.ivIcon)
         val titleColor: Int = tvTitle.currentTextColor
         val idLabelColor: Int = tvIdLabel.currentTextColor

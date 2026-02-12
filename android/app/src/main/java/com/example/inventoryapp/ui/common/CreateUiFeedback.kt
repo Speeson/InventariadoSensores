@@ -73,6 +73,64 @@ object CreateUiFeedback {
         return LoadingHandle(dialog, minCycleMs, SystemClock.elapsedRealtime(), Handler(Looper.getMainLooper()))
     }
 
+    fun showLoadingMessage(
+        activity: Activity,
+        message: String,
+        animationRes: Int = R.raw.loading
+    ): LoadingHandle {
+        val view = LayoutInflater.from(activity).inflate(R.layout.dialog_create_loading, null)
+        val label = view.findViewById<TextView>(R.id.tvLoadingLabel)
+        val lottie = view.findViewById<LottieAnimationView>(R.id.lottieLoading)
+        label.text = message
+
+        val minCycleMs = AtomicLong(800L)
+        lottie.setAnimation(animationRes)
+        lottie.repeatCount = LottieDrawable.INFINITE
+        lottie.addLottieOnCompositionLoadedListener { comp ->
+            minCycleMs.set(comp.duration.toLong())
+        }
+        lottie.playAnimation()
+
+        val dialog = AlertDialog.Builder(activity)
+            .setView(view)
+            .setCancelable(false)
+            .create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.show()
+        return LoadingHandle(dialog, minCycleMs, SystemClock.elapsedRealtime(), Handler(Looper.getMainLooper()))
+    }
+
+    fun showListLoading(
+        activity: Activity,
+        message: String,
+        animationRes: Int = R.raw.loading_list,
+        minCycles: Int = 3
+    ): LoadingHandle {
+        val view = LayoutInflater.from(activity).inflate(R.layout.dialog_list_loading, null)
+        val label = view.findViewById<TextView>(R.id.tvListLoadingLabel)
+        val lottie = view.findViewById<LottieAnimationView>(R.id.lottieListLoading)
+        label.text = message
+
+        val minCycleMs = AtomicLong(2_400L)
+        lottie.setAnimation(animationRes)
+        lottie.scaleX = 5f
+        lottie.scaleY = 5f
+        lottie.repeatCount = LottieDrawable.INFINITE
+        lottie.addLottieOnCompositionLoadedListener { comp ->
+            val cycles = if (minCycles <= 0) 1 else minCycles
+            minCycleMs.set((comp.duration.toLong() * cycles).coerceAtLeast(1_200L))
+        }
+        lottie.playAnimation()
+
+        val dialog = AlertDialog.Builder(activity)
+            .setView(view)
+            .setCancelable(false)
+            .create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.show()
+        return LoadingHandle(dialog, minCycleMs, SystemClock.elapsedRealtime(), Handler(Looper.getMainLooper()))
+    }
+
     fun showCreatedPopup(
         activity: Activity,
         title: String,

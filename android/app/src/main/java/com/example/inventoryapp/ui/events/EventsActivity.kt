@@ -30,6 +30,7 @@ import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.google.gson.Gson
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.io.IOException
 import java.util.UUID
@@ -41,6 +42,10 @@ import android.view.inputmethod.InputMethodManager
 
 
 class EventsActivity : AppCompatActivity() {
+    companion object {
+        @Volatile
+        private var cacheNoticeShownInOfflineSession = false
+    }
 
     private lateinit var binding: ActivityEventsBinding
     private lateinit var session: SessionManager
@@ -125,11 +130,17 @@ snack = SendSnack(binding.root)
             binding.rvEvents.scrollToPosition(0)
         }
 
-        adapter = EventAdapter(emptyList()) { row ->
-            snack.showError(row.pendingMessage ?: "Guardado en modo offline")
-        }
+        adapter = EventAdapter(emptyList())
         binding.rvEvents.layoutManager = LinearLayoutManager(this)
         binding.rvEvents.adapter = adapter
+
+        lifecycleScope.launch {
+            NetworkModule.offlineState.collectLatest { offline ->
+                if (!offline) {
+                    cacheNoticeShownInOfflineSession = false
+                }
+            }
+        }
 
         setupLocationDropdown()
         setupCreateDropdowns()
@@ -409,7 +420,17 @@ snack = SendSnack(binding.root)
     private fun loadEvents(withSnack: Boolean) {
         if (isLoading) return
         isLoading = true
-        if (withSnack) snack.showSending("Cargando eventos...")
+        var postLoadingNotice: (() -> Unit)? = null
+        val loading = if (withSnack) {
+            CreateUiFeedback.showListLoading(
+                this,
+                message = "Cargando eventos",
+                animationRes = R.raw.loading_list,
+                minCycles = 2
+            )
+        } else {
+            null
+        }
 
         lifecycleScope.launch {
             try {
@@ -417,6 +438,7 @@ snack = SendSnack(binding.root)
                 val effectiveLimit = if (filtersActive) 100 else pageSize
                 val effectiveOffset = if (filtersActive) 0 else currentOffset
                 if (filtersActive) currentOffset = 0
+                val pendingTotalCount = pendingEventsCount()
                 val cacheKey = CacheKeys.list(
                     "events",
                     mapOf(
@@ -426,7 +448,12 @@ snack = SendSnack(binding.root)
                 )
                 val cached = cacheStore.get(cacheKey, EventListResponseDto::class.java)
                 if (cached != null) {
-                    val pendingItems = buildPendingRows()
+                    val pendingItems = pendingRowsForPage(
+                        offset = effectiveOffset,
+                        remoteItemsCount = cached.items.size,
+                        remoteTotal = cached.total,
+                        filtersActive = filtersActive
+                    )
                     val allProductIds = mutableSetOf<Int>()
                     cached.items.forEach { allProductIds.add(it.productId) }
                     pendingItems.forEach { allProductIds.add(it.productId) }
@@ -434,18 +461,22 @@ snack = SendSnack(binding.root)
                     val cachedRows = cached.items.map { it.toRowUi(productNames) }
                     val pendingWithNames = pendingItems.map { it.copy(productName = productNames[it.productId]) }
                     val ordered = (pendingWithNames + cachedRows).sortedByDescending { it.id }
-                    totalCount = cached.total + pendingItems.size
+                    totalCount = cached.total + pendingTotalCount
                     setAllItemsAndApplyFilters(ordered)
-                    updatePageInfo(cached.items.size, pendingItems.size)
-                    isLoading = false
+                    updatePageInfo(ordered.size, pendingItems.size)
                 }
                 val res = repo.listEvents(limit = effectiveLimit, offset = effectiveOffset)
                 if (res.isSuccess) {
                     val body = res.getOrNull()!!
                     cacheStore.put(cacheKey, body)
                     val remoteEvents = body.items
-                    val pendingItems = buildPendingRows()
-                    totalCount = body.total + pendingItems.size
+                    val pendingItems = pendingRowsForPage(
+                        offset = effectiveOffset,
+                        remoteItemsCount = remoteEvents.size,
+                        remoteTotal = body.total,
+                        filtersActive = filtersActive
+                    )
+                    totalCount = body.total + pendingTotalCount
                     val allProductIds = mutableSetOf<Int>()
                     remoteEvents.forEach { allProductIds.add(it.productId) }
                     pendingItems.forEach { allProductIds.add(it.productId) }
@@ -455,20 +486,30 @@ snack = SendSnack(binding.root)
                     val pendingWithNames = pendingItems.map { it.copy(productName = productNames[it.productId]) }
                     val ordered = (pendingWithNames + remoteItems).sortedByDescending { it.id }
                     setAllItemsAndApplyFilters(ordered)
-                    updatePageInfo(remoteEvents.size, pendingItems.size)
-                    if (withSnack) snack.showSuccess("OK: Eventos cargados")
+                    updatePageInfo(ordered.size, pendingItems.size)
+                    if (withSnack) {
+                        postLoadingNotice = {
+                            UiNotifier.showBlockingTimed(
+                                this@EventsActivity,
+                                "Eventos cargados",
+                                R.drawable.loaded,
+                                timeoutMs = 2_500L
+                            )
+                        }
+                    }
                 } else {
                     val ex = res.exceptionOrNull()
-                    if (withSnack) {
-                        if (ex is IOException) {
-                            snack.showError("Sin conexión a Internet")
-                        } else {
-                            snack.showError("Error: ${ex?.message ?: "sin detalle"}")
-                        }
+                    if (withSnack && ex !is IOException) {
+                        snack.showError("Error: ${ex?.message ?: "sin detalle"}")
                     }
                     val cachedOnError = cacheStore.get(cacheKey, EventListResponseDto::class.java)
                     if (cachedOnError != null) {
-                        val pendingItems = buildPendingRows()
+                        val pendingItems = pendingRowsForPage(
+                            offset = effectiveOffset,
+                            remoteItemsCount = cachedOnError.items.size,
+                            remoteTotal = cachedOnError.total,
+                            filtersActive = filtersActive
+                        )
                         val allProductIds = mutableSetOf<Int>()
                         cachedOnError.items.forEach { allProductIds.add(it.productId) }
                         pendingItems.forEach { allProductIds.add(it.productId) }
@@ -476,37 +517,44 @@ snack = SendSnack(binding.root)
                         val cachedRows = cachedOnError.items.map { it.toRowUi(productNames) }
                         val pendingWithNames = pendingItems.map { it.copy(productName = productNames[it.productId]) }
                         val ordered = (pendingWithNames + cachedRows).sortedByDescending { it.id }
-                        totalCount = cachedOnError.total + pendingItems.size
+                        totalCount = cachedOnError.total + pendingTotalCount
                         setAllItemsAndApplyFilters(ordered)
-                        updatePageInfo(cachedOnError.items.size, pendingItems.size)
-                        snack.showError("Mostrando eventos en cache")
+                        updatePageInfo(ordered.size, pendingItems.size)
+                        if (!cacheNoticeShownInOfflineSession) {
+                            postLoadingNotice = cacheNoticePopupAction()
+                        }
                     } else {
                         val pendingItems = buildPendingRows()
                         val productNames = fetchProductNames(pendingItems.map { it.productId }.toSet())
                         val pendingWithNames = pendingItems.map { it.copy(productName = productNames[it.productId]) }
                         val ordered = pendingWithNames.sortedByDescending { it.id }
-                        totalCount = pendingItems.size
+                        totalCount = pendingTotalCount
                         setAllItemsAndApplyFilters(ordered)
                         updatePageInfo(ordered.size, ordered.size)
                     }
                 }
             } catch (e: Exception) {
-                if (withSnack) {
-                    if (e is IOException) {
-                        snack.showError("Sin conexión a Internet")
-                    } else {
-                    }
+                if (withSnack && e !is IOException) {
+                    snack.showError("Error: ${e.message ?: "sin detalle"}")
                 }
+                val filtersActive = hasActiveFilters()
+                val effectiveOffset = if (filtersActive) 0 else currentOffset
+                val pendingTotalCount = pendingEventsCount()
                 val cacheKey = CacheKeys.list(
                     "events",
                     mapOf(
-                        "limit" to if (hasActiveFilters()) 100 else pageSize,
-                        "offset" to if (hasActiveFilters()) 0 else currentOffset
+                        "limit" to if (filtersActive) 100 else pageSize,
+                        "offset" to effectiveOffset
                     )
                 )
                 val cachedOnError = cacheStore.get(cacheKey, EventListResponseDto::class.java)
                 if (cachedOnError != null) {
-                    val pendingItems = buildPendingRows()
+                    val pendingItems = pendingRowsForPage(
+                        offset = effectiveOffset,
+                        remoteItemsCount = cachedOnError.items.size,
+                        remoteTotal = cachedOnError.total,
+                        filtersActive = filtersActive
+                    )
                     val allProductIds = mutableSetOf<Int>()
                     cachedOnError.items.forEach { allProductIds.add(it.productId) }
                     pendingItems.forEach { allProductIds.add(it.productId) }
@@ -514,24 +562,37 @@ snack = SendSnack(binding.root)
                     val cachedRows = cachedOnError.items.map { it.toRowUi(productNames) }
                     val pendingWithNames = pendingItems.map { it.copy(productName = productNames[it.productId]) }
                     val ordered = (pendingWithNames + cachedRows).sortedByDescending { it.id }
-                    totalCount = cachedOnError.total + pendingItems.size
+                    totalCount = cachedOnError.total + pendingTotalCount
                     setAllItemsAndApplyFilters(ordered)
-                    updatePageInfo(cachedOnError.items.size, pendingItems.size)
-                    snack.showError("Mostrando eventos en cache")
+                    updatePageInfo(ordered.size, pendingItems.size)
+                    if (!cacheNoticeShownInOfflineSession) {
+                        postLoadingNotice = cacheNoticePopupAction()
+                    }
                 } else {
                     val pendingItems = buildPendingRows()
                     val productNames = fetchProductNames(pendingItems.map { it.productId }.toSet())
                     val pendingWithNames = pendingItems.map { it.copy(productName = productNames[it.productId]) }
                     val ordered = pendingWithNames.sortedByDescending { it.id }
-                    totalCount = pendingItems.size
+                    totalCount = pendingTotalCount
                     setAllItemsAndApplyFilters(ordered)
                     updatePageInfo(ordered.size, ordered.size)
                 }
-            }
-            isLoading = false
-            if (pendingFilterApply) {
-                pendingFilterApply = false
-                applySearchFiltersInternal(allowReload = false)
+            } finally {
+                if (loading != null) {
+                    val action = postLoadingNotice
+                    if (action != null) {
+                        loading.dismissThen { action() }
+                    } else {
+                        loading.dismiss()
+                    }
+                } else {
+                    postLoadingNotice?.invoke()
+                }
+                isLoading = false
+                if (pendingFilterApply) {
+                    pendingFilterApply = false
+                    applySearchFiltersInternal(allowReload = false)
+                }
             }
         }
     }
@@ -614,6 +675,46 @@ snack = SendSnack(binding.root)
                 height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
             }
             iv.scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
+        }
+    }
+
+    private fun pendingEventsCount(): Int {
+        return OfflineQueue(this).getAll().count { it.type == PendingType.EVENT_CREATE }
+    }
+
+    private fun pendingRowsForPage(
+        offset: Int,
+        remoteItemsCount: Int,
+        remoteTotal: Int,
+        filtersActive: Boolean
+    ): List<EventRowUi> {
+        if (!shouldAppendPendingToCurrentPage(offset, remoteItemsCount, remoteTotal, filtersActive)) {
+            return emptyList()
+        }
+        return buildPendingRows()
+    }
+
+    private fun shouldAppendPendingToCurrentPage(
+        offset: Int,
+        remoteItemsCount: Int,
+        remoteTotal: Int,
+        filtersActive: Boolean
+    ): Boolean {
+        if (filtersActive) return true
+        if (remoteTotal <= 0) return true
+        val shownRemote = (offset + remoteItemsCount).coerceAtMost(remoteTotal)
+        return shownRemote >= remoteTotal
+    }
+
+    private fun cacheNoticePopupAction(): () -> Unit {
+        return {
+            UiNotifier.showBlockingTimed(
+                this,
+                "Mostrando eventos en cache y pendientes offline",
+                R.drawable.sync,
+                timeoutMs = 3_200L
+            )
+            cacheNoticeShownInOfflineSession = true
         }
     }
 
