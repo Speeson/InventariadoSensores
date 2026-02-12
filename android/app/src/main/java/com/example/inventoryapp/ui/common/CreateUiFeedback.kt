@@ -64,10 +64,12 @@ object CreateUiFeedback {
         val lottie = view.findViewById<LottieAnimationView>(R.id.lottieLoading)
         label.text = "Creando $entityLabel..."
 
-        val minCycleMs = AtomicLong(800L)
+        val minCycleMs = AtomicLong(1_200L)
+        lottie.scaleX = 2f
+        lottie.scaleY = 2f
         lottie.repeatCount = LottieDrawable.INFINITE
         lottie.addLottieOnCompositionLoadedListener { comp ->
-            minCycleMs.set(comp.duration.toLong())
+            minCycleMs.set(comp.duration.toLong().coerceAtLeast(1_200L))
         }
         lottie.playAnimation()
 
@@ -92,11 +94,13 @@ object CreateUiFeedback {
         val lottie = view.findViewById<LottieAnimationView>(R.id.lottieLoading)
         label.text = message
 
-        val minCycleMs = AtomicLong(800L)
+        val minCycleMs = AtomicLong(1_200L)
         lottie.setAnimation(animationRes)
+        lottie.scaleX = 2f
+        lottie.scaleY = 2f
         lottie.repeatCount = LottieDrawable.INFINITE
         lottie.addLottieOnCompositionLoadedListener { comp ->
-            minCycleMs.set(comp.duration.toLong())
+            minCycleMs.set(comp.duration.toLong().coerceAtLeast(1_200L))
         }
         lottie.playAnimation()
 
@@ -144,16 +148,18 @@ object CreateUiFeedback {
         return LoadingHandle(dialog, minCycleMs, SystemClock.elapsedRealtime(), Handler(Looper.getMainLooper()))
     }
 
-    fun showCreatedPopup(
+    private fun showAnimatedResultPopup(
         activity: Activity,
         title: String,
         details: String,
+        layoutRes: Int,
+        animationRes: Int,
         autoDismissMs: Long = 2800L,
         accentColorRes: Int? = null
     ) {
         if (!canShowDialog(activity)) return
 
-        val view = LayoutInflater.from(activity).inflate(R.layout.dialog_create_success, null)
+        val view = LayoutInflater.from(activity).inflate(layoutRes, null)
         val titleView = view.findViewById<TextView>(R.id.tvSuccessTitle)
         val detailsView = view.findViewById<TextView>(R.id.tvSuccessDetails)
         val lottie = view.findViewById<LottieAnimationView>(R.id.lottieSuccess)
@@ -163,6 +169,7 @@ object CreateUiFeedback {
             titleView.setTextColor(activity.getColor(accentColorRes))
         }
         detailsView.text = details
+        lottie.setAnimation(animationRes)
         lottie.repeatCount = 0
         lottie.playAnimation()
         lottie.addAnimatorListener(object : android.animation.Animator.AnimatorListener {
@@ -190,5 +197,41 @@ object CreateUiFeedback {
                 dismissSafely(dialog)
             }, autoDismissMs)
         }
+    }
+
+    fun showCreatedPopup(
+        activity: Activity,
+        title: String,
+        details: String,
+        autoDismissMs: Long = 2800L,
+        accentColorRes: Int? = null
+    ) {
+        showAnimatedResultPopup(
+            activity = activity,
+            title = title,
+            details = details,
+            layoutRes = R.layout.dialog_create_success,
+            animationRes = R.raw.correct_create,
+            autoDismissMs = autoDismissMs,
+            accentColorRes = accentColorRes
+        )
+    }
+
+    fun showErrorPopup(
+        activity: Activity,
+        title: String,
+        details: String,
+        autoDismissMs: Long = 3200L,
+        accentColorRes: Int? = null
+    ) {
+        showAnimatedResultPopup(
+            activity = activity,
+            title = title,
+            details = details,
+            layoutRes = R.layout.dialog_create_failure,
+            animationRes = R.raw.wrong,
+            autoDismissMs = autoDismissMs,
+            accentColorRes = accentColorRes
+        )
     }
 }

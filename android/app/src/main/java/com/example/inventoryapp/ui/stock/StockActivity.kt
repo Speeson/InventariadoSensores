@@ -28,7 +28,9 @@ import com.example.inventoryapp.ui.common.SendSnack
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.common.CreateUiFeedback
+import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.google.gson.Gson
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.io.IOException
 import com.example.inventoryapp.ui.common.GradientIconUtil
@@ -38,8 +40,14 @@ import android.view.View
 import androidx.transition.AutoTransition
 import androidx.transition.TransitionManager
 import android.view.inputmethod.InputMethodManager
+import org.json.JSONArray
+import org.json.JSONObject
 
 class StockActivity : AppCompatActivity() {
+    companion object {
+        @Volatile
+        private var cacheNoticeShownInOfflineSession = false
+    }
 
     private lateinit var binding: ActivityStockBinding
     private lateinit var snack: SendSnack
@@ -80,7 +88,7 @@ class StockActivity : AppCompatActivity() {
         }
 
         binding.btnCreate.setOnClickListener { createStock() }
-        binding.btnRefresh.setOnClickListener { loadStocks() }
+        binding.btnRefresh.setOnClickListener { loadStocks(withSnack = true) }
         binding.layoutCreateStockHeader.setOnClickListener { toggleCreateStockForm() }
         binding.layoutSearchStockHeader.setOnClickListener { toggleSearchForm() }
         binding.btnSearchStock.setOnClickListener {
@@ -99,6 +107,14 @@ class StockActivity : AppCompatActivity() {
         adapter = StockListAdapter { stock -> showEditDialog(stock) }
         binding.rvStocks.layoutManager = LinearLayoutManager(this)
         binding.rvStocks.adapter = adapter
+
+        lifecycleScope.launch {
+            NetworkModule.offlineState.collectLatest { offline ->
+                if (!offline) {
+                    cacheNoticeShownInOfflineSession = false
+                }
+            }
+        }
 
         binding.btnPrevPage.setOnClickListener {
             if (hasActiveFilters()) {
@@ -137,18 +153,30 @@ class StockActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         currentOffset = 0
-        loadStocks()
+        loadStocks(withSnack = false)
     }
 
-    private fun loadStocks() {
+    private fun loadStocks(withSnack: Boolean = false) {
         if (isLoading) return
         isLoading = true
+        var postLoadingNotice: (() -> Unit)? = null
+        val loading = if (withSnack) {
+            CreateUiFeedback.showListLoading(
+                this,
+                message = "Cargando stock",
+                animationRes = R.raw.loading_list,
+                minCycles = 2
+            )
+        } else {
+            null
+        }
         lifecycleScope.launch {
             try {
                 val filtersActive = hasActiveFilters()
                 val effectiveLimit = if (filtersActive) 100 else pageSize
                 val effectiveOffset = if (filtersActive) 0 else currentOffset
                 if (filtersActive) currentOffset = 0
+                val pendingTotalCount = pendingStocksCount()
                 val cacheKey = CacheKeys.list(
                     "stocks",
                     mapOf(
@@ -158,39 +186,67 @@ class StockActivity : AppCompatActivity() {
                 )
                 val cached = cacheStore.get(cacheKey, StockListResponseDto::class.java)
                 if (cached != null) {
-                    val pending = buildPendingStocks()
+                    val pending = pendingStocksForPage(
+                        offset = effectiveOffset,
+                        remoteItemsCount = cached.items.size,
+                        remoteTotal = cached.total,
+                        filtersActive = filtersActive
+                    )
                     val ordered = (pending + cached.items).sortedBy { it.id }
                     productNameById = resolveProductNames(ordered)
-                    totalCount = cached.total
+                    totalCount = cached.total + pendingTotalCount
                     setAllItemsAndApplyFilters(ordered)
-                    updatePageInfo(cached.items.size, pending.size)
-                    isLoading = false
+                    updatePageInfo(ordered.size, pending.size)
                 }
                 val res = NetworkModule.api.listStocks(limit = effectiveLimit, offset = effectiveOffset)
                 if (res.isSuccessful && res.body() != null) {
                     cacheStore.put(cacheKey, res.body()!!)
-                    val pending = buildPendingStocks()
+                    val pending = pendingStocksForPage(
+                        offset = effectiveOffset,
+                        remoteItemsCount = res.body()!!.items.size,
+                        remoteTotal = res.body()!!.total,
+                        filtersActive = filtersActive
+                    )
                     val pageItems = res.body()!!.items
-                    totalCount = res.body()!!.total
+                    totalCount = res.body()!!.total + pendingTotalCount
                     val ordered = (pending + pageItems).sortedBy { it.id }
                     productNameById = resolveProductNames(ordered)
                     setAllItemsAndApplyFilters(ordered)
-                    updatePageInfo(pageItems.size, pending.size)
+                    updatePageInfo(ordered.size, pending.size)
+                    if (withSnack) {
+                        postLoadingNotice = {
+                            UiNotifier.showBlockingTimed(
+                                this@StockActivity,
+                                "Stock cargado",
+                                R.drawable.loaded,
+                                timeoutMs = 2_500L
+                            )
+                        }
+                    }
                 } else {
                     val cachedOnError = cacheStore.get(cacheKey, StockListResponseDto::class.java)
                     if (cachedOnError != null) {
-                        val pending = buildPendingStocks()
+                        val pending = pendingStocksForPage(
+                            offset = effectiveOffset,
+                            remoteItemsCount = cachedOnError.items.size,
+                            remoteTotal = cachedOnError.total,
+                            filtersActive = filtersActive
+                        )
                         val ordered = (pending + cachedOnError.items).sortedBy { it.id }
                         productNameById = resolveProductNames(ordered)
-                        totalCount = cachedOnError.total
+                        totalCount = cachedOnError.total + pendingTotalCount
                         setAllItemsAndApplyFilters(ordered)
-                        updatePageInfo(cachedOnError.items.size, pending.size)
-                        snack.showError("Mostrando stock en cache")
+                        updatePageInfo(ordered.size, pending.size)
+                        if (withSnack && !cacheNoticeShownInOfflineSession) {
+                            postLoadingNotice = { showStockCacheNoticeOnce() }
+                        } else {
+                            showStockCacheNoticeOnce()
+                        }
                     } else {
                         val pending = buildPendingStocks()
                         val ordered = pending.sortedBy { it.id }
                         productNameById = resolveProductNames(ordered)
-                        totalCount = pending.size
+                        totalCount = pendingTotalCount
                         setAllItemsAndApplyFilters(ordered)
                         updatePageInfo(ordered.size, ordered.size)
                     }
@@ -206,27 +262,39 @@ class StockActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
+                val filtersActive = hasActiveFilters()
+                val effectiveOffset = if (filtersActive) 0 else currentOffset
+                val pendingTotalCount = pendingStocksCount()
                 val cacheKey = CacheKeys.list(
                     "stocks",
                     mapOf(
-                        "limit" to if (hasActiveFilters()) 100 else pageSize,
-                        "offset" to if (hasActiveFilters()) 0 else currentOffset
+                        "limit" to if (filtersActive) 100 else pageSize,
+                        "offset" to effectiveOffset
                     )
                 )
                 val cachedOnError = cacheStore.get(cacheKey, StockListResponseDto::class.java)
                 if (cachedOnError != null) {
-                    val pending = buildPendingStocks()
+                    val pending = pendingStocksForPage(
+                        offset = effectiveOffset,
+                        remoteItemsCount = cachedOnError.items.size,
+                        remoteTotal = cachedOnError.total,
+                        filtersActive = filtersActive
+                    )
                     val ordered = (pending + cachedOnError.items).sortedBy { it.id }
                     productNameById = resolveProductNames(ordered)
-                    totalCount = cachedOnError.total
+                    totalCount = cachedOnError.total + pendingTotalCount
                     setAllItemsAndApplyFilters(ordered)
-                    updatePageInfo(cachedOnError.items.size, pending.size)
-                    snack.showError("Mostrando stock en cache")
+                    updatePageInfo(ordered.size, pending.size)
+                    if (withSnack && !cacheNoticeShownInOfflineSession) {
+                        postLoadingNotice = { showStockCacheNoticeOnce() }
+                    } else {
+                        showStockCacheNoticeOnce()
+                    }
                 } else {
                     val pending = buildPendingStocks()
                     val ordered = pending.sortedBy { it.id }
                     productNameById = resolveProductNames(ordered)
-                    totalCount = pending.size
+                    totalCount = pendingTotalCount
                     setAllItemsAndApplyFilters(ordered)
                     updatePageInfo(ordered.size, ordered.size)
                     if (e is IOException) {
@@ -234,6 +302,16 @@ class StockActivity : AppCompatActivity() {
                     }
                 }
             } finally {
+                if (loading != null) {
+                    val action = postLoadingNotice
+                    if (action != null) {
+                        loading.dismissThen { action() }
+                    } else {
+                        loading.dismiss()
+                    }
+                } else {
+                    postLoadingNotice?.invoke()
+                }
                 isLoading = false
                 if (pendingFilterApply) {
                     pendingFilterApply = false
@@ -381,24 +459,20 @@ class StockActivity : AppCompatActivity() {
                     cacheStore.invalidatePrefix("stocks")
                     loadStocks()
                 } else {
-                    if (res.code() == 403) {
-                        UiNotifier.showBlocking(
-                            this@StockActivity,
-                            "Permisos insuficientes",
-                            "No tienes permisos para crear stock.",
-                            com.example.inventoryapp.R.drawable.ic_lock
-                        )
-                    } else {
-                        if (res.code() == 403) {
-                        UiNotifier.showBlocking(
-                            this@StockActivity,
-                            "Permisos insuficientes",
-                            "No tienes permisos para actualizar stock.",
-                            com.example.inventoryapp.R.drawable.ic_lock
-                        )
-                    } else {
-                        snack.showError("❌ Error ${res.code()}: ${res.errorBody()?.string()}")
+                    val detail = runCatching { res.errorBody()?.string() }.getOrNull()
+                    val technical = canSeeTechnicalErrors()
+                    val formatted = formatCreateStockError(res.code(), detail, technical)
+                    val details = buildString {
+                        append(formatted)
+                        if (technical && res.code() > 0) append("\nHTTP ${res.code()}")
                     }
+                    loadingHandled = true
+                    loading.dismissThen {
+                        CreateUiFeedback.showErrorPopup(
+                            activity = this@StockActivity,
+                            title = "No se pudo crear stock",
+                            details = details
+                        )
                     }
                 }
 
@@ -417,7 +491,19 @@ class StockActivity : AppCompatActivity() {
                 loadStocks()
 
             } catch (e: Exception) {
-                snack.showError("❌ Error: ${e.message}")
+                loadingHandled = true
+                val details = if (canSeeTechnicalErrors()) {
+                    "Ha ocurrido un error inesperado\n${e.javaClass.simpleName}: ${e.message ?: "sin detalle"}"
+                } else {
+                    "Ha ocurrido un error inesperado"
+                }
+                loading.dismissThen {
+                    CreateUiFeedback.showErrorPopup(
+                        activity = this@StockActivity,
+                        title = "No se pudo crear stock",
+                        details = details
+                    )
+                }
             } finally {
                 if (!loadingHandled) {
                     loading.dismiss()
@@ -530,6 +616,45 @@ class StockActivity : AppCompatActivity() {
                 )
             }
         }
+    }
+
+    private fun showStockCacheNoticeOnce() {
+        if (cacheNoticeShownInOfflineSession) return
+        UiNotifier.showBlockingTimed(
+            this,
+            "Mostrando stock en cache y pendientes offline",
+            R.drawable.sync,
+            timeoutMs = 3_200L
+        )
+        cacheNoticeShownInOfflineSession = true
+    }
+
+    private fun pendingStocksCount(): Int {
+        return OfflineQueue(this).getAll().count { it.type == PendingType.STOCK_CREATE }
+    }
+
+    private fun pendingStocksForPage(
+        offset: Int,
+        remoteItemsCount: Int,
+        remoteTotal: Int,
+        filtersActive: Boolean
+    ): List<StockResponseDto> {
+        if (!shouldAppendPendingToCurrentPage(offset, remoteItemsCount, remoteTotal, filtersActive)) {
+            return emptyList()
+        }
+        return buildPendingStocks()
+    }
+
+    private fun shouldAppendPendingToCurrentPage(
+        offset: Int,
+        remoteItemsCount: Int,
+        remoteTotal: Int,
+        filtersActive: Boolean
+    ): Boolean {
+        if (filtersActive) return true
+        if (remoteTotal <= 0) return true
+        val shownRemote = (offset + remoteItemsCount).coerceAtMost(remoteTotal)
+        return shownRemote >= remoteTotal
     }
 
     private fun setupLocationDropdown() {
@@ -760,6 +885,113 @@ class StockActivity : AppCompatActivity() {
         if (needle.isBlank()) return null
         val match = productNameById.entries.firstOrNull { it.value.lowercase() == needle }
         return match?.key
+    }
+
+    private fun formatCreateStockError(code: Int, detail: String?, technical: Boolean): String {
+        val backendMsg = extractBackendErrorMessage(detail)
+        val detailLower = backendMsg.lowercase()
+        val mapped = when (code) {
+            400 -> "Datos inválidos para crear stock"
+            409 -> {
+                if (
+                    detailLower.contains("location") ||
+                    detailLower.contains("ubicaci") ||
+                    detailLower.contains("already exists") ||
+                    detailLower.contains("ya existe")
+                ) {
+                    "Ya existe stock para ese producto en esa ubicación"
+                } else {
+                    "Conflicto: ya existe un stock similar"
+                }
+            }
+            422 -> "No se puede crear stock con esos datos"
+            else -> ApiErrorFormatter.format(code, backendMsg)
+        }
+
+        if (code == 400 && isDuplicateStockMessage(detailLower)) {
+            return "Ya existe stock para ese producto en esa ubicación"
+        }
+        if (technical && backendMsg.isNotBlank() && !isTooGenericBackendMessage(backendMsg)) {
+            return backendMsg
+        }
+        return mapped
+    }
+
+    private fun isDuplicateStockMessage(messageLower: String): Boolean {
+        if (messageLower.isBlank()) return false
+        return (
+            (messageLower.contains("stock") && messageLower.contains("exist")) ||
+            (messageLower.contains("stock") && messageLower.contains("duplic")) ||
+            (messageLower.contains("producto") && messageLower.contains("ubicaci") && messageLower.contains("exist")) ||
+            messageLower.contains("unique constraint") ||
+            messageLower.contains("integrityerror")
+        )
+    }
+
+    private fun isTooGenericBackendMessage(message: String): Boolean {
+        val m = message.trim().lowercase()
+        return m.isBlank() ||
+            m == "bad request" ||
+            m == "invalid request" ||
+            m == "validation error" ||
+            m == "error"
+    }
+
+    private fun extractBackendErrorMessage(detail: String?): String {
+        if (detail.isNullOrBlank()) return ""
+
+        val raw = detail.trim()
+        val fromJsonObject = runCatching {
+            val obj = JSONObject(raw)
+            obj.optString("detail").takeIf { it.isNotBlank() }
+                ?: obj.optString("message").takeIf { it.isNotBlank() }
+                ?: obj.optString("error").takeIf { it.isNotBlank() }
+                ?: parseErrorsNode(obj.opt("errors"))
+        }.getOrNull()
+        if (!fromJsonObject.isNullOrBlank()) return fromJsonObject
+
+        val fromJsonArray = runCatching {
+            val arr = JSONArray(raw)
+            if (arr.length() > 0) arr.optString(0) else null
+        }.getOrNull()
+        if (!fromJsonArray.isNullOrBlank()) return fromJsonArray
+
+        return raw.take(240)
+    }
+
+    private fun canSeeTechnicalErrors(): Boolean {
+        val prefs = getSharedPreferences("ui_prefs", MODE_PRIVATE)
+        val role = prefs.getString("cached_role", null) ?: return false
+        return role.equals("ADMIN", ignoreCase = true) ||
+            role.equals("MANAGER", ignoreCase = true)
+    }
+
+    private fun parseErrorsNode(node: Any?): String? {
+        return when (node) {
+            is JSONObject -> {
+                val keys = node.keys()
+                val parts = mutableListOf<String>()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    val value = node.opt(key)
+                    val valueText = when (value) {
+                        is JSONArray -> (0 until value.length())
+                            .mapNotNull { idx -> value.optString(idx).takeIf { it.isNotBlank() } }
+                            .joinToString(", ")
+                        else -> value?.toString().orEmpty()
+                    }
+                    if (valueText.isNotBlank()) {
+                        parts.add("$key: $valueText")
+                    }
+                }
+                parts.joinToString(" | ").ifBlank { null }
+            }
+            is JSONArray -> (0 until node.length())
+                .mapNotNull { idx -> node.optString(idx).takeIf { it.isNotBlank() } }
+                .joinToString(", ")
+                .ifBlank { null }
+            else -> null
+        }
     }
 
     private fun hideKeyboard() {
