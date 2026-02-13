@@ -38,11 +38,16 @@ import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.common.GradientIconUtil
 import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.google.gson.Gson
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.io.IOException
 import android.graphics.drawable.GradientDrawable
 
 class ProductListActivity : AppCompatActivity() {
+    companion object {
+        @Volatile
+        private var cacheNoticeShownInOfflineSession = false
+    }
 
     private lateinit var binding: ActivityProductListBinding
     private lateinit var offlineQueue: OfflineQueue
@@ -99,6 +104,13 @@ class ProductListActivity : AppCompatActivity() {
         )
         binding.rvProducts.layoutManager = LinearLayoutManager(this)
         binding.rvProducts.adapter = adapter
+        lifecycleScope.launch {
+            NetworkModule.offlineState.collectLatest { offline ->
+                if (!offline) {
+                    cacheNoticeShownInOfflineSession = false
+                }
+            }
+        }
 
         binding.layoutCreateProductHeader.setOnClickListener { toggleCreateProductForm() }
         binding.layoutSearchProductHeader.setOnClickListener { toggleSearchForm() }
@@ -171,7 +183,17 @@ class ProductListActivity : AppCompatActivity() {
     private fun loadProducts(withSnack: Boolean) {
         if (isLoading) return
         isLoading = true
-        if (withSnack) UiNotifier.show(this, "Cargando productos...")
+        var postLoadingNotice: (() -> Unit)? = null
+        val loading = if (withSnack) {
+            CreateUiFeedback.showListLoading(
+                this,
+                message = "Cargando productos",
+                animationRes = R.raw.loading_list,
+                minCycles = 2
+            )
+        } else {
+            null
+        }
 
         lifecycleScope.launch {
             val filtersActive = hasActiveFilters()
@@ -262,6 +284,16 @@ class ProductListActivity : AppCompatActivity() {
                     } else {
                         // rows handled in filtered page
                     }
+                    if (withSnack) {
+                        postLoadingNotice = {
+                            UiNotifier.showBlockingTimed(
+                                this@ProductListActivity,
+                                "Productos cargados",
+                                R.drawable.loaded,
+                                timeoutMs = 2_500L
+                            )
+                        }
+                    }
                 } else {
                     val err = res.errorBody()?.string()
                     UiNotifier.show(this@ProductListActivity, ApiErrorFormatter.format(res.code(), err))
@@ -274,7 +306,11 @@ class ProductListActivity : AppCompatActivity() {
                             pendingAll = pendingAll,
                             pendingTotalCount = pendingTotalCount
                         )
-                        UiNotifier.show(this@ProductListActivity, "Mostrando productos en cache")
+                        if (withSnack && !cacheNoticeShownInOfflineSession) {
+                            postLoadingNotice = { showProductsCacheNoticeOnce() }
+                        } else {
+                            showProductsCacheNoticeOnce()
+                        }
                     } else {
                         val pending = pendingProductsForPage(
                             offset = effectiveOffset,
@@ -300,7 +336,11 @@ class ProductListActivity : AppCompatActivity() {
                         pendingAll = pendingAll,
                         pendingTotalCount = pendingTotalCount
                     )
-                    UiNotifier.show(this@ProductListActivity, "Mostrando productos en cache")
+                    if (withSnack && !cacheNoticeShownInOfflineSession) {
+                        postLoadingNotice = { showProductsCacheNoticeOnce() }
+                    } else {
+                        showProductsCacheNoticeOnce()
+                    }
                 } else {
                     val pending = pendingProductsForPage(
                         offset = effectiveOffset,
@@ -316,6 +356,16 @@ class ProductListActivity : AppCompatActivity() {
                     updatePageInfo(pending.size)
                 }
             } finally {
+                if (loading != null) {
+                    val action = postLoadingNotice
+                    if (action != null) {
+                        loading.dismissThen { action() }
+                    } else {
+                        loading.dismiss()
+                    }
+                } else {
+                    postLoadingNotice?.invoke()
+                }
                 isLoading = false
                 if (pendingFilterApply) {
                     pendingFilterApply = false
@@ -376,7 +426,16 @@ class ProductListActivity : AppCompatActivity() {
                         com.example.inventoryapp.R.drawable.ic_lock
                     )
                 } else {
-                    UiNotifier.show(this@ProductListActivity, "Error ${res.code()}: ${res.errorBody()?.string()}")
+                    val raw = runCatching { res.errorBody()?.string() }.getOrNull()
+                    val details = formatCreateProductError(res.code(), raw)
+                    loadingHandled = true
+                    loading.dismissThen {
+                        CreateUiFeedback.showErrorPopup(
+                            activity = this@ProductListActivity,
+                            title = "No se pudo crear producto",
+                            details = details
+                        )
+                    }
                 }
             } catch (e: IOException) {
                 val dto = ProductCreateDto(sku = sku, name = name, barcode = rawBarcode, categoryId = categoryId!!, active = true)
@@ -392,7 +451,19 @@ class ProductListActivity : AppCompatActivity() {
                 }
                 resetAndLoad()
             } catch (e: Exception) {
-                UiNotifier.show(this@ProductListActivity, "Error: ${e.message}")
+                loadingHandled = true
+                val details = if (canShowTechnicalCreateErrors()) {
+                    "Ha ocurrido un error inesperado.\n${e.javaClass.simpleName}: ${e.message ?: "sin detalle"}"
+                } else {
+                    "Ha ocurrido un error inesperado al crear el producto."
+                }
+                loading.dismissThen {
+                    CreateUiFeedback.showErrorPopup(
+                        activity = this@ProductListActivity,
+                        title = "No se pudo crear producto",
+                        details = details
+                    )
+                }
             } finally {
                 if (!loadingHandled) {
                     loading.dismiss()
@@ -909,6 +980,17 @@ class ProductListActivity : AppCompatActivity() {
         }
     }
 
+    private fun showProductsCacheNoticeOnce() {
+        if (cacheNoticeShownInOfflineSession) return
+        UiNotifier.showBlockingTimed(
+            this,
+            "Mostrando productos en cache y pendientes offline",
+            R.drawable.sync,
+            timeoutMs = 3_200L
+        )
+        cacheNoticeShownInOfflineSession = true
+    }
+
     private fun applyCachedProducts(
         cached: ProductListResponseDto,
         filtersActive: Boolean,
@@ -1020,6 +1102,75 @@ class ProductListActivity : AppCompatActivity() {
             val merged = map.entries.map { ProductNameItem(it.key, it.value) }
             cacheStore.put("products:names", ProductNameCache(merged))
         }
+    }
+
+    private fun canShowTechnicalCreateErrors(): Boolean {
+        val role = getSharedPreferences("ui_prefs", MODE_PRIVATE).getString("cached_role", null)
+        return role.equals("ADMIN", ignoreCase = true) || role.equals("MANAGER", ignoreCase = true)
+    }
+
+    private fun formatCreateProductError(code: Int, rawError: String?): String {
+        val raw = rawError?.trim().orEmpty()
+        val normalized = raw.lowercase()
+        val technical = canShowTechnicalCreateErrors()
+
+        val looksLikeDuplicateSku =
+            normalized.contains("sku") &&
+                (normalized.contains("existe") || normalized.contains("exists") || normalized.contains("duplic"))
+        val looksLikeDuplicateBarcode =
+            normalized.contains("barcode") &&
+                (normalized.contains("existe") || normalized.contains("exists") || normalized.contains("duplic"))
+
+        if (looksLikeDuplicateSku) {
+            return if (technical) {
+                buildString {
+                    append("SKU duplicado: ya existe un producto con ese SKU.")
+                    if (raw.isNotBlank()) append("\nDetalle: ${compactErrorDetail(raw)}")
+                    if (code > 0) append("\nHTTP $code")
+                }
+            } else {
+                "Ese SKU ya está en uso. Introduce un SKU diferente."
+            }
+        }
+
+        if (looksLikeDuplicateBarcode) {
+            return if (technical) {
+                buildString {
+                    append("Barcode duplicado: ya existe un producto con ese código.")
+                    if (raw.isNotBlank()) append("\nDetalle: ${compactErrorDetail(raw)}")
+                    if (code > 0) append("\nHTTP $code")
+                }
+            } else {
+                "Ese código de barras ya está en uso. Introduce otro diferente."
+            }
+        }
+
+        return if (technical) {
+            buildString {
+                append(
+                    when (code) {
+                        400, 422 -> "Datos inválidos para crear producto."
+                        409 -> "Conflicto al crear producto."
+                        500 -> "Error interno del servidor al crear producto."
+                        else -> "No se pudo crear el producto."
+                    }
+                )
+                if (raw.isNotBlank()) append("\nDetalle: ${compactErrorDetail(raw)}")
+                if (code > 0) append("\nHTTP $code")
+            }
+        } else {
+            when (code) {
+                400, 422 -> "No se pudo crear el producto. Revisa los datos introducidos."
+                409 -> "No se pudo crear el producto porque entra en conflicto con otro existente."
+                500 -> "No se pudo crear el producto por un problema del servidor. Inténtalo de nuevo."
+                else -> "No se pudo crear el producto. Inténtalo de nuevo."
+            }
+        }
+    }
+
+    private fun compactErrorDetail(raw: String, maxLen: Int = 180): String {
+        val singleLine = raw.replace("\\s+".toRegex(), " ").trim()
+        return if (singleLine.length <= maxLen) singleLine else singleLine.take(maxLen) + "..."
     }
 
 }

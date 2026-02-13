@@ -2,6 +2,7 @@ package com.example.inventoryapp.ui.stock
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.appcompat.widget.TooltipCompat
 import androidx.recyclerview.widget.RecyclerView
 import androidx.core.content.ContextCompat
 import com.example.inventoryapp.R
@@ -41,6 +42,10 @@ class StockListAdapter(
         holder.binding.tvMeta.text = "Cantidad: ${s.quantity}"
         holder.binding.ivWarning.visibility =
             if (isOffline) android.view.View.VISIBLE else android.view.View.GONE
+        holder.binding.ivWarning.setImageResource(R.drawable.sync)
+        val pendingTooltip = "Guardado en modo offline, pendiente de sincronización"
+        TooltipCompat.setTooltipText(holder.binding.ivWarning, if (isOffline) pendingTooltip else null)
+        holder.binding.ivWarning.contentDescription = if (isOffline) pendingTooltip else "Pendiente"
         val offlineColor = ContextCompat.getColor(holder.itemView.context, R.color.offline_text)
         if (isOffline) {
             holder.binding.tvStockId.setTextColor(offlineColor)

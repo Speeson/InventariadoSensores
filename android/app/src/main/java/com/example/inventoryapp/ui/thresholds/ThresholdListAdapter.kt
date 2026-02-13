@@ -5,6 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.appcompat.widget.TooltipCompat
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.example.inventoryapp.data.remote.model.ThresholdResponseDto
@@ -53,6 +54,10 @@ class ThresholdListAdapter(
 
         holder.binding.ivWarning.visibility =
             if (isOffline) View.VISIBLE else View.GONE
+        holder.binding.ivWarning.setImageResource(R.drawable.sync)
+        val pendingTooltip = "Guardado en modo offline, pendiente de sincronizacion"
+        TooltipCompat.setTooltipText(holder.binding.ivWarning, if (isOffline) pendingTooltip else null)
+        holder.binding.ivWarning.contentDescription = if (isOffline) pendingTooltip else "Pendiente"
         val offlineColor = ContextCompat.getColor(holder.itemView.context, R.color.offline_text)
         if (isOffline) {
             holder.binding.tvTitle.setTextColor(offlineColor)

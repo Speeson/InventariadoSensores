@@ -91,7 +91,7 @@
                         android:layout_height="18dp"
                         android:layout_marginStart="6dp"
                         android:contentDescription="Producto offline"
-                        android:src="@drawable/ic_error_red"
+                        android:src="@drawable/sync"
                         android:visibility="gone" />
                 </LinearLayout>
 

@@ -29,17 +29,17 @@
                 android:gravity="center_vertical">
 
                 <TextView
-                    android:id="@+id/tvEditStockTitle"
+                    android:id="@+id/tvEditThresholdTitle"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Editar stock"
+                    android:text="Editar threshold"
                     android:textStyle="bold"
                     android:textSize="18sp"
                     android:textColor="?attr/colorOnSurface" />
 
                 <ImageButton
-                    android:id="@+id/btnEditStockClose"
+                    android:id="@+id/btnEditThresholdClose"
                     android:layout_width="32dp"
                     android:layout_height="32dp"
                     android:background="@android:color/transparent"
@@ -49,7 +49,7 @@
             </LinearLayout>
 
             <TextView
-                android:id="@+id/tvEditStockMeta"
+                android:id="@+id/tvEditThresholdMeta"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
@@ -64,10 +64,26 @@
                 app:boxBackgroundMode="outline">
 
                 <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etEditStockQty"
+                    android:id="@+id/etEditThresholdLocation"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Cantidad"
+                    android:hint="Ubicacion"
+                    android:inputType="text"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                app:boxBackgroundMode="outline">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etEditThresholdMinQty"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Min quantity"
                     android:inputType="number"
                     android:paddingStart="8dp"
                     android:paddingEnd="8dp" />
@@ -80,7 +96,7 @@
                 android:orientation="horizontal">
 
                 <Button
-                    android:id="@+id/btnEditStockSave"
+                    android:id="@+id/btnEditThresholdSave"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
@@ -99,14 +115,14 @@
                     android:layout_height="0dp" />
 
                 <Button
-                    android:id="@+id/btnEditStockDelete"
+                    android:id="@+id/btnEditThresholdDelete"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:background="@drawable/bg_button_danger"
                     android:backgroundTint="@null"
                     app:backgroundTint="@null"
-                    android:text="Vaciar stock"
+                    android:text="Eliminar"
                     android:textAllCaps="false"
                     android:textColor="@android:color/white"
                     android:textStyle="bold"

@@ -131,29 +131,7 @@ class HomeActivity : AppCompatActivity() {
                 UiNotifier.show(this@HomeActivity, "Solo admin/manager")
                 return@setOnClickListener
             }
-            lifecycleScope.launch {
-                try {
-                    val res = NetworkModule.api.me()
-                    if (res.code() == 401) return@launch
-                    if (res.isSuccessful && res.body() != null) {
-                        val role = res.body()!!.role
-                        if (role == "MANAGER" || role == "ADMIN") {
-                            startActivity(Intent(this@HomeActivity, RotationActivity::class.java))
-                        } else {
-                            UiNotifier.showBlocking(
-                                this@HomeActivity,
-                                "Permisos insuficientes",
-                                "No tienes permisos para acceder a esta sección.",
-                                com.example.inventoryapp.R.drawable.ic_lock
-                            )
-                        }
-                    } else {
-                        UiNotifier.show(this@HomeActivity, ApiErrorFormatter.format(res.code()))
-                    }
-                } catch (e: Exception) {
-                UiNotifier.showConnectionError(this@HomeActivity, e.message)
-                }
-            }
+            startActivity(Intent(this@HomeActivity, RotationActivity::class.java))
         }
 
         binding.btnReports.setOnClickListener {
@@ -828,6 +806,7 @@ private fun confirmLogout() {
         return out
     }
 }
+
 
 
 

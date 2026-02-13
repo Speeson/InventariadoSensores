@@ -67,8 +67,8 @@
                     android:layout_width="18dp"
                     android:layout_height="18dp"
                     android:layout_marginStart="8dp"
-                    android:contentDescription="Aviso"
-                    android:src="@drawable/ic_error_red"
+                    android:contentDescription="Pendiente"
+                    android:src="@drawable/sync"
                     android:visibility="gone" />
             </LinearLayout>
 

@@ -39,12 +39,17 @@ import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.google.gson.Gson
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.io.IOException
 import java.text.NumberFormat
 import java.util.Locale
 
 class MovementsMenuActivity : AppCompatActivity() {
+    companion object {
+        @Volatile
+        private var cacheNoticeShownInOfflineSession = false
+    }
 
     private lateinit var binding: ActivityMovementsMenuBinding
     private lateinit var snack: SendSnack
@@ -93,6 +98,13 @@ class MovementsMenuActivity : AppCompatActivity() {
         adapter = MovementsListAdapter()
         binding.rvMovements.layoutManager = LinearLayoutManager(this)
         binding.rvMovements.adapter = adapter
+        lifecycleScope.launch {
+            NetworkModule.offlineState.collectLatest { offline ->
+                if (!offline) {
+                    cacheNoticeShownInOfflineSession = false
+                }
+            }
+        }
 
         setupTypeDropdowns()
         setupSourceDropdowns()
@@ -213,7 +225,8 @@ class MovementsMenuActivity : AppCompatActivity() {
                             cacheStore.invalidatePrefix("movements")
                             loadMovements(withSnack = false)
                         } else {
-                            handleMovementError(res.code(), res.errorBody()?.string())
+                            loadingHandled = true
+                            handleMovementError(res.code(), res.errorBody()?.string(), loading)
                         }
                     }
                     "OUT" -> {
@@ -231,7 +244,8 @@ class MovementsMenuActivity : AppCompatActivity() {
                             cacheStore.invalidatePrefix("movements")
                             loadMovements(withSnack = false)
                         } else {
-                            handleMovementError(res.code(), res.errorBody()?.string())
+                            loadingHandled = true
+                            handleMovementError(res.code(), res.errorBody()?.string(), loading)
                         }
                     }
                     "ADJUST" -> {
@@ -249,7 +263,8 @@ class MovementsMenuActivity : AppCompatActivity() {
                             cacheStore.invalidatePrefix("movements")
                             loadMovements(withSnack = false)
                         } else {
-                            handleMovementError(res.code(), res.errorBody()?.string())
+                            loadingHandled = true
+                            handleMovementError(res.code(), res.errorBody()?.string(), loading)
                         }
                     }
                     "TRANSFER" -> {
@@ -267,7 +282,8 @@ class MovementsMenuActivity : AppCompatActivity() {
                             cacheStore.invalidatePrefix("movements")
                             loadMovements(withSnack = false)
                         } else {
-                            handleMovementError(res.code(), res.errorBody()?.string())
+                            loadingHandled = true
+                            handleMovementError(res.code(), res.errorBody()?.string(), loading)
                         }
                     }
                 }
@@ -290,7 +306,19 @@ class MovementsMenuActivity : AppCompatActivity() {
                 }
                 loadMovements(withSnack = false)
             } catch (e: Exception) {
-                snack.showError("Error: ${e.message}")
+                loadingHandled = true
+                val details = if (canShowTechnicalMovementErrors()) {
+                    "Ha ocurrido un error inesperado.\n${e.javaClass.simpleName}: ${e.message ?: "sin detalle"}"
+                } else {
+                    "Ha ocurrido un error inesperado al crear el movimiento."
+                }
+                loading.dismissThen {
+                    CreateUiFeedback.showErrorPopup(
+                        activity = this@MovementsMenuActivity,
+                        title = "No se pudo crear movimiento",
+                        details = details
+                    )
+                }
             } finally {
                 if (!loadingHandled) {
                     loading.dismiss()
@@ -300,17 +328,101 @@ class MovementsMenuActivity : AppCompatActivity() {
         }
     }
 
-    private fun handleMovementError(code: Int, body: String?) {
+    private fun handleMovementError(
+        code: Int,
+        body: String?,
+        loading: CreateUiFeedback.LoadingHandle
+    ) {
         if (code == 403) {
-            UiNotifier.showBlocking(
-                this,
-                "Permisos insuficientes",
-                "No tienes permisos para crear movimientos.",
-                R.drawable.ic_lock
-            )
+            loading.dismissThen {
+                UiNotifier.showBlocking(
+                    this,
+                    "Permisos insuficientes",
+                    "No tienes permisos para crear movimientos.",
+                    R.drawable.ic_lock
+                )
+            }
         } else {
-            snack.showError("Error $code: ${body ?: "sin detalle"}")
+            val details = formatMovementCreateError(code, body)
+            loading.dismissThen {
+                CreateUiFeedback.showErrorPopup(
+                    activity = this,
+                    title = "No se pudo crear movimiento",
+                    details = details
+                )
+            }
         }
+    }
+
+    private fun canShowTechnicalMovementErrors(): Boolean {
+        val role = getSharedPreferences("ui_prefs", MODE_PRIVATE).getString("cached_role", null)
+        return role.equals("ADMIN", ignoreCase = true) || role.equals("MANAGER", ignoreCase = true)
+    }
+
+    private fun formatMovementCreateError(code: Int, rawError: String?): String {
+        val raw = rawError?.trim().orEmpty()
+        val normalized = raw.lowercase()
+        val technical = canShowTechnicalMovementErrors()
+
+        val looksProductNotFound =
+            (normalized.contains("product") || normalized.contains("producto")) &&
+                (normalized.contains("not found") || normalized.contains("no existe") || normalized.contains("inexist"))
+        val looksInsufficientStock =
+            (normalized.contains("stock") || normalized.contains("inventario")) &&
+                (normalized.contains("insufficient") || normalized.contains("insuf") || normalized.contains("not enough"))
+
+        if (looksProductNotFound) {
+            return if (technical) {
+                buildString {
+                    append("Producto no existe.")
+                    if (raw.isNotBlank()) append("\nDetalle: ${compactMovementErrorDetail(raw)}")
+                    if (code > 0) append("\nHTTP $code")
+                }
+            } else {
+                "No existe el producto indicado. Revisa el ID o el nombre."
+            }
+        }
+
+        if (looksInsufficientStock) {
+            return if (technical) {
+                buildString {
+                    append("Stock insuficiente para completar la salida o traslado.")
+                    if (raw.isNotBlank()) append("\nDetalle: ${compactMovementErrorDetail(raw)}")
+                    if (code > 0) append("\nHTTP $code")
+                }
+            } else {
+                "No hay stock suficiente para realizar ese movimiento."
+            }
+        }
+
+        return if (technical) {
+            buildString {
+                append(
+                    when (code) {
+                        400, 422 -> "Datos inválidos para crear movimiento."
+                        404 -> "Recurso no encontrado para crear movimiento."
+                        409 -> "Conflicto al crear movimiento."
+                        500 -> "Error interno del servidor al crear movimiento."
+                        else -> "No se pudo crear el movimiento."
+                    }
+                )
+                if (raw.isNotBlank()) append("\nDetalle: ${compactMovementErrorDetail(raw)}")
+                if (code > 0) append("\nHTTP $code")
+            }
+        } else {
+            when (code) {
+                400, 422 -> "No se pudo crear el movimiento. Revisa los datos."
+                404 -> "No se encontró el recurso indicado para el movimiento."
+                409 -> "No se pudo crear el movimiento por conflicto de datos."
+                500 -> "No se pudo crear el movimiento por un problema del servidor."
+                else -> "No se pudo crear el movimiento. Inténtalo de nuevo."
+            }
+        }
+    }
+
+    private fun compactMovementErrorDetail(raw: String, maxLen: Int = 180): String {
+        val singleLine = raw.replace("\\s+".toRegex(), " ").trim()
+        return if (singleLine.length <= maxLen) singleLine else singleLine.take(maxLen) + "..."
     }
 
     private fun enqueueOffline(
@@ -351,7 +463,17 @@ class MovementsMenuActivity : AppCompatActivity() {
     private fun loadMovements(withSnack: Boolean) {
         if (isLoading) return
         isLoading = true
-        if (withSnack) snack.showSending("Cargando movimientos...")
+        var postLoadingNotice: (() -> Unit)? = null
+        val loading = if (withSnack) {
+            CreateUiFeedback.showListLoading(
+                this,
+                message = "Cargando movimientos",
+                animationRes = R.raw.loading_list,
+                minCycles = 2
+            )
+        } else {
+            null
+        }
 
         val filtersActive = hasActiveFilters()
         val effectiveLimit = if (filtersActive) 100 else pageSize
@@ -429,7 +551,16 @@ class MovementsMenuActivity : AppCompatActivity() {
                     val ordered = (pending + mappedRemote).sortedByDescending { it.id }
                     setAllItemsAndApplyFilters(ordered)
                     updatePageInfo(ordered.size, pending.size)
-                    if (withSnack) snack.showSuccess("Movimientos cargados")
+                    if (withSnack) {
+                        postLoadingNotice = {
+                            UiNotifier.showBlockingTimed(
+                                this@MovementsMenuActivity,
+                                "Movimientos cargados",
+                                R.drawable.loaded,
+                                timeoutMs = 2_500L
+                            )
+                        }
+                    }
                 } else {
                     if (withSnack) snack.showError("Error ${res.code()}: ${res.errorBody()?.string()}")
                     val cachedOnError = cacheStore.get(cacheKey, MovementListResponseDto::class.java)
@@ -447,7 +578,11 @@ class MovementsMenuActivity : AppCompatActivity() {
                         totalCount = cachedOnError.total + pendingTotalCount
                         setAllItemsAndApplyFilters(ordered)
                         updatePageInfo(ordered.size, pending.size)
-                        snack.showError("Mostrando movimientos en cache")
+                        if (withSnack && !cacheNoticeShownInOfflineSession) {
+                            postLoadingNotice = { showMovementsCacheNoticeOnce() }
+                        } else {
+                            showMovementsCacheNoticeOnce()
+                        }
                     } else {
                         val pending = pendingMovementsForPage(
                             offset = effectiveOffset,
@@ -463,7 +598,9 @@ class MovementsMenuActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
-                if (withSnack) snack.showError("Error de red: ${e.message}")
+                if (withSnack && e !is IOException) {
+                    snack.showError("Error de red: ${e.message}")
+                }
                 val cacheKey = CacheKeys.list(
                     "movements",
                     mapOf(
@@ -489,7 +626,11 @@ class MovementsMenuActivity : AppCompatActivity() {
                     totalCount = cachedOnError.total + pendingTotalCount
                     setAllItemsAndApplyFilters(ordered)
                     updatePageInfo(ordered.size, pending.size)
-                    snack.showError("Mostrando movimientos en cache")
+                    if (withSnack && !cacheNoticeShownInOfflineSession) {
+                        postLoadingNotice = { showMovementsCacheNoticeOnce() }
+                    } else {
+                        showMovementsCacheNoticeOnce()
+                    }
                 } else {
                     val pending = pendingMovementsForPage(
                         offset = effectiveOffset,
@@ -504,6 +645,16 @@ class MovementsMenuActivity : AppCompatActivity() {
                     updatePageInfo(ordered.size, ordered.size)
                 }
             } finally {
+                if (loading != null) {
+                    val action = postLoadingNotice
+                    if (action != null) {
+                        loading.dismissThen { action() }
+                    } else {
+                        loading.dismiss()
+                    }
+                } else {
+                    postLoadingNotice?.invoke()
+                }
                 isLoading = false
                 if (pendingFilterApply) {
                     pendingFilterApply = false
@@ -1158,6 +1309,17 @@ class MovementsMenuActivity : AppCompatActivity() {
             return trimmed.substringAfter(") ").trim()
         }
         return trimmed
+    }
+
+    private fun showMovementsCacheNoticeOnce() {
+        if (cacheNoticeShownInOfflineSession) return
+        UiNotifier.showBlockingTimed(
+            this,
+            "Mostrando movimientos en cache y pendientes offline",
+            R.drawable.sync,
+            timeoutMs = 3_200L
+        )
+        cacheNoticeShownInOfflineSession = true
     }
 
     private fun hideKeyboard() {

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardUseCompatPadding="true"
+    app:cardElevation="6dp"
+    app:cardCornerRadius="16dp"
+    app:strokeWidth="1dp"
+    app:strokeColor="#E1D5F0"
+    app:cardBackgroundColor="#F7F2FA">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:minWidth="330dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="14dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical|center_horizontal">
+
+            <com.airbnb.lottie.LottieAnimationView
+                android:id="@+id/permissionDeniedLottie"
+                android:layout_width="92dp"
+                android:layout_height="92dp"
+                android:layout_marginEnd="10dp"
+                app:lottie_autoPlay="true"
+                app:lottie_rawRes="@raw/locked"
+                app:lottie_loop="true" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/permissionDeniedTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:maxWidth="210dp"
+                    android:textStyle="bold"
+                    android:textSize="16sp"
+                    android:textColor="@android:color/black"
+                    android:text="Permisos insuficientes" />
+
+                <TextView
+                    android:id="@+id/permissionDeniedMessage"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:maxWidth="210dp"
+                    android:textSize="14sp"
+                    android:textColor="@android:color/black"
+                    android:text="No tienes permisos para acceder a esta sección." />
+            </LinearLayout>
+        </LinearLayout>
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/permissionDeniedAccept"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginTop="12dp"
+            android:layout_gravity="center_horizontal"
+            android:minWidth="136dp"
+            android:minHeight="0dp"
+            android:background="@drawable/bg_button_soft_purple"
+            android:backgroundTint="@null"
+            android:elevation="0dp"
+            android:foreground="@null"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:paddingTop="0dp"
+            android:paddingBottom="0dp"
+            android:stateListAnimator="@null"
+            android:translationZ="0dp"
+            android:text="Aceptar"
+            android:textAllCaps="false"
+            android:textColor="@android:color/white" />
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

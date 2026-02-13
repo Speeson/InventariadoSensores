@@ -21,7 +21,9 @@ import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.common.NetworkStatusBar
+import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.google.gson.Gson
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.io.IOException
 import com.example.inventoryapp.ui.common.GradientIconUtil
@@ -36,6 +38,10 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 
 class ThresholdsActivity : AppCompatActivity() {
+    companion object {
+        @Volatile
+        private var cacheNoticeShownInOfflineSession = false
+    }
 
     private lateinit var binding: ActivityThresholdsBinding
     private lateinit var adapter: ThresholdListAdapter
@@ -78,11 +84,18 @@ class ThresholdsActivity : AppCompatActivity() {
         }
         binding.rvThresholds.layoutManager = LinearLayoutManager(this)
         binding.rvThresholds.adapter = adapter
+        lifecycleScope.launch {
+            NetworkModule.offlineState.collectLatest { offline ->
+                if (!offline) {
+                    cacheNoticeShownInOfflineSession = false
+                }
+            }
+        }
 
         binding.btnCreate.setOnClickListener { createThreshold() }
         binding.btnRefresh.setOnClickListener {
             invalidateBulkProductNamesCache()
-            loadThresholds()
+            loadThresholds(withSnack = true)
         }
         binding.layoutCreateThresholdHeader.setOnClickListener { toggleCreateForm() }
         binding.layoutSearchThresholdHeader.setOnClickListener { toggleSearchForm() }
@@ -182,9 +195,20 @@ class ThresholdsActivity : AppCompatActivity() {
         updatePageInfo(rows.size)
     }
 
-    private fun loadThresholds(productId: Int? = null, location: String? = null) {
+    private fun loadThresholds(productId: Int? = null, location: String? = null, withSnack: Boolean = false) {
         if (isLoading) return
         isLoading = true
+        var postLoadingNotice: (() -> Unit)? = null
+        val loading = if (withSnack) {
+            CreateUiFeedback.showListLoading(
+                this,
+                message = "Cargando thresholds",
+                animationRes = R.raw.loading_list,
+                minCycles = 2
+            )
+        } else {
+            null
+        }
         lifecycleScope.launch {
             try {
                 val filtersActive = hasActiveFilters()
@@ -239,6 +263,16 @@ class ThresholdsActivity : AppCompatActivity() {
                         adapter.submit(rows)
                         updatePageInfo(rows.size)
                     }
+                    if (withSnack) {
+                        postLoadingNotice = {
+                            UiNotifier.showBlockingTimed(
+                                this@ThresholdsActivity,
+                                "Thresholds cargados",
+                                R.drawable.loaded,
+                                timeoutMs = 2_500L
+                            )
+                        }
+                    }
                 } else {
                     UiNotifier.show(this@ThresholdsActivity, ApiErrorFormatter.format(res.code()))
                     val cachedOnError = cacheStore.get(cacheKey, ThresholdListResponseDto::class.java)
@@ -255,7 +289,11 @@ class ThresholdsActivity : AppCompatActivity() {
                         val rows = items.map { ThresholdRowUi(it, productNameById[it.productId]) }
                         adapter.submit(rows)
                         updatePageInfo(rows.size)
-                        UiNotifier.show(this@ThresholdsActivity, "Mostrando thresholds en cache")
+                        if (withSnack && !cacheNoticeShownInOfflineSession) {
+                            postLoadingNotice = { showThresholdsCacheNoticeOnce() }
+                        } else {
+                            showThresholdsCacheNoticeOnce()
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -286,7 +324,11 @@ class ThresholdsActivity : AppCompatActivity() {
                     val rows = items.map { ThresholdRowUi(it, productNameById[it.productId]) }
                     adapter.submit(rows)
                     updatePageInfo(rows.size)
-                    UiNotifier.show(this@ThresholdsActivity, "Mostrando thresholds en cache")
+                    if (withSnack && !cacheNoticeShownInOfflineSession) {
+                        postLoadingNotice = { showThresholdsCacheNoticeOnce() }
+                    } else {
+                        showThresholdsCacheNoticeOnce()
+                    }
                 } else {
                     val filtersActive = hasActiveFilters()
                     val effectiveOffset = if (filtersActive) 0 else currentOffset
@@ -310,6 +352,16 @@ class ThresholdsActivity : AppCompatActivity() {
                     }
                 }
             } finally {
+                if (loading != null) {
+                    val action = postLoadingNotice
+                    if (action != null) {
+                        loading.dismissThen { action() }
+                    } else {
+                        loading.dismiss()
+                    }
+                } else {
+                    postLoadingNotice?.invoke()
+                }
                 isLoading = false
                 if (pendingFilterApply) {
                     pendingFilterApply = false
@@ -328,68 +380,126 @@ class ThresholdsActivity : AppCompatActivity() {
         if (productId == null) { binding.etProductId.error = "Producto ID o nombre valido"; return }
         if (minQty == null || minQty < 0) { binding.etMinQty.error = "Min >= 0"; return }
 
+        val dto = ThresholdCreateDto(productId = productId, location = location, minQuantity = minQty)
         binding.btnCreate.isEnabled = false
+        val loading = CreateUiFeedback.showLoading(this, "threshold")
         lifecycleScope.launch {
+            var loadingHandled = false
             try {
-                val res = NetworkModule.api.createThreshold(
-                    ThresholdCreateDto(productId = productId, location = location, minQuantity = minQty)
-                )
+                val res = NetworkModule.api.createThreshold(dto)
                 if (res.code() == 401) { return@launch }
                 if (res.isSuccessful) {
+                    val created = res.body()
+                    val productName = productNameById[productId] ?: "Producto $productId"
+                    val details = if (created != null) {
+                        "ID: ${created.id}\nProducto: $productName\nUbicacion: ${created.location ?: "-"}\nUmbral: ${created.minQuantity}"
+                    } else {
+                        "Producto: $productName\nUbicacion: ${location ?: "-"}\nUmbral: $minQty"
+                    }
+                    loadingHandled = true
+                    loading.dismissThen {
+                        CreateUiFeedback.showCreatedPopup(
+                            this@ThresholdsActivity,
+                            "Threshold creado",
+                            details
+                        )
+                    }
                     binding.etProductId.setText("")
                     binding.etLocation.setText("")
                     binding.etMinQty.setText("")
                     cacheStore.invalidatePrefix("thresholds")
                     loadThresholds()
                 } else {
-                    UiNotifier.show(this@ThresholdsActivity, ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))
+                    val details = ApiErrorFormatter.format(res.code(), res.errorBody()?.string())
+                    loadingHandled = true
+                    loading.dismissThen {
+                        CreateUiFeedback.showErrorPopup(
+                            activity = this@ThresholdsActivity,
+                            title = "No se pudo crear threshold",
+                            details = details
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 if (e is IOException) {
-                    val dto = ThresholdCreateDto(productId = productId, location = location, minQuantity = minQty)
                     OfflineQueue(this@ThresholdsActivity).enqueue(PendingType.THRESHOLD_CREATE, gson.toJson(dto))
-                    UiNotifier.show(this@ThresholdsActivity, "Sin conexion. Threshold guardado offline")
+                    val productName = productNameById[productId] ?: "Producto $productId"
+                    loadingHandled = true
+                    loading.dismissThen {
+                        CreateUiFeedback.showCreatedPopup(
+                            this@ThresholdsActivity,
+                            "Threshold creado (offline)",
+                            "Producto: $productName\nUbicacion: ${location ?: "-"}\nUmbral: $minQty (offline)",
+                            accentColorRes = R.color.offline_text
+                        )
+                    }
                     loadThresholds()
                 } else {
+                    val details = "Ha ocurrido un error inesperado"
+                    loadingHandled = true
+                    loading.dismissThen {
+                        CreateUiFeedback.showErrorPopup(
+                            activity = this@ThresholdsActivity,
+                            title = "No se pudo crear threshold",
+                            details = details
+                        )
+                    }
                 }
             } finally {
+                if (!loadingHandled) {
+                    loading.dismiss()
+                }
                 binding.btnCreate.isEnabled = true
             }
         }
     }
 
     private fun showEditDialog(threshold: ThresholdResponseDto) {
-        val inputLocation = android.widget.EditText(this).apply {
-            hint = "Ubicacion"
-            setText(threshold.location ?: "")
-        }
-        val inputMin = android.widget.EditText(this).apply {
-            hint = "Min quantity"
-            inputType = android.text.InputType.TYPE_CLASS_NUMBER
-            setText(threshold.minQuantity.toString())
-        }
-        val container = android.widget.LinearLayout(this).apply {
-            orientation = android.widget.LinearLayout.VERTICAL
-            addView(inputLocation)
-            addView(inputMin)
-            setPadding(32, 16, 32, 0)
+        val view = layoutInflater.inflate(R.layout.dialog_edit_threshold, null)
+        val title = view.findViewById<android.widget.TextView>(R.id.tvEditThresholdTitle)
+        val meta = view.findViewById<android.widget.TextView>(R.id.tvEditThresholdMeta)
+        val inputLocation = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etEditThresholdLocation)
+        val inputMin = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etEditThresholdMinQty)
+        val btnSave = view.findViewById<android.widget.Button>(R.id.btnEditThresholdSave)
+        val btnDelete = view.findViewById<android.widget.Button>(R.id.btnEditThresholdDelete)
+        val btnClose = view.findViewById<android.widget.ImageButton>(R.id.btnEditThresholdClose)
+
+        title.text = "Editar threshold #${threshold.id}"
+        meta.text = "Producto ID: ${threshold.productId}"
+        inputLocation.setText(threshold.location ?: "")
+        inputMin.setText(threshold.minQuantity.toString())
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(view)
+            .create()
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        btnSave.setOnClickListener {
+            val newLoc = inputLocation.text?.toString()?.trim().orEmpty().ifBlank { null }
+            val newMin = inputMin.text?.toString()?.trim()?.toIntOrNull()
+            if (newMin == null || newMin < 0) {
+                inputMin.error = "Min >= 0"
+                return@setOnClickListener
+            }
+            updateThreshold(threshold.id, newLoc, newMin)
+            dialog.dismiss()
         }
 
-        AlertDialog.Builder(this)
-            .setTitle("Editar threshold #${threshold.id}")
-            .setView(container)
-            .setNegativeButton("Cancelar", null)
-            .setNeutralButton("Eliminar") { _, _ -> deleteThreshold(threshold.id) }
-            .setPositiveButton("Guardar") { _, _ ->
-                val newLoc = inputLocation.text.toString().trim().ifBlank { null }
-                val newMin = inputMin.text.toString().trim().toIntOrNull()
-                if (newMin == null || newMin < 0) {
-                    UiNotifier.show(this, "Min >= 0")
-                } else {
-                    updateThreshold(threshold.id, newLoc, newMin)
+        btnDelete.setOnClickListener {
+            AlertDialog.Builder(this)
+                .setTitle("Eliminar threshold")
+                .setMessage("Se eliminara el threshold #${threshold.id}. Continuar?")
+                .setNegativeButton("Cancelar", null)
+                .setPositiveButton("Eliminar") { _, _ ->
+                    deleteThreshold(threshold.id)
+                    dialog.dismiss()
                 }
-            }
-            .show()
+                .show()
+        }
+
+        btnClose.setOnClickListener { dialog.dismiss() }
+
+        dialog.show()
     }
 
     private fun updateThreshold(id: Int, location: String?, minQty: Int) {
@@ -558,6 +668,17 @@ class ThresholdsActivity : AppCompatActivity() {
             return trimmed.substringAfter(") ").trim()
         }
         return trimmed
+    }
+
+    private fun showThresholdsCacheNoticeOnce() {
+        if (cacheNoticeShownInOfflineSession) return
+        UiNotifier.showBlockingTimed(
+            this,
+            "Mostrando thresholds en cache y pendientes offline",
+            R.drawable.sync,
+            timeoutMs = 3_200L
+        )
+        cacheNoticeShownInOfflineSession = true
     }
 
     private fun hasActiveFilters(): Boolean {

@@ -9,6 +9,7 @@ import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.inventoryapp.data.local.cache.CacheStore
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.model.MovementTypeDto
 import com.example.inventoryapp.databinding.ActivityRotationBinding
@@ -16,6 +17,8 @@ import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.common.SendSnack
 import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.common.UiNotifier
+import com.example.inventoryapp.ui.common.CreateUiFeedback
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import com.example.inventoryapp.ui.common.GradientIconUtil
 import android.graphics.drawable.GradientDrawable
@@ -24,17 +27,24 @@ import android.view.View
 import androidx.transition.AutoTransition
 import androidx.transition.TransitionManager
 import android.view.inputmethod.InputMethodManager
+import java.io.IOException
 
 class RotationActivity : AppCompatActivity() {
+    companion object {
+        @Volatile
+        private var cacheNoticeShownInOfflineSession = false
+    }
 
     private lateinit var binding: ActivityRotationBinding
     private lateinit var snack: SendSnack
     private lateinit var adapter: RotationAdapter
+    private lateinit var cacheStore: CacheStore
 
     private val pageSize = 5
     private var currentPage = 0
     private var allRows: List<RotationRow> = emptyList()
     private var filteredRows: List<RotationRow> = emptyList()
+    private val rotationCacheKey = "rotation:rows:v1"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,6 +58,7 @@ class RotationActivity : AppCompatActivity() {
 
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
         snack = SendSnack(binding.root)
+        cacheStore = CacheStore.getInstance(this)
 
         binding.btnBack.setOnClickListener { finish() }
         binding.btnAlertsQuick.setOnClickListener {
@@ -57,6 +68,13 @@ class RotationActivity : AppCompatActivity() {
         adapter = RotationAdapter(emptyList())
         binding.rvRotation.layoutManager = LinearLayoutManager(this)
         binding.rvRotation.adapter = adapter
+        lifecycleScope.launch {
+            NetworkModule.offlineState.collectLatest { offline ->
+                if (!offline) {
+                    cacheNoticeShownInOfflineSession = false
+                }
+            }
+        }
 
         binding.btnRefreshRotation.setOnClickListener { loadRotation(withSnack = true) }
         binding.layoutSearchRotationHeader.setOnClickListener { toggleSearchForm() }
@@ -98,36 +116,21 @@ class RotationActivity : AppCompatActivity() {
     }
 
     private fun ensureRotationAccessThenLoad() {
-        lifecycleScope.launch {
-            try {
-                val res = NetworkModule.api.me()
-                if (res.code() == 401) return@launch
-                if (res.isSuccessful && res.body() != null) {
-                    val role = res.body()!!.role
-                    if (role == "MANAGER" || role == "ADMIN") {
-                        loadRotation(withSnack = false)
-                    } else {
-                        com.example.inventoryapp.ui.common.UiNotifier.showBlocking(
-                            this@RotationActivity,
-                            "Permisos insuficientes",
-                            "No tienes permisos para acceder a esta secci�n.",
-                            com.example.inventoryapp.R.drawable.ic_lock
-                        )
-                        finish()
-                    }
-                } else {
-                    snack.showError("No se pudo validar permisos (${res.code()}).")
-                    finish()
-                }
-            } catch (e: Exception) {
-                snack.showError(UiNotifier.buildConnectionMessage(this@RotationActivity, e.message))
-                finish()
-            }
-        }
+        loadRotation(withSnack = false)
     }
 
     private fun loadRotation(withSnack: Boolean) {
-        if (withSnack) snack.showSending("Cargando rotaci�n...")
+        var postLoadingNotice: (() -> Unit)? = null
+        val loading = if (withSnack) {
+            CreateUiFeedback.showListLoading(
+                this,
+                message = "Cargando traslados",
+                animationRes = R.raw.loading_list,
+                minCycles = 2
+            )
+        } else {
+            null
+        }
 
         lifecycleScope.launch {
             try {
@@ -137,11 +140,11 @@ class RotationActivity : AppCompatActivity() {
                 if (movRes.code() == 401 || prodRes.code() == 401) return@launch
 
                 if (movRes.code() == 403 || prodRes.code() == 403) {
-                    com.example.inventoryapp.ui.common.UiNotifier.showBlocking(
+                    UiNotifier.showBlocking(
                         this@RotationActivity,
                         "Permisos insuficientes",
-                        "No tienes permisos para acceder a esta secci�n.",
-                        com.example.inventoryapp.R.drawable.ic_lock
+                        "No tienes permisos para acceder a esta secci?n.",
+                        R.drawable.ic_lock
                     )
                     return@launch
                 }
@@ -180,14 +183,83 @@ class RotationActivity : AppCompatActivity() {
                     )
                 }.sortedByDescending { it.createdAt }
 
+                cacheStore.put(rotationCacheKey, RotationCachePayload(rows))
                 allRows = rows
                 applySearchFilters(resetPage = true)
-                if (withSnack) snack.showSuccess("OK: Rotaci�n cargada")
+                if (withSnack) {
+                    postLoadingNotice = {
+                        UiNotifier.showBlockingTimed(
+                            this@RotationActivity,
+                            "Traslados cargados",
+                            R.drawable.loaded,
+                            timeoutMs = 2_500L
+                        )
+                    }
+                }
 
             } catch (e: Exception) {
-                snack.showError(UiNotifier.buildConnectionMessage(this@RotationActivity, e.message))
+                val cachedRows = loadCachedRotationRows()
+                if (e is IOException) {
+                    if (cachedRows.isNotEmpty() || allRows.isNotEmpty()) {
+                        if (cachedRows.isNotEmpty()) {
+                            allRows = cachedRows
+                            applySearchFilters(resetPage = true)
+                        }
+                        if (withSnack && !cacheNoticeShownInOfflineSession) {
+                            postLoadingNotice = { showRotationCacheNoticeOnce() }
+                        } else {
+                            showRotationCacheNoticeOnce()
+                        }
+                    } else {
+                        UiNotifier.showBlockingTimed(
+                            this@RotationActivity,
+                            "Sin conexión. No hay traslados en cache.",
+                            R.drawable.offline,
+                            timeoutMs = 3_200L
+                        )
+                    }
+                } else if (cachedRows.isNotEmpty() || allRows.isNotEmpty()) {
+                    if (cachedRows.isNotEmpty()) {
+                        allRows = cachedRows
+                        applySearchFilters(resetPage = true)
+                    }
+                    if (withSnack && !cacheNoticeShownInOfflineSession) {
+                        postLoadingNotice = { showRotationCacheNoticeOnce() }
+                    } else {
+                        showRotationCacheNoticeOnce()
+                    }
+                } else {
+                    snack.showError(UiNotifier.buildConnectionMessage(this@RotationActivity, e.message))
+                }
+            } finally {
+                if (loading != null) {
+                    val action = postLoadingNotice
+                    if (action != null) {
+                        loading.dismissThen { action() }
+                    } else {
+                        loading.dismiss()
+                    }
+                } else {
+                    postLoadingNotice?.invoke()
+                }
             }
         }
+    }
+
+    private suspend fun loadCachedRotationRows(): List<RotationRow> {
+        val cached = cacheStore.get(rotationCacheKey, RotationCachePayload::class.java)
+        return cached?.items.orEmpty().sortedByDescending { it.createdAt }
+    }
+
+    private fun showRotationCacheNoticeOnce() {
+        if (cacheNoticeShownInOfflineSession) return
+        UiNotifier.showBlockingTimed(
+            this,
+            "Mostrando traslados en cache y pendientes offline",
+            R.drawable.sync,
+            timeoutMs = 3_200L
+        )
+        cacheNoticeShownInOfflineSession = true
     }
 
     private fun applySearchFilters(resetPage: Boolean = true) {
@@ -386,4 +458,8 @@ class RotationActivity : AppCompatActivity() {
     }
 
 }
+
+data class RotationCachePayload(
+    val items: List<RotationRow>
+)
 

@@ -2,6 +2,7 @@ package com.example.inventoryapp.ui.movements
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.appcompat.widget.TooltipCompat
 import androidx.recyclerview.widget.RecyclerView
 import androidx.core.content.ContextCompat
 import com.example.inventoryapp.R
@@ -55,6 +56,10 @@ class MovementsListAdapter : RecyclerView.Adapter<MovementsListAdapter.VH>() {
         holder.binding.ivIcon.alpha = if (row.isPending) 0.7f else 1.0f
         holder.binding.ivWarning.visibility =
             if (row.isPending) android.view.View.VISIBLE else android.view.View.GONE
+        holder.binding.ivWarning.setImageResource(R.drawable.sync)
+        val pendingTooltip = "Guardado en modo offline, pendiente de sincronizacion"
+        TooltipCompat.setTooltipText(holder.binding.ivWarning, if (row.isPending) pendingTooltip else null)
+        holder.binding.ivWarning.contentDescription = if (row.isPending) pendingTooltip else "Pendiente"
         val offlineColor = ContextCompat.getColor(holder.itemView.context, R.color.offline_text)
         if (row.isPending) {
             holder.binding.tvTypeTag.setTextColor(offlineColor)

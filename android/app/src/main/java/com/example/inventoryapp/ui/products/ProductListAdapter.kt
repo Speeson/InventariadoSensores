@@ -14,6 +14,7 @@ import android.graphics.Shader
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.appcompat.widget.TooltipCompat
 import androidx.recyclerview.widget.RecyclerView
 import androidx.core.content.ContextCompat
 import com.example.inventoryapp.R
@@ -63,6 +64,10 @@ class ProductListAdapter(
         val isOffline = p.id < 0 || p.name.contains("(offline)", ignoreCase = true)
         holder.binding.ivOfflineAlert.visibility =
             if (isOffline) android.view.View.VISIBLE else android.view.View.GONE
+        holder.binding.ivOfflineAlert.setImageResource(R.drawable.sync)
+        val pendingTooltip = "Guardado en modo offline, pendiente de sincronizacion"
+        TooltipCompat.setTooltipText(holder.binding.ivOfflineAlert, if (isOffline) pendingTooltip else null)
+        holder.binding.ivOfflineAlert.contentDescription = if (isOffline) pendingTooltip else "Pendiente"
         val offlineColor = ContextCompat.getColor(holder.itemView.context, R.color.offline_text)
         if (isOffline) {
             holder.binding.tvName.setTextColor(offlineColor)

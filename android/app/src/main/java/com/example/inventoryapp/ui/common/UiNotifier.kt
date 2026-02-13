@@ -19,6 +19,7 @@ import com.google.android.material.snackbar.Snackbar
 import androidx.appcompat.app.AlertDialog
 import android.content.Context
 import com.example.inventoryapp.BuildConfig
+import com.airbnb.lottie.LottieAnimationView
 
 object UiNotifier {
     private fun canShowDialog(activity: Activity): Boolean {
@@ -41,6 +42,10 @@ object UiNotifier {
     }
 
     fun showBlocking(activity: Activity, title: String, message: String, iconRes: Int? = null) {
+        if (iconRes == R.drawable.ic_lock) {
+            showPermissionDeniedDialog(activity, title, message)
+            return
+        }
         val builder = AlertDialog.Builder(activity)
             .setTitle(title)
             .setMessage(message)
@@ -49,6 +54,39 @@ object UiNotifier {
             builder.setIcon(iconRes)
         }
         builder.show()
+    }
+
+    private fun showPermissionDeniedDialog(activity: Activity, title: String, message: String) {
+        if (!canShowDialog(activity)) return
+
+        val view = LayoutInflater.from(activity).inflate(R.layout.dialog_permission_denied, null)
+        val titleView = view.findViewById<TextView>(R.id.permissionDeniedTitle)
+        val messageView = view.findViewById<TextView>(R.id.permissionDeniedMessage)
+        val lottie = view.findViewById<LottieAnimationView>(R.id.permissionDeniedLottie)
+        titleView.text = title
+        messageView.text = message
+        lottie.repeatCount = com.airbnb.lottie.LottieDrawable.INFINITE
+        lottie.playAnimation()
+
+        val dialog = Dialog(activity)
+        dialog.setContentView(view)
+        dialog.setCancelable(true)
+
+        val wasShown = runCatching {
+            dialog.show()
+            true
+        }.getOrDefault(false)
+        if (!wasShown) return
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog.window?.setLayout(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT
+        )
+        dialog.window?.setGravity(Gravity.CENTER)
+
+        view.findViewById<android.widget.Button>(R.id.permissionDeniedAccept)?.setOnClickListener {
+            dismissSafely(dialog)
+        }
     }
 
     fun showBlockingTimed(

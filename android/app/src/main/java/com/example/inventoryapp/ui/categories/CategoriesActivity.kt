@@ -31,9 +31,15 @@ import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.google.gson.Gson
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.io.IOException
 class CategoriesActivity : AppCompatActivity() {
+    companion object {
+        @Volatile
+        private var cacheNoticeShownInOfflineSession = false
+    }
+
     private lateinit var binding: ActivityCategoriesBinding
     private lateinit var adapter: CategoryListAdapter
     private lateinit var cacheStore: CacheStore
@@ -65,6 +71,13 @@ class CategoriesActivity : AppCompatActivity() {
         }
         binding.rvCategories.layoutManager = LinearLayoutManager(this)
         binding.rvCategories.adapter = adapter
+        lifecycleScope.launch {
+            NetworkModule.offlineState.collectLatest { offline ->
+                if (!offline) {
+                    cacheNoticeShownInOfflineSession = false
+                }
+            }
+        }
         binding.layoutCreateCategoryHeader.setOnClickListener { toggleCreateForm() }
         binding.layoutSearchCategoryHeader.setOnClickListener { toggleSearchForm() }
         binding.btnCreateCategory.setOnClickListener { createCategory() }
@@ -165,6 +178,17 @@ class CategoriesActivity : AppCompatActivity() {
     private fun loadCategories(name: String? = searchName, withSnack: Boolean = false) {
         if (isLoading) return
         isLoading = true
+        var postLoadingNotice: (() -> Unit)? = null
+        val loading = if (withSnack) {
+            CreateUiFeedback.showListLoading(
+                this,
+                message = "Cargando categorias",
+                animationRes = R.raw.loading_list,
+                minCycles = 2
+            )
+        } else {
+            null
+        }
         lifecycleScope.launch {
             try {
                 val includePending = name == null
@@ -204,6 +228,16 @@ class CategoriesActivity : AppCompatActivity() {
                     totalCount = res.body()!!.total + pendingTotalCount
                     adapter.submit(items)
                     updatePageInfo(items.size, pending.size)
+                    if (withSnack) {
+                        postLoadingNotice = {
+                            UiNotifier.showBlockingTimed(
+                                this@CategoriesActivity,
+                                "Categorias cargadas",
+                                R.drawable.loaded,
+                                timeoutMs = 2_500L
+                            )
+                        }
+                    }
                 } else {
                     UiNotifier.show(this@CategoriesActivity, ApiErrorFormatter.format(res.code()))
                     val cachedOnError = cacheStore.get(cacheKey, CategoryListResponseDto::class.java)
@@ -217,7 +251,11 @@ class CategoriesActivity : AppCompatActivity() {
                         totalCount = cachedOnError.total + pendingTotalCount
                         adapter.submit(items)
                         updatePageInfo(items.size, pending.size)
-                        UiNotifier.show(this@CategoriesActivity, "Mostrando categorías en caché")
+                        if (withSnack && !cacheNoticeShownInOfflineSession) {
+                            postLoadingNotice = { showCategoriesCacheNoticeOnce() }
+                        } else {
+                            showCategoriesCacheNoticeOnce()
+                        }
                     } else {
                         val pending = pendingCategoriesForPage(
                             offset = currentOffset,
@@ -253,7 +291,11 @@ class CategoriesActivity : AppCompatActivity() {
                     totalCount = cachedOnError.total + pendingTotalCount
                     adapter.submit(items)
                     updatePageInfo(items.size, pending.size)
-                    UiNotifier.show(this@CategoriesActivity, "Mostrando categorías en caché")
+                    if (withSnack && !cacheNoticeShownInOfflineSession) {
+                        postLoadingNotice = { showCategoriesCacheNoticeOnce() }
+                    } else {
+                        showCategoriesCacheNoticeOnce()
+                    }
                 } else {
                     val pending = pendingCategoriesForPage(
                         offset = currentOffset,
@@ -265,9 +307,30 @@ class CategoriesActivity : AppCompatActivity() {
                     updatePageInfo(pending.size, pending.size)
                 }
             } finally {
+                if (loading != null) {
+                    val action = postLoadingNotice
+                    if (action != null) {
+                        loading.dismissThen { action() }
+                    } else {
+                        loading.dismiss()
+                    }
+                } else {
+                    postLoadingNotice?.invoke()
+                }
                 isLoading = false
             }
         }
+    }
+
+    private fun showCategoriesCacheNoticeOnce() {
+        if (cacheNoticeShownInOfflineSession) return
+        UiNotifier.showBlockingTimed(
+            this,
+            "Mostrando categorias en cache y pendientes offline",
+            R.drawable.sync,
+            timeoutMs = 3_200L
+        )
+        cacheNoticeShownInOfflineSession = true
     }
     private fun createCategory() {
         val name = binding.etCategoryName.text.toString().trim()
