@@ -583,12 +583,22 @@ class HomeActivity : AppCompatActivity() {
     }
 
 private fun confirmLogout() {
-        AlertDialog.Builder(this)
-            .setTitle("Cerrar sesiÃ³n")
-            .setMessage("Â¿Seguro que quieres cerrar sesiÃ³n?")
-            .setNegativeButton("Cancelar", null)
-            .setPositiveButton("Cerrar") { _, _ -> logout() }
-            .show()
+        val view = layoutInflater.inflate(R.layout.dialog_logout_confirm, null)
+        val dialog = AlertDialog.Builder(this)
+            .setView(view)
+            .setCancelable(true)
+            .create()
+
+        view.findViewById<android.widget.Button>(R.id.btnLogoutCancel)?.setOnClickListener {
+            dialog.dismiss()
+        }
+        view.findViewById<android.widget.Button>(R.id.btnLogoutConfirm)?.setOnClickListener {
+            dialog.dismiss()
+            logout()
+        }
+
+        dialog.show()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
     }
 
     private fun logout() {
