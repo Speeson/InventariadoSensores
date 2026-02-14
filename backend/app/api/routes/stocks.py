@@ -5,10 +5,11 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, require_roles
 from app.cache.redis_cache import cache_get, cache_set, cache_invalidate_prefix, make_key
 from app.db.deps import get_db
-from app.models.enums import UserRole
-from app.repositories import stock_repo, product_repo
+from app.models.enums import UserRole, Entity, ActionType
+from app.repositories import stock_repo, product_repo, audit_log_repo
 from app.schemas.stock import StockResponse, StockUpdate, StockCreate
 from app.services import inventory_service
+from app.models.user import User
 
 
 class StockListResponse(BaseModel):
@@ -90,9 +91,12 @@ def get_stock(stock_id: int, db: Session = Depends(get_db), user=Depends(get_cur
     "/",
     response_model=StockResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value))],
 )
-def create_stock(payload: StockCreate, db: Session = Depends(get_db)):
+def create_stock(
+    payload: StockCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value)),
+):
     product = product_repo.get(db, payload.product_id)
     if not product:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Producto no existe")
@@ -108,15 +112,26 @@ def create_stock(payload: StockCreate, db: Session = Depends(get_db)):
     )
     cache_invalidate_prefix("stocks:list")
     cache_invalidate_prefix("stocks:detail")
+    audit_log_repo.create_log(
+        db,
+        entity=Entity.STOCK,
+        action=ActionType.CREATE,
+        user_id=user.id,
+        details=f"stock_id={stock.id} product_id={stock.product_id} location={stock.location}",
+    )
     return stock
 
 
 @router.patch(
     "/{stock_id}",
     response_model=StockResponse,
-    dependencies=[Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value))],
 )
-def update_stock(stock_id: int, payload: StockUpdate, db: Session = Depends(get_db)):
+def update_stock(
+    stock_id: int,
+    payload: StockUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value)),
+):
     stock = stock_repo.get(db, stock_id)
     if not stock:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Stock no encontrado")
@@ -137,4 +152,11 @@ def update_stock(stock_id: int, payload: StockUpdate, db: Session = Depends(get_
         inventory_service.maybe_create_alerts_for_stock_update(db, stock=stock, old_quantity=old_quantity)
     cache_invalidate_prefix("stocks:list")
     cache_invalidate_prefix("stocks:detail")
+    audit_log_repo.create_log(
+        db,
+        entity=Entity.STOCK,
+        action=ActionType.UPDATE,
+        user_id=user.id,
+        details=f"stock_id={stock.id} product_id={stock.product_id} location={stock.location} quantity={stock.quantity}",
+    )
     return stock
