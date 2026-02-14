@@ -59,6 +59,7 @@ class ProductListActivity : AppCompatActivity() {
     private var filteredItems: List<ProductResponseDto> = emptyList()
     private var filteredOffset = 0
     private var pendingFilterApply = false
+    private var pendingSearchNotFoundDialog = false
 
     private lateinit var adapter: ProductListAdapter
     private var isLoading = false
@@ -257,7 +258,7 @@ class ProductListActivity : AppCompatActivity() {
                 if (res.isSuccessful && res.body() != null) {
                     cacheStore.put(cacheKey, res.body()!!)
                     val pageItems = res.body()!!.items
-                    if (pageItems.isEmpty() && currentOffset == 0) {
+                    if (pageItems.isEmpty() && currentOffset == 0 && !filtersActive) {
                         UiNotifier.show(this@ProductListActivity, "Sin resultados")
                     }
                     val pending = pendingProductsForPage(
@@ -369,7 +370,9 @@ class ProductListActivity : AppCompatActivity() {
                 isLoading = false
                 if (pendingFilterApply) {
                     pendingFilterApply = false
-                    applySearchFiltersInternal(allowReload = false)
+                    val showDialog = pendingSearchNotFoundDialog
+                    pendingSearchNotFoundDialog = false
+                    applySearchFiltersInternal(allowReload = false, showNotFoundDialog = showDialog)
                 }
             }
         }
@@ -653,10 +656,13 @@ class ProductListActivity : AppCompatActivity() {
     }
 
     private fun applySearchFilters() {
-        applySearchFiltersInternal(allowReload = true)
+        applySearchFiltersInternal(allowReload = true, showNotFoundDialog = true)
     }
 
-    private fun applySearchFiltersInternal(allowReload: Boolean) {
+    private fun applySearchFiltersInternal(
+        allowReload: Boolean,
+        showNotFoundDialog: Boolean = false
+    ) {
         val productRaw = binding.etSearchProduct.text.toString().trim()
         val skuRaw = binding.etSearchSku.text.toString().trim()
         val barcodeRaw = binding.etSearchBarcode.text.toString().trim()
@@ -664,6 +670,7 @@ class ProductListActivity : AppCompatActivity() {
 
         if (allowReload && !isLoading && (currentOffset > 0 || totalCount > allItems.size)) {
             pendingFilterApply = true
+            pendingSearchNotFoundDialog = showNotFoundDialog
             currentOffset = 0
             loadProducts(withSnack = false)
             return
@@ -697,6 +704,14 @@ class ProductListActivity : AppCompatActivity() {
         filteredItems = filtered
         filteredOffset = 0
         applyFilteredPage()
+        if (showNotFoundDialog && hasActiveFilters() && filtered.isEmpty()) {
+            CreateUiFeedback.showErrorPopup(
+                activity = this,
+                title = "No se encontraron productos",
+                details = buildProductSearchNotFoundDetails(productRaw, skuRaw, barcodeRaw, categoryRaw),
+                animationRes = R.raw.notfound
+            )
+        }
     }
 
     private fun clearSearchFilters() {
@@ -734,6 +749,31 @@ class ProductListActivity : AppCompatActivity() {
             binding.etSearchSku.text?.isNotBlank() == true ||
             binding.etSearchBarcode.text?.isNotBlank() == true ||
             binding.etSearchCategory.text?.isNotBlank() == true
+    }
+
+    private fun buildProductSearchNotFoundDetails(
+        productRaw: String,
+        skuRaw: String,
+        barcodeRaw: String,
+        categoryRaw: String
+    ): String {
+        val parts = mutableListOf<String>()
+        if (productRaw.isNotBlank()) {
+            val label = if (productRaw.toIntOrNull() != null) {
+                "ID $productRaw"
+            } else {
+                "\"$productRaw\""
+            }
+            parts.add("producto $label")
+        }
+        if (skuRaw.isNotBlank()) parts.add("SKU \"$skuRaw\"")
+        if (barcodeRaw.isNotBlank()) parts.add("barcode \"$barcodeRaw\"")
+        if (categoryRaw.isNotBlank()) parts.add("categoría \"$categoryRaw\"")
+        return if (parts.isEmpty()) {
+            "No se encontraron productos con los filtros actuales."
+        } else {
+            "No se encontraron productos para ${parts.joinToString(separator = ", ")}."
+        }
     }
 
     private fun updatePageInfo(pageSizeLoaded: Int, total: Int = totalCount, filtered: Boolean = false) {

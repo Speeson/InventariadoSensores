@@ -222,14 +222,15 @@ object CreateUiFeedback {
         title: String,
         details: String,
         autoDismissMs: Long = 3200L,
-        accentColorRes: Int? = null
+        accentColorRes: Int? = null,
+        animationRes: Int = R.raw.wrong
     ) {
         showAnimatedResultPopup(
             activity = activity,
             title = title,
             details = details,
             layoutRes = R.layout.dialog_create_failure,
-            animationRes = R.raw.wrong,
+            animationRes = animationRes,
             autoDismissMs = autoDismissMs,
             accentColorRes = accentColorRes
         )

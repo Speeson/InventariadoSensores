@@ -151,7 +151,11 @@ class CategoriesActivity : AppCompatActivity() {
                     totalCount = 1
                     updatePageInfo(items.size, 0)
                 } else {
-                    UiNotifier.show(this@CategoriesActivity, ApiErrorFormatter.format(res.code()))
+                    if (res.code() == 404) {
+                        showCategoryNotFoundDialog(query = id.toString(), byId = true)
+                    } else {
+                        UiNotifier.show(this@CategoriesActivity, ApiErrorFormatter.format(res.code()))
+                    }
                     adapter.submit(emptyList())
                     totalCount = 0
                     updatePageInfo(0, 0)
@@ -228,6 +232,9 @@ class CategoriesActivity : AppCompatActivity() {
                     totalCount = res.body()!!.total + pendingTotalCount
                     adapter.submit(items)
                     updatePageInfo(items.size, pending.size)
+                    if (name != null && currentOffset == 0 && res.body()!!.items.isEmpty()) {
+                        showCategoryNotFoundDialog(query = name, byId = false)
+                    }
                     if (withSnack) {
                         postLoadingNotice = {
                             UiNotifier.showBlockingTimed(
@@ -358,7 +365,16 @@ class CategoriesActivity : AppCompatActivity() {
                     cacheStore.invalidatePrefix("categories")
                     loadCategories()
                 } else {
-                    UiNotifier.show(this@CategoriesActivity, ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))
+                    val raw = runCatching { res.errorBody()?.string() }.getOrNull()
+                    val details = formatCreateCategoryError(res.code(), raw)
+                    loadingHandled = true
+                    loading.dismissThen {
+                        CreateUiFeedback.showErrorPopup(
+                            activity = this@CategoriesActivity,
+                            title = "No se pudo crear categoría",
+                            details = details
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 if (e is IOException) {
@@ -375,6 +391,14 @@ class CategoriesActivity : AppCompatActivity() {
                     currentOffset = 0
                     loadCategories()
                 } else {
+                    loadingHandled = true
+                    loading.dismissThen {
+                        CreateUiFeedback.showErrorPopup(
+                            activity = this@CategoriesActivity,
+                            title = "No se pudo crear categoría",
+                            details = "Ha ocurrido un error inesperado al crear la categoría."
+                        )
+                    }
                 }
             } finally {
                 if (!loadingHandled) {
@@ -426,6 +450,11 @@ class CategoriesActivity : AppCompatActivity() {
                 val res = NetworkModule.api.updateCategory(id, CategoryUpdateDto(name = name))
                 if (res.code() == 401) { return@launch }
                 if (res.isSuccessful) {
+                    CreateUiFeedback.showCreatedPopup(
+                        this@CategoriesActivity,
+                        "Categoría actualizada",
+                        "Categoría actualizada a: $name"
+                    )
                     currentOffset = 0
                     cacheStore.invalidatePrefix("categories")
                     loadCategories()
@@ -438,6 +467,55 @@ class CategoriesActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun showCategoryNotFoundDialog(query: String, byId: Boolean) {
+        val details = if (byId) {
+            "Categoría ID $query no encontrada"
+        } else {
+            "Categoría \"$query\" no encontrada"
+        }
+        CreateUiFeedback.showErrorPopup(
+            activity = this,
+            title = "Categoría no encontrada",
+            details = details,
+            animationRes = R.raw.notfound
+        )
+    }
+
+    private fun formatCreateCategoryError(code: Int, rawError: String?): String {
+        val raw = rawError?.trim().orEmpty()
+        val normalized = raw.lowercase()
+        val duplicateName =
+            (normalized.contains("name") || normalized.contains("nombre") || normalized.contains("categor")) &&
+                (normalized.contains("existe") || normalized.contains("exists") || normalized.contains("duplic"))
+
+        if (duplicateName) {
+            return buildString {
+                append("Ya existe una categoría con ese nombre.")
+                if (raw.isNotBlank()) append("\nDetalle: ${compactCategoryErrorDetail(raw)}")
+                if (code > 0) append("\nHTTP $code")
+            }
+        }
+
+        return buildString {
+            append(
+                when (code) {
+                    400, 422 -> "Datos inválidos para crear categoría."
+                    403 -> "No tienes permisos para crear categorías."
+                    409 -> "Conflicto al crear categoría."
+                    500 -> "Error interno del servidor al crear categoría."
+                    else -> "No se pudo crear la categoría."
+                }
+            )
+            if (raw.isNotBlank()) append("\nDetalle: ${compactCategoryErrorDetail(raw)}")
+            if (code > 0) append("\nHTTP $code")
+        }
+    }
+
+    private fun compactCategoryErrorDetail(raw: String, maxLen: Int = 180): String {
+        val singleLine = raw.replace("\\s+".toRegex(), " ").trim()
+        return if (singleLine.length <= maxLen) singleLine else singleLine.take(maxLen) + "..."
     }
     private fun deleteCategory(id: Int) {
         lifecycleScope.launch {

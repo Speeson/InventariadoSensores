@@ -64,6 +64,7 @@ class EventsActivity : AppCompatActivity() {
     private var filteredItems: List<EventRowUi> = emptyList()
     private var filteredOffset = 0
     private var pendingFilterApply = false
+    private var pendingSearchNotFoundDialog = false
     private var bulkProductNamesCache: Map<Int, String>? = null
     private var bulkProductNamesCacheAtMs: Long = 0L
     private val bulkProductNamesCacheTtlMs = 30_000L
@@ -295,16 +296,20 @@ snack = SendSnack(binding.root)
     }
 
     private fun applySearchFilters() {
-        applySearchFiltersInternal(allowReload = true)
+        applySearchFiltersInternal(allowReload = true, showNotFoundDialog = true)
     }
 
-    private fun applySearchFiltersInternal(allowReload: Boolean) {
+    private fun applySearchFiltersInternal(
+        allowReload: Boolean,
+        showNotFoundDialog: Boolean = false
+    ) {
         val typeRawInput = binding.etSearchType.text.toString().trim().uppercase()
         val productRaw = binding.etSearchProduct.text.toString().trim()
         val sourceRawInput = binding.etSearchSource.text.toString().trim().uppercase()
 
         if (allowReload && !isLoading && (currentOffset > 0 || totalCount > allItems.size)) {
             pendingFilterApply = true
+            pendingSearchNotFoundDialog = showNotFoundDialog
             currentOffset = 0
             loadEvents(withSnack = false)
             return
@@ -347,6 +352,14 @@ snack = SendSnack(binding.root)
         filteredItems = filtered
         filteredOffset = 0
         applyFilteredPage()
+        if (showNotFoundDialog && hasActiveFilters() && filtered.isEmpty()) {
+            CreateUiFeedback.showErrorPopup(
+                activity = this,
+                title = "No se encontraron eventos",
+                details = buildEventSearchNotFoundDetails(typeRawInput, sourceRawInput, productRaw),
+                animationRes = R.raw.notfound
+            )
+        }
     }
 
     private fun hideKeyboard() {
@@ -604,7 +617,9 @@ snack = SendSnack(binding.root)
                 isLoading = false
                 if (pendingFilterApply) {
                     pendingFilterApply = false
-                    applySearchFiltersInternal(allowReload = false)
+                    val showDialog = pendingSearchNotFoundDialog
+                    pendingSearchNotFoundDialog = false
+                    applySearchFiltersInternal(allowReload = false, showNotFoundDialog = showDialog)
                 }
             }
         }
@@ -933,6 +948,38 @@ snack = SendSnack(binding.root)
         return binding.etSearchType.text?.isNotBlank() == true ||
             binding.etSearchProduct.text?.isNotBlank() == true ||
             binding.etSearchSource.text?.isNotBlank() == true
+    }
+
+    private fun buildEventSearchNotFoundDetails(
+        typeRawInput: String,
+        sourceRawInput: String,
+        productRaw: String
+    ): String {
+        val parts = mutableListOf<String>()
+        if (typeRawInput.isNotBlank()) {
+            val typeLabel = when (typeRawInput) {
+                "IN", "SENSOR_IN" -> "de tipo SENSOR_IN (entrada)"
+                "OUT", "SENSOR_OUT" -> "de tipo SENSOR_OUT (salida)"
+                else -> "de tipo $typeRawInput"
+            }
+            parts.add(typeLabel)
+        }
+        if (sourceRawInput.isNotBlank()) {
+            parts.add("de la fuente $sourceRawInput")
+        }
+        if (productRaw.isNotBlank()) {
+            val productLabel = if (productRaw.toIntOrNull() != null) {
+                "del producto ID $productRaw"
+            } else {
+                "del producto \"$productRaw\""
+            }
+            parts.add(productLabel)
+        }
+        return if (parts.isEmpty()) {
+            "No se encontraron eventos con los filtros actuales."
+        } else {
+            "No se encontraron eventos ${parts.joinToString(separator = " ")}."
+        }
     }
 
     private fun applyFilteredPage() {

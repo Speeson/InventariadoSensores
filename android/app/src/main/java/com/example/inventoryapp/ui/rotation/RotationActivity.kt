@@ -81,7 +81,7 @@ class RotationActivity : AppCompatActivity() {
 
         binding.btnSearchRotation.setOnClickListener {
             hideKeyboard()
-            applySearchFilters()
+            applySearchFilters(showNotFoundDialog = true)
         }
         binding.btnClearSearchRotation.setOnClickListener {
             hideKeyboard()
@@ -262,7 +262,7 @@ class RotationActivity : AppCompatActivity() {
         cacheNoticeShownInOfflineSession = true
     }
 
-    private fun applySearchFilters(resetPage: Boolean = true) {
+    private fun applySearchFilters(resetPage: Boolean = true, showNotFoundDialog: Boolean = false) {
         val movementIdRaw = binding.etSearchMovementId.text.toString().trim()
         val productRaw = binding.etSearchProduct.text.toString().trim()
         val fromRaw = normalizeLocationInput(binding.etSearchFromLocation.text.toString().trim())
@@ -302,6 +302,16 @@ class RotationActivity : AppCompatActivity() {
         filteredRows = filtered
         if (resetPage) currentPage = 0
         updatePage()
+        val hasFilters =
+            movementIdRaw.isNotBlank() || productRaw.isNotBlank() || fromRaw.isNotBlank() || toRaw.isNotBlank()
+        if (showNotFoundDialog && hasFilters && filtered.isEmpty()) {
+            CreateUiFeedback.showErrorPopup(
+                activity = this,
+                title = "No se encontraron traslados",
+                details = buildRotationSearchNotFoundDetails(movementIdRaw, productRaw, fromRaw, toRaw),
+                animationRes = R.raw.notfound
+            )
+        }
     }
 
     private fun clearSearchFilters() {
@@ -312,6 +322,31 @@ class RotationActivity : AppCompatActivity() {
         filteredRows = allRows
         currentPage = 0
         updatePage()
+    }
+
+    private fun buildRotationSearchNotFoundDetails(
+        movementIdRaw: String,
+        productRaw: String,
+        fromRaw: String,
+        toRaw: String
+    ): String {
+        val parts = mutableListOf<String>()
+        if (movementIdRaw.isNotBlank()) parts.add("movimiento ID $movementIdRaw")
+        if (productRaw.isNotBlank()) {
+            val productLabel = if (productRaw.toIntOrNull() != null) {
+                "producto ID $productRaw"
+            } else {
+                "producto \"$productRaw\""
+            }
+            parts.add(productLabel)
+        }
+        if (fromRaw.isNotBlank()) parts.add("origen \"$fromRaw\"")
+        if (toRaw.isNotBlank()) parts.add("destino \"$toRaw\"")
+        return if (parts.isEmpty()) {
+            "No se encontraron traslados con los filtros actuales."
+        } else {
+            "No se encontraron traslados para ${parts.joinToString(separator = ", ")}."
+        }
     }
 
     private fun updatePage() {

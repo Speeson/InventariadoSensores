@@ -65,6 +65,7 @@ class StockActivity : AppCompatActivity() {
     private var filteredItems: List<StockResponseDto> = emptyList()
     private var filteredOffset = 0
     private var pendingFilterApply = false
+    private var pendingSearchNotFoundDialog = false
     private var bulkProductNamesCache: Map<Int, String>? = null
     private var bulkProductNamesCacheAtMs: Long = 0L
     private val bulkProductNamesCacheTtlMs = 30_000L
@@ -328,7 +329,9 @@ class StockActivity : AppCompatActivity() {
                 isLoading = false
                 if (pendingFilterApply) {
                     pendingFilterApply = false
-                    applySearchFiltersInternal(allowReload = false)
+                    val showDialog = pendingSearchNotFoundDialog
+                    pendingSearchNotFoundDialog = false
+                    applySearchFiltersInternal(allowReload = false, showNotFoundDialog = showDialog)
                 }
             }
         }
@@ -854,16 +857,20 @@ class StockActivity : AppCompatActivity() {
     }
 
     private fun applySearchFilters() {
-        applySearchFiltersInternal(allowReload = true)
+        applySearchFiltersInternal(allowReload = true, showNotFoundDialog = true)
     }
 
-    private fun applySearchFiltersInternal(allowReload: Boolean) {
+    private fun applySearchFiltersInternal(
+        allowReload: Boolean,
+        showNotFoundDialog: Boolean = false
+    ) {
         val productRaw = binding.etSearchProduct.text.toString().trim()
         val locationRaw = normalizeLocationInput(binding.etSearchLocation.text.toString().trim())
         val qtyRaw = binding.etSearchQuantity.text.toString().trim()
 
         if (allowReload && !isLoading && (currentOffset > 0 || totalCount > allItems.size)) {
             pendingFilterApply = true
+            pendingSearchNotFoundDialog = showNotFoundDialog
             currentOffset = 0
             loadStocks()
             return
@@ -893,6 +900,14 @@ class StockActivity : AppCompatActivity() {
         filteredItems = filtered
         filteredOffset = 0
         applyFilteredPage()
+        if (showNotFoundDialog && hasActiveFilters() && filtered.isEmpty()) {
+            CreateUiFeedback.showErrorPopup(
+                activity = this,
+                title = "No se encontró stock",
+                details = buildStockSearchNotFoundDetails(productRaw, locationRaw, qtyRaw),
+                animationRes = R.raw.notfound
+            )
+        }
     }
 
     private fun clearSearchFilters() {
@@ -920,6 +935,33 @@ class StockActivity : AppCompatActivity() {
         return binding.etSearchProduct.text?.isNotBlank() == true ||
             binding.etSearchLocation.text?.isNotBlank() == true ||
             binding.etSearchQuantity.text?.isNotBlank() == true
+    }
+
+    private fun buildStockSearchNotFoundDetails(
+        productRaw: String,
+        locationRaw: String,
+        qtyRaw: String
+    ): String {
+        val parts = mutableListOf<String>()
+        if (productRaw.isNotBlank()) {
+            val productLabel = if (productRaw.toIntOrNull() != null) {
+                "del producto ID $productRaw"
+            } else {
+                "del producto \"$productRaw\""
+            }
+            parts.add(productLabel)
+        }
+        if (locationRaw.isNotBlank()) {
+            parts.add("en ubicación \"$locationRaw\"")
+        }
+        if (qtyRaw.isNotBlank()) {
+            parts.add("con cantidad $qtyRaw")
+        }
+        return if (parts.isEmpty()) {
+            "No se encontró stock con los filtros actuales."
+        } else {
+            "No se encontró stock ${parts.joinToString(separator = " ")}."
+        }
     }
 
     private fun applyFilteredPage() {

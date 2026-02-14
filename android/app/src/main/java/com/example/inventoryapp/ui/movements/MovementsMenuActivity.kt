@@ -68,6 +68,7 @@ class MovementsMenuActivity : AppCompatActivity() {
     private var filteredItems: List<MovementRowUi> = emptyList()
     private var filteredOffset = 0
     private var pendingFilterApply = false
+    private var pendingSearchNotFoundDialog = false
     private var bulkProductNamesCache: Map<Int, String>? = null
     private var bulkProductNamesCacheAtMs: Long = 0L
     private val bulkProductNamesCacheTtlMs = 30_000L
@@ -658,7 +659,9 @@ class MovementsMenuActivity : AppCompatActivity() {
                 isLoading = false
                 if (pendingFilterApply) {
                     pendingFilterApply = false
-                    applySearchFiltersInternal(allowReload = false)
+                    val showDialog = pendingSearchNotFoundDialog
+                    pendingSearchNotFoundDialog = false
+                    applySearchFiltersInternal(allowReload = false, showNotFoundDialog = showDialog)
                 }
             }
         }
@@ -1220,16 +1223,17 @@ class MovementsMenuActivity : AppCompatActivity() {
     }
 
     private fun applySearchFilters() {
-        applySearchFiltersInternal(allowReload = true)
+        applySearchFiltersInternal(allowReload = true, showNotFoundDialog = true)
     }
 
-    private fun applySearchFiltersInternal(allowReload: Boolean) {
+    private fun applySearchFiltersInternal(allowReload: Boolean, showNotFoundDialog: Boolean = false) {
         val typeRaw = binding.etSearchType.text.toString().trim().uppercase()
         val sourceRaw = binding.etSearchSource.text.toString().trim().uppercase()
         val productRaw = binding.etSearchProduct.text.toString().trim()
 
         if (allowReload && !isLoading && (currentOffset > 0 || totalCount > allItems.size)) {
             pendingFilterApply = true
+            pendingSearchNotFoundDialog = showNotFoundDialog
             currentOffset = 0
             loadMovements(withSnack = false)
             return
@@ -1258,6 +1262,14 @@ class MovementsMenuActivity : AppCompatActivity() {
         filteredItems = filtered
         filteredOffset = 0
         applyFilteredPage()
+        if (showNotFoundDialog && hasActiveFilters() && filtered.isEmpty()) {
+            CreateUiFeedback.showErrorPopup(
+                activity = this,
+                title = "No se encontraron movimientos",
+                details = buildMovementSearchNotFoundDetails(typeRaw, sourceRaw, productRaw),
+                animationRes = R.raw.notfound
+            )
+        }
     }
 
     private fun clearSearchFilters() {
@@ -1320,6 +1332,45 @@ class MovementsMenuActivity : AppCompatActivity() {
             timeoutMs = 3_200L
         )
         cacheNoticeShownInOfflineSession = true
+    }
+
+    private fun buildMovementSearchNotFoundDetails(
+        typeRaw: String,
+        sourceRaw: String,
+        productRaw: String
+    ): String {
+        val parts = mutableListOf<String>()
+        if (typeRaw.isNotBlank()) {
+            val typeLabel = when (typeRaw) {
+                "IN" -> "de entrada (IN)"
+                "OUT" -> "de salida (OUT)"
+                "ADJUST" -> "de ajuste (ADJUST)"
+                "TRANSFER" -> "de traslado (TRANSFER)"
+                else -> "de tipo $typeRaw"
+            }
+            parts.add(typeLabel)
+        }
+        if (sourceRaw.isNotBlank()) {
+            val sourceLabel = when (sourceRaw) {
+                "SCAN" -> "de la fuente SCAN"
+                "MANUAL" -> "de la fuente MANUAL"
+                else -> "de la fuente $sourceRaw"
+            }
+            parts.add(sourceLabel)
+        }
+        if (productRaw.isNotBlank()) {
+            val productLabel = if (productRaw.toIntOrNull() != null) {
+                "del producto ID $productRaw"
+            } else {
+                "del producto \"$productRaw\""
+            }
+            parts.add(productLabel)
+        }
+        return if (parts.isEmpty()) {
+            "No se encontró ningún movimiento con los filtros actuales."
+        } else {
+            "No se encontró ningún movimiento ${parts.joinToString(separator = " ")}."
+        }
     }
 
     private fun hideKeyboard() {

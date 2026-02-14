@@ -20,6 +20,7 @@ import com.example.inventoryapp.databinding.ActivityScanBinding
 import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.common.NetworkStatusBar
+import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import kotlinx.coroutines.launch
@@ -112,7 +113,12 @@ binding.btnBack.setOnClickListener { finish() }
             if (granted) {
                 startCamera()
             } else {
-                UiNotifier.show(this, "Permiso de cámara denegado")
+                CreateUiFeedback.showErrorPopup(
+                    activity = this,
+                    title = "Permiso de cámara denegado",
+                    details = "",
+                    animationRes = R.raw.camera
+                )
             }
         }
     }
@@ -193,7 +199,6 @@ binding.btnBack.setOnClickListener { finish() }
                     }
                     lastScannedCode = code
                     binding.etBarcode.setText(code)
-                    UiNotifier.show(this, "Detectado: $code")
                     if (!hasNavigated) {
                         validateAndNavigate(code)
                     }
@@ -220,7 +225,12 @@ binding.btnBack.setOnClickListener { finish() }
                 } else {
                     lastNotFoundCode = barcode
                     lastNotFoundAt = System.currentTimeMillis()
-                    UiNotifier.show(this@ScanActivity, "Producto no encontrado")
+                    CreateUiFeedback.showErrorPopup(
+                        activity = this@ScanActivity,
+                        title = "Producto no encontrado",
+                        details = "Detectado: $barcode",
+                        animationRes = R.raw.notfound
+                    )
                 }
             } catch (_: Exception) {
                 lastScannedCode = null
@@ -262,3 +272,5 @@ binding.btnBack.setOnClickListener { finish() }
         }
     }
 }
+
+

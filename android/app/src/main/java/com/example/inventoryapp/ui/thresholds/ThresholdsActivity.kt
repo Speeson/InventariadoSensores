@@ -56,6 +56,7 @@ class ThresholdsActivity : AppCompatActivity() {
     private var filteredItems: List<ThresholdResponseDto> = emptyList()
     private var filteredOffset = 0
     private var pendingFilterApply = false
+    private var pendingSearchNotFoundDialog = false
     private var bulkProductNamesCache: Map<Int, String>? = null
     private var bulkProductNamesCacheAtMs: Long = 0L
     private val bulkProductNamesCacheTtlMs = 30_000L
@@ -151,15 +152,19 @@ class ThresholdsActivity : AppCompatActivity() {
     }
 
     private fun applySearchFilters() {
-        applySearchFiltersInternal(allowReload = true)
+        applySearchFiltersInternal(allowReload = true, showNotFoundDialog = true)
     }
 
-    private fun applySearchFiltersInternal(allowReload: Boolean) {
+    private fun applySearchFiltersInternal(
+        allowReload: Boolean,
+        showNotFoundDialog: Boolean = false
+    ) {
         val productRaw = binding.etSearchProductId.text.toString().trim()
         val locationRaw = normalizeLocationInput(binding.etSearchLocation.text.toString().trim())
 
         if (allowReload && !isLoading && (currentOffset > 0 || totalCount > items.size)) {
             pendingFilterApply = true
+            pendingSearchNotFoundDialog = showNotFoundDialog
             currentOffset = 0
             loadThresholds()
             return
@@ -183,6 +188,14 @@ class ThresholdsActivity : AppCompatActivity() {
         filteredItems = filtered
         filteredOffset = 0
         applyFilteredPage()
+        if (showNotFoundDialog && hasActiveFilters() && filtered.isEmpty()) {
+            CreateUiFeedback.showErrorPopup(
+                activity = this,
+                title = "No se encontraron thresholds",
+                details = buildThresholdSearchNotFoundDetails(productRaw, locationRaw),
+                animationRes = R.raw.notfound
+            )
+        }
     }
 
     private fun clearSearchFilters() {
@@ -274,7 +287,10 @@ class ThresholdsActivity : AppCompatActivity() {
                         }
                     }
                 } else {
-                    UiNotifier.show(this@ThresholdsActivity, ApiErrorFormatter.format(res.code()))
+                    val suppressInvalidSearchMessage = hasActiveFilters() && (res.code() == 400 || res.code() == 422)
+                    if (!suppressInvalidSearchMessage) {
+                        UiNotifier.show(this@ThresholdsActivity, ApiErrorFormatter.format(res.code()))
+                    }
                     val cachedOnError = cacheStore.get(cacheKey, ThresholdListResponseDto::class.java)
                     if (cachedOnError != null) {
                         val pending = pendingThresholdsForPage(
@@ -365,7 +381,9 @@ class ThresholdsActivity : AppCompatActivity() {
                 isLoading = false
                 if (pendingFilterApply) {
                     pendingFilterApply = false
-                    applySearchFiltersInternal(allowReload = false)
+                    val showDialog = pendingSearchNotFoundDialog
+                    pendingSearchNotFoundDialog = false
+                    applySearchFiltersInternal(allowReload = false, showNotFoundDialog = showDialog)
                 }
             }
         }
@@ -410,7 +428,8 @@ class ThresholdsActivity : AppCompatActivity() {
                     cacheStore.invalidatePrefix("thresholds")
                     loadThresholds()
                 } else {
-                    val details = ApiErrorFormatter.format(res.code(), res.errorBody()?.string())
+                    val raw = runCatching { res.errorBody()?.string() }.getOrNull()
+                    val details = formatCreateThresholdError(res.code(), raw)
                     loadingHandled = true
                     loading.dismissThen {
                         CreateUiFeedback.showErrorPopup(
@@ -684,6 +703,129 @@ class ThresholdsActivity : AppCompatActivity() {
     private fun hasActiveFilters(): Boolean {
         return binding.etSearchProductId.text?.isNotBlank() == true ||
             binding.etSearchLocation.text?.isNotBlank() == true
+    }
+
+    private fun buildThresholdSearchNotFoundDetails(productRaw: String, locationRaw: String): String {
+        val parts = mutableListOf<String>()
+        if (productRaw.isNotBlank()) {
+            val productLabel = if (productRaw.toIntOrNull() != null) {
+                "del producto ID $productRaw"
+            } else {
+                "del producto \"$productRaw\""
+            }
+            parts.add(productLabel)
+        }
+        if (locationRaw.isNotBlank()) {
+            parts.add("en ubicación \"$locationRaw\"")
+        }
+        return if (parts.isEmpty()) {
+            "No se encontraron thresholds con los filtros actuales."
+        } else {
+            "No se encontraron thresholds ${parts.joinToString(separator = " ")}."
+        }
+    }
+
+    private fun canShowTechnicalThresholdErrors(): Boolean {
+        val role = getSharedPreferences("ui_prefs", MODE_PRIVATE).getString("cached_role", null)
+        return role.equals("ADMIN", ignoreCase = true) || role.equals("MANAGER", ignoreCase = true)
+    }
+
+    private fun formatCreateThresholdError(code: Int, rawError: String?): String {
+        val raw = rawError?.trim().orEmpty()
+        val normalized = raw.lowercase()
+        val technical = canShowTechnicalThresholdErrors()
+
+        val productNotFound =
+            (normalized.contains("product") || normalized.contains("producto")) &&
+                (normalized.contains("not found") || normalized.contains("no existe") || normalized.contains("inexist"))
+        val locationInvalid =
+            (normalized.contains("location") || normalized.contains("ubic")) &&
+                (normalized.contains("invalid") || normalized.contains("not found") || normalized.contains("no existe"))
+        val duplicateThreshold =
+            (normalized.contains("threshold") || normalized.contains("umbral")) &&
+                (normalized.contains("exists") || normalized.contains("existe") || normalized.contains("duplic"))
+        val invalidMinQty =
+            (normalized.contains("min") || normalized.contains("quantity") || normalized.contains("cantidad")) &&
+                (normalized.contains("invalid") || normalized.contains(">= 0") || normalized.contains("must be"))
+
+        if (productNotFound) {
+            return if (technical) {
+                buildString {
+                    append("No se puede crear: el producto indicado no existe.")
+                    if (raw.isNotBlank()) append("\nDetalle: ${compactThresholdErrorDetail(raw)}")
+                    if (code > 0) append("\nHTTP $code")
+                }
+            } else {
+                "No se puede crear el threshold porque el producto no existe."
+            }
+        }
+
+        if (locationInvalid) {
+            return if (technical) {
+                buildString {
+                    append("No se puede crear: la ubicación indicada no es válida.")
+                    if (raw.isNotBlank()) append("\nDetalle: ${compactThresholdErrorDetail(raw)}")
+                    if (code > 0) append("\nHTTP $code")
+                }
+            } else {
+                "No se puede crear el threshold porque la ubicación no es válida."
+            }
+        }
+
+        if (duplicateThreshold) {
+            return if (technical) {
+                buildString {
+                    append("No se puede crear: ya existe un threshold para ese producto/ubicación.")
+                    if (raw.isNotBlank()) append("\nDetalle: ${compactThresholdErrorDetail(raw)}")
+                    if (code > 0) append("\nHTTP $code")
+                }
+            } else {
+                "Ya existe un threshold para ese producto y ubicación."
+            }
+        }
+
+        if (invalidMinQty) {
+            return if (technical) {
+                buildString {
+                    append("No se puede crear: valor de umbral inválido.")
+                    if (raw.isNotBlank()) append("\nDetalle: ${compactThresholdErrorDetail(raw)}")
+                    if (code > 0) append("\nHTTP $code")
+                }
+            } else {
+                "El valor del umbral no es válido."
+            }
+        }
+
+        return if (technical) {
+            buildString {
+                append(
+                    when (code) {
+                        400, 422 -> "Datos inválidos para crear threshold."
+                        403 -> "No tienes permisos para crear thresholds."
+                        409 -> "Conflicto al crear threshold."
+                        500 -> "Error interno del servidor al crear threshold."
+                        else -> ApiErrorFormatter.format(code, raw)
+                    }
+                )
+                if (raw.isNotBlank() && code !in setOf(400, 422, 403, 409, 500)) {
+                    append("\nDetalle: ${compactThresholdErrorDetail(raw)}")
+                }
+                if (code > 0) append("\nHTTP $code")
+            }
+        } else {
+            when (code) {
+                400, 422 -> "No se puede crear el threshold. Revisa los datos introducidos."
+                403 -> "No tienes permisos para crear thresholds."
+                409 -> "No se puede crear el threshold porque entra en conflicto con otro existente."
+                500 -> "No se puede crear el threshold por un problema del servidor."
+                else -> "No se pudo crear el threshold. Inténtalo de nuevo."
+            }
+        }
+    }
+
+    private fun compactThresholdErrorDetail(raw: String, maxLen: Int = 180): String {
+        val singleLine = raw.replace("\\s+".toRegex(), " ").trim()
+        return if (singleLine.length <= maxLen) singleLine else singleLine.take(maxLen) + "..."
     }
 
     private fun applyFilteredPage() {
