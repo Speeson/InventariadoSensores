@@ -1,0 +1,24 @@
+{
+  "elements": [
+    {
+      "json": {
+        "codeType": 31,
+        "height": 26,
+        "rotate": 0,
+        "value": "123456789",
+        "width": 26,
+        "x": 2,
+        "y": 2
+      },
+      "type": "qrCode"
+    }
+  ],
+  "InitDrawingBoardParam": {
+    "height": 30,
+    "HorizontalShift": 0,
+    "path": "ZT001.ttf",
+    "rotate": 0,
+    "verticalShift": 0,
+    "width": 30
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "elements": [
+    {
+      "json": {
+        "codeType": 20,
+        "fontSize": 3.2,
+        "height": 16,
+        "rotate": 0,
+        "textHeight": 3.2,
+        "textPosition": 0,
+        "value": "12345678",
+        "width": 36,
+        "x": 2,
+        "y": 2
+      },
+      "type": "barCode"
+    }
+  ],
+  "InitDrawingBoardParam": {
+    "height": 20,
+    "HorizontalShift": 0,
+    "path": "ZT001.ttf",
+    "rotate": 0,
+    "verticalShift": 0,
+    "width": 40
+  }
+}

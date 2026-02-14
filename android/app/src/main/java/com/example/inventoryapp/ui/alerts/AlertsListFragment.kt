@@ -83,7 +83,11 @@ class AlertsListFragment : Fragment() {
         }
 
         binding.btnClearStock.setOnClickListener {
-            clearStockAlerts()
+            if (isUserRole()) {
+                showStockPermissionDenied()
+            } else {
+                clearStockAlerts()
+            }
         }
 
         binding.btnClearFailedEvents.setOnClickListener {
@@ -93,6 +97,8 @@ class AlertsListFragment : Fragment() {
                 snack.showSuccess("Eventos fallidos limpiados")
             }
         }
+
+        applyRoleRestrictions()
     }
 
     override fun onResume() {
@@ -203,7 +209,11 @@ class AlertsListFragment : Fragment() {
 
         if (alert.alertStatus == AlertStatusDto.PENDING) {
             builder.setPositiveButton("Marcar vista") { _, _ ->
-                ackAlert(alert.id)
+                if (isUserRole()) {
+                    showStockPermissionDenied()
+                } else {
+                    ackAlert(alert.id)
+                }
             }
         }
 
@@ -211,6 +221,10 @@ class AlertsListFragment : Fragment() {
     }
 
     private fun ackAlert(alertId: Int) {
+        if (isUserRole()) {
+            showStockPermissionDenied()
+            return
+        }
         lifecycleScope.launch {
             try {
                 val res = NetworkModule.api.ackAlert(alertId)
@@ -219,6 +233,8 @@ class AlertsListFragment : Fragment() {
                 if (res.isSuccessful) {
                     snack.showSuccess("Alerta marcada como vista")
                     loadAlerts()
+                } else if (res.code() == 403) {
+                    showStockPermissionDenied()
                 } else {
                     snack.showError(ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))
                 }
@@ -229,6 +245,10 @@ class AlertsListFragment : Fragment() {
     }
 
     private fun clearStockAlerts() {
+        if (isUserRole()) {
+            showStockPermissionDenied()
+            return
+        }
         lifecycleScope.launch {
             try {
                 val res = NetworkModule.api.listAlerts(status = AlertStatusDto.PENDING, limit = 100, offset = 0)
@@ -241,6 +261,8 @@ class AlertsListFragment : Fragment() {
                     items.forEach { NetworkModule.api.ackAlert(it.id) }
                     loadAlerts()
                     snack.showSuccess("Alertas de stock marcadas como vistas")
+                } else if (res.code() == 403) {
+                    showStockPermissionDenied()
                 } else {
                     snack.showError(ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))
                 }
@@ -295,6 +317,30 @@ class AlertsListFragment : Fragment() {
         val role = prefs.getString("cached_role", null) ?: return true
         if (!role.equals("USER", ignoreCase = true)) return true
         return alert.alertType == AlertTypeDto.LOW_STOCK || alert.alertType == AlertTypeDto.OUT_OF_STOCK
+    }
+
+    private fun isUserRole(): Boolean {
+        val role = requireContext().getSharedPreferences("ui_prefs", 0).getString("cached_role", null)
+        return role.equals("USER", ignoreCase = true)
+    }
+
+    private fun showStockPermissionDenied() {
+        UiNotifier.showBlocking(
+            requireActivity(),
+            "Permisos insuficientes",
+            "No tienes permisos para gestionar alertas de stock.",
+            com.example.inventoryapp.R.drawable.ic_lock
+        )
+    }
+
+    private fun applyRoleRestrictions() {
+        if (!isUserRole()) return
+        binding.btnClearStock.apply {
+            text = "Bloqueado"
+            setCompoundDrawablesWithIntrinsicBounds(com.example.inventoryapp.R.drawable.ic_lock, 0, 0, 0)
+            compoundDrawablePadding = 10
+            isAllCaps = false
+        }
     }
 
     private fun EventResponseDto.toRowUi(): EventRowUi {

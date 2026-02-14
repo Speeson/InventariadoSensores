@@ -51,6 +51,7 @@ class ProductListAdapter(
     override fun onBindViewHolder(holder: VH, position: Int) {
         val row = items[position]
         val p = row.product
+        val isUserRole = isUserRole(holder.itemView.context)
         holder.binding.tvName.text = p.name
         holder.binding.ivIcon.setImageBitmap(getGradientIcon(holder.itemView.context))
         holder.binding.tvProductIdValue.text = p.id.toString()
@@ -85,6 +86,9 @@ class ProductListAdapter(
             if (barcode.isNullOrBlank()) android.view.View.GONE else android.view.View.VISIBLE
         holder.binding.btnLabel.visibility =
             if (barcode.isNullOrBlank()) android.view.View.GONE else android.view.View.VISIBLE
+        holder.binding.ivLabelLock.visibility =
+            if (!barcode.isNullOrBlank() && isUserRole) android.view.View.VISIBLE else android.view.View.GONE
+
         holder.binding.btnCopyBarcode.setOnClickListener {
             val ctx = holder.itemView.context
             if (!barcode.isNullOrBlank()) {
@@ -93,8 +97,14 @@ class ProductListAdapter(
                 Toast.makeText(ctx, "Barcode copiado", Toast.LENGTH_SHORT).show()
             }
         }
+        holder.binding.btnLabel.isEnabled = !isUserRole
+        holder.binding.btnLabel.alpha = if (isUserRole) 0.7f else 1f
+        TooltipCompat.setTooltipText(
+            holder.binding.btnLabel,
+            if (isUserRole) "Bloqueado para rol USER" else "Ver etiqueta"
+        )
         holder.binding.btnLabel.setOnClickListener {
-            onLabelClick(p)
+            if (!isUserRole) onLabelClick(p)
         }
         holder.binding.root.setOnClickListener { onClick(p) }
     }
@@ -139,5 +149,11 @@ class ProductListAdapter(
         paint.xfermode = null
         gradientIcon = out
         return out
+    }
+
+    private fun isUserRole(context: Context): Boolean {
+        val role = context.getSharedPreferences("ui_prefs", Context.MODE_PRIVATE)
+            .getString("cached_role", null)
+        return role.equals("USER", ignoreCase = true)
     }
 }

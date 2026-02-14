@@ -1,0 +1,180 @@
+{
+  "elements": [
+    {
+      "json": {
+        "fontFamily": "",
+        "fontSize": 5.6,
+        "fontStyle": [
+          true,
+          false,
+          false,
+          false
+        ],
+        "height": 7.4,
+        "letterSpacing": 0,
+        "lineMode": 6,
+        "lineSpacing": 1,
+        "rotate": 0,
+        "textAlignHorizontal": 1,
+        "textAlignVertical": 1,
+        "value": "Certificate",
+        "width": 36,
+        "x": 2,
+        "y": 2
+      },
+      "type": "text"
+    },
+    {
+      "json": {
+        "fontFamily": "",
+        "fontSize": 3.2,
+        "fontStyle": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "height": 4.3,
+        "letterSpacing": 0,
+        "lineMode": 6,
+        "lineSpacing": 1,
+        "rotate": 0,
+        "textAlignHorizontal": 0,
+        "textAlignVertical": 1,
+        "value": "Name: Dress",
+        "width": 34,
+        "x": 3,
+        "y": 11
+      },
+      "type": "text"
+    },
+    {
+      "json": {
+        "fontFamily": "",
+        "fontSize": 3.2,
+        "fontStyle": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "height": 4.3,
+        "letterSpacing": 0,
+        "lineMode": 6,
+        "lineSpacing": 1,
+        "rotate": 0,
+        "textAlignHorizontal": 0,
+        "textAlignVertical": 1,
+        "value": "Item No.: L0565",
+        "width": 34,
+        "x": 3,
+        "y": 17
+      },
+      "type": "text"
+    },
+    {
+      "json": {
+        "fontFamily": "",
+        "fontSize": 3.2,
+        "fontStyle": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "height": 4.3,
+        "letterSpacing": 0,
+        "lineMode": 6,
+        "lineSpacing": 1,
+        "rotate": 0,
+        "textAlignHorizontal": 0,
+        "textAlignVertical": 1,
+        "value": "Size: S (155)",
+        "width": 34,
+        "x": 3,
+        "y": 23
+      },
+      "type": "text"
+    },
+    {
+      "json": {
+        "fontFamily": "",
+        "fontSize": 3.2,
+        "fontStyle": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "height": 4.3,
+        "letterSpacing": 0,
+        "lineMode": 6,
+        "lineSpacing": 1,
+        "rotate": 0,
+        "textAlignHorizontal": 0,
+        "textAlignVertical": 1,
+        "value": "Color: Blue",
+        "width": 34,
+        "x": 3,
+        "y": 29
+      },
+      "type": "text"
+    },
+    {
+      "json": {
+        "fontFamily": "",
+        "fontSize": 3.2,
+        "fontStyle": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "height": 4.3,
+        "letterSpacing": 0,
+        "lineMode": 6,
+        "lineSpacing": 1,
+        "rotate": 0,
+        "textAlignHorizontal": 0,
+        "textAlignVertical": 1,
+        "value": "Fabric: 100% Polyester",
+        "width": 34,
+        "x": 3,
+        "y": 35
+      },
+      "type": "text"
+    },
+    {
+      "json": {
+        "fontFamily": "",
+        "fontSize": 5.6,
+        "fontStyle": [
+          false,
+          false,
+          false,
+          false
+        ],
+        "height": 14.8,
+        "letterSpacing": 0,
+        "lineMode": 6,
+        "lineSpacing": 1,
+        "rotate": 0,
+        "textAlignHorizontal": 1,
+        "textAlignVertical": 1,
+        "value": "Unified Price\n¥188",
+        "width": 34,
+        "x": 3,
+        "y": 41
+      },
+      "type": "text"
+    }
+  ],
+  "InitDrawingBoardParam": {
+    "height": 60,
+    "HorizontalShift": 0,
+    "path": "ZT001.ttf",
+    "rotate": 0,
+    "verticalShift": 0,
+    "width": 40
+  }
+}

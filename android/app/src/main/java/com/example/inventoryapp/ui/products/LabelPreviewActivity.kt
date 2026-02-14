@@ -1,6 +1,15 @@
 package com.example.inventoryapp.ui.products
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.app.AlertDialog
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.ContentValues
+import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -19,16 +28,22 @@ import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.databinding.ActivityLabelPreviewBinding
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.common.NetworkStatusBar
+import com.example.inventoryapp.ui.common.CreateUiFeedback
+import com.example.inventoryapp.R
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
-import java.io.OutputStream
-import com.example.inventoryapp.R
+import java.util.Locale
 
 class LabelPreviewActivity : AppCompatActivity() {
 
@@ -38,6 +53,20 @@ class LabelPreviewActivity : AppCompatActivity() {
     private var barcode: String = ""
     private var lastSvg: String? = null
     private val niimbotPackage = "com.gengcon.android.jccloudprinter"
+    private var niimbotScanDialog: AlertDialog? = null
+    private var niimbotPrintDialog: AlertDialog? = null
+    private var btReceiverRegistered = false
+    private val discoveredDevices = linkedMapOf<String, BluetoothDevice>()
+    private val discoveredRows = mutableListOf<String>()
+    private var discoveredAdapter: android.widget.ArrayAdapter<String>? = null
+    private var bluetoothAdapter: BluetoothAdapter? = null
+    private val niimbotPrefs by lazy { getSharedPreferences("niimbot_prefs", MODE_PRIVATE) }
+
+    private companion object {
+        private const val REQ_BT_PERMS = 1107
+        private const val KEY_LAST_NIIMBOT_MAC = "last_niimbot_mac"
+        private const val KEY_LAST_NIIMBOT_NAME = "last_niimbot_name"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,12 +84,13 @@ class LabelPreviewActivity : AppCompatActivity() {
         applyTitleGradient()
 
         setupWebView()
+        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
 
         binding.btnDownloadSvg.setOnClickListener { downloadSvg() }
         binding.btnDownloadPdf.setOnClickListener { downloadPdf() }
         binding.btnRegenerate.setOnClickListener { regenerateLabel() }
         binding.btnPrint.setOnClickListener { printLabel() }
-        binding.btnSaveNiimbot.setOnClickListener { saveNiimbotLabel() }
+        binding.btnSaveNiimbot.setOnClickListener { showNiimbotActionsDialog() }
 
         checkRoleForRegenerate()
         loadLabel()
@@ -218,6 +248,23 @@ class LabelPreviewActivity : AppCompatActivity() {
         tryCaptureAndSaveLabel(attemptsLeft = 6)
     }
 
+    private fun showNiimbotActionsDialog() {
+        val view = layoutInflater.inflate(R.layout.dialog_niimbot_actions, null)
+        val dialog = AlertDialog.Builder(this)
+            .setView(view)
+            .create()
+        view.findViewById<android.view.View>(R.id.btnOpenNiimbotAppCard)?.setOnClickListener {
+            dialog.dismiss()
+            saveNiimbotLabel()
+        }
+        view.findViewById<android.view.View>(R.id.btnPrintNiimbotDirectCard)?.setOnClickListener {
+            dialog.dismiss()
+            startDirectNiimbotPrintFlow()
+        }
+        dialog.show()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+    }
+
     private fun tryCaptureAndSaveLabel(attemptsLeft: Int) {
         binding.webLabel.postDelayed({
             val raw = capturePreviewBitmap()
@@ -359,6 +406,380 @@ class LabelPreviewActivity : AppCompatActivity() {
         }
     }
 
+    private val btScanReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                BluetoothDevice.ACTION_FOUND -> {
+                    val device = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+                    }
+                    if (device != null) addDiscoveredDevice(device)
+                }
+                BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
+                    if (discoveredRows.isEmpty()) {
+                        discoveredRows.add("No se encontraron impresoras. Pulsa Reescanear.")
+                        discoveredAdapter?.notifyDataSetChanged()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun startDirectNiimbotPrintFlow() {
+        if (lastSvg.isNullOrBlank()) {
+            UiNotifier.show(this, "Etiqueta no disponible")
+            return
+        }
+        if (!ensureBluetoothReady()) return
+        if (tryPrintWithRememberedPrinter()) return
+        showBluetoothScanDialog()
+        startBluetoothDiscovery()
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun tryPrintWithRememberedPrinter(): Boolean {
+        val mac = niimbotPrefs.getString(KEY_LAST_NIIMBOT_MAC, null)?.trim().orEmpty()
+        if (mac.isBlank()) return false
+        val adapter = bluetoothAdapter ?: return false
+        val rememberedDevice = try {
+            adapter.getRemoteDevice(mac)
+        } catch (_: Exception) {
+            null
+        } ?: return false
+        connectAndPrint(rememberedDevice, fallbackToScanOnFailure = true)
+        return true
+    }
+
+    private fun ensureBluetoothReady(): Boolean {
+        val adapter = bluetoothAdapter
+        if (adapter == null) {
+            UiNotifier.show(this, "Bluetooth no disponible")
+            return false
+        }
+        if (!hasBluetoothPermissions()) {
+            requestBluetoothPermissions()
+            return false
+        }
+        if (!adapter.isEnabled) {
+            UiNotifier.show(this, "Activa Bluetooth para conectar con Niimbot")
+            return false
+        }
+        return true
+    }
+
+    private fun hasBluetoothPermissions(): Boolean {
+        val connectGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.BLUETOOTH_CONNECT
+            ) == PackageManager.PERMISSION_GRANTED
+        } else true
+        val scanGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.BLUETOOTH_SCAN
+            ) == PackageManager.PERMISSION_GRANTED
+        } else true
+        val locationGranted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        return connectGranted && scanGranted && locationGranted
+    }
+
+    private fun requestBluetoothPermissions() {
+        val perms = mutableListOf(
+            Manifest.permission.ACCESS_FINE_LOCATION
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            perms += Manifest.permission.BLUETOOTH_SCAN
+            perms += Manifest.permission.BLUETOOTH_CONNECT
+        } else {
+            perms += Manifest.permission.BLUETOOTH
+            perms += Manifest.permission.BLUETOOTH_ADMIN
+        }
+        ActivityCompat.requestPermissions(this, perms.toTypedArray(), REQ_BT_PERMS)
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun showBluetoothScanDialog() {
+        val view = layoutInflater.inflate(R.layout.dialog_niimbot_bluetooth, null)
+        val list = view.findViewById<android.widget.ListView>(R.id.lvBluetoothDevices)
+        val btnCancel = view.findViewById<android.widget.Button>(R.id.btnBluetoothCancel)
+        val btnRescan = view.findViewById<android.widget.Button>(R.id.btnBluetoothRescan)
+
+        discoveredRows.clear()
+        discoveredAdapter = android.widget.ArrayAdapter(
+            this,
+            android.R.layout.simple_list_item_1,
+            discoveredRows
+        )
+        list.adapter = discoveredAdapter
+        list.setOnItemClickListener { _, _, position, _ ->
+            val text = discoveredRows.getOrNull(position).orEmpty()
+            val device = discoveredDevices.values.firstOrNull { rowForDevice(it) == text }
+            if (device != null) {
+                niimbotScanDialog?.dismiss()
+                connectAndPrint(device)
+            }
+        }
+
+        btnRescan.setOnClickListener { startBluetoothDiscovery() }
+        btnCancel.setOnClickListener { niimbotScanDialog?.dismiss() }
+
+        niimbotScanDialog?.dismiss()
+        niimbotScanDialog = AlertDialog.Builder(this)
+            .setView(view)
+            .setCancelable(false)
+            .create()
+        niimbotScanDialog?.setOnDismissListener {
+            stopBluetoothDiscovery()
+        }
+        niimbotScanDialog?.show()
+        niimbotScanDialog?.window?.setBackgroundDrawableResource(android.R.color.transparent)
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun startBluetoothDiscovery() {
+        if (!hasBluetoothPermissions()) return
+        if (!btReceiverRegistered) {
+            val filter = IntentFilter().apply {
+                addAction(BluetoothDevice.ACTION_FOUND)
+                addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
+            }
+            registerReceiver(btScanReceiver, filter)
+            btReceiverRegistered = true
+        }
+
+        discoveredDevices.clear()
+        discoveredRows.clear()
+        discoveredAdapter?.notifyDataSetChanged()
+
+        val adapter = bluetoothAdapter ?: return
+        adapter.cancelDiscovery()
+        val bonded = adapter.bondedDevices.orEmpty()
+        bonded.forEach { addDiscoveredDevice(it) }
+        adapter.startDiscovery()
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun stopBluetoothDiscovery() {
+        val adapter = bluetoothAdapter
+        if (adapter != null && adapter.isDiscovering) {
+            adapter.cancelDiscovery()
+        }
+        if (btReceiverRegistered) {
+            try {
+                unregisterReceiver(btScanReceiver)
+            } catch (_: Exception) {}
+            btReceiverRegistered = false
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun addDiscoveredDevice(device: BluetoothDevice) {
+        val address = device.address ?: return
+        if (address.isBlank()) return
+        discoveredDevices[address] = device
+        discoveredRows.clear()
+        discoveredRows.addAll(
+            discoveredDevices.values
+                .sortedWith(
+                    compareByDescending<BluetoothDevice> {
+                        when (it.bondState) {
+                            BluetoothDevice.BOND_BONDED -> 2
+                            BluetoothDevice.BOND_BONDING -> 1
+                            else -> 0
+                        }
+                    }.thenBy { (it.name ?: "").uppercase(Locale.getDefault()) }
+                )
+                .map { rowForDevice(it) }
+        )
+        discoveredAdapter?.notifyDataSetChanged()
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun rowForDevice(device: BluetoothDevice): String {
+        val name = device.name?.ifBlank { "Niimbot" } ?: "Niimbot"
+        val suffix = when (device.bondState) {
+            BluetoothDevice.BOND_BONDED -> " (emparejada)"
+            BluetoothDevice.BOND_BONDING -> " (emparejando...)"
+            else -> ""
+        }
+        val lastMac = niimbotPrefs.getString(KEY_LAST_NIIMBOT_MAC, null)
+        val preferred = if (!lastMac.isNullOrBlank() && lastMac.equals(device.address, ignoreCase = true)) {
+            " (ultima usada)"
+        } else ""
+        return "$name - ${device.address}$suffix$preferred"
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun connectAndPrint(device: BluetoothDevice, fallbackToScanOnFailure: Boolean = false) {
+        showNiimbotPrintingDialog(
+            message = "Conectando con ${device.name ?: "Niimbot"}",
+            animationRes = R.raw.connect_print
+        )
+        lifecycleScope.launch(Dispatchers.IO) {
+            if (device.bondState == BluetoothDevice.BOND_NONE) {
+                try { device.createBond() } catch (_: Exception) {}
+                delay(1200)
+            }
+
+            var connectResult = -1
+            var connected = false
+            for (idx in 0 until 3) {
+                connectResult = NiimbotSdkManager.connectBluetooth(this@LabelPreviewActivity, device.address)
+                if (connectResult == 0 || NiimbotSdkManager.isConnected(this@LabelPreviewActivity)) {
+                    connected = true
+                    break
+                }
+                if (idx < 2) delay(700)
+            }
+            if (!connected && connectResult != 0 && !NiimbotSdkManager.isConnected(this@LabelPreviewActivity)) {
+                withContext(Dispatchers.Main) {
+                    dismissNiimbotPrintingDialog()
+                    CreateUiFeedback.showErrorPopup(
+                        activity = this@LabelPreviewActivity,
+                        title = "No se pudo conectar",
+                        details = "No se pudo conectar con la impresora",
+                        animationRes = R.raw.print_error
+                    )
+                    if (fallbackToScanOnFailure) {
+                        showBluetoothScanDialog()
+                        startBluetoothDiscovery()
+                    }
+                }
+                return@launch
+            }
+
+            saveLastPrinter(device)
+            val raw = withContext(Dispatchers.Main) { waitAndCaptureLabelBitmap() }
+            if (raw == null) {
+                withContext(Dispatchers.Main) {
+                    dismissNiimbotPrintingDialog()
+                    UiNotifier.show(this@LabelPreviewActivity, "No se pudo preparar la etiqueta")
+                }
+                return@launch
+            }
+
+            val trimmed = trimVerticalWhitespace(raw)
+            val prepared = NiimbotSdkManager.prepareBitmapFor50x30(trimmed, marginMm = 2f)
+            withContext(Dispatchers.Main) {
+                setNiimbotPrintingAnimation(R.raw.printing)
+                setNiimbotPrintingLabel("Imprimiendo etiqueta")
+            }
+            NiimbotSdkManager.printBitmap(
+                context = this@LabelPreviewActivity,
+                bitmap = prepared,
+                onProgress = { msg ->
+                    setNiimbotPrintingLabel(msg)
+                },
+                onSuccess = {
+                    dismissNiimbotPrintingDialog()
+                    UiNotifier.show(this@LabelPreviewActivity, "Etiqueta enviada a Niimbot")
+                },
+                onError = { msg ->
+                    dismissNiimbotPrintingDialog()
+                    UiNotifier.show(this@LabelPreviewActivity, msg)
+                }
+            )
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun saveLastPrinter(device: BluetoothDevice) {
+        niimbotPrefs.edit()
+            .putString(KEY_LAST_NIIMBOT_MAC, device.address)
+            .putString(KEY_LAST_NIIMBOT_NAME, device.name ?: "Niimbot")
+            .apply()
+    }
+
+    private suspend fun waitAndCaptureLabelBitmap(attempts: Int = 6): Bitmap? {
+        repeat(attempts) {
+            val bmp = capturePreviewBitmap()
+            if (bmp != null) return bmp
+            delay(140)
+        }
+        return null
+    }
+
+    private fun showNiimbotPrintingDialog(message: String, animationRes: Int = R.raw.printing) {
+        val view = layoutInflater.inflate(R.layout.dialog_niimbot_printing, null)
+        view.findViewById<android.widget.TextView>(R.id.tvNiimbotPrintingLabel).text = message
+        applyNiimbotDialogAnimationStyle(
+            view.findViewById(R.id.lottieNiimbotPrinting),
+            animationRes
+        )
+        niimbotPrintDialog?.dismiss()
+        niimbotPrintDialog = AlertDialog.Builder(this)
+            .setView(view)
+            .setCancelable(false)
+            .create()
+        niimbotPrintDialog?.show()
+        niimbotPrintDialog?.window?.setBackgroundDrawableResource(android.R.color.transparent)
+    }
+
+    private fun setNiimbotPrintingAnimation(animationRes: Int) {
+        val lottie = niimbotPrintDialog
+            ?.findViewById<com.airbnb.lottie.LottieAnimationView>(R.id.lottieNiimbotPrinting)
+        if (lottie != null) {
+            applyNiimbotDialogAnimationStyle(lottie, animationRes)
+        }
+    }
+
+    private fun applyNiimbotDialogAnimationStyle(
+        lottie: com.airbnb.lottie.LottieAnimationView,
+        animationRes: Int
+    ) {
+        lottie.setAnimation(animationRes)
+        val lp = lottie.layoutParams
+        when (animationRes) {
+            R.raw.connect_print -> {
+                lp.width = dpToPx(128)
+                lp.height = dpToPx(110)
+                lottie.layoutParams = lp
+                lottie.scaleX = 1.22f
+                lottie.scaleY = 1.22f
+                lottie.translationY = -dpToPx(8).toFloat()
+            }
+            R.raw.printing -> {
+                lp.width = dpToPx(124)
+                lp.height = dpToPx(102)
+                lottie.layoutParams = lp
+                lottie.scaleX = 1.18f
+                lottie.scaleY = 1.18f
+                lottie.translationY = -dpToPx(3).toFloat()
+            }
+            else -> {
+                lp.width = dpToPx(120)
+                lp.height = dpToPx(120)
+                lottie.layoutParams = lp
+                lottie.scaleX = 1f
+                lottie.scaleY = 1f
+                lottie.translationY = 0f
+            }
+        }
+        lottie.playAnimation()
+    }
+
+    private fun dpToPx(dp: Int): Int {
+        return (dp * resources.displayMetrics.density).toInt()
+    }
+
+    private fun setNiimbotPrintingLabel(message: String) {
+        val tv = niimbotPrintDialog
+            ?.findViewById<android.widget.TextView>(R.id.tvNiimbotPrintingLabel)
+        tv?.text = message
+    }
+
+    private fun dismissNiimbotPrintingDialog() {
+        niimbotPrintDialog?.dismiss()
+        niimbotPrintDialog = null
+    }
+
     private fun saveToPictures(filename: String, bitmap: Bitmap): Boolean {
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -441,7 +862,7 @@ class LabelPreviewActivity : AppCompatActivity() {
         binding.btnRegenerate.visibility = android.view.View.VISIBLE
         binding.btnRegenerate.isEnabled = false
         binding.btnRegenerate.alpha = 0.6f
-        binding.btnRegenerate.text = "Solo admin/manager"
+        binding.btnRegenerate.text = "Bloqueado"
         binding.btnRegenerate.setCompoundDrawablesWithIntrinsicBounds(
             com.example.inventoryapp.R.drawable.ic_lock,
             0,
@@ -482,6 +903,37 @@ class LabelPreviewActivity : AppCompatActivity() {
         binding.btnSaveNiimbot.alpha = 0.6f
         binding.ivPrintLock.visibility = android.view.View.VISIBLE
         binding.ivNiimbotLock.visibility = android.view.View.VISIBLE
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQ_BT_PERMS) {
+            val granted = grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+            if (granted) {
+                startDirectNiimbotPrintFlow()
+            } else {
+                UiNotifier.show(this, "Permisos Bluetooth requeridos para imprimir")
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        stopBluetoothDiscovery()
+        dismissNiimbotPrintingDialog()
+        niimbotScanDialog?.dismiss()
+        niimbotScanDialog = null
+        runCatching {
+            binding.webLabel.stopLoading()
+            binding.webLabel.loadUrl("about:blank")
+            binding.webLabel.clearHistory()
+            binding.webLabel.removeAllViews()
+            binding.webLabel.destroy()
+        }
     }
 
 

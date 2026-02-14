@@ -47,7 +47,7 @@ Frontend (Android):
 - WebView sin caché para evitar SVG obsoletos.
 - Iconos de copiar/imprimir en lista más grandes.
 - Botón "Regenerar etiqueta" en la pantalla de preview.
-- Botón "Regenerar etiqueta" con lock y texto "Solo admin/manager" si el usuario no tiene permisos y está habilitado el toggle de ver restringidos.
+- Botón "Regenerar etiqueta" bloqueado por rol (candado) cuando no hay permisos.
 - Gradiente de iconos aplicado a las tarjetas del Home, campana de alertas y menú lateral.
 - Título "IoTrack" con el mismo gradiente de iconos.
 
@@ -95,23 +95,40 @@ Objetivo: unificar estructura visual con desplegables Crear/Buscar, paginación 
 - Paginación a 5 registros; filtros con paginación local.
 - `ProductDetail` queda solo para edición (crear se hace desde listado).
 
-## Etiquetas Niimbot (B1) + guardado en galería
+## Etiquetas Niimbot (B1) + integración SDK oficial
 
-Objetivo: guardar la etiqueta que se ve en el preview y abrir la app Niimbot para imprimir.
+Objetivo: imprimir etiquetas 50x30 mm directamente en Niimbot B1 desde la app, manteniendo fallback a apertura de app Niimbot.
 
 Android:
-- Botón Niimbot en la pantalla de etiqueta: guarda en galería y abre Niimbot.
-- La imagen guardada se genera **desde el preview** (WebView) y se recorta el blanco superior/inferior con margen.
-- Sin reescalado forzado: se guarda tal cual para ajustar tamaño en la app Niimbot.
-- Intent explícito para abrir Niimbot:
-  - Paquete: `com.gengcon.android.jccloudprinter`
-  - Activity: `com.gengcon.android.jccloudprinter.LaunchActivity`
-  - Fallback: `com.gengcon.android.jccloudprinter.LaunchFromWebActivity`
+- Integración del SDK oficial Niimbot (AAR/JAR) en `android/app/libs`.
+- Nuevo flujo de impresión directa por Bluetooth:
+  - Escaneo de impresoras compatibles.
+  - Priorización de dispositivos emparejados en la lista.
+  - Recordatorio de última impresora usada (MAC) para impresión directa en siguientes intentos.
+  - Si la impresora recordada no está disponible, fallback automático al diálogo de selección.
+- Preparación de bitmap para etiqueta 50x30 con margen configurable.
+- Conservado el flujo anterior de "Abrir app Niimbot" como alternativa.
 
-UI pantalla etiqueta:
-- Botones cuadrados con iconos: `print.png` y `niimbot.png` (misma altura, lado a lado).
-- Botones y acciones con tema morado suave.
-- Título "Etiqueta" visible con el estilo de otras actividades.
+UI/UX en `LabelPreview`:
+- Reorganización de botones:
+  - Descargar SVG / Descargar PDF
+  - Regenerar etiqueta
+  - Botón impresión sistema + botón Niimbot
+- Botón Niimbot abre diálogo con dos acciones:
+  - Abrir app Niimbot
+  - Impresión directa SDK
+- Diálogos personalizados:
+  - Búsqueda Bluetooth (animación)
+  - Conectando con impresora (animación)
+  - Imprimiendo etiqueta (animación)
+  - Error de impresión/conexión (popup error con animación dedicada)
+- Fondos de diálogo ajustados (sin recuadro exterior no deseado) y layout más compacto para listas/dispositivos.
+
+Permisos:
+- Solicitud y validación de permisos Bluetooth (Android S+ y compatibilidad versiones anteriores).
+
+Compatibilidad por rol:
+- En rol `USER`, acceso a `LabelPreview` bloqueado desde listado de productos (icono impresora con candado).
 
 ## Cache híbrido (Redis + Room) y modo offline
 
@@ -300,6 +317,40 @@ Android:
 - Backoff exponencial en reintentos (`10s` base).
 - En mÃ³vil (no emulador) el worker se eleva a foreground si hay permiso de notificaciones, para aumentar fiabilidad.
 - NotificaciÃ³n del worker: canal `offline_sync` con texto “Sincronizando pendientes”.
+
+## Unificacion de mensajes y permisos (UI)
+
+Objetivo: eliminar duplicados, mejorar claridad y centralizar respuestas visuales por tipo de evento.
+
+- Reemplazo progresivo de mensajes planos por dialogos unificados:
+  - Cargando lista (`loading_list.json`)
+  - Lista cargada (icono exito)
+  - Creacion en curso / creacion completada
+  - Errores de creacion (`dialog_create_failure`)
+  - Permisos insuficientes (`dialog_permission_denied` con `locked.json`)
+- Politica de aviso cache/offline:
+  - "Mostrando X en cache y pendientes offline" solo una vez por sesion offline.
+  - Se resetea al recuperar conexion.
+- En varios flujos de edicion/accion se eliminaron mensajes redundantes de tipo "sending..." cuando no aportan valor.
+- En pantallas restringidas para `USER`, acceso bloqueado en cabecera/boton con dialogo de permisos en lugar de mensaje plano.
+- Ajuste de animacion de permisos:
+  - `locked.json` configurada para iniciar en frame 45 en el dialogo de permisos.
+
+## Estado del sistema y health-check
+
+Objetivo: mejorar diagnostico visual y evitar falsos offline en cliente.
+
+Frontend:
+- "Estado del sistema" redisenado como dialogo con componentes:
+  - API
+  - Base de datos
+  - Redis
+  - Celery
+- Iconografia dedicada por componente y estado OK/KO.
+
+Backend:
+- Ajuste de `/health` para no forzar 503 global por estado de Celery en escenarios de arranque parcial.
+- Correccion de variables de entorno en contenedores `worker` y `beat` (`JWT_SECRET`, `JWT_ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES`) para evitar caida de Celery por configuracion faltante.
 
 ## Optimizaciones aplicadas (requisito Sprint 3)
 

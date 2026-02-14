@@ -1,0 +1,72 @@
+{
+  "elements": [
+    {
+      "json": {
+        "dashwidth": [
+          1,
+          1
+        ],
+        "height": 0.5,
+        "lineType": 0,
+        "rotate": 0,
+        "width": 36,
+        "x": 2,
+        "y": 2
+      },
+      "type": "line"
+    },
+    {
+      "json": {
+        "dashwidth": [
+          1,
+          1
+        ],
+        "height": 0.5,
+        "lineType": 0,
+        "rotate": 0,
+        "width": 36,
+        "x": 2,
+        "y": 18
+      },
+      "type": "line"
+    },
+    {
+      "json": {
+        "dashwidth": [
+          1,
+          1
+        ],
+        "height": 16,
+        "lineType": 0,
+        "rotate": 0,
+        "width": 0.5,
+        "x": 2,
+        "y": 2
+      },
+      "type": "line"
+    },
+    {
+      "json": {
+        "dashwidth": [
+          1,
+          1
+        ],
+        "height": 16,
+        "lineType": 0,
+        "rotate": 0,
+        "width": 0.5,
+        "x": 38,
+        "y": 2
+      },
+      "type": "line"
+    }
+  ],
+  "InitDrawingBoardParam": {
+    "height": 20,
+    "HorizontalShift": 0,
+    "path": "ZT001.ttf",
+    "rotate": 0,
+    "verticalShift": 0,
+    "width": 40
+  }
+}

@@ -64,6 +64,9 @@ services:
       DB_HOST: db
       DB_PORT: 5432
       DATABASE_URL: postgresql+psycopg://inventory_user:inventory_pass@db:5432/inventory_db
+      JWT_SECRET: change_me_super_secret
+      JWT_ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
       APP_ROLE: worker
       RUN_SEED: 0
       REDIS_HOST: redis
@@ -94,6 +97,9 @@ services:
       DB_HOST: db
       DB_PORT: 5432
       DATABASE_URL: postgresql+psycopg://inventory_user:inventory_pass@db:5432/inventory_db
+      JWT_SECRET: change_me_super_secret
+      JWT_ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
       APP_ROLE: beat
       RUN_SEED: 0
       REDIS_HOST: redis

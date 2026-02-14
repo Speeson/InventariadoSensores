@@ -77,7 +77,7 @@ interface InventoryApi {
     suspend fun me(): Response<UserMeResponse>
 
     @GET("health")
-    suspend fun health(): Response<Unit>
+    suspend fun health(): Response<HealthResponseDto>
 
     @POST("movements/in")
     suspend fun movementIn(@Body body: MovementOperationRequest): retrofit2.Response<MovementWithStockResponseDto>

@@ -1,4 +1,4 @@
-package com.example.inventoryapp.ui.home
+﻿package com.example.inventoryapp.ui.home
 
 import android.content.Intent
 import android.os.Bundle
@@ -21,7 +21,6 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.lifecycleScope
 import androidx.core.content.ContextCompat
 import com.example.inventoryapp.R
-import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.OfflineSyncer
 import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.remote.NetworkModule
@@ -74,7 +73,7 @@ class HomeActivity : AppCompatActivity() {
             if (isDark) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
         )
 
-        // ✅ Si no hay token, fuera
+        // âœ… Si no hay token, fuera
         if (session.getToken().isNullOrBlank()) {
             goToLogin()
             return
@@ -82,7 +81,7 @@ class HomeActivity : AppCompatActivity() {
         if (session.isTokenExpired() && !NetworkModule.isManualOffline()) {
             session.clearToken()
             clearCachedRole()
-            UiNotifier.showBlockingTimed(this@HomeActivity, "Sesión caducada. Inicia sesión.", R.drawable.expired)
+            UiNotifier.showBlockingTimed(this@HomeActivity, "SesiÃ³n caducada. Inicia sesiÃ³n.", R.drawable.expired)
             goToLogin()
             return
         }
@@ -97,11 +96,11 @@ class HomeActivity : AppCompatActivity() {
             true
         }
 
-        // Pop-up bienvenida si venías de registro
+        // Pop-up bienvenida si venÃ­as de registro
         intent.getStringExtra("welcome_email")?.takeIf { it.isNotBlank() }?.let { email ->
             AlertDialog.Builder(this)
                 .setTitle("Bienvenido")
-                .setMessage("¡Bienvenido, $email!")
+                .setMessage("Â¡Bienvenido, $email!")
                 .setPositiveButton("OK", null)
                 .show()
         }
@@ -128,7 +127,7 @@ class HomeActivity : AppCompatActivity() {
 
         binding.btnRotation.setOnClickListener {
             if (!canAccessRestricted()) {
-                UiNotifier.show(this@HomeActivity, "Solo admin/manager")
+                showRestrictedPermissionDialog()
                 return@setOnClickListener
             }
             startActivity(Intent(this@HomeActivity, RotationActivity::class.java))
@@ -136,7 +135,7 @@ class HomeActivity : AppCompatActivity() {
 
         binding.btnReports.setOnClickListener {
             if (!canAccessRestricted()) {
-                UiNotifier.show(this@HomeActivity, "Solo admin/manager")
+                showRestrictedPermissionDialog()
                 return@setOnClickListener
             }
             startActivity(Intent(this, ReportsActivity::class.java))
@@ -144,7 +143,7 @@ class HomeActivity : AppCompatActivity() {
 
         binding.btnCategories.setOnClickListener {
             if (!canAccessRestricted()) {
-                UiNotifier.show(this@HomeActivity, "Solo admin/manager")
+                showRestrictedPermissionDialog()
                 return@setOnClickListener
             }
             startActivity(Intent(this, CategoriesActivity::class.java))
@@ -152,14 +151,14 @@ class HomeActivity : AppCompatActivity() {
 
         binding.btnThresholds.setOnClickListener {
             if (!canAccessRestricted()) {
-                UiNotifier.show(this@HomeActivity, "Solo admin/manager")
+                showRestrictedPermissionDialog()
                 return@setOnClickListener
             }
             startActivity(Intent(this, ThresholdsActivity::class.java))
         }
         binding.btnImports.setOnClickListener {
             if (!canAccessRestricted()) {
-                UiNotifier.show(this@HomeActivity, "Solo admin/manager")
+                showRestrictedPermissionDialog()
                 return@setOnClickListener
             }
             startActivity(Intent(this, ImportsActivity::class.java))
@@ -239,7 +238,7 @@ class HomeActivity : AppCompatActivity() {
                 SystemAlertManager.record(
                     this@HomeActivity,
                     SystemAlertType.OFFLINE_SYNC_OK,
-                    "Sincronización completada",
+                    "SincronizaciÃ³n completada",
                     "Se enviaron correctamente ${report.sent} pendientes offline.",
                     blocking = false
                 )
@@ -249,7 +248,7 @@ class HomeActivity : AppCompatActivity() {
                 UiNotifier.showBlocking(
                     this@HomeActivity,
                     "Pendientes con error",
-                    "${report.movedToFailed} pendientes han fallado. Revisa la pestaña de Pendientes offline.",
+                    "${report.movedToFailed} pendientes han fallado. Revisa la pestaÃ±a de Pendientes offline.",
                     com.example.inventoryapp.R.drawable.ic_error_red
                 )
             }
@@ -262,54 +261,67 @@ class HomeActivity : AppCompatActivity() {
             }
         }
     }
-
-
     private fun showSystemStatus() {
         lifecycleScope.launch {
-            val q = OfflineQueue(this@HomeActivity)
-            val pending = q.size()
-            val failed = q.getFailed().size
-
             try {
                 val res = NetworkModule.api.health()
-                if (res.isSuccessful) {
-                    AlertDialog.Builder(this@HomeActivity)
-                        .setTitle("Estado del sistema")
-                        .setMessage(
-                            "Backend OK ✅\n" +
-                                    "Pendientes offline: $pending\n" +
-                                    "Pendientes con error: $failed"
-                        )
-                        .setPositiveButton("OK", null)
-                        .show()
-                } else {
-                    val detail = try { res.errorBody()?.string()?.take(200) } catch (_: Exception) { null }
-                    val detailMsg = if (!detail.isNullOrBlank()) "\n$detail" else ""
-                    AlertDialog.Builder(this@HomeActivity)
-                        .setTitle("Estado del sistema")
-                        .setMessage(
-                            "Backend respondió ${res.code()} ❌\n" +
-                                    "Pendientes offline: $pending\n" +
-                                    "Pendientes con error: $failed"
-                        )
-                        .setPositiveButton("OK", null)
-                        .show()
-                }
-            } catch (e: Exception) {
-                val msg = UiNotifier.buildConnectionMessage(this@HomeActivity, e.message)
-                AlertDialog.Builder(this@HomeActivity)
-                    .setTitle("Estado del sistema")
-                    .setMessage(
-                        "$msg\n" +
-                                "Pendientes offline: $pending\n" +
-                                "Pendientes con error: $failed"
-                    )
-                    .setPositiveButton("OK", null)
-                    .show()
+                val checks = res.body()?.checks.orEmpty()
+                val apiOk = res.isSuccessful
+                val dbOk = checks["db"]?.toString().equals("ok", ignoreCase = true)
+                val redisOk = checks["redis"]?.toString().equals("ok", ignoreCase = true)
+                val celeryOk = checks["celery"]?.toString().equals("ok", ignoreCase = true)
+
+                val view = layoutInflater.inflate(R.layout.dialog_system_status, null)
+                setSystemStatusIcon(view, R.id.ivApiStatus, apiOk)
+                setSystemStatusIcon(view, R.id.ivDbStatus, dbOk)
+                setSystemStatusIcon(view, R.id.ivRedisStatus, redisOk)
+                setSystemStatusIcon(view, R.id.ivCeleryStatus, celeryOk)
+                showSystemStatusDialog(view)
+            } catch (_: Exception) {
+                val view = layoutInflater.inflate(R.layout.dialog_system_status, null)
+                setSystemStatusIcon(view, R.id.ivApiStatus, false)
+                setSystemStatusIcon(view, R.id.ivDbStatus, false)
+                setSystemStatusIcon(view, R.id.ivRedisStatus, false)
+                setSystemStatusIcon(view, R.id.ivCeleryStatus, false)
+                showSystemStatusDialog(view)
             }
         }
     }
 
+    private fun setSystemStatusIcon(view: android.view.View, iconId: Int, isOk: Boolean) {
+        val image = view.findViewById<ImageView>(iconId)
+        image.setImageResource(if (isOk) R.drawable.ic_check_green else R.drawable.ic_error_red)
+    }
+
+    private fun showSystemStatusDialog(view: android.view.View) {
+        val dialog = AlertDialog.Builder(this@HomeActivity)
+            .setView(view)
+            .create()
+        applySystemStatusComponentIconTint(view)
+        view.findViewById<android.widget.Button>(R.id.btnCloseSystemStatus)?.setOnClickListener {
+            dialog.dismiss()
+        }
+        dialog.show()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.window?.setDimAmount(0f)
+    }
+
+    private fun applySystemStatusComponentIconTint(view: android.view.View) {
+        val isDark = prefs.getBoolean("dark_mode", false)
+        val tint = if (isDark) Color.WHITE else MaterialColors.getColor(
+            view,
+            com.google.android.material.R.attr.colorOnSurface
+        )
+        val ids = intArrayOf(
+            R.id.ivApiIcon,
+            R.id.ivDbIcon,
+            R.id.ivRedisIcon,
+            R.id.ivCeleryIcon
+        )
+        ids.forEach { id ->
+            view.findViewById<ImageView>(id)?.setColorFilter(tint)
+        }
+    }
     private fun showHostDialog() {
         val input = EditText(this).apply {
             hint = "IP del servidor (ej. 192.168.1.50)"
@@ -318,7 +330,7 @@ class HomeActivity : AppCompatActivity() {
 
         AlertDialog.Builder(this)
             .setTitle("Configurar servidor")
-            .setMessage("Se guardará solo en este dispositivo.")
+            .setMessage("Se guardarÃ¡ solo en este dispositivo.")
             .setView(input)
             .setNegativeButton("Cancelar", null)
             .setNeutralButton("Limpiar") { _, _ ->
@@ -347,7 +359,7 @@ class HomeActivity : AppCompatActivity() {
                 } else if (res.code() != 401) {
                     AlertDialog.Builder(this@HomeActivity)
                         .setTitle("Mi perfil")
-                        .setMessage("Error ${res.code()} ❌")
+                        .setMessage("Error ${res.code()} âŒ")
                         .setPositiveButton("OK", null)
                         .show()
                 }
@@ -524,7 +536,7 @@ class HomeActivity : AppCompatActivity() {
         }
 
         if (restricted) {
-            label.text = "Solo admin/manager"
+            label.text = "Bloqueado"
             label.setTextColor(Color.DKGRAY)
             icon.setImageResource(R.drawable.ic_lock)
             icon.setColorFilter(Color.parseColor("#9E9E9E"))
@@ -538,6 +550,15 @@ class HomeActivity : AppCompatActivity() {
             card.setCardBackgroundColor(MaterialColors.getColor(card, com.google.android.material.R.attr.colorSurface))
             card.alpha = 1.0f
         }
+    }
+
+    private fun showRestrictedPermissionDialog() {
+        UiNotifier.showBlocking(
+            this,
+            "Permisos insuficientes",
+            "Esta funcionalidad está disponible solo para admin/manager.",
+            R.drawable.ic_lock
+        )
     }
 
 
@@ -563,8 +584,8 @@ class HomeActivity : AppCompatActivity() {
 
 private fun confirmLogout() {
         AlertDialog.Builder(this)
-            .setTitle("Cerrar sesión")
-            .setMessage("¿Seguro que quieres cerrar sesión?")
+            .setTitle("Cerrar sesiÃ³n")
+            .setMessage("Â¿Seguro que quieres cerrar sesiÃ³n?")
             .setNegativeButton("Cancelar", null)
             .setPositiveButton("Cerrar") { _, _ -> logout() }
             .show()
@@ -806,6 +827,7 @@ private fun confirmLogout() {
         return out
     }
 }
+
 
 
 

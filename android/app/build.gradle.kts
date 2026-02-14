@@ -46,6 +46,11 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
+    packaging {
+        jniLibs {
+            pickFirsts += "lib/*/libc++_shared.so"
+        }
+    }
 }
 
 dependencies {
@@ -88,6 +93,11 @@ dependencies {
 
     // ✅ Lottie
     implementation("com.airbnb.android:lottie:6.4.1")
+
+    // ✅ Niimbot SDK (local libs)
+    implementation(files("libs/4.0.2-release.aar"))
+    implementation(files("libs/LPAPI-2019-11-20-R.jar"))
+    implementation(files("libs/image-1.9.5-20260121.aar"))
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

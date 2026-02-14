@@ -163,11 +163,12 @@ class ProductListActivity : AppCompatActivity() {
 
         setupCategoryDropdowns()
         binding.tilCreateCategory.post { applyCategoryDropdownIcon() }
+        resetAndLoad()
     }
 
     override fun onResume() {
         super.onResume()
-        resetAndLoad()
+        AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
     }
 
     private fun resetAndLoad() {
@@ -379,6 +380,16 @@ class ProductListActivity : AppCompatActivity() {
     }
 
     private fun createProduct() {
+        if (isUserRole()) {
+            UiNotifier.showBlocking(
+                this,
+                "Permisos insuficientes",
+                "No tienes permisos para crear productos.",
+                com.example.inventoryapp.R.drawable.ic_lock
+            )
+            return
+        }
+
         val sku = binding.etSku.text.toString().trim()
         val name = binding.etName.text.toString().trim()
         val rawBarcode = binding.etBarcode.text.toString().trim()
@@ -926,6 +937,15 @@ class ProductListActivity : AppCompatActivity() {
     }
 
     private fun toggleCreateProductForm() {
+        if (isUserRole()) {
+            UiNotifier.showBlocking(
+                this,
+                "Permisos insuficientes",
+                "No tienes permisos para crear productos.",
+                com.example.inventoryapp.R.drawable.ic_lock
+            )
+            return
+        }
         TransitionManager.beginDelayedTransition(binding.scrollProducts, AutoTransition().setDuration(180))
         val isVisible = binding.layoutCreateProductContent.visibility == View.VISIBLE
         if (isVisible) {
@@ -1147,6 +1167,11 @@ class ProductListActivity : AppCompatActivity() {
     private fun canShowTechnicalCreateErrors(): Boolean {
         val role = getSharedPreferences("ui_prefs", MODE_PRIVATE).getString("cached_role", null)
         return role.equals("ADMIN", ignoreCase = true) || role.equals("MANAGER", ignoreCase = true)
+    }
+
+    private fun isUserRole(): Boolean {
+        val role = getSharedPreferences("ui_prefs", MODE_PRIVATE).getString("cached_role", null)
+        return role.equals("USER", ignoreCase = true)
     }
 
     private fun formatCreateProductError(code: Int, rawError: String?): String {

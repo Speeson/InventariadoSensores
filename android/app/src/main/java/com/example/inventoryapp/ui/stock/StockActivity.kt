@@ -1,4 +1,4 @@
-package com.example.inventoryapp.ui.stock
+﻿package com.example.inventoryapp.ui.stock
 import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 import com.example.inventoryapp.R
 
@@ -468,12 +468,22 @@ class StockActivity : AppCompatActivity() {
     }
 
     private fun createStock() {
+        if (isUserRole()) {
+            UiNotifier.showBlocking(
+                this,
+                "Permisos insuficientes",
+                "No tienes permisos para crear stock.",
+                com.example.inventoryapp.R.drawable.ic_lock
+            )
+            return
+        }
+
         val productInput = binding.etProductId.text.toString().trim()
         val productId = productInput.toIntOrNull() ?: resolveProductIdByName(productInput)
         val location = normalizeLocationInput(binding.etLocation.text.toString().trim())
         val quantity = binding.etQuantity.text.toString().toIntOrNull()
 
-        if (productId == null) { binding.etProductId.error = "Product ID o nombre válido"; return }
+        if (productId == null) { binding.etProductId.error = "Product ID o nombre vÃ¡lido"; return }
         if (location.isBlank()) { binding.etLocation.error = "Location requerida"; return }
         if (quantity == null || quantity < 0) { binding.etQuantity.error = "Quantity >= 0"; return }
 
@@ -490,9 +500,9 @@ class StockActivity : AppCompatActivity() {
                     val created = res.body()
                     val name = productNameById[productId] ?: productId.toString()
                     val details = if (created != null) {
-                        "ID: ${created.id}\nProducto: $name\nUbicación: ${created.location}\nCantidad: ${created.quantity}"
+                        "ID: ${created.id}\nProducto: $name\nUbicaciÃ³n: ${created.location}\nCantidad: ${created.quantity}"
                     } else {
-                        "Producto: $name\nUbicación: $location\nCantidad: $quantity"
+                        "Producto: $name\nUbicaciÃ³n: $location\nCantidad: $quantity"
                     }
                     loadingHandled = true
                     loading.dismissThen {
@@ -527,7 +537,7 @@ class StockActivity : AppCompatActivity() {
                     CreateUiFeedback.showCreatedPopup(
                         this@StockActivity,
                         "Stock creado (offline)",
-                        "Producto: $name\nUbicación: $location\nCantidad: $quantity (offline)",
+                        "Producto: $name\nUbicaciÃ³n: $location\nCantidad: $quantity (offline)",
                         accentColorRes = R.color.offline_text
                     )
                 }
@@ -567,7 +577,7 @@ class StockActivity : AppCompatActivity() {
 
         val productName = productNameById[stock.productId] ?: "Producto ${stock.productId}"
         title.text = "Editar: $productName (ID ${stock.id})"
-        meta.text = "Ubicación: ${stock.location}"
+        meta.text = "UbicaciÃ³n: ${stock.location}"
         qtyInput.setText(stock.quantity.toString())
 
         val dialog = AlertDialog.Builder(this)
@@ -578,7 +588,7 @@ class StockActivity : AppCompatActivity() {
         btnSave.setOnClickListener {
             val newQty = qtyInput.text?.toString()?.toIntOrNull()
             if (newQty == null || newQty < 0) {
-                qtyInput.error = "Cantidad inválida"
+                qtyInput.error = "Cantidad invÃ¡lida"
                 return@setOnClickListener
             }
             updateStock(stock.id, StockUpdateDto(quantity = newQty))
@@ -588,7 +598,7 @@ class StockActivity : AppCompatActivity() {
         btnDelete.setOnClickListener {
             AlertDialog.Builder(this)
                 .setTitle("Vaciar stock")
-                .setMessage("Se pondrá la cantidad a 0. ¿Continuar?")
+                .setMessage("Se pondrÃ¡ la cantidad a 0. Â¿Continuar?")
                 .setNegativeButton("Cancelar", null)
                 .setPositiveButton("Vaciar") { _, _ ->
                     updateStock(stock.id, StockUpdateDto(quantity = 0))
@@ -603,13 +613,12 @@ class StockActivity : AppCompatActivity() {
     }
 
     private fun updateStock(stockId: Int, body: StockUpdateDto) {
-        snack.showSending("Enviando actualización de stock...")
 
         lifecycleScope.launch {
             try {
                 val res = NetworkModule.api.updateStock(stockId, body)
                 if (res.isSuccessful) {
-                    snack.showSuccess("✅ Stock actualizado")
+                    snack.showSuccess("âœ… Stock actualizado")
                     cacheStore.invalidatePrefix("stocks")
                     loadStocks()
                 } else {                    if (res.code() == 403) {
@@ -627,10 +636,10 @@ class StockActivity : AppCompatActivity() {
             } catch (e: IOException) {
                 val payload = OfflineSyncer.StockUpdatePayload(stockId, body)
                 OfflineQueue(this@StockActivity).enqueue(PendingType.STOCK_UPDATE, gson.toJson(payload))
-                snack.showQueuedOffline("Sin conexión. Update guardado offline")
+                snack.showQueuedOffline("Sin conexiÃ³n. Update guardado offline")
 
             } catch (e: Exception) {
-                snack.showError("❌ Error red: ${e.message}")
+                snack.showError("âŒ Error red: ${e.message}")
             }
         }
     }
@@ -789,6 +798,15 @@ class StockActivity : AppCompatActivity() {
     }
 
     private fun toggleCreateStockForm() {
+        if (isUserRole()) {
+            UiNotifier.showBlocking(
+                this,
+                "Permisos insuficientes",
+                "No tienes permisos para crear stock.",
+                com.example.inventoryapp.R.drawable.ic_lock
+            )
+            return
+        }
         TransitionManager.beginDelayedTransition(binding.scrollStock, AutoTransition().setDuration(180))
         val isVisible = binding.layoutCreateStockContent.visibility == View.VISIBLE
         if (isVisible) {
@@ -903,7 +921,7 @@ class StockActivity : AppCompatActivity() {
         if (showNotFoundDialog && hasActiveFilters() && filtered.isEmpty()) {
             CreateUiFeedback.showErrorPopup(
                 activity = this,
-                title = "No se encontró stock",
+                title = "No se encontrÃ³ stock",
                 details = buildStockSearchNotFoundDetails(productRaw, locationRaw, qtyRaw),
                 animationRes = R.raw.notfound
             )
@@ -952,15 +970,15 @@ class StockActivity : AppCompatActivity() {
             parts.add(productLabel)
         }
         if (locationRaw.isNotBlank()) {
-            parts.add("en ubicación \"$locationRaw\"")
+            parts.add("en ubicaciÃ³n \"$locationRaw\"")
         }
         if (qtyRaw.isNotBlank()) {
             parts.add("con cantidad $qtyRaw")
         }
         return if (parts.isEmpty()) {
-            "No se encontró stock con los filtros actuales."
+            "No se encontrÃ³ stock con los filtros actuales."
         } else {
-            "No se encontró stock ${parts.joinToString(separator = " ")}."
+            "No se encontrÃ³ stock ${parts.joinToString(separator = " ")}."
         }
     }
 
@@ -992,7 +1010,7 @@ class StockActivity : AppCompatActivity() {
         val backendMsg = extractBackendErrorMessage(detail)
         val detailLower = backendMsg.lowercase()
         val mapped = when (code) {
-            400 -> "Datos inválidos para crear stock"
+            400 -> "Datos invÃ¡lidos para crear stock"
             409 -> {
                 if (
                     detailLower.contains("location") ||
@@ -1000,7 +1018,7 @@ class StockActivity : AppCompatActivity() {
                     detailLower.contains("already exists") ||
                     detailLower.contains("ya existe")
                 ) {
-                    "Ya existe stock para ese producto en esa ubicación"
+                    "Ya existe stock para ese producto en esa ubicaciÃ³n"
                 } else {
                     "Conflicto: ya existe un stock similar"
                 }
@@ -1010,7 +1028,7 @@ class StockActivity : AppCompatActivity() {
         }
 
         if (code == 400 && isDuplicateStockMessage(detailLower)) {
-            return "Ya existe stock para ese producto en esa ubicación"
+            return "Ya existe stock para ese producto en esa ubicaciÃ³n"
         }
         if (technical && backendMsg.isNotBlank() && !isTooGenericBackendMessage(backendMsg)) {
             return backendMsg
@@ -1065,6 +1083,11 @@ class StockActivity : AppCompatActivity() {
         val role = prefs.getString("cached_role", null) ?: return false
         return role.equals("ADMIN", ignoreCase = true) ||
             role.equals("MANAGER", ignoreCase = true)
+    }
+
+    private fun isUserRole(): Boolean {
+        val role = getSharedPreferences("ui_prefs", MODE_PRIVATE).getString("cached_role", null)
+        return role.equals("USER", ignoreCase = true)
     }
 
     private fun parseErrorsNode(node: Any?): String? {

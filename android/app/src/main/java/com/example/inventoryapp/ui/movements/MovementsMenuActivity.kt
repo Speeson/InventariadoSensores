@@ -168,6 +168,16 @@ class MovementsMenuActivity : AppCompatActivity() {
     }
 
     private fun createMovement() {
+        if (isUserRole()) {
+            UiNotifier.showBlocking(
+                this,
+                "Permisos insuficientes",
+                "No tienes permisos para crear movimientos.",
+                R.drawable.ic_lock
+            )
+            return
+        }
+
         val type = binding.etCreateType.text.toString().trim().uppercase()
         val sourceRaw = binding.etCreateSource.text.toString().trim().uppercase()
         val productInput = binding.etCreateProduct.text.toString().trim()
@@ -358,6 +368,11 @@ class MovementsMenuActivity : AppCompatActivity() {
     private fun canShowTechnicalMovementErrors(): Boolean {
         val role = getSharedPreferences("ui_prefs", MODE_PRIVATE).getString("cached_role", null)
         return role.equals("ADMIN", ignoreCase = true) || role.equals("MANAGER", ignoreCase = true)
+    }
+
+    private fun isUserRole(): Boolean {
+        val role = getSharedPreferences("ui_prefs", MODE_PRIVATE).getString("cached_role", null)
+        return role.equals("USER", ignoreCase = true)
     }
 
     private fun formatMovementCreateError(code: Int, rawError: String?): String {
@@ -1155,6 +1170,15 @@ class MovementsMenuActivity : AppCompatActivity() {
     }
 
     private fun toggleCreateForm() {
+        if (isUserRole()) {
+            UiNotifier.showBlocking(
+                this,
+                "Permisos insuficientes",
+                "No tienes permisos para crear movimientos.",
+                R.drawable.ic_lock
+            )
+            return
+        }
         TransitionManager.beginDelayedTransition(binding.scrollMovements, AutoTransition().setDuration(180))
         val isVisible = binding.layoutCreateMovementContent.visibility == View.VISIBLE
         if (isVisible) {

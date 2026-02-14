@@ -169,6 +169,16 @@ snack = SendSnack(binding.root)
     }
 
     private fun createEvent() {
+        if (isUserRole()) {
+            UiNotifier.showBlocking(
+                this,
+                "Permisos insuficientes",
+                "No tienes permisos para crear eventos.",
+                com.example.inventoryapp.R.drawable.ic_lock
+            )
+            return
+        }
+
         val typeRawInput = binding.etEventType.text.toString().trim().uppercase()
         val productId = binding.etProductId.text.toString().trim().toIntOrNull()
         val delta = binding.etDelta.text.toString().trim().toIntOrNull()
@@ -270,6 +280,15 @@ snack = SendSnack(binding.root)
     }
 
     private fun toggleCreateEventForm() {
+        if (isUserRole()) {
+            UiNotifier.showBlocking(
+                this,
+                "Permisos insuficientes",
+                "No tienes permisos para crear eventos.",
+                com.example.inventoryapp.R.drawable.ic_lock
+            )
+            return
+        }
         TransitionManager.beginDelayedTransition(binding.scrollEvents, AutoTransition().setDuration(180))
         val isVisible = binding.layoutCreateEventContent.visibility == View.VISIBLE
         if (isVisible) {
@@ -426,6 +445,11 @@ snack = SendSnack(binding.root)
     private fun isForbidden(ex: Throwable?): Boolean {
         val msg = ex?.message ?: return false
         return msg.contains("HTTP 403")
+    }
+
+    private fun isUserRole(): Boolean {
+        val role = getSharedPreferences("ui_prefs", MODE_PRIVATE).getString("cached_role", null)
+        return role.equals("USER", ignoreCase = true)
     }
 
     private fun normalizeLocationInput(raw: String): String {

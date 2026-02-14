@@ -66,7 +66,19 @@ object UiNotifier {
         titleView.text = title
         messageView.text = message
         lottie.repeatCount = com.airbnb.lottie.LottieDrawable.INFINITE
-        lottie.playAnimation()
+        lottie.addLottieOnCompositionLoadedListener { composition ->
+            val startFrame = 45
+            val endFrame = composition.endFrame.toInt().coerceAtLeast(startFrame + 1)
+            lottie.setMinAndMaxFrame(startFrame, endFrame)
+            lottie.frame = startFrame
+            lottie.playAnimation()
+        }
+        if (lottie.composition != null) {
+            val endFrame = lottie.composition!!.endFrame.toInt().coerceAtLeast(46)
+            lottie.setMinAndMaxFrame(45, endFrame)
+            lottie.frame = 45
+            lottie.playAnimation()
+        }
 
         val dialog = Dialog(activity)
         dialog.setContentView(view)

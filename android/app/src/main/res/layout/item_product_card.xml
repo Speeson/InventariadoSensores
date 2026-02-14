@@ -123,16 +123,30 @@
                     android:scaleType="fitCenter"
                     android:src="@drawable/copy" />
 
-                <ImageButton
-                    android:id="@+id/btnLabel"
+                <FrameLayout
                     android:layout_width="36dp"
                     android:layout_height="36dp"
-                    android:layout_marginTop="8dp"
-                    android:background="@android:color/transparent"
-                    android:contentDescription="Ver etiqueta"
-                    android:padding="0dp"
-                    android:scaleType="fitCenter"
-                    android:src="@drawable/print" />
+                    android:layout_marginTop="8dp">
+
+                    <ImageButton
+                        android:id="@+id/btnLabel"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@android:color/transparent"
+                        android:contentDescription="Ver etiqueta"
+                        android:padding="0dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/print" />
+
+                    <ImageView
+                        android:id="@+id/ivLabelLock"
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:layout_gravity="center"
+                        android:contentDescription="Bloqueado"
+                        android:src="@drawable/ic_lock"
+                        android:visibility="gone" />
+                </FrameLayout>
             </LinearLayout>
         </LinearLayout>
 

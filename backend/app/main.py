@@ -77,12 +77,10 @@ def health():
         worker_count = len(replies or [])
         details["celery"] = "ok" if worker_count > 0 else "error"
         details["celery_workers"] = worker_count
-        if worker_count == 0:
-            failures.append("celery")
     except Exception as exc:
         details["celery"] = "error"
         details["celery_error"] = str(exc)
-        failures.append("celery")
+        # Celery health is reported for observability, but does not mark API as unavailable.
 
     status = "ok" if not failures else "degraded"
     payload = {"status": status, "checks": details}
