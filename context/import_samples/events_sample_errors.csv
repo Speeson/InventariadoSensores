@@ -1,0 +1,8 @@
+type,sku,barcode,name,category_id,location_id,quantity
+IN,,1234567890123,Producto Sin SKU,1,1,5
+OUT,SKU-ERROR, ,Producto Sin Barcode,1,1,5
+IN,SKU-CAT-INVALID,1234500000000,Producto Cat Invalida,9999,1,5
+IN,SKU-LOC-INVALID,1234500000001,Producto Loc Invalida,1,9999,5
+IN,SKU-QTY-NEG,1234500000002,Producto Qty Negativo,1,1,-3
+ADJUST,SKU-QTY-ZERO,1234500000003,Producto Qty Cero,1,1,0
+OUT,SKU-STOCK-LOW,1234500000004,Producto Stock Bajo,1,1,999999

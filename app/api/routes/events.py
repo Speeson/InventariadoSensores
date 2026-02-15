@@ -1,0 +1,159 @@
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Response
+from pydantic import BaseModel
+from prometheus_client import Histogram, Counter
+from sqlalchemy.orm import Session
+from app.tasks import process_event
+from app.api.deps import get_current_user
+from app.cache.redis_cache import cache_get, cache_set, cache_invalidate_prefix, make_key
+from app.db.deps import get_db
+from app.models.enums import EventType
+from app.models.user import User
+from app.repositories import event_repo, product_repo, location_repo
+from app.schemas.event import EventCreate, EventResponse
+from sqlalchemy.exc import IntegrityError
+
+# Métricas para events
+EVENTS_OPS = Counter("route_events_operations_total", "Event route operations", ["operation", "status"])
+EVENTS_OP_TIME = Histogram("route_events_operation_duration_seconds", "Event operation durations", ["operation"])
+
+
+class EventListResponse(BaseModel):
+    items: list[EventResponse]
+    total: int
+    limit: int
+    offset: int
+
+
+router = APIRouter(prefix="/events", tags=["events"])
+
+
+@router.get("/", response_model=EventListResponse)
+def list_events(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    event_type: EventType | None = Query(None),
+    product_id: int | None = Query(None),
+    processed: bool | None = Query(None),
+    order_by: str | None = Query("created_at"),
+    order_dir: str | None = Query("desc"),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+):
+    EVENTS_OPS.labels(operation="list_events", status="started").inc()
+    with EVENTS_OP_TIME.labels(operation="list_events").time():
+        try:
+            if order_by != "created_at":
+                raise HTTPException(status_code=400, detail="order_by debe ser 'created_at'")
+            if order_dir not in {"asc", "desc"}:
+                raise HTTPException(status_code=400, detail="order_dir debe ser 'asc' o 'desc'")
+            
+            cache_key = make_key(
+                "events:list",
+                user.id,
+                {
+                    "event_type": event_type,
+                    "product_id": product_id,
+                    "processed": processed,
+                    "order_by": order_by,
+                    "order_dir": order_dir,
+                    "limit": limit,
+                    "offset": offset,
+                },
+            )
+            cached = cache_get(cache_key)
+            if cached is not None:
+                EVENTS_OPS.labels(operation="list_events", status="success").inc()
+                return cached
+            
+            items, total = event_repo.list_events(
+                db,
+                event_type=event_type,
+                product_id=product_id,
+                processed=processed,
+                order_dir=order_dir,
+                limit=limit,
+                offset=offset,
+            )
+            payload = EventListResponse(items=items, total=total, limit=limit, offset=offset)
+            cache_set(cache_key, payload, ttl_seconds=300)
+            EVENTS_OPS.labels(operation="list_events", status="success").inc()
+            return payload
+        except Exception as exc:
+            EVENTS_OPS.labels(operation="list_events", status="error").inc()
+            raise
+
+
+@router.post(
+    "/",
+    response_model=EventResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_event(
+    payload: EventCreate,
+    response: Response,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    EVENTS_OPS.labels(operation="create_event", status="started").inc()
+    with EVENTS_OP_TIME.labels(operation="create_event").time():
+        try:
+            # 0) Validar producto
+            product = product_repo.get(db, payload.product_id)
+            if not product:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
+
+            # 1) Validar location si en vuestro flujo es obligatorio
+            if not payload.location:
+                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="location es obligatorio")
+
+            # 2) Idempotencia "rapida": si ya existe esa key, devolver el mismo evento
+            # (Esto evita duplicados cuando el cliente reintenta el POST)
+            existing = event_repo.get_by_idempotency_key(db, payload.idempotency_key)
+            if existing:
+                response.status_code = status.HTTP_200_OK
+                EVENTS_OPS.labels(operation="create_event", status="success").inc()
+                return existing
+
+            # 3) Asegurar location (crear si no existe)
+            location_obj = location_repo.get_or_create(db, payload.location)
+
+            # 4) Crear evento PENDING y manejar carrera por key duplicada
+            try:
+                event = event_repo.create_event(
+                    db,
+                    event_type=payload.event_type,
+                    product_id=payload.product_id,
+                    delta=payload.delta,
+                    source=payload.source,
+                    location_id=location_obj.id,
+                    processed=False,
+                    idempotency_key=payload.idempotency_key,
+                )
+            except IntegrityError:
+                # Si entraron dos peticiones a la vez con la misma key,
+                # una puede fallar por unique constraint. Recuperamos el existente.
+                db.rollback()
+                existing = event_repo.get_by_idempotency_key(db, payload.idempotency_key)
+                if existing:
+                    response.status_code = status.HTTP_200_OK
+                    EVENTS_OPS.labels(operation="create_event", status="success").inc()
+                    return existing
+                raise
+
+            # 5) Encolar para que lo procese el worker (S2)
+            try:
+                process_event.delay(event.id)
+            except Exception as exc:
+                # El evento queda PENDING. El enqueue fallo (infra).
+                EVENTS_OPS.labels(operation="create_event", status="error").inc()
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=f"No se pudo encolar el evento: {exc}",
+                )
+
+            cache_invalidate_prefix("events:list")
+            EVENTS_OPS.labels(operation="create_event", status="success").inc()
+            return event
+        except Exception as exc:
+            EVENTS_OPS.labels(operation="create_event", status="error").inc()
+            raise

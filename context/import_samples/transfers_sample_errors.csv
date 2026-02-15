@@ -1,0 +1,6 @@
+sku,barcode,name,category_id,from_location_id,to_location_id,quantity
+CPU-R7-9900,8400000000001,Transfer Misma Location,1,1,1,5
+CPU-R7-9900,8400000000001,Transfer Loc Origen Invalida,1,9999,2,5
+CPU-R7-9900,8400000000001,Transfer Loc Destino Invalida,1,1,9999,5
+CPU-R7-9900,8400000000001,Transfer Qty Cero,1,1,2,0
+CPU-R7-9900,8400000000001,Transfer Qty Negativa,1,1,2,-3
