@@ -1,12 +1,13 @@
 import os
 
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 import redis
 
 from app.db.session import SessionLocal
+from app.core.observability import MetricsRegistry, ObservabilityMiddleware
 
 from app.api.routes import auth, users, products, stocks, movements, events, alerts, categories, thresholds, reports, locations, imports, audit
 from app.api.routes import ws_alerts
@@ -14,6 +15,7 @@ from app.ws.alerts_ws import start_redis_listener
 import asyncio
 
 app = FastAPI(title="Sistema Inventariado Sensores")
+metrics_registry = MetricsRegistry()
 
 
 cors_origins_env = os.getenv("CORS_ORIGINS", "")
@@ -29,6 +31,11 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
+)
+app.add_middleware(
+    ObservabilityMiddleware,
+    registry=metrics_registry,
+    exclude_paths={"/metrics", "/health"},
 )
 
 app.include_router(auth.router)
@@ -87,6 +94,14 @@ def health():
     payload = {"status": status, "checks": details}
     status_code = 200 if not failures else 503
     return JSONResponse(payload, status_code=status_code)
+
+
+@app.get("/metrics", response_class=PlainTextResponse)
+def metrics():
+    return PlainTextResponse(
+        metrics_registry.render_prometheus(),
+        media_type="text/plain; version=0.0.4; charset=utf-8",
+    )
 
 
 @app.on_event("startup")

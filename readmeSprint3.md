@@ -419,3 +419,49 @@ Migraciones:
   - `backend/alembic/versions/3f5d8b2a1e47_add_import_entity_to_audit_log.py`
 - Nota de Alembic:
   - si aparecen múltiples heads, crear merge revision y actualizar a `head` para dejar historial lineal.
+
+## Observabilidad: métricas y trazas básicas
+
+Objetivo: medir rendimiento y errores de la API con trazabilidad por request, sin dependencia obligatoria de Prometheus/Grafana en esta fase.
+
+Backend:
+- Middleware de observabilidad:
+  - `backend/app/core/observability.py`
+  - Genera o propaga `X-Request-ID`.
+  - Añade `X-Request-ID` a la respuesta.
+  - Registra tiempo por request (`duration_ms`), método, path, status y cliente.
+  - Log estructurado JSON por request (`event=http_request`).
+- Registro de métricas en memoria:
+  - Requests totales.
+  - Errores 5xx.
+  - Suma y conteo de latencias (ms).
+  - Métricas desglosadas por ruta/método/status.
+- Endpoint de métricas:
+  - `GET /metrics`
+  - Formato texto estilo Prometheus (`text/plain; version=0.0.4`).
+
+Métricas principales:
+- `http_requests_total`
+- `http_request_errors_5xx_total`
+- `http_request_duration_ms_sum`
+- `http_request_duration_ms_count`
+- `http_requests_by_route_method_status{path,method,status}`
+- `http_request_duration_ms_by_route_method_sum{path,method}`
+- `http_request_duration_ms_by_route_method_count{path,method}`
+
+Integración:
+- `backend/app/main.py`
+  - Se registra el middleware.
+  - Se añade la ruta `/metrics`.
+
+Filtro de agregados globales:
+- Para evitar ruido en KPIs globales, se excluyen del agregado:
+  - `/metrics`
+  - `/health`
+- Aun así, estas rutas se mantienen en métricas por ruta para diagnóstico.
+
+Validación realizada:
+- Forzado de 5xx real (`POST /auth/login` con DB caída) y aumento de `http_request_errors_5xx_total`.
+- Verificación de `X-Request-ID`:
+  - con cabecera entrante (se conserva),
+  - sin cabecera (se genera UUID automáticamente).
