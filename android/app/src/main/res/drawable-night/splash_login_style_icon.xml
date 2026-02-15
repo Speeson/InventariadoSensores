@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:gravity="center"
+        android:width="142dp"
+        android:height="142dp">
+        <shape android:shape="rectangle">
+            <corners android:radius="28dp" />
+            <solid android:color="#FFFFFF" />
+            <stroke
+                android:width="2dp"
+                android:color="#4A72C9" />
+        </shape>
+    </item>
+
+    <item
+        android:gravity="center"
+        android:width="126dp"
+        android:height="126dp"
+        android:drawable="@drawable/iotrack_adaptative" />
+</layer-list>

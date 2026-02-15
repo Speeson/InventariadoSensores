@@ -8,4 +8,8 @@
         android:id="@+id/nav_alerts"
         android:title="Alertas"
         android:icon="@drawable/ic_bell" />
+    <item
+        android:id="@+id/nav_audit"
+        android:title="Auditoria"
+        android:icon="@drawable/reports" />
 </menu>

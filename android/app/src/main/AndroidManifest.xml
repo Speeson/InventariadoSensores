@@ -25,7 +25,6 @@
         android:theme="@style/Theme.Inventoryapp"
         android:usesCleartextTraffic="true">
 
-        <!-- LOGIN (pantalla inicial) -->
         <activity
             android:name=".ui.auth.LoginActivity"
             android:exported="true">
@@ -51,6 +50,7 @@
         <activity android:name=".ui.stock.StockActivity" />
         <activity android:name=".ui.movements.ResultActivity" />
         <activity android:name=".ui.imports.ImportsActivity" />
+        <activity android:name=".ui.audit.AuditActivity" />
         <activity android:name=".ui.home.HomeActivity" />
         <activity android:name=".MainActivity" />
 
@@ -61,6 +61,16 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 

@@ -51,6 +51,7 @@ android {
             pickFirsts += "lib/*/libc++_shared.so"
         }
     }
+
 }
 
 dependencies {

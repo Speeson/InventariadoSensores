@@ -3,6 +3,9 @@
     <style name="Base.Theme.Inventoryapp" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your light theme here. -->
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_empty_icon</item>
+        <item name="android:windowSplashScreenAnimationDuration">120</item>
+        <item name="android:windowSplashScreenBackground">#6A31F6</item>
     </style>
 
     <style name="Theme.Inventoryapp" parent="Base.Theme.Inventoryapp" />

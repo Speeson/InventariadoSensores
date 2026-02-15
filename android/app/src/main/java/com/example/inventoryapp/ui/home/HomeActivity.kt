@@ -44,6 +44,7 @@ import com.example.inventoryapp.ui.common.SystemAlertManager
 import com.example.inventoryapp.data.local.SystemAlertType
 import com.example.inventoryapp.data.remote.model.AlertStatusDto
 import com.example.inventoryapp.ui.imports.ImportsActivity
+import com.example.inventoryapp.ui.audit.AuditActivity
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.navigation.NavigationView
@@ -174,6 +175,13 @@ class HomeActivity : AppCompatActivity() {
                 R.id.nav_alerts -> {
                     startActivity(Intent(this, AlertsActivity::class.java))
                     binding.tvAlertsBadge.visibility = android.view.View.GONE
+                }
+                R.id.nav_audit -> {
+                    if (!currentRole.equals("ADMIN", ignoreCase = true)) {
+                        showRestrictedPermissionDialog()
+                    } else {
+                        startActivity(Intent(this, AuditActivity::class.java))
+                    }
                 }
             }
             binding.drawerLayout.closeDrawer(GravityCompat.START)
@@ -409,6 +417,7 @@ class HomeActivity : AppCompatActivity() {
                 val showRestricted = prefs.getBoolean("show_restricted_cards", false)
                 val isUser = me.role.equals("USER", ignoreCase = true)
                 rowToggle.visibility = if (isUser) android.view.View.VISIBLE else android.view.View.GONE
+                binding.navViewMain.menu.findItem(R.id.nav_audit)?.isVisible = me.role.equals("ADMIN", ignoreCase = true)
                 toggle.setOnCheckedChangeListener(null)
                 toggle.isChecked = showRestricted
                 toggle.setOnCheckedChangeListener { _, isChecked ->
@@ -712,6 +721,7 @@ private fun confirmLogout() {
         if (cachedRole.isNullOrBlank()) return
         if (cachedUserId <= 0) return
         currentRole = cachedRole
+        binding.navViewMain.menu.findItem(R.id.nav_audit)?.isVisible = cachedRole.equals("ADMIN", ignoreCase = true)
         val showRestricted = prefs.getBoolean("show_restricted_cards", false)
         val isUser = cachedRole.equals("USER", ignoreCase = true)
         rowToggle.visibility = if (isUser) android.view.View.VISIBLE else android.view.View.GONE

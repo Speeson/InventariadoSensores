@@ -33,7 +33,7 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        applyBluePurpleGradient(binding.tvBrandTitle)
+        playEntryMotion()
         applyBluePurpleGradient(binding.tvTitle)
 
         session = SessionManager(this)
@@ -160,8 +160,7 @@ class LoginActivity : AppCompatActivity() {
                     UiNotifier.show(this@LoginActivity, "¡Bienvenido!")
 
                     persistEmailIfNeeded(user)
-                    startActivity(Intent(this@LoginActivity, HomeActivity::class.java))
-                    finish()
+                    navigateToHome(Intent(this@LoginActivity, HomeActivity::class.java))
                 } else {
                     val errorMsg = when (response.code()) {
                         401 -> "Usuario o contraseña incorrectos"
@@ -185,8 +184,7 @@ class LoginActivity : AppCompatActivity() {
                 val res = NetworkModule.api.me()
                 if (res.isSuccessful && res.body() != null) {
                     NetworkModule.resetAuthRedirectGuard()
-                    startActivity(Intent(this@LoginActivity, HomeActivity::class.java))
-                    finish()
+                    navigateToHome(Intent(this@LoginActivity, HomeActivity::class.java))
                     FcmTokenManager.sync(this@LoginActivity)
                 } else {
                     session.clearToken()
@@ -300,8 +298,7 @@ class LoginActivity : AppCompatActivity() {
                     persistEmailIfNeeded(email)
                     val i = Intent(this@LoginActivity, HomeActivity::class.java)
                     i.putExtra("welcome_email", email)
-                    startActivity(i)
-                    finish()
+                    navigateToHome(i)
                 } else {
                     val msg = when (response.code()) {
                         409 -> "Ese email ya existe"
@@ -334,6 +331,27 @@ class LoginActivity : AppCompatActivity() {
         binding.btnLogin.text = if (loading) "Entrando..." else "Login"
     }
 
+    private fun navigateToHome(intent: Intent) {
+        startActivity(intent)
+        overridePendingTransition(R.anim.screen_enter_soft, R.anim.screen_exit_soft)
+        finish()
+    }
+
+    private fun playEntryMotion() {
+        binding.root.alpha = 0f
+        binding.root.scaleX = 0.985f
+        binding.root.scaleY = 0.985f
+        binding.root.translationY = 18f
+        binding.root.animate()
+            .alpha(1f)
+            .scaleX(1f)
+            .scaleY(1f)
+            .translationY(0f)
+            .setDuration(420L)
+            .setInterpolator(android.view.animation.OvershootInterpolator(0.7f))
+            .start()
+    }
+
     private fun showHostDialog() {
         val input = EditText(this).apply {
             hint = "IP del servidor (ej. 192.168.1.50)"
@@ -359,3 +377,4 @@ class LoginActivity : AppCompatActivity() {
     }
 
 }
+

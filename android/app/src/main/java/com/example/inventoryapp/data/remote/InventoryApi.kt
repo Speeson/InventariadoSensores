@@ -33,6 +33,7 @@ import com.example.inventoryapp.data.remote.model.ThresholdUpdateDto
 import com.example.inventoryapp.data.remote.model.AlertListResponseDto
 import com.example.inventoryapp.data.remote.model.AlertResponseDto
 import com.example.inventoryapp.data.remote.model.AlertStatusDto
+import com.example.inventoryapp.data.remote.model.AuditLogListResponseDto
 import com.example.inventoryapp.data.remote.model.FcmTokenRequest
 import com.example.inventoryapp.data.remote.model.ImportSummaryResponseDto
 import com.example.inventoryapp.data.remote.model.ImportReviewListResponseDto
@@ -289,6 +290,18 @@ interface InventoryApi {
     suspend fun rejectImportReview(
         @Path("review_id") reviewId: Int
     ): Response<BasicOkDto>
+
+    @GET("audit/")
+    suspend fun listAuditLogs(
+        @Query("entity") entity: String? = null,
+        @Query("action") action: String? = null,
+        @Query("user_id") userId: Int? = null,
+        @Query("date_from") dateFrom: String? = null,
+        @Query("date_to") dateTo: String? = null,
+        @Query("order_dir") orderDir: String? = "desc",
+        @Query("limit") limit: Int = 20,
+        @Query("offset") offset: Int = 0
+    ): Response<AuditLogListResponseDto>
 }
 
 
