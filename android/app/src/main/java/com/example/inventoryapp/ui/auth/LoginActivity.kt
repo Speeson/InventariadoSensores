@@ -19,6 +19,9 @@ import kotlinx.coroutines.launch
 import com.example.inventoryapp.R
 import java.util.LinkedHashSet
 import android.content.Context
+import android.graphics.LinearGradient
+import android.graphics.Shader
+import android.widget.TextView
 
 class LoginActivity : AppCompatActivity() {
 
@@ -30,6 +33,8 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        applyBluePurpleGradient(binding.tvBrandTitle)
+        applyBluePurpleGradient(binding.tvTitle)
 
         session = SessionManager(this)
         setupEmailAutocomplete()
@@ -220,15 +225,17 @@ class LoginActivity : AppCompatActivity() {
         val etUsername = dialogView.findViewById<EditText>(R.id.etRegUsername)
         val etEmail = dialogView.findViewById<EditText>(R.id.etRegEmail)
         val etPass = dialogView.findViewById<EditText>(R.id.etRegPassword)
+        val tvRegisterTitle = dialogView.findViewById<TextView>(R.id.tvRegisterTitle)
+        val btnCancel = dialogView.findViewById<android.widget.Button>(R.id.btnRegisterCancel)
+        val btnCreate = dialogView.findViewById<android.widget.Button>(R.id.btnRegisterCreate)
 
         val dialog = AlertDialog.Builder(this)
             .setView(dialogView)
-            .setNegativeButton("Cancelar", null)
-            .setPositiveButton("Crear", null) // lo sobreescribimos para validar
             .create()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
         dialog.setOnShowListener {
-            val btnCreate = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            applyBluePurpleGradient(tvRegisterTitle)
             btnCreate.setOnClickListener {
                 val username = etUsername.text.toString().trim()
                 val email = etEmail.text.toString().trim()
@@ -241,9 +248,34 @@ class LoginActivity : AppCompatActivity() {
 
                 registerWithApi(username, email, pass, dialog)
             }
+            btnCancel.setOnClickListener { dialog.dismiss() }
         }
 
         dialog.show()
+    }
+
+    private fun applyBluePurpleGradient(textView: TextView) {
+        textView.post {
+            val text = textView.text?.toString().orEmpty()
+            if (text.isEmpty()) return@post
+            val width = textView.paint.measureText(text)
+            if (width <= 0f) return@post
+            val shader = LinearGradient(
+                0f,
+                0f,
+                width,
+                0f,
+                intArrayOf(
+                    getColor(R.color.icon_grad_start),
+                    getColor(R.color.icon_grad_mid2),
+                    getColor(R.color.icon_grad_end)
+                ),
+                floatArrayOf(0f, 0.55f, 1f),
+                Shader.TileMode.CLAMP
+            )
+            textView.paint.shader = shader
+            textView.invalidate()
+        }
     }
 
     private fun registerWithApi(username: String, email: String, pass: String, dialog: AlertDialog) {

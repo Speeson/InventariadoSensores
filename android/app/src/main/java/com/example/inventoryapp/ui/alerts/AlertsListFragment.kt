@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.app.AlertDialog
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -20,6 +21,7 @@ import com.example.inventoryapp.data.remote.model.AlertTypeDto
 import com.example.inventoryapp.data.remote.model.EventResponseDto
 import com.example.inventoryapp.databinding.FragmentAlertsListBinding
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
+import com.example.inventoryapp.ui.common.GradientIconUtil
 import com.example.inventoryapp.ui.common.SendSnack
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.events.EventAdapter
@@ -98,6 +100,10 @@ class AlertsListFragment : Fragment() {
             }
         }
 
+        GradientIconUtil.applyGradient(binding.ivSystemChevron, com.example.inventoryapp.R.drawable.triangle_down_lg)
+        GradientIconUtil.applyGradient(binding.ivImportantChevron, com.example.inventoryapp.R.drawable.triangle_down_lg)
+        GradientIconUtil.applyGradient(binding.ivFailedChevron, com.example.inventoryapp.R.drawable.triangle_down_lg)
+        setupSections()
         applyRoleRestrictions()
     }
 
@@ -117,6 +123,7 @@ class AlertsListFragment : Fragment() {
     private fun loadSystemAlerts() {
         val items = systemStore.list()
         systemAdapter.submit(items)
+        binding.tvAlertsTitle.text = "Alertas del sistema (${items.size})"
         binding.tvAlertsEmpty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
     }
 
@@ -158,6 +165,7 @@ class AlertsListFragment : Fragment() {
                                 .thenByDescending { it.alert.id }
                         )
                     alertAdapter.submit(rows)
+                    binding.tvBackendAlertsTitle.text = "Alertas importantes (${rows.size})"
                     binding.tvBackendAlertsEmpty.visibility = if (rows.isEmpty()) View.VISIBLE else View.GONE
                 } else {
                     snack.showError(ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))
@@ -181,6 +189,7 @@ class AlertsListFragment : Fragment() {
                         .filterNot { dismissedStore.list().contains(it.id) }
                     lastFailedRows = rows
                     failedEventAdapter.submit(rows)
+                    binding.tvEventsTitle.text = "Eventos fallidos (${rows.size})"
                     binding.tvEventsEmpty.visibility = if (rows.isEmpty()) View.VISIBLE else View.GONE
                 } else {
                     snack.showError(ApiErrorFormatter.format(res.code(), res.errorBody()?.string()))
@@ -335,12 +344,82 @@ class AlertsListFragment : Fragment() {
 
     private fun applyRoleRestrictions() {
         if (!isUserRole()) return
-        binding.btnClearStock.apply {
-            text = "Bloqueado"
-            setCompoundDrawablesWithIntrinsicBounds(com.example.inventoryapp.R.drawable.ic_lock, 0, 0, 0)
-            compoundDrawablePadding = 10
-            isAllCaps = false
+        binding.btnClearStock.alpha = 0.6f
+    }
+
+    private fun setupSections() {
+        binding.layoutSystemHeader.setOnClickListener {
+            toggleSection(
+                targetContent = binding.layoutSystemContent,
+                targetChevron = binding.ivSystemChevron,
+                targetHeader = binding.layoutSystemHeader,
+                otherContentA = binding.layoutImportantContent,
+                otherChevronA = binding.ivImportantChevron,
+                otherHeaderA = binding.layoutImportantHeader,
+                otherContentB = binding.layoutFailedContent,
+                otherChevronB = binding.ivFailedChevron,
+                otherHeaderB = binding.layoutFailedHeader
+            )
         }
+        binding.layoutImportantHeader.setOnClickListener {
+            toggleSection(
+                targetContent = binding.layoutImportantContent,
+                targetChevron = binding.ivImportantChevron,
+                targetHeader = binding.layoutImportantHeader,
+                otherContentA = binding.layoutSystemContent,
+                otherChevronA = binding.ivSystemChevron,
+                otherHeaderA = binding.layoutSystemHeader,
+                otherContentB = binding.layoutFailedContent,
+                otherChevronB = binding.ivFailedChevron,
+                otherHeaderB = binding.layoutFailedHeader
+            )
+        }
+        binding.layoutFailedHeader.setOnClickListener {
+            toggleSection(
+                targetContent = binding.layoutFailedContent,
+                targetChevron = binding.ivFailedChevron,
+                targetHeader = binding.layoutFailedHeader,
+                otherContentA = binding.layoutSystemContent,
+                otherChevronA = binding.ivSystemChevron,
+                otherHeaderA = binding.layoutSystemHeader,
+                otherContentB = binding.layoutImportantContent,
+                otherChevronB = binding.ivImportantChevron,
+                otherHeaderB = binding.layoutImportantHeader
+            )
+        }
+
+        binding.layoutSystemContent.visibility = View.VISIBLE
+        binding.ivSystemChevron.rotation = 180f
+        binding.layoutSystemHeader.setBackgroundResource(com.example.inventoryapp.R.drawable.bg_toggle_active)
+        binding.layoutImportantHeader.setBackgroundResource(com.example.inventoryapp.R.drawable.bg_toggle_idle)
+        binding.layoutFailedHeader.setBackgroundResource(com.example.inventoryapp.R.drawable.bg_toggle_idle)
+    }
+
+    private fun toggleSection(
+        targetContent: View,
+        targetChevron: View,
+        targetHeader: View,
+        otherContentA: View,
+        otherChevronA: View,
+        otherHeaderA: View,
+        otherContentB: View,
+        otherChevronB: View,
+        otherHeaderB: View
+    ) {
+        val opening = !targetContent.isVisible
+        targetContent.visibility = if (opening) View.VISIBLE else View.GONE
+        targetChevron.animate().rotation(if (opening) 180f else 0f).setDuration(160).start()
+
+        otherContentA.visibility = View.GONE
+        otherContentB.visibility = View.GONE
+        otherChevronA.animate().rotation(0f).setDuration(160).start()
+        otherChevronB.animate().rotation(0f).setDuration(160).start()
+
+        targetHeader.setBackgroundResource(
+            if (opening) com.example.inventoryapp.R.drawable.bg_toggle_active else com.example.inventoryapp.R.drawable.bg_toggle_idle
+        )
+        otherHeaderA.setBackgroundResource(com.example.inventoryapp.R.drawable.bg_toggle_idle)
+        otherHeaderB.setBackgroundResource(com.example.inventoryapp.R.drawable.bg_toggle_idle)
     }
 
     private fun EventResponseDto.toRowUi(): EventRowUi {

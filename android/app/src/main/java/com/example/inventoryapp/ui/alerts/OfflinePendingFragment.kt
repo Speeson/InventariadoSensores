@@ -6,12 +6,14 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.app.AlertDialog
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.PendingRequest
 import com.example.inventoryapp.data.local.FailedRequest
 import com.example.inventoryapp.databinding.FragmentOfflinePendingBinding
+import com.example.inventoryapp.ui.common.GradientIconUtil
 import com.example.inventoryapp.ui.offline.OfflineErrorsAdapter
 
 class OfflinePendingFragment : Fragment() {
@@ -46,6 +48,32 @@ class OfflinePendingFragment : Fragment() {
         failedAdapter = OfflineErrorsAdapter { index -> showFailedActions(index) }
         binding.rvFailed.layoutManager = LinearLayoutManager(requireContext())
         binding.rvFailed.adapter = failedAdapter
+
+        binding.layoutPendingHeader.setOnClickListener {
+            toggleSection(binding.layoutPendingContent, binding.ivPendingChevron)
+        }
+        binding.layoutFailedHeader.setOnClickListener {
+            toggleSection(binding.layoutFailedContent, binding.ivFailedChevron)
+        }
+        binding.btnClearPending.setOnClickListener {
+            queue.clear()
+            refresh()
+        }
+        binding.btnClearFailed.setOnClickListener {
+            queue.clearFailed()
+            refresh()
+        }
+
+        GradientIconUtil.applyGradient(binding.ivPendingChevron, com.example.inventoryapp.R.drawable.triangle_down_lg)
+        GradientIconUtil.applyGradient(binding.ivFailedChevron, com.example.inventoryapp.R.drawable.triangle_down_lg)
+
+        // Offline sections collapsed by default.
+        binding.layoutPendingContent.visibility = View.GONE
+        binding.layoutFailedContent.visibility = View.GONE
+        binding.ivPendingChevron.rotation = 0f
+        binding.ivFailedChevron.rotation = 0f
+        binding.layoutPendingHeader.setBackgroundResource(com.example.inventoryapp.R.drawable.bg_toggle_idle)
+        binding.layoutFailedHeader.setBackgroundResource(com.example.inventoryapp.R.drawable.bg_toggle_idle)
     }
 
     override fun onResume() {
@@ -62,13 +90,33 @@ class OfflinePendingFragment : Fragment() {
         pending = queue.getAll()
         failed = queue.getFailed()
 
-        binding.tvPendingTitle.text = "Pendientes (${pending.size})"
-        binding.tvFailedTitle.text = "Fallidos (${failed.size})"
+        binding.tvPendingTitle.text = "Envíos pendientes (${pending.size})"
+        binding.tvFailedTitle.text = "Envíos fallidos (${failed.size})"
         binding.tvPendingEmpty.visibility = if (pending.isEmpty()) View.VISIBLE else View.GONE
         binding.tvFailedEmpty.visibility = if (failed.isEmpty()) View.VISIBLE else View.GONE
 
         pendingAdapter.submit(pending)
         failedAdapter.submit(failed)
+    }
+
+    private fun toggleSection(content: View, chevron: View) {
+        val isPending = content === binding.layoutPendingContent
+        val header = if (isPending) binding.layoutPendingHeader else binding.layoutFailedHeader
+        val otherContent = if (isPending) binding.layoutFailedContent else binding.layoutPendingContent
+        val otherChevron = if (isPending) binding.ivFailedChevron else binding.ivPendingChevron
+        val otherHeader = if (isPending) binding.layoutFailedHeader else binding.layoutPendingHeader
+
+        val opening = !content.isVisible
+        content.visibility = if (opening) View.VISIBLE else View.GONE
+        chevron.animate().rotation(if (opening) 180f else 0f).setDuration(160).start()
+
+        otherContent.visibility = View.GONE
+        otherChevron.animate().rotation(0f).setDuration(160).start()
+
+        header.setBackgroundResource(
+            if (opening) com.example.inventoryapp.R.drawable.bg_toggle_active else com.example.inventoryapp.R.drawable.bg_toggle_idle
+        )
+        otherHeader.setBackgroundResource(com.example.inventoryapp.R.drawable.bg_toggle_idle)
     }
 
     private fun showPendingActions(index: Int) {

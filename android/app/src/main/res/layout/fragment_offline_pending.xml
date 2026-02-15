@@ -8,58 +8,158 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
 
-        <TextView
-            android:id="@+id/tvPendingTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Pendientes"
-            android:textStyle="bold"
-            android:textSize="18sp" />
+        <FrameLayout
+            android:id="@+id/layoutPendingHeader"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:background="@drawable/bg_toggle_idle"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground">
 
-        <TextView
-            android:id="@+id/tvPendingEmpty"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Sin pendientes"
-            android:visibility="gone"
-            android:layout_marginTop="6dp"
-            android:textColor="?attr/colorOnSurface"
-            android:alpha="0.7" />
+            <TextView
+                android:id="@+id/tvPendingTitle"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="start|center_vertical"
+                android:paddingStart="14dp"
+                android:paddingEnd="96dp"
+                android:text="Envios pendientes (0)"
+                android:textColor="?attr/colorOnSurface"
+                android:textStyle="bold" />
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvPending"
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_gravity="end|center_vertical"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingEnd="8dp">
+
+                <ImageButton
+                    android:id="@+id/btnClearPending"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="@android:color/transparent"
+                    android:contentDescription="Limpiar envios pendientes"
+                    android:padding="3dp"
+                    android:scaleType="centerInside"
+                    android:src="@drawable/clear" />
+
+                <ImageView
+                    android:id="@+id/ivPendingChevron"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="10dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/triangle_down_lg" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <LinearLayout
+            android:id="@+id/layoutPendingContent"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:nestedScrollingEnabled="false" />
+            android:orientation="vertical"
+            android:paddingTop="8dp"
+            android:visibility="gone">
 
-        <TextView
-            android:id="@+id/tvFailedTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Fallidos"
-            android:textStyle="bold"
-            android:textSize="18sp"
-            android:layout_marginTop="18dp" />
+            <TextView
+                android:id="@+id/tvPendingEmpty"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="Sin pendientes"
+                android:textColor="?attr/colorOnSurface"
+                android:visibility="gone" />
 
-        <TextView
-            android:id="@+id/tvFailedEmpty"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Sin errores"
-            android:visibility="gone"
-            android:layout_marginTop="6dp"
-            android:textColor="?attr/colorOnSurface"
-            android:alpha="0.7" />
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvPending"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:nestedScrollingEnabled="false" />
+        </LinearLayout>
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvFailed"
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="10dp" />
+
+        <FrameLayout
+            android:id="@+id/layoutFailedHeader"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:background="@drawable/bg_toggle_idle"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground">
+
+            <TextView
+                android:id="@+id/tvFailedTitle"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="start|center_vertical"
+                android:paddingStart="14dp"
+                android:paddingEnd="96dp"
+                android:text="Envios fallidos (0)"
+                android:textColor="?attr/colorOnSurface"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_gravity="end|center_vertical"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingEnd="8dp">
+
+                <ImageButton
+                    android:id="@+id/btnClearFailed"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="@android:color/transparent"
+                    android:contentDescription="Limpiar envios fallidos"
+                    android:padding="3dp"
+                    android:scaleType="centerInside"
+                    android:src="@drawable/clear" />
+
+                <ImageView
+                    android:id="@+id/ivFailedChevron"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="10dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/triangle_down_lg" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <LinearLayout
+            android:id="@+id/layoutFailedContent"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:nestedScrollingEnabled="false" />
+            android:orientation="vertical"
+            android:paddingTop="8dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvFailedEmpty"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="Sin errores"
+                android:textColor="?attr/colorOnSurface"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvFailed"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:nestedScrollingEnabled="false" />
+        </LinearLayout>
 
     </LinearLayout>
 

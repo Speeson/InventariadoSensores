@@ -676,17 +676,17 @@ private fun confirmLogout() {
             val paint = binding.tvHomeTitle.paint
             val width = paint.measureText(binding.tvHomeTitle.text.toString())
             if (width <= 0f) return@post
-            val c1 = ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_start)
-            val c2 = ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_mid2)
-            val c3 = ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_mid1)
-            val c4 = ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_end)
             val shader = android.graphics.LinearGradient(
                 0f,
                 0f,
                 width,
                 0f,
-                intArrayOf(c1, c2, c3, c4),
-                null,
+                intArrayOf(
+                    ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_start),
+                    ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_mid2),
+                    ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_end)
+                ),
+                floatArrayOf(0f, 0.55f, 1f),
                 android.graphics.Shader.TileMode.CLAMP
             )
             paint.shader = shader
