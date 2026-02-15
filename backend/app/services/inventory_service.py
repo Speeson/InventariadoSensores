@@ -3,12 +3,12 @@ import uuid
 
 from sqlalchemy.orm import Session
 
-from app.models.enums import Source, MovementType, AlertType, AlertStatus
+from app.models.enums import Source, MovementType, AlertType, AlertStatus, Entity, ActionType
 from app.models.product import Product
 from app.models.location import Location
 from app.models.stock import Stock
 from app.models.movement import Movement
-from app.repositories import product_repo, stock_repo, movement_repo, location_repo, alert_repo
+from app.repositories import product_repo, stock_repo, movement_repo, location_repo, alert_repo, audit_log_repo
 from app.models.stock_threshold import StockThreshold
 from sqlalchemy import select
 import os
@@ -152,6 +152,13 @@ def increase_stock(
         movement_source=source,
         location_id=location_id,
     )
+    audit_log_repo.create_log(
+        db,
+        entity=Entity.MOVEMENT,
+        action=ActionType.CREATE,
+        user_id=user_id,
+        details=f"movement_id={movement.id} product_id={product_id} delta={quantity} type=IN",
+    )
     _maybe_create_alerts(db, stock=updated_stock, delta=quantity)
     return updated_stock, movement
 
@@ -182,6 +189,13 @@ def decrease_stock(
         movement_type=MovementType.OUT,
         movement_source=source,
         location_id=location_id,
+    )
+    audit_log_repo.create_log(
+        db,
+        entity=Entity.MOVEMENT,
+        action=ActionType.CREATE,
+        user_id=user_id,
+        details=f"movement_id={movement.id} product_id={product_id} delta={-quantity} type=OUT",
     )
     _maybe_create_alerts(db, stock=updated_stock, delta=-quantity)
     return updated_stock, movement
@@ -217,6 +231,13 @@ def adjust_stock(
         movement_type=MovementType.ADJUST,
         movement_source=source,
         location_id=location_id,
+    )
+    audit_log_repo.create_log(
+        db,
+        entity=Entity.MOVEMENT,
+        action=ActionType.CREATE,
+        user_id=user_id,
+        details=f"movement_id={movement.id} product_id={product_id} delta={quantity} type=ADJUST",
     )
     _maybe_create_alerts(db, stock=updated_stock, delta=quantity)
     return updated_stock, movement
@@ -290,6 +311,20 @@ def transfer_stock(
     db.refresh(to_stock)
     db.refresh(out_movement)
     db.refresh(in_movement)
+    audit_log_repo.create_log(
+        db,
+        entity=Entity.MOVEMENT,
+        action=ActionType.CREATE,
+        user_id=user_id,
+        details=f"movement_id={out_movement.id} product_id={product_id} delta={-quantity} type=OUT transfer_id={transfer_id}",
+    )
+    audit_log_repo.create_log(
+        db,
+        entity=Entity.MOVEMENT,
+        action=ActionType.CREATE,
+        user_id=user_id,
+        details=f"movement_id={in_movement.id} product_id={product_id} delta={quantity} type=IN transfer_id={transfer_id}",
+    )
 
     _maybe_create_alerts(db, stock=from_stock, delta=-quantity, include_large_movement=True)
     _maybe_create_alerts(db, stock=to_stock, delta=quantity, include_large_movement=False)
@@ -329,6 +364,13 @@ def increase_stock_by_location_id(
         movement_source=source,
         location_id=location_id,
     )
+    audit_log_repo.create_log(
+        db,
+        entity=Entity.MOVEMENT,
+        action=ActionType.CREATE,
+        user_id=user_id,
+        details=f"movement_id={movement.id} product_id={product_id} delta={quantity} type=IN",
+    )
     _maybe_create_alerts(db, stock=updated_stock, delta=quantity)
     return updated_stock, movement
 
@@ -359,6 +401,13 @@ def decrease_stock_by_location_id(
         movement_type=MovementType.OUT,
         movement_source=source,
         location_id=location_id,
+    )
+    audit_log_repo.create_log(
+        db,
+        entity=Entity.MOVEMENT,
+        action=ActionType.CREATE,
+        user_id=user_id,
+        details=f"movement_id={movement.id} product_id={product_id} delta={-quantity} type=OUT",
     )
     _maybe_create_alerts(db, stock=updated_stock, delta=-quantity)
     return updated_stock, movement
@@ -391,6 +440,13 @@ def adjust_stock_by_location_id(
         movement_type=MovementType.ADJUST,
         movement_source=source,
         location_id=location_id,
+    )
+    audit_log_repo.create_log(
+        db,
+        entity=Entity.MOVEMENT,
+        action=ActionType.CREATE,
+        user_id=user_id,
+        details=f"movement_id={movement.id} product_id={product_id} delta={quantity} type=ADJUST",
     )
     _maybe_create_alerts(db, stock=updated_stock, delta=quantity)
     return updated_stock, movement
@@ -467,6 +523,20 @@ def transfer_stock_by_location_id(
     db.refresh(to_stock)
     db.refresh(out_movement)
     db.refresh(in_movement)
+    audit_log_repo.create_log(
+        db,
+        entity=Entity.MOVEMENT,
+        action=ActionType.CREATE,
+        user_id=user_id,
+        details=f"movement_id={out_movement.id} product_id={product_id} delta={-quantity} type=OUT transfer_id={transfer_id}",
+    )
+    audit_log_repo.create_log(
+        db,
+        entity=Entity.MOVEMENT,
+        action=ActionType.CREATE,
+        user_id=user_id,
+        details=f"movement_id={in_movement.id} product_id={product_id} delta={quantity} type=IN transfer_id={transfer_id}",
+    )
 
     _maybe_create_alerts(db, stock=from_stock, delta=-quantity, include_large_movement=True)
     _maybe_create_alerts(db, stock=to_stock, delta=quantity, include_large_movement=False)

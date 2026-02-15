@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+﻿from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import FileResponse
 import logging
 from pydantic import BaseModel
@@ -7,10 +7,11 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, require_roles
 from app.cache.redis_cache import cache_get, cache_set, cache_invalidate_prefix, make_key
 from app.db.deps import get_db
-from app.models.enums import UserRole
-from app.repositories import product_repo
+from app.models.enums import UserRole, Entity, ActionType
+from app.repositories import product_repo, audit_log_repo
 from app.schemas.product import ProductCreate, ProductUpdate, ProductResponse
 from app.models.category import Category
+from app.models.user import User
 from app.services import label_service
 
 
@@ -97,12 +98,15 @@ def get_product(product_id: int, db: Session = Depends(get_db), user=Depends(get
     "/",
     response_model=ProductResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value))],
 )
-def create_product(payload: ProductCreate, db: Session = Depends(get_db)):
+def create_product(
+    payload: ProductCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value)),
+):
     category = db.get(Category, payload.category_id)
     if not category:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Categoría no existe")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Categoria no existe")
 
     if product_repo.get_by_sku(db, payload.sku):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="SKU ya existe")
@@ -125,15 +129,26 @@ def create_product(payload: ProductCreate, db: Session = Depends(get_db)):
             )
         except Exception:
             logger.exception("No se pudo generar la etiqueta para producto %s", product.id)
+    audit_log_repo.create_log(
+        db,
+        entity=Entity.PRODUCT,
+        action=ActionType.CREATE,
+        user_id=user.id,
+        details=f"product_id={product.id} sku={product.sku}",
+    )
     return product
 
 
 @router.patch(
     "/{product_id}",
     response_model=ProductResponse,
-    dependencies=[Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value))],
 )
-def update_product(product_id: int, payload: ProductUpdate, db: Session = Depends(get_db)):
+def update_product(
+    product_id: int,
+    payload: ProductUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value)),
+):
     product = product_repo.get(db, product_id)
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
@@ -141,7 +156,7 @@ def update_product(product_id: int, payload: ProductUpdate, db: Session = Depend
     if payload.category_id is not None:
         category = db.get(Category, payload.category_id)
         if not category:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Categoría no existe")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Categoria no existe")
 
     if payload.barcode:
         existing_barcode = product_repo.get_by_barcode(db, payload.barcode)
@@ -168,15 +183,25 @@ def update_product(product_id: int, payload: ProductUpdate, db: Session = Depend
                 logger.exception("No se pudo regenerar la etiqueta para producto %s", product.id)
     cache_invalidate_prefix("products:list")
     cache_invalidate_prefix("products:detail")
+    audit_log_repo.create_log(
+        db,
+        entity=Entity.PRODUCT,
+        action=ActionType.UPDATE,
+        user_id=user.id,
+        details=f"product_id={product.id} sku={product.sku}",
+    )
     return product
 
 
 @router.delete(
     "/{product_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=[Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value))],
 )
-def delete_product(product_id: int, db: Session = Depends(get_db)):
+def delete_product(
+    product_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value)),
+):
     product = product_repo.get(db, product_id)
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
@@ -188,6 +213,13 @@ def delete_product(product_id: int, db: Session = Depends(get_db)):
         pass
     cache_invalidate_prefix("products:list")
     cache_invalidate_prefix("products:detail")
+    audit_log_repo.create_log(
+        db,
+        entity=Entity.PRODUCT,
+        action=ActionType.DELETE,
+        user_id=user.id,
+        details=f"product_id={product.id} sku={product.sku}",
+    )
     return None
 
 

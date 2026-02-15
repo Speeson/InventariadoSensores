@@ -375,3 +375,47 @@ Objetivo: mejorar rendimiento, estabilidad y UX en escenarios con paginación + 
 - Robustez del modo debug offline:
   - Failsafe en Login: al entrar en `LoginActivity`, se desactiva `manual offline` para evitar bloqueo de acceso.
   - En Home, no se fuerza logout por expiración cuando `manual offline` está activo.
+
+## Logs y auditoría de acciones clave
+
+Objetivo: registrar trazabilidad de acciones críticas indicando **quién hizo qué, sobre qué entidad y cuándo**.
+
+Backend:
+- Repositorio de auditoría:
+  - `backend/app/repositories/audit_log_repo.py`
+  - API interna:
+    - `create_log(...)`
+    - `list_logs(...)` con filtros y paginación
+- Schemas de respuesta:
+  - `backend/app/schemas/audit_log.py`
+
+Entidad y acciones auditadas:
+- `Entity.PRODUCT`: create/update/delete de productos.
+- `Entity.STOCK`: create/update de stock.
+- `Entity.MOVEMENT`: operaciones IN/OUT/ADJUST/TRANSFER (incluye ambos movimientos en transfer).
+- `Entity.IMPORT`: creación de batch de import y acciones de review (approve/reject).
+
+Endpoint de consulta (solo admin):
+- `GET /audit`
+- Filtros soportados:
+  - `entity`
+  - `action`
+  - `user_id`
+  - `date_from`
+  - `date_to`
+  - `order_dir=asc|desc`
+  - `limit`, `offset`
+- Seguridad:
+  - protegido con rol `ADMIN` (`require_roles(UserRole.ADMIN.value)`).
+
+Integración:
+- Router registrado en:
+  - `backend/app/main.py`
+- Implementación de ruta:
+  - `backend/app/api/routes/audit.py`
+
+Migraciones:
+- Se añade `IMPORT` al enum `entity` en PostgreSQL:
+  - `backend/alembic/versions/3f5d8b2a1e47_add_import_entity_to_audit_log.py`
+- Nota de Alembic:
+  - si aparecen múltiples heads, crear merge revision y actualizar a `head` para dejar historial lineal.

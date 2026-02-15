@@ -12,6 +12,7 @@ class Entity(enum.Enum):
     STOCK = "STOCK"
     MOVEMENT = "MOVEMENT"
     EVENT = "EVENT"
+    IMPORT = "IMPORT"
     STOCK_THRESHOLD = "STOCK_THRESHOLD"
     ALERT = "ALERT"
     

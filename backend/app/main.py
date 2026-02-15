@@ -8,7 +8,7 @@ import redis
 
 from app.db.session import SessionLocal
 
-from app.api.routes import auth, users, products, stocks, movements, events, alerts, categories, thresholds, reports, locations, imports
+from app.api.routes import auth, users, products, stocks, movements, events, alerts, categories, thresholds, reports, locations, imports, audit
 from app.api.routes import ws_alerts
 from app.ws.alerts_ws import start_redis_listener
 import asyncio
@@ -43,6 +43,7 @@ app.include_router(thresholds.router)
 app.include_router(reports.router)
 app.include_router(locations.router)
 app.include_router(imports.router)
+app.include_router(audit.router)
 app.include_router(ws_alerts.router)
 
 

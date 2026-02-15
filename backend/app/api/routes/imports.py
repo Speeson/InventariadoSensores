@@ -16,8 +16,8 @@ from app.models import ImportBatch, ImportError, ImportReview
 from app.models.category import Category
 from app.models.location import Location
 from app.models.product import Product
-from app.models.enums import Source, UserRole, AlertType, AlertStatus
-from app.repositories import category_repo, product_repo, alert_repo
+from app.models.enums import Source, UserRole, AlertType, AlertStatus, Entity, ActionType
+from app.repositories import category_repo, product_repo, alert_repo, audit_log_repo
 from app.services import fcm_service
 from app.services import inventory_service
 from app.models.user import User
@@ -352,6 +352,14 @@ def import_events_csv(
     batch = ImportBatch(kind="EVENTS", user_id=user.id, dry_run=dry_run)
     db.add(batch)
     db.flush()
+    audit_log_repo.create_log(
+        db,
+        entity=Entity.IMPORT,
+        action=ActionType.CREATE,
+        user_id=user.id,
+        details=f"batch_id={batch.id} kind={batch.kind} dry_run={batch.dry_run}",
+        commit=False,
+    )
 
     errors: list[ImportErrorResponse] = []
     reviews: list[ImportReviewResponse] = []
@@ -560,6 +568,14 @@ def import_transfers_csv(
     batch = ImportBatch(kind="TRANSFERS", user_id=user.id, dry_run=dry_run)
     db.add(batch)
     db.flush()
+    audit_log_repo.create_log(
+        db,
+        entity=Entity.IMPORT,
+        action=ActionType.CREATE,
+        user_id=user.id,
+        details=f"batch_id={batch.id} kind={batch.kind} dry_run={batch.dry_run}",
+        commit=False,
+    )
 
     errors: list[ImportErrorResponse] = []
     reviews: list[ImportReviewResponse] = []
@@ -800,6 +816,13 @@ def approve_import_review(
     db.delete(review)
     db.add(batch)
     db.commit()
+    audit_log_repo.create_log(
+        db,
+        entity=Entity.IMPORT,
+        action=ActionType.UPDATE,
+        user_id=user.id,
+        details=f"batch_id={batch.id} review_id={review.id} action=approve",
+    )
 
     cache_invalidate_prefix("movements:list")
     cache_invalidate_prefix("stocks:list")
@@ -841,5 +864,12 @@ def reject_import_review(
     db.delete(review)
     db.add(batch)
     db.commit()
+    audit_log_repo.create_log(
+        db,
+        entity=Entity.IMPORT,
+        action=ActionType.UPDATE,
+        user_id=user.id,
+        details=f"batch_id={batch.id} review_id={review.id} action=reject",
+    )
 
     return {"ok": True}
