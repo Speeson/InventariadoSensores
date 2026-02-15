@@ -6,9 +6,12 @@ import android.graphics.drawable.ColorDrawable
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.TextView
+import androidx.appcompat.widget.AppCompatButton
 import androidx.appcompat.app.AlertDialog
 import com.airbnb.lottie.LottieAnimationView
 import com.airbnb.lottie.LottieDrawable
@@ -25,6 +28,16 @@ object CreateUiFeedback {
             if (dialog.isShowing) {
                 dialog.dismiss()
             }
+        }
+    }
+
+    private fun centerDialog(dialog: AlertDialog) {
+        dialog.window?.let { window ->
+            window.setLayout(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            window.setGravity(Gravity.CENTER)
         }
     }
 
@@ -79,7 +92,10 @@ object CreateUiFeedback {
             .create()
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         if (canShowDialog(activity)) {
-            runCatching { dialog.show() }
+            runCatching {
+                dialog.show()
+                centerDialog(dialog)
+            }
         }
         return LoadingHandle(dialog, minCycleMs, SystemClock.elapsedRealtime(), Handler(Looper.getMainLooper()))
     }
@@ -110,7 +126,10 @@ object CreateUiFeedback {
             .create()
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         if (canShowDialog(activity)) {
-            runCatching { dialog.show() }
+            runCatching {
+                dialog.show()
+                centerDialog(dialog)
+            }
         }
         return LoadingHandle(dialog, minCycleMs, SystemClock.elapsedRealtime(), Handler(Looper.getMainLooper()))
     }
@@ -143,7 +162,10 @@ object CreateUiFeedback {
             .create()
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         if (canShowDialog(activity)) {
-            runCatching { dialog.show() }
+            runCatching {
+                dialog.show()
+                centerDialog(dialog)
+            }
         }
         return LoadingHandle(dialog, minCycleMs, SystemClock.elapsedRealtime(), Handler(Looper.getMainLooper()))
     }
@@ -187,6 +209,7 @@ object CreateUiFeedback {
         dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         val wasShown = runCatching {
             dialog.show()
+            centerDialog(dialog)
             true
         }.getOrDefault(false)
         if (!wasShown) return
@@ -217,6 +240,25 @@ object CreateUiFeedback {
         )
     }
 
+    fun showStatusPopup(
+        activity: Activity,
+        title: String,
+        details: String,
+        animationRes: Int,
+        autoDismissMs: Long = 3200L,
+        accentColorRes: Int? = null
+    ) {
+        showAnimatedResultPopup(
+            activity = activity,
+            title = title,
+            details = details,
+            layoutRes = R.layout.dialog_create_success,
+            animationRes = animationRes,
+            autoDismissMs = autoDismissMs,
+            accentColorRes = accentColorRes
+        )
+    }
+
     fun showErrorPopup(
         activity: Activity,
         title: String,
@@ -234,5 +276,48 @@ object CreateUiFeedback {
             autoDismissMs = autoDismissMs,
             accentColorRes = accentColorRes
         )
+    }
+
+    fun showQuestionConfirmDialog(
+        activity: Activity,
+        title: String,
+        message: String,
+        confirmText: String = "Confirmar",
+        cancelText: String = "Cancelar",
+        onConfirm: () -> Unit
+    ) {
+        if (!canShowDialog(activity)) return
+
+        val view = LayoutInflater.from(activity).inflate(R.layout.dialog_logout_confirm, null)
+        val lottie = view.findViewById<LottieAnimationView>(R.id.lottieLogout)
+        val titleView = view.findViewById<TextView>(R.id.tvLogoutTitle)
+        val messageView = view.findViewById<TextView>(R.id.tvLogoutMessage)
+        val btnCancel = view.findViewById<AppCompatButton>(R.id.btnLogoutCancel)
+        val btnConfirm = view.findViewById<AppCompatButton>(R.id.btnLogoutConfirm)
+
+        lottie.setAnimation(R.raw.question)
+        lottie.repeatCount = LottieDrawable.INFINITE
+        lottie.playAnimation()
+        titleView.text = title
+        messageView.text = message
+        btnCancel.text = cancelText
+        btnConfirm.text = confirmText
+
+        val dialog = AlertDialog.Builder(activity)
+            .setView(view)
+            .setCancelable(true)
+            .create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        btnCancel.setOnClickListener { dismissSafely(dialog) }
+        btnConfirm.setOnClickListener {
+            dismissSafely(dialog)
+            onConfirm()
+        }
+
+        runCatching {
+            dialog.show()
+            centerDialog(dialog)
+        }
     }
 }

@@ -18,6 +18,10 @@ class OfflineSyncWorker(
     params: WorkerParameters
 ) : CoroutineWorker(appContext, params) {
 
+    override suspend fun getForegroundInfo(): androidx.work.ForegroundInfo {
+        return createForegroundInfo()
+    }
+
     override suspend fun doWork(): Result {
         if (shouldUseForeground(applicationContext)) {
             setForeground(createForegroundInfo())

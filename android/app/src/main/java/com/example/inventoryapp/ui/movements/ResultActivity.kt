@@ -4,13 +4,13 @@ import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.example.inventoryapp.databinding.ActivityResultBinding
 import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.scan.ScanActivity
 import com.example.inventoryapp.ui.common.GradientIconUtil
+import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.example.inventoryapp.R
 
 class ResultActivity : AppCompatActivity() {
@@ -44,11 +44,13 @@ val success = intent.getBooleanExtra("success", false)
                 "FAILED" -> "El evento fallo al procesarse."
                 else -> "Evento enviado. Aun pendiente de procesamiento."
             }
-            AlertDialog.Builder(this)
-                .setTitle("Estado del evento")
-                .setMessage(statusMsg)
-                .setPositiveButton("OK", null)
-                .show()
+            CreateUiFeedback.showStatusPopup(
+                activity = this,
+                title = "Estado del evento",
+                details = statusMsg,
+                animationRes = R.raw.send,
+                autoDismissMs = 3500L
+            )
         }
 
         binding.btnBack.setOnClickListener {

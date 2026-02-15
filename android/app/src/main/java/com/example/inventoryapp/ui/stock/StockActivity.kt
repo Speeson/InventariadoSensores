@@ -596,15 +596,16 @@ class StockActivity : AppCompatActivity() {
         }
 
         btnDelete.setOnClickListener {
-            AlertDialog.Builder(this)
-                .setTitle("Vaciar stock")
-                .setMessage("Se pondrÃ¡ la cantidad a 0. Â¿Continuar?")
-                .setNegativeButton("Cancelar", null)
-                .setPositiveButton("Vaciar") { _, _ ->
-                    updateStock(stock.id, StockUpdateDto(quantity = 0))
-                    dialog.dismiss()
-                }
-                .show()
+            CreateUiFeedback.showQuestionConfirmDialog(
+                activity = this,
+                title = "Vaciar stock",
+                message = "Se pondrá la cantidad a 0. ¿Continuar?",
+                confirmText = "Vaciar",
+                cancelText = "Cancelar"
+            ) {
+                updateStock(stock.id, StockUpdateDto(quantity = 0))
+                dialog.dismiss()
+            }
         }
 
         btnClose.setOnClickListener { dialog.dismiss() }

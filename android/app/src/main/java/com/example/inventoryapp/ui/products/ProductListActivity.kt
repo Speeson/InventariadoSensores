@@ -1,4 +1,4 @@
-package com.example.inventoryapp.ui.products
+﻿package com.example.inventoryapp.ui.products
 
 import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 import com.example.inventoryapp.R
@@ -399,10 +399,10 @@ class ProductListActivity : AppCompatActivity() {
         if (name.isBlank()) { binding.etName.error = "Nombre requerido"; return }
         if (rawBarcode.isBlank()) { binding.etBarcode.error = "Barcode requerido"; return }
         if (!rawBarcode.matches(Regex("^\\d{13}$"))) {
-            binding.etBarcode.error = "Barcode debe tener 13 dígitos"
+            binding.etBarcode.error = "Barcode debe tener 13 dÃ­gitos"
             return
         }
-        if (categoryId == null) { binding.etCategory.error = "Categoría requerida"; return }
+        if (categoryId == null) { binding.etCategory.error = "CategorÃ­a requerida"; return }
 
         binding.btnCreateProduct.isEnabled = false
         val loading = CreateUiFeedback.showLoading(this, "producto")
@@ -423,7 +423,7 @@ class ProductListActivity : AppCompatActivity() {
                         CreateUiFeedback.showCreatedPopup(
                             this@ProductListActivity,
                             "Producto creado",
-                            "ID: ${created.id}\nSKU: ${created.sku}\nNombre: ${created.name}\nBarcode: ${created.barcode ?: "-"}\nCategoría: $categoryLabel"
+                            "ID: ${created.id}\nSKU: ${created.sku}\nNombre: ${created.name}\nBarcode: ${created.barcode ?: "-"}\nCategorÃ­a: $categoryLabel"
                         )
                     }
                     binding.etSku.setText("")
@@ -459,7 +459,7 @@ class ProductListActivity : AppCompatActivity() {
                     CreateUiFeedback.showCreatedPopup(
                         this@ProductListActivity,
                         "Producto creado (offline)",
-                        "SKU: ${dto.sku}\nNombre: ${dto.name}\nBarcode: ${dto.barcode}\nCategoría: ${dto.categoryId} (offline)",
+                        "SKU: ${dto.sku}\nNombre: ${dto.name}\nBarcode: ${dto.barcode}\nCategorÃ­a: ${dto.categoryId} (offline)",
                         accentColorRes = R.color.offline_text
                     )
                 }
@@ -544,11 +544,11 @@ class ProductListActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
             if (rawBarcode.isNotBlank() && !rawBarcode.matches(Regex("^\\d{13}$"))) {
-                barcodeInput.error = "Barcode debe tener 13 dígitos"
+                barcodeInput.error = "Barcode debe tener 13 dÃ­gitos"
                 return@setOnClickListener
             }
             if (categoryId == null) {
-                categoryInput.error = "Categoría requerida"
+                categoryInput.error = "CategorÃ­a requerida"
                 return@setOnClickListener
             }
 
@@ -563,25 +563,26 @@ class ProductListActivity : AppCompatActivity() {
             } else {
                 "¿Seguro que quieres eliminar este producto?"
             }
-            AlertDialog.Builder(this)
-                .setTitle(titleText)
-                .setMessage(bodyText)
-                .setNegativeButton("Cancelar", null)
-                .setPositiveButton("Eliminar") { _, _ ->
-                    if (isOffline) {
-                        val removed = removeOfflineProduct(product)
-                        if (removed) {
-                            UiNotifier.show(this@ProductListActivity, "Producto offline eliminado")
-                            resetAndLoad()
-                        } else {
-                            UiNotifier.show(this@ProductListActivity, "No se pudo eliminar de la cola offline")
-                        }
+            CreateUiFeedback.showQuestionConfirmDialog(
+                activity = this,
+                title = titleText,
+                message = bodyText,
+                confirmText = "Eliminar",
+                cancelText = "Cancelar"
+            ) {
+                if (isOffline) {
+                    val removed = removeOfflineProduct(product)
+                    if (removed) {
+                        UiNotifier.show(this@ProductListActivity, "Producto offline eliminado")
+                        resetAndLoad()
                     } else {
-                        deleteProduct(product.id)
+                        UiNotifier.show(this@ProductListActivity, "No se pudo eliminar de la cola offline")
                     }
-                    dialog.dismiss()
+                } else {
+                    deleteProduct(product.id)
                 }
-                .show()
+                dialog.dismiss()
+            }
         }
 
         btnClose.setOnClickListener { dialog.dismiss() }
@@ -628,7 +629,7 @@ class ProductListActivity : AppCompatActivity() {
             } catch (e: IOException) {
                 val payload = OfflineSyncer.ProductUpdatePayload(id, body)
                 OfflineQueue(this@ProductListActivity).enqueue(PendingType.PRODUCT_UPDATE, gson.toJson(payload))
-                UiNotifier.show(this@ProductListActivity, "Sin conexión. Actualización guardada offline")
+                UiNotifier.show(this@ProductListActivity, "Sin conexiÃ³n. ActualizaciÃ³n guardada offline")
                 resetAndLoad()
             } catch (e: Exception) {
                 UiNotifier.show(this@ProductListActivity, "Error: ${e.message}")
@@ -658,7 +659,7 @@ class ProductListActivity : AppCompatActivity() {
             } catch (e: IOException) {
                 val payload = OfflineSyncer.ProductDeletePayload(id)
                 OfflineQueue(this@ProductListActivity).enqueue(PendingType.PRODUCT_DELETE, gson.toJson(payload))
-                UiNotifier.show(this@ProductListActivity, "Sin conexión. Eliminado guardado offline")
+                UiNotifier.show(this@ProductListActivity, "Sin conexiÃ³n. Eliminado guardado offline")
                 resetAndLoad()
             } catch (e: Exception) {
                 UiNotifier.show(this@ProductListActivity, "Error: ${e.message}")
@@ -779,7 +780,7 @@ class ProductListActivity : AppCompatActivity() {
         }
         if (skuRaw.isNotBlank()) parts.add("SKU \"$skuRaw\"")
         if (barcodeRaw.isNotBlank()) parts.add("barcode \"$barcodeRaw\"")
-        if (categoryRaw.isNotBlank()) parts.add("categoría \"$categoryRaw\"")
+        if (categoryRaw.isNotBlank()) parts.add("categorÃ­a \"$categoryRaw\"")
         return if (parts.isEmpty()) {
             "No se encontraron productos con los filtros actuales."
         } else {
@@ -1194,19 +1195,19 @@ class ProductListActivity : AppCompatActivity() {
                     if (code > 0) append("\nHTTP $code")
                 }
             } else {
-                "Ese SKU ya está en uso. Introduce un SKU diferente."
+                "Ese SKU ya estÃ¡ en uso. Introduce un SKU diferente."
             }
         }
 
         if (looksLikeDuplicateBarcode) {
             return if (technical) {
                 buildString {
-                    append("Barcode duplicado: ya existe un producto con ese código.")
+                    append("Barcode duplicado: ya existe un producto con ese cÃ³digo.")
                     if (raw.isNotBlank()) append("\nDetalle: ${compactErrorDetail(raw)}")
                     if (code > 0) append("\nHTTP $code")
                 }
             } else {
-                "Ese código de barras ya está en uso. Introduce otro diferente."
+                "Ese cÃ³digo de barras ya estÃ¡ en uso. Introduce otro diferente."
             }
         }
 
@@ -1214,7 +1215,7 @@ class ProductListActivity : AppCompatActivity() {
             buildString {
                 append(
                     when (code) {
-                        400, 422 -> "Datos inválidos para crear producto."
+                        400, 422 -> "Datos invÃ¡lidos para crear producto."
                         409 -> "Conflicto al crear producto."
                         500 -> "Error interno del servidor al crear producto."
                         else -> "No se pudo crear el producto."
@@ -1227,8 +1228,8 @@ class ProductListActivity : AppCompatActivity() {
             when (code) {
                 400, 422 -> "No se pudo crear el producto. Revisa los datos introducidos."
                 409 -> "No se pudo crear el producto porque entra en conflicto con otro existente."
-                500 -> "No se pudo crear el producto por un problema del servidor. Inténtalo de nuevo."
-                else -> "No se pudo crear el producto. Inténtalo de nuevo."
+                500 -> "No se pudo crear el producto por un problema del servidor. IntÃ©ntalo de nuevo."
+                else -> "No se pudo crear el producto. IntÃ©ntalo de nuevo."
             }
         }
     }

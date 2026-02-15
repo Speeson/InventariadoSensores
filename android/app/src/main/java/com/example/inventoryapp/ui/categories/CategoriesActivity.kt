@@ -1,4 +1,4 @@
-package com.example.inventoryapp.ui.categories
+﻿package com.example.inventoryapp.ui.categories
 import android.content.Intent
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
@@ -343,7 +343,7 @@ class CategoriesActivity : AppCompatActivity() {
         val name = binding.etCategoryName.text.toString().trim()
         if (name.isBlank()) { binding.etCategoryName.error = "Nombre requerido"; return }
         binding.btnCreateCategory.isEnabled = false
-        val loading = CreateUiFeedback.showLoading(this, "categoría")
+        val loading = CreateUiFeedback.showLoading(this, "categorÃ­a")
         lifecycleScope.launch {
             var loadingHandled = false
             try {
@@ -358,7 +358,7 @@ class CategoriesActivity : AppCompatActivity() {
                     }
                     loadingHandled = true
                     loading.dismissThen {
-                        CreateUiFeedback.showCreatedPopup(this@CategoriesActivity, "Categoría creada", details)
+                        CreateUiFeedback.showCreatedPopup(this@CategoriesActivity, "CategorÃ­a creada", details)
                     }
                     binding.etCategoryName.setText("")
                     currentOffset = 0
@@ -371,7 +371,7 @@ class CategoriesActivity : AppCompatActivity() {
                     loading.dismissThen {
                         CreateUiFeedback.showErrorPopup(
                             activity = this@CategoriesActivity,
-                            title = "No se pudo crear categoría",
+                            title = "No se pudo crear categorÃ­a",
                             details = details
                         )
                     }
@@ -383,7 +383,7 @@ class CategoriesActivity : AppCompatActivity() {
                     loading.dismissThen {
                         CreateUiFeedback.showCreatedPopup(
                             this@CategoriesActivity,
-                            "Categoría creada (offline)",
+                            "CategorÃ­a creada (offline)",
                             "Nombre: $name (offline)",
                             accentColorRes = R.color.offline_text
                         )
@@ -395,8 +395,8 @@ class CategoriesActivity : AppCompatActivity() {
                     loading.dismissThen {
                         CreateUiFeedback.showErrorPopup(
                             activity = this@CategoriesActivity,
-                            title = "No se pudo crear categoría",
-                            details = "Ha ocurrido un error inesperado al crear la categoría."
+                            title = "No se pudo crear categorÃ­a",
+                            details = "Ha ocurrido un error inesperado al crear la categorÃ­a."
                         )
                     }
                 }
@@ -431,16 +431,18 @@ class CategoriesActivity : AppCompatActivity() {
             dialog.dismiss()
         }
         btnDelete.setOnClickListener {
-            AlertDialog.Builder(this)
-                .setTitle("Eliminar categoría")
-                .setMessage("¿Seguro que quieres eliminar esta categoría?")
-                .setNegativeButton("Cancelar", null)
-                .setPositiveButton("Eliminar") { _, _ ->
-                    deleteCategory(category.id)
-                    dialog.dismiss()
-                }
-                .show()
+            CreateUiFeedback.showQuestionConfirmDialog(
+                activity = this,
+                title = "Eliminar categoría",
+                message = "¿Seguro que quieres eliminar esta categoría?",
+                confirmText = "Eliminar",
+                cancelText = "Cancelar"
+            ) {
+                deleteCategory(category.id)
+                dialog.dismiss()
+            }
         }
+
         btnClose.setOnClickListener { dialog.dismiss() }
         dialog.show()
     }
@@ -452,8 +454,8 @@ class CategoriesActivity : AppCompatActivity() {
                 if (res.isSuccessful) {
                     CreateUiFeedback.showCreatedPopup(
                         this@CategoriesActivity,
-                        "Categoría actualizada",
-                        "Categoría actualizada a: $name"
+                        "CategorÃ­a actualizada",
+                        "CategorÃ­a actualizada a: $name"
                     )
                     currentOffset = 0
                     cacheStore.invalidatePrefix("categories")
@@ -471,13 +473,13 @@ class CategoriesActivity : AppCompatActivity() {
 
     private fun showCategoryNotFoundDialog(query: String, byId: Boolean) {
         val details = if (byId) {
-            "Categoría ID $query no encontrada"
+            "CategorÃ­a ID $query no encontrada"
         } else {
-            "Categoría \"$query\" no encontrada"
+            "CategorÃ­a \"$query\" no encontrada"
         }
         CreateUiFeedback.showErrorPopup(
             activity = this,
-            title = "Categoría no encontrada",
+            title = "CategorÃ­a no encontrada",
             details = details,
             animationRes = R.raw.notfound
         )
@@ -492,7 +494,7 @@ class CategoriesActivity : AppCompatActivity() {
 
         if (duplicateName) {
             return buildString {
-                append("Ya existe una categoría con ese nombre.")
+                append("Ya existe una categorÃ­a con ese nombre.")
                 if (raw.isNotBlank()) append("\nDetalle: ${compactCategoryErrorDetail(raw)}")
                 if (code > 0) append("\nHTTP $code")
             }
@@ -501,11 +503,11 @@ class CategoriesActivity : AppCompatActivity() {
         return buildString {
             append(
                 when (code) {
-                    400, 422 -> "Datos inválidos para crear categoría."
-                    403 -> "No tienes permisos para crear categorías."
-                    409 -> "Conflicto al crear categoría."
-                    500 -> "Error interno del servidor al crear categoría."
-                    else -> "No se pudo crear la categoría."
+                    400, 422 -> "Datos invÃ¡lidos para crear categorÃ­a."
+                    403 -> "No tienes permisos para crear categorÃ­as."
+                    409 -> "Conflicto al crear categorÃ­a."
+                    500 -> "Error interno del servidor al crear categorÃ­a."
+                    else -> "No se pudo crear la categorÃ­a."
                 }
             )
             if (raw.isNotBlank()) append("\nDetalle: ${compactCategoryErrorDetail(raw)}")
@@ -542,7 +544,7 @@ class CategoriesActivity : AppCompatActivity() {
             val dto = runCatching { gson.fromJson(p.payloadJson, CategoryCreateDto::class.java) }.getOrNull()
             CategoryResponseDto(
                 id = -1 - index,
-                name = dto?.name ?: "Categoría offline",
+                name = dto?.name ?: "CategorÃ­a offline",
                 createdAt = "offline",
                 updatedAt = null
             )
