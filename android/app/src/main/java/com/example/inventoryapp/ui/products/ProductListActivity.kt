@@ -45,6 +45,7 @@ import android.graphics.drawable.GradientDrawable
 
 class ProductListActivity : AppCompatActivity() {
     companion object {
+        private const val OFFLINE_DELETE_MARKER = "offline_delete"
         @Volatile
         private var cacheNoticeShownInOfflineSession = false
     }
@@ -268,7 +269,7 @@ class ProductListActivity : AppCompatActivity() {
                         filtersActive = filtersActive,
                         pendingAll = pendingAll
                     )
-                    val combined = pageItems + pending
+                    val combined = markPendingDeletedProducts(pageItems + pending)
                     val categoryMap = categoryCache.ifEmpty { fetchCategoryMap().also { categoryCache = it } }
                     updateProductNameCache(pageItems)
                     val rows = combined.map { ProductRowUi(it, categoryMap[it.categoryId]) }
@@ -314,12 +315,12 @@ class ProductListActivity : AppCompatActivity() {
                             showProductsCacheNoticeOnce()
                         }
                     } else {
-                        val pending = pendingProductsForPage(
+                        val pending = markPendingDeletedProducts(pendingProductsForPage(
                             offset = effectiveOffset,
                             remoteTotal = cachedRemoteTotal,
                             filtersActive = filtersActive,
                             pendingAll = pendingAll
-                        )
+                        ))
                         products.clear()
                         products.addAll(pending)
                         totalCount = cachedRemoteTotal + pendingTotalCount
@@ -344,12 +345,12 @@ class ProductListActivity : AppCompatActivity() {
                         showProductsCacheNoticeOnce()
                     }
                 } else {
-                    val pending = pendingProductsForPage(
+                    val pending = markPendingDeletedProducts(pendingProductsForPage(
                         offset = effectiveOffset,
                         remoteTotal = cachedRemoteTotal,
                         filtersActive = filtersActive,
                         pendingAll = pendingAll
-                    )
+                    ))
                     products.clear()
                     products.addAll(pending)
                     totalCount = cachedRemoteTotal + pendingTotalCount
@@ -659,13 +660,19 @@ class ProductListActivity : AppCompatActivity() {
                     CreateUiFeedback.showErrorPopup(
                         activity = this@ProductListActivity,
                         title = "No se pudo eliminar producto",
-                        details = details
+                        details = details,
+                        animationRes = R.raw.error
                     )
                 }
             } catch (e: IOException) {
                 val payload = OfflineSyncer.ProductDeletePayload(id)
                 OfflineQueue(this@ProductListActivity).enqueue(PendingType.PRODUCT_DELETE, gson.toJson(payload))
-                UiNotifier.show(this@ProductListActivity, "Sin conexiÃ³n. Eliminado guardado offline")
+                CreateUiFeedback.showErrorPopup(
+                    activity = this@ProductListActivity,
+                    title = "Sin conexion",
+                    details = "No se pudo eliminar ahora. La solicitud se guardo en cola offline.",
+                    animationRes = R.raw.error
+                )
                 resetAndLoad()
             } catch (e: Exception) {
                 val details = if (canShowTechnicalCreateErrors()) {
@@ -676,7 +683,8 @@ class ProductListActivity : AppCompatActivity() {
                 CreateUiFeedback.showErrorPopup(
                     activity = this@ProductListActivity,
                     title = "No se pudo eliminar producto",
-                    details = details
+                    details = details,
+                    animationRes = R.raw.error
                 )
             }
         }
@@ -1081,7 +1089,7 @@ class ProductListActivity : AppCompatActivity() {
             pendingAll = pendingAll
         )
         val pageItems = cached.items
-        val combined = pageItems + pending
+        val combined = markPendingDeletedProducts(pageItems + pending)
         updateProductNameCache(pageItems)
         products.clear()
         products.addAll(combined)
@@ -1249,23 +1257,51 @@ class ProductListActivity : AppCompatActivity() {
         }
     }
 
+    private fun markPendingDeletedProducts(rows: List<ProductResponseDto>): List<ProductResponseDto> {
+        val pendingDeleteIds = offlineQueue.getAll()
+            .asSequence()
+            .filter { it.type == PendingType.PRODUCT_DELETE }
+            .mapNotNull {
+                runCatching {
+                    gson.fromJson(it.payloadJson, OfflineSyncer.ProductDeletePayload::class.java).productId
+                }.getOrNull()
+            }
+            .toSet()
+        if (pendingDeleteIds.isEmpty()) return rows
+        return rows.map { product ->
+            if (product.id > 0 && pendingDeleteIds.contains(product.id)) {
+                val markedName = if (product.name.contains("(pendiente eliminar)", ignoreCase = true)) {
+                    product.name
+                } else {
+                    "${product.name} (pendiente eliminar)"
+                }
+                product.copy(name = markedName, updatedAt = OFFLINE_DELETE_MARKER)
+            } else {
+                product
+            }
+        }
+    }
+
     private fun formatDeleteProductError(code: Int, rawError: String?): String {
         val raw = rawError?.trim().orEmpty()
         val normalized = raw.lowercase()
         val technical = canShowTechnicalCreateErrors()
-        val hasMovementsConflict = normalized.contains("movements_product_id_fkey") ||
+        val hasHistoryConflict = normalized.contains("movements_product_id_fkey") ||
+            normalized.contains("events_product_id_fkey") ||
             normalized.contains("movimientos historicos") ||
-            normalized.contains("referenced from table \"movements\"")
+            normalized.contains("referenced from table \"movements\"") ||
+            normalized.contains("referenced from table \"events\"")
 
-        if (hasMovementsConflict || code == 409) {
+        if (hasHistoryConflict || code == 409) {
             return if (technical) {
                 buildString {
-                    append("No se puede eliminar el producto porque tiene movimientos historicos asociados.")
+                    append("Error de integridad referencial al eliminar el producto.")
+                    append("\nDescripcion: el producto tiene eventos o movimientos asociados.")
                     if (raw.isNotBlank()) append("\nDetalle: ${compactErrorDetail(raw)}")
                     if (code > 0) append("\nHTTP $code")
                 }
             } else {
-                "No se puede eliminar el producto porque tiene movimientos historicos asociados."
+                "No se puede eliminar el producto porque tiene eventos o movimientos asociados."
             }
         }
 

@@ -8,13 +8,18 @@ import android.view.ViewGroup
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.inventoryapp.R
+import com.example.inventoryapp.data.local.OfflineSyncer
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.PendingRequest
 import com.example.inventoryapp.data.local.FailedRequest
 import com.example.inventoryapp.databinding.FragmentOfflinePendingBinding
+import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.example.inventoryapp.ui.common.GradientIconUtil
 import com.example.inventoryapp.ui.offline.OfflineErrorsAdapter
+import kotlinx.coroutines.launch
 
 class OfflinePendingFragment : Fragment() {
 
@@ -164,7 +169,53 @@ class OfflinePendingFragment : Fragment() {
             .setPositiveButton("Reintentar") { _, _ ->
                 queue.moveFailedBackToPending(index)
                 refresh()
+                retryPendingNow()
             }
             .show()
+    }
+
+    private fun retryPendingNow() {
+        val loading = CreateUiFeedback.showLoadingMessage(
+            activity = requireActivity(),
+            message = "Reintentando envío offline...",
+            animationRes = R.raw.sync,
+            animationScale = 1.15f
+        )
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val report = OfflineSyncer.flush(requireContext())
+            refresh()
+            loading.dismissThen {
+                val failedAgain = report.movedToFailed > 0 || (report.sent == 0 && report.stoppedReason != null)
+                if (failedAgain) {
+                    val details = if (report.movedToFailed > 0) {
+                        if (report.movedToFailed == 1) {
+                            "El envío ha vuelto a fallar. Revisa Pendientes offline."
+                        } else {
+                            "${report.movedToFailed} envíos han vuelto a fallar. Revisa Pendientes offline."
+                        }
+                    } else {
+                        "No se pudo reintentar el envío en este momento. Revisa Pendientes offline."
+                    }
+                    CreateUiFeedback.showErrorPopup(
+                        activity = requireActivity(),
+                        title = "Reintento fallido",
+                        details = details,
+                        animationRes = R.raw.wrong
+                    )
+                } else if (report.sent > 0) {
+                    CreateUiFeedback.showStatusPopup(
+                        activity = requireActivity(),
+                        title = "Reintento completado",
+                        details = if (report.sent == 1) {
+                            "Se ha reenviado correctamente 1 envío offline."
+                        } else {
+                            "Se han reenviado correctamente ${report.sent} envíos offline."
+                        },
+                        animationRes = R.raw.sync
+                    )
+                }
+            }
+        }
     }
 }

@@ -15,7 +15,9 @@ enum class PendingType {
     PRODUCT_UPDATE,
     PRODUCT_DELETE,
     CATEGORY_CREATE,
+    CATEGORY_DELETE,
     THRESHOLD_CREATE,
+    THRESHOLD_DELETE,
     STOCK_CREATE,
     STOCK_UPDATE
 }
@@ -69,7 +71,15 @@ class OfflineQueue(context: Context) {
 
     fun addFailed(f: FailedRequest) {
         val all = getFailed().toMutableList()
-        all.add(f)
+        val existingIndex = all.indexOfFirst {
+            it.original.type == f.original.type &&
+                it.original.payloadJson == f.original.payloadJson
+        }
+        if (existingIndex >= 0) {
+            all[existingIndex] = f
+        } else {
+            all.add(f)
+        }
         saveFailed(all)
     }
 

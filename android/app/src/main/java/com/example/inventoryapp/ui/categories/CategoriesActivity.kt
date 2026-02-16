@@ -14,6 +14,7 @@ import androidx.transition.AutoTransition
 import androidx.transition.TransitionManager
 import com.example.inventoryapp.R
 import com.example.inventoryapp.data.local.OfflineQueue
+import com.example.inventoryapp.data.local.OfflineSyncer
 import com.example.inventoryapp.data.local.PendingType
 import com.example.inventoryapp.data.local.cache.CacheKeys
 import com.example.inventoryapp.data.local.cache.CacheStore
@@ -36,6 +37,7 @@ import kotlinx.coroutines.launch
 import java.io.IOException
 class CategoriesActivity : AppCompatActivity() {
     companion object {
+        private const val OFFLINE_DELETE_MARKER = "offline_delete"
         @Volatile
         private var cacheNoticeShownInOfflineSession = false
     }
@@ -145,7 +147,7 @@ class CategoriesActivity : AppCompatActivity() {
                 val res = NetworkModule.api.getCategory(id)
                 if (res.code() == 401) { return@launch }
                 if (res.isSuccessful && res.body() != null) {
-                    items = listOf(res.body()!!)
+                    items = markPendingDeletedCategories(listOf(res.body()!!))
                     cacheStore.put(CacheKeys.detail("categories", id), res.body()!!)
                     adapter.submit(items)
                     totalCount = 1
@@ -213,7 +215,7 @@ class CategoriesActivity : AppCompatActivity() {
                         remoteTotal = cached.total,
                         includePending = includePending
                     )
-                    items = cached.items + pending
+                    items = markPendingDeletedCategories(cached.items + pending)
                     totalCount = cached.total + pendingTotalCount
                     adapter.submit(items)
                     updatePageInfo(items.size, pending.size)
@@ -228,7 +230,7 @@ class CategoriesActivity : AppCompatActivity() {
                         remoteTotal = res.body()!!.total,
                         includePending = includePending
                     )
-                    items = res.body()!!.items + pending
+                    items = markPendingDeletedCategories(res.body()!!.items + pending)
                     totalCount = res.body()!!.total + pendingTotalCount
                     adapter.submit(items)
                     updatePageInfo(items.size, pending.size)
@@ -254,7 +256,7 @@ class CategoriesActivity : AppCompatActivity() {
                             remoteTotal = cachedOnError.total,
                             includePending = includePending
                         )
-                        items = cachedOnError.items + pending
+                        items = markPendingDeletedCategories(cachedOnError.items + pending)
                         totalCount = cachedOnError.total + pendingTotalCount
                         adapter.submit(items)
                         updatePageInfo(items.size, pending.size)
@@ -269,7 +271,7 @@ class CategoriesActivity : AppCompatActivity() {
                             remoteTotal = cachedRemoteTotal,
                             includePending = includePending
                         )
-                        items = pending
+                        items = markPendingDeletedCategories(pending)
                         adapter.submit(items)
                         totalCount = cachedRemoteTotal + pendingTotalCount
                         updatePageInfo(items.size, items.size)
@@ -294,7 +296,7 @@ class CategoriesActivity : AppCompatActivity() {
                         remoteTotal = cachedOnError.total,
                         includePending = includePending
                     )
-                    items = cachedOnError.items + pending
+                    items = markPendingDeletedCategories(cachedOnError.items + pending)
                     totalCount = cachedOnError.total + pendingTotalCount
                     adapter.submit(items)
                     updatePageInfo(items.size, pending.size)
@@ -309,7 +311,7 @@ class CategoriesActivity : AppCompatActivity() {
                         remoteTotal = cachedRemoteTotal,
                         includePending = includePending
                     )
-                    adapter.submit(pending)
+                    adapter.submit(markPendingDeletedCategories(pending))
                     totalCount = cachedRemoteTotal + pendingTotalCount
                     updatePageInfo(pending.size, pending.size)
                 }
@@ -533,6 +535,16 @@ class CategoriesActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 if (e is IOException) {
+                    val payload = OfflineSyncer.CategoryDeletePayload(id)
+                    OfflineQueue(this@CategoriesActivity).enqueue(PendingType.CATEGORY_DELETE, gson.toJson(payload))
+                    CreateUiFeedback.showErrorPopup(
+                        activity = this@CategoriesActivity,
+                        title = "Sin conexion",
+                        details = "No se pudo eliminar ahora. La solicitud se guardo en cola offline.",
+                        animationRes = R.raw.error
+                    )
+                    currentOffset = 0
+                    loadCategories()
                 } else {
                 }
             }
@@ -552,6 +564,35 @@ class CategoriesActivity : AppCompatActivity() {
     }
     private fun pendingCategoriesCount(): Int {
         return OfflineQueue(this).getAll().count { it.type == PendingType.CATEGORY_CREATE }
+    }
+
+    private fun pendingCategoryDeleteIds(): Set<Int> {
+        return OfflineQueue(this).getAll()
+            .asSequence()
+            .filter { it.type == PendingType.CATEGORY_DELETE }
+            .mapNotNull {
+                runCatching {
+                    gson.fromJson(it.payloadJson, OfflineSyncer.CategoryDeletePayload::class.java).categoryId
+                }.getOrNull()
+            }
+            .toSet()
+    }
+
+    private fun markPendingDeletedCategories(rows: List<CategoryResponseDto>): List<CategoryResponseDto> {
+        val pendingDeleteIds = pendingCategoryDeleteIds()
+        if (pendingDeleteIds.isEmpty()) return rows
+        return rows.map { category ->
+            if (category.id > 0 && pendingDeleteIds.contains(category.id)) {
+                val markedName = if (category.name.contains("(pendiente eliminar)", ignoreCase = true)) {
+                    category.name
+                } else {
+                    "${category.name} (pendiente eliminar)"
+                }
+                category.copy(name = markedName, updatedAt = OFFLINE_DELETE_MARKER)
+            } else {
+                category
+            }
+        }
     }
     private fun pendingCategoriesForPage(
         offset: Int,

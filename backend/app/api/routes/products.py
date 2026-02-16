@@ -211,10 +211,16 @@ def delete_product(
         product_repo.delete_product(db, product)
     except IntegrityError as exc:
         db.rollback()
-        if "movements_product_id_fkey" in str(exc.orig):
+        orig_text = str(exc.orig).lower()
+        sqlstate = getattr(exc.orig, "sqlstate", None)
+        if (
+            "movements_product_id_fkey" in orig_text
+            or "events_product_id_fkey" in orig_text
+            or sqlstate == "23503"
+        ):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="No se puede eliminar el producto porque tiene movimientos historicos asociados.",
+                detail="No se puede eliminar el producto porque tiene registros históricos asociados (eventos/movimientos).",
             ) from exc
         raise
     try:

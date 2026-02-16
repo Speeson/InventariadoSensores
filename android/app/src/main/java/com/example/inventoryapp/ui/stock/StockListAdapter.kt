@@ -3,8 +3,8 @@ package com.example.inventoryapp.ui.stock
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.appcompat.widget.TooltipCompat
-import androidx.recyclerview.widget.RecyclerView
 import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.RecyclerView
 import com.example.inventoryapp.R
 import com.example.inventoryapp.data.remote.model.StockResponseDto
 import com.example.inventoryapp.databinding.ItemStockCardBinding
@@ -32,6 +32,7 @@ class StockListAdapter(
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val s = items[position]
+        val isPendingDelete = s.updatedAt == "offline_delete"
         val isOffline = s.id < 0 || s.createdAt == "offline"
         val titleId = if (isOffline) "offline" else s.id.toString()
         val productName = productNameById[s.productId] ?: "Producto"
@@ -41,13 +42,19 @@ class StockListAdapter(
         holder.binding.tvLocation.text = "Ubicacion: ${s.location}"
         holder.binding.tvMeta.text = "Cantidad: ${s.quantity}"
         holder.binding.ivWarning.visibility =
-            if (isOffline) android.view.View.VISIBLE else android.view.View.GONE
-        holder.binding.ivWarning.setImageResource(R.drawable.sync)
-        val pendingTooltip = "Guardado en modo offline, pendiente de sincronización"
-        TooltipCompat.setTooltipText(holder.binding.ivWarning, if (isOffline) pendingTooltip else null)
-        holder.binding.ivWarning.contentDescription = if (isOffline) pendingTooltip else "Pendiente"
+            if (isOffline || isPendingDelete) android.view.View.VISIBLE else android.view.View.GONE
+        val pendingTooltip = if (isPendingDelete) {
+            "Pendiente de vaciado en sincronizacion offline"
+        } else {
+            "Guardado en modo offline, pendiente de sincronizacion"
+        }
+        holder.binding.ivWarning.setImageResource(
+            if (isPendingDelete) R.drawable.ic_close_red else R.drawable.sync
+        )
+        TooltipCompat.setTooltipText(holder.binding.ivWarning, if (isOffline || isPendingDelete) pendingTooltip else null)
+        holder.binding.ivWarning.contentDescription = if (isOffline || isPendingDelete) pendingTooltip else "Pendiente"
         val offlineColor = ContextCompat.getColor(holder.itemView.context, R.color.offline_text)
-        if (isOffline) {
+        if (isOffline || isPendingDelete) {
             holder.binding.tvStockId.setTextColor(offlineColor)
             holder.binding.tvTitle.setTextColor(offlineColor)
             holder.binding.tvLocation.setTextColor(offlineColor)

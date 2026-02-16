@@ -29,19 +29,26 @@ class CategoryListAdapter(
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val c = items[position]
+        val isPendingDelete = c.updatedAt == "offline_delete"
         val isOffline = c.id < 0 || c.createdAt == "offline"
         val name = if (isOffline) "${c.name} (offline)" else c.name
         val idLabel = if (isOffline) "offline" else c.id.toString()
         holder.binding.tvName.text = name
         holder.binding.tvMeta.text = "ID: $idLabel"
         holder.binding.ivWarning.visibility =
-            if (isOffline) android.view.View.VISIBLE else android.view.View.GONE
-        holder.binding.ivWarning.setImageResource(R.drawable.sync)
-        val pendingTooltip = "Guardado en modo offline, pendiente de sincronizacion"
-        TooltipCompat.setTooltipText(holder.binding.ivWarning, if (isOffline) pendingTooltip else null)
-        holder.binding.ivWarning.contentDescription = if (isOffline) pendingTooltip else "Pendiente"
+            if (isOffline || isPendingDelete) android.view.View.VISIBLE else android.view.View.GONE
+        val pendingTooltip = if (isPendingDelete) {
+            "Pendiente de eliminar en sincronizacion offline"
+        } else {
+            "Guardado en modo offline, pendiente de sincronizacion"
+        }
+        holder.binding.ivWarning.setImageResource(
+            if (isPendingDelete) R.drawable.ic_close_red else R.drawable.sync
+        )
+        TooltipCompat.setTooltipText(holder.binding.ivWarning, if (isOffline || isPendingDelete) pendingTooltip else null)
+        holder.binding.ivWarning.contentDescription = if (isOffline || isPendingDelete) pendingTooltip else "Pendiente"
         val offlineColor = ContextCompat.getColor(holder.itemView.context, R.color.offline_text)
-        if (isOffline) {
+        if (isOffline || isPendingDelete) {
             holder.binding.tvName.setTextColor(offlineColor)
             holder.binding.tvMeta.setTextColor(offlineColor)
         } else {

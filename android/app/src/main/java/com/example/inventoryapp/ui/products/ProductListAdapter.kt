@@ -62,15 +62,26 @@ class ProductListAdapter(
             "Barcode: $barcodeText\n" +
             "Categoria: $catName (ID ${p.categoryId})\n" +
             "Updated: ${p.updatedAt}"
+        val isPendingDelete = p.updatedAt == "offline_delete"
         val isOffline = p.id < 0 || p.name.contains("(offline)", ignoreCase = true)
         holder.binding.ivOfflineAlert.visibility =
-            if (isOffline) android.view.View.VISIBLE else android.view.View.GONE
-        holder.binding.ivOfflineAlert.setImageResource(R.drawable.sync)
-        val pendingTooltip = "Guardado en modo offline, pendiente de sincronizacion"
-        TooltipCompat.setTooltipText(holder.binding.ivOfflineAlert, if (isOffline) pendingTooltip else null)
-        holder.binding.ivOfflineAlert.contentDescription = if (isOffline) pendingTooltip else "Pendiente"
+            if (isOffline || isPendingDelete) android.view.View.VISIBLE else android.view.View.GONE
+        val pendingTooltip = if (isPendingDelete) {
+            "Pendiente de eliminar en sincronizacion offline"
+        } else {
+            "Guardado en modo offline, pendiente de sincronizacion"
+        }
+        holder.binding.ivOfflineAlert.setImageResource(
+            if (isPendingDelete) R.drawable.ic_close_red else R.drawable.sync
+        )
+        TooltipCompat.setTooltipText(
+            holder.binding.ivOfflineAlert,
+            if (isOffline || isPendingDelete) pendingTooltip else null
+        )
+        holder.binding.ivOfflineAlert.contentDescription =
+            if (isOffline || isPendingDelete) pendingTooltip else "Pendiente"
         val offlineColor = ContextCompat.getColor(holder.itemView.context, R.color.offline_text)
-        if (isOffline) {
+        if (isOffline || isPendingDelete) {
             holder.binding.tvName.setTextColor(offlineColor)
             holder.binding.tvDetails.setTextColor(offlineColor)
             holder.binding.tvProductIdLabel.setTextColor(offlineColor)

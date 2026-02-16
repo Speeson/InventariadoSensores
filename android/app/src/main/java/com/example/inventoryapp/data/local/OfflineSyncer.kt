@@ -214,9 +214,17 @@ object OfflineSyncer {
                 val dto = gson.fromJson(req.payloadJson, CategoryCreateDto::class.java)
                 NetworkModule.api.createCategory(dto)
             }
+            PendingType.CATEGORY_DELETE -> {
+                val payload = gson.fromJson(req.payloadJson, CategoryDeletePayload::class.java)
+                NetworkModule.api.deleteCategory(payload.categoryId)
+            }
             PendingType.THRESHOLD_CREATE -> {
                 val dto = gson.fromJson(req.payloadJson, ThresholdCreateDto::class.java)
                 NetworkModule.api.createThreshold(dto)
+            }
+            PendingType.THRESHOLD_DELETE -> {
+                val payload = gson.fromJson(req.payloadJson, ThresholdDeletePayload::class.java)
+                NetworkModule.api.deleteThreshold(payload.thresholdId)
             }
             PendingType.STOCK_CREATE -> {
                 val dto = gson.fromJson(req.payloadJson, StockCreateDto::class.java)
@@ -273,6 +281,8 @@ object OfflineSyncer {
     // Payloads auxiliares
     data class ProductUpdatePayload(val productId: Int, val body: ProductUpdateDto)
     data class ProductDeletePayload(val productId: Int)
+    data class CategoryDeletePayload(val categoryId: Int)
+    data class ThresholdDeletePayload(val thresholdId: Int)
     data class StockUpdatePayload(val stockId: Int, val body: StockUpdateDto)
     data class ScanEventPayload(
         val barcode: String,

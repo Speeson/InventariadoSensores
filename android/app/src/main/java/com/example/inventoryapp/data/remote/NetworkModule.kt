@@ -126,7 +126,7 @@ object NetworkModule {
         consecutiveServerErrors = 0
         _offlineState.value = false
         val activity = ActivityTracker.getCurrent()
-        if (activity != null) {
+        if (activity != null && activity !is LoginActivity) {
             activity.runOnUiThread {
                 UiNotifier.showBlockingTimed(
                     activity,
@@ -193,8 +193,8 @@ object NetworkModule {
                         R.drawable.ic_error_red
                     )
                     report.sent > 0 -> Triple(
-                        "Sincronización offline",
-                        "Se han sincronizado correctamente ${report.sent} elementos offline.",
+                        "Pendientes procesados",
+                        "Se han enviado correctamente ${report.sent} pendientes offline.",
                         R.drawable.ic_check_green
                     )
                     else -> Triple(
@@ -217,9 +217,16 @@ object NetworkModule {
                 )
 
                 val activity = ActivityTracker.getCurrent()
-                if (activity != null) {
+                if (activity != null && activity !is LoginActivity) {
                     activity.runOnUiThread {
-                        if (title == "Pendientes con error") {
+                        if (title == "Pendientes procesados") {
+                            CreateUiFeedback.showStatusPopup(
+                                activity = activity,
+                                title = title,
+                                details = message,
+                                animationRes = R.raw.sync
+                            )
+                        } else if (title == "Pendientes con error" || title == "Sincronización offline parcial") {
                             CreateUiFeedback.showErrorPopup(
                                 activity = activity,
                                 title = title,

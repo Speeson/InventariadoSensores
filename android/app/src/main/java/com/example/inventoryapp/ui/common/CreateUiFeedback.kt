@@ -103,7 +103,8 @@ object CreateUiFeedback {
     fun showLoadingMessage(
         activity: Activity,
         message: String,
-        animationRes: Int = R.raw.loading
+        animationRes: Int = R.raw.loading,
+        animationScale: Float = 2f
     ): LoadingHandle {
         val view = LayoutInflater.from(activity).inflate(R.layout.dialog_create_loading, null)
         val label = view.findViewById<TextView>(R.id.tvLoadingLabel)
@@ -112,8 +113,8 @@ object CreateUiFeedback {
 
         val minCycleMs = AtomicLong(1_200L)
         lottie.setAnimation(animationRes)
-        lottie.scaleX = 2f
-        lottie.scaleY = 2f
+        lottie.scaleX = animationScale
+        lottie.scaleY = animationScale
         lottie.repeatCount = LottieDrawable.INFINITE
         lottie.addLottieOnCompositionLoadedListener { comp ->
             minCycleMs.set(comp.duration.toLong().coerceAtLeast(1_200L))

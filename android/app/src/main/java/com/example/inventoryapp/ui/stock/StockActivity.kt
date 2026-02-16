@@ -45,6 +45,7 @@ import org.json.JSONObject
 
 class StockActivity : AppCompatActivity() {
     companion object {
+        private const val OFFLINE_DELETE_MARKER = "offline_delete"
         @Volatile
         private var cacheNoticeShownInOfflineSession = false
     }
@@ -199,7 +200,7 @@ class StockActivity : AppCompatActivity() {
                         remoteTotal = cached.total,
                         filtersActive = filtersActive
                     )
-                    val ordered = cached.items + pending
+                    val ordered = markPendingDeletedStocks(cached.items + pending)
                     productNameById = resolveProductNames(ordered)
                     totalCount = cached.total + pendingTotalCount
                     setAllItemsAndApplyFilters(ordered)
@@ -215,7 +216,7 @@ class StockActivity : AppCompatActivity() {
                     )
                     val pageItems = res.body()!!.items
                     totalCount = res.body()!!.total + pendingTotalCount
-                    val ordered = pageItems + pending
+                    val ordered = markPendingDeletedStocks(pageItems + pending)
                     productNameById = resolveProductNames(ordered)
                     setAllItemsAndApplyFilters(ordered)
                     updatePageInfo(ordered.size, pending.size)
@@ -237,7 +238,7 @@ class StockActivity : AppCompatActivity() {
                             remoteTotal = cachedOnError.total,
                             filtersActive = filtersActive
                         )
-                        val ordered = cachedOnError.items + pending
+                        val ordered = markPendingDeletedStocks(cachedOnError.items + pending)
                         productNameById = resolveProductNames(ordered)
                         totalCount = cachedOnError.total + pendingTotalCount
                         setAllItemsAndApplyFilters(ordered)
@@ -253,7 +254,7 @@ class StockActivity : AppCompatActivity() {
                             remoteTotal = cachedRemoteTotal,
                             filtersActive = filtersActive
                         )
-                        val ordered = pending
+                        val ordered = markPendingDeletedStocks(pending)
                         productNameById = resolveProductNames(ordered)
                         totalCount = cachedRemoteTotal + pendingTotalCount
                         setAllItemsAndApplyFilters(ordered)
@@ -290,7 +291,7 @@ class StockActivity : AppCompatActivity() {
                         remoteTotal = cachedOnError.total,
                         filtersActive = filtersActive
                     )
-                    val ordered = cachedOnError.items + pending
+                    val ordered = markPendingDeletedStocks(cachedOnError.items + pending)
                     productNameById = resolveProductNames(ordered)
                     totalCount = cachedOnError.total + pendingTotalCount
                     setAllItemsAndApplyFilters(ordered)
@@ -306,7 +307,7 @@ class StockActivity : AppCompatActivity() {
                         remoteTotal = cachedRemoteTotal,
                         filtersActive = filtersActive
                     )
-                    val ordered = pending
+                    val ordered = markPendingDeletedStocks(pending)
                     productNameById = resolveProductNames(ordered)
                     totalCount = cachedRemoteTotal + pendingTotalCount
                     setAllItemsAndApplyFilters(ordered)
@@ -683,6 +684,32 @@ class StockActivity : AppCompatActivity() {
 
     private fun pendingStocksCount(): Int {
         return OfflineQueue(this).getAll().count { it.type == PendingType.STOCK_CREATE }
+    }
+
+    private fun pendingStockDeleteIds(): Set<Int> {
+        return OfflineQueue(this).getAll()
+            .asSequence()
+            .filter { it.type == PendingType.STOCK_UPDATE }
+            .mapNotNull {
+                runCatching {
+                    gson.fromJson(it.payloadJson, OfflineSyncer.StockUpdatePayload::class.java)
+                }.getOrNull()
+            }
+            .filter { it.body.quantity == 0 }
+            .map { it.stockId }
+            .toSet()
+    }
+
+    private fun markPendingDeletedStocks(rows: List<StockResponseDto>): List<StockResponseDto> {
+        val pendingDeleteIds = pendingStockDeleteIds()
+        if (pendingDeleteIds.isEmpty()) return rows
+        return rows.map { stock ->
+            if (stock.id > 0 && pendingDeleteIds.contains(stock.id)) {
+                stock.copy(updatedAt = OFFLINE_DELETE_MARKER)
+            } else {
+                stock
+            }
+        }
     }
 
     private suspend fun resolveCachedRemoteTotal(limit: Int): Int {
