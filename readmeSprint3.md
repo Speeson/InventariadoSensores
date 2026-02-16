@@ -465,3 +465,151 @@ Validación realizada:
 - Verificación de `X-Request-ID`:
   - con cabecera entrante (se conserva),
   - sin cabecera (se genera UUID automáticamente).
+
+## Observabilidad avanzada: Prometheus + Grafana
+
+Objetivo: persistir y visualizar métricas de la API en dashboards operativos.
+
+Infra Docker:
+- `backend/docker-compose.yml` incluye:
+  - `prometheus` (puerto `9090`)
+  - `grafana` (puerto `3001`)
+- Volúmenes persistentes:
+  - `prometheus_data`
+  - `grafana_data`
+
+Prometheus:
+- Configuración:
+  - `backend/observability/prometheus/prometheus.yml`
+- Scrape:
+  - job `inventory-api`
+  - target `api:8000`
+  - `metrics_path: /metrics`
+  - intervalo `10s`
+
+Grafana (provisioning automático):
+- Datasource:
+  - `backend/observability/grafana/provisioning/datasources/datasource.yml`
+  - URL interna: `http://prometheus:9090`
+- Dashboard provider:
+  - `backend/observability/grafana/provisioning/dashboards/dashboard.yml`
+- Dashboard inicial:
+  - `backend/observability/grafana/dashboards/inventory-observability.json`
+  - Paneles incluidos:
+    - Requests/s
+    - 5xx/s
+    - Latencia media global (ms)
+    - Total requests
+    - Request rate por ruta/método
+    - Latencia media por ruta/método
+    - Tabla de status por ruta/método
+
+Credenciales por defecto Grafana:
+- URL: `http://localhost:3001`
+- User: `admin`
+- Password: `admin`
+
+## Pruebas end-to-end de observabilidad
+
+### 1) Levantar stack
+- `docker compose -f backend/docker-compose.yml up -d --build`
+
+### 2) Verificar API y métricas base
+- `curl.exe -i http://localhost:8000/health`
+- `curl.exe -s http://localhost:8000/metrics`
+
+Esperado:
+- `/health` responde `200` (o `503` si dependencia caída).
+- `/metrics` devuelve texto con métricas `http_*`.
+
+### 3) Verificar Prometheus
+- Abrir `http://localhost:9090/targets`
+
+Esperado:
+- Target `inventory-api` en estado `UP`.
+
+### 4) Verificar Grafana
+- Abrir `http://localhost:3001`
+- Login `admin/admin`
+- Ir a carpeta **Inventory** y abrir dashboard **Inventory API Observability**.
+
+Esperado:
+- Paneles con datos tras generar tráfico.
+
+### 5) Generar tráfico de negocio
+- `curl.exe -s -H "Authorization: Bearer <TOKEN>" http://localhost:8000/users/me > NUL`
+- `curl.exe -s -H "Authorization: Bearer <TOKEN>" "http://localhost:8000/alerts/?status=PENDING&limit=1&offset=0" > NUL`
+- `curl.exe -s -H "Authorization: Bearer <TOKEN>" "http://localhost:8000/products/?limit=5&offset=0" > NUL`
+
+Esperado:
+- Suben métricas de requests y latencia.
+
+### 6) Verificar exclusión de `/health` y `/metrics` en agregados globales
+- Consultar `/metrics` y revisar:
+  - `http_requests_total`
+  - `http_request_duration_ms_*`
+  - series por ruta `path="/health"` y `path="/metrics"`
+
+Esperado:
+- `/health` y `/metrics` aparecen en métricas por ruta.
+- No inflan agregados globales.
+
+### 7) Forzar 5xx real y validar contador
+- Parar DB temporalmente:
+  - `docker compose -f backend/docker-compose.yml stop db`
+- Forzar request que dependa de DB:
+  - `curl.exe -i -X POST http://localhost:8000/auth/login -H "Content-Type: application/x-www-form-urlencoded" --data-raw "email=user@example.com&password=12345678"`
+- Revisar métricas:
+  - `curl.exe -s http://localhost:8000/metrics | findstr /i "http_request_errors_5xx_total"`
+- Restaurar DB:
+  - `docker compose -f backend/docker-compose.yml start db`
+
+Esperado:
+- Incrementa `http_request_errors_5xx_total`.
+
+### 8) Verificar trazabilidad por `X-Request-ID`
+- Con cabecera:
+  - `curl.exe -i -H "X-Request-ID: prueba-123" http://localhost:8000/health`
+- Sin cabecera:
+  - `curl.exe -i http://localhost:8000/health`
+
+Esperado:
+- Con cabecera: respuesta devuelve `x-request-id: prueba-123`.
+- Sin cabecera: respuesta devuelve UUID generado.
+
+## Ajustes de estabilidad y errores (API + Android)
+
+Objetivo: evitar loops de reconexión y mostrar errores funcionales claros cuando hay conflictos de datos.
+
+Backend:
+- Borrado de producto con historial:
+  - `DELETE /products/{id}` ahora captura `IntegrityError` por FK `movements_product_id_fkey`.
+  - En vez de `500`, devuelve `409 Conflict` con detalle funcional:
+    - `No se puede eliminar el producto porque tiene movimientos historicos asociados.`
+  - Archivo:
+    - `backend/app/api/routes/products.py`
+
+Android:
+- Tratamiento de backend no disponible:
+  - Respuestas `5xx` se tratan como backend temporalmente no disponible para activar comportamiento tipo offline y evitar spam.
+  - Se añade cooldown para alertas de error de servidor.
+  - Archivos:
+    - `android/app/src/main/java/com/example/inventoryapp/data/remote/NetworkModule.kt`
+
+- WebSocket de alertas:
+  - Se evita reconexión agresiva cuando `offlineState` está activo.
+  - Se añade cooldown para mensajes de estado WS (conectado/desconectado).
+  - Archivo:
+    - `android/app/src/main/java/com/example/inventoryapp/data/remote/AlertsWebSocketManager.kt`
+
+- Diálogos de error en creación de eventos:
+  - Si producto no existe: diálogo `failure` con animación `notfound.json`.
+  - Si ubicación no válida: diálogo `failure` con mensaje limpio.
+  - Archivo:
+    - `android/app/src/main/java/com/example/inventoryapp/ui/events/EventsActivity.kt`
+
+- Mensajes de `notfound` y ubicación:
+  - Correcciones de texto en `Stock` y `Thresholds` para evitar cadenas corruptas (`Ã`) y mantener formato consistente (`ubicacion`).
+  - Archivos:
+    - `android/app/src/main/java/com/example/inventoryapp/ui/stock/StockActivity.kt`
+    - `android/app/src/main/java/com/example/inventoryapp/ui/thresholds/ThresholdsActivity.kt`

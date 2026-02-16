@@ -1,46 +1,46 @@
 package com.example.inventoryapp.data.remote
 
 import android.content.Context
-import com.example.inventoryapp.data.local.SessionManager
-import com.example.inventoryapp.data.remote.model.AlertResponseDto
-import com.example.inventoryapp.data.remote.model.AlertTypeDto
-import com.example.inventoryapp.ui.common.ActivityTracker
-import com.example.inventoryapp.ui.common.SystemAlertManager
-import com.example.inventoryapp.data.local.SystemAlertType
-import android.widget.Toast
-import android.view.Gravity
 import android.os.Handler
 import android.os.Looper
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.StyleSpan
+import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.WindowManager
+import android.view.animation.AnimationUtils
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
-import android.view.WindowManager
-import android.view.animation.AnimationUtils
-import androidx.core.content.ContextCompat
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import com.example.inventoryapp.R
+import com.example.inventoryapp.data.local.SessionManager
+import com.example.inventoryapp.data.local.SystemAlertType
+import com.example.inventoryapp.data.remote.model.AlertResponseDto
+import com.example.inventoryapp.data.remote.model.AlertTypeDto
+import com.example.inventoryapp.ui.common.ActivityTracker
+import com.example.inventoryapp.ui.common.AlertsBadgeUtil
+import com.example.inventoryapp.ui.common.SystemAlertManager
 import com.google.gson.Gson
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
-import com.example.inventoryapp.ui.common.AlertsBadgeUtil
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.lifecycleScope
 
 object AlertsWebSocketManager {
     private val gson = Gson()
@@ -56,14 +56,18 @@ object AlertsWebSocketManager {
     @Volatile private var currentToken: String? = null
     @Volatile private var manualClose = false
     @Volatile private var reconnectAttempts = 0
-    private var reconnectJobActive = false
+    @Volatile private var reconnectJobActive = false
     @Volatile private var currentDialog: AlertDialog? = null
+    @Volatile private var lastWsStatusAlertAt: Long = 0L
     private val mainHandler = Handler(Looper.getMainLooper())
     private val pendingQueue = ArrayDeque<AlertPopupData>()
     @Volatile private var showingPopup = false
     @Volatile private var shownCountInBatch = 0
 
+    private const val WS_STATUS_ALERT_COOLDOWN_MS = 30_000L
+
     fun connect(context: Context) {
+        if (shouldDeferRealtimeReconnect()) return
         val token = SessionManager(context).getToken() ?: return
         if (socket != null && token == currentToken) return
 
@@ -89,13 +93,15 @@ object AlertsWebSocketManager {
                 reconnectAttempts = 0
                 reconnectJobActive = false
                 webSocket.send("ping")
-                SystemAlertManager.record(
-                    appContext,
-                    SystemAlertType.NETWORK,
-                    "WebSocket conectado",
-                    "Conexión en tiempo real activa.",
-                    blocking = false
-                )
+                if (shouldEmitWsStatusAlert()) {
+                    SystemAlertManager.record(
+                        appContext,
+                        SystemAlertType.NETWORK,
+                        "WebSocket conectado",
+                        "Conexion en tiempo real activa.",
+                        blocking = false
+                    )
+                }
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
@@ -109,13 +115,15 @@ object AlertsWebSocketManager {
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 socket = null
                 if (!manualClose) {
-                    SystemAlertManager.record(
-                        appContext,
-                        SystemAlertType.NETWORK,
-                        "WebSocket desconectado",
-                        "No se pudo mantener la conexión en tiempo real.",
-                        blocking = false
-                    )
+                    if (shouldEmitWsStatusAlert()) {
+                        SystemAlertManager.record(
+                            appContext,
+                            SystemAlertType.NETWORK,
+                            "WebSocket desconectado",
+                            "No se pudo mantener la conexion en tiempo real.",
+                            blocking = false
+                        )
+                    }
                     scheduleReconnect(appContext)
                 }
             }
@@ -123,13 +131,15 @@ object AlertsWebSocketManager {
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                 socket = null
                 if (!manualClose) {
-                    SystemAlertManager.record(
-                        appContext,
-                        SystemAlertType.NETWORK,
-                        "WebSocket desconectado",
-                        "La conexión en tiempo real se ha cerrado.",
-                        blocking = false
-                    )
+                    if (shouldEmitWsStatusAlert()) {
+                        SystemAlertManager.record(
+                            appContext,
+                            SystemAlertType.NETWORK,
+                            "WebSocket desconectado",
+                            "La conexion en tiempo real se ha cerrado.",
+                            blocking = false
+                        )
+                    }
                     scheduleReconnect(appContext)
                 }
             }
@@ -138,11 +148,13 @@ object AlertsWebSocketManager {
 
     private fun scheduleReconnect(context: Context) {
         if (reconnectJobActive) return
+        if (shouldDeferRealtimeReconnect()) return
         reconnectJobActive = true
         val delayMs = reconnectDelayMs()
         scope.launch {
             delay(delayMs)
             reconnectJobActive = false
+            if (shouldDeferRealtimeReconnect()) return@launch
             connect(context)
         }
     }
@@ -153,13 +165,24 @@ object AlertsWebSocketManager {
         return base.coerceAtMost(30_000L)
     }
 
+    private fun shouldDeferRealtimeReconnect(): Boolean {
+        return NetworkModule.isManualOffline() || NetworkModule.offlineState.value
+    }
+
+    private fun shouldEmitWsStatusAlert(): Boolean {
+        val now = System.currentTimeMillis()
+        if (now - lastWsStatusAlertAt < WS_STATUS_ALERT_COOLDOWN_MS) return false
+        lastWsStatusAlertAt = now
+        return true
+    }
+
     private fun handleAlert(context: Context, alert: AlertResponseDto) {
         val title = when (alert.alertType) {
             AlertTypeDto.LOW_STOCK -> "Alerta de stock bajo"
             AlertTypeDto.OUT_OF_STOCK -> "Alerta de stock agotado"
             AlertTypeDto.LARGE_MOVEMENT -> "Alerta de movimiento grande"
             AlertTypeDto.TRANSFER_COMPLETE -> "Alerta de transferencia completada"
-            AlertTypeDto.IMPORT_ISSUES -> "Alerta de importaci\u00f3n con errores"
+            AlertTypeDto.IMPORT_ISSUES -> "Alerta de importacion con errores"
         }
 
         val iconRes = when (alert.alertType) {
@@ -170,28 +193,22 @@ object AlertsWebSocketManager {
             AlertTypeDto.IMPORT_ISSUES -> R.drawable.alert_blue
         }
         val cardColor = when (alert.alertType) {
-            AlertTypeDto.OUT_OF_STOCK -> 0xFFFFEBEE.toInt()   // light red
-            AlertTypeDto.LOW_STOCK -> 0xFFFFF8E1.toInt()     // light amber
-            AlertTypeDto.TRANSFER_COMPLETE -> 0xFFE8F5E9.toInt() // light green
-            AlertTypeDto.LARGE_MOVEMENT -> 0xFFF3E5F5.toInt() // light violet
-            AlertTypeDto.IMPORT_ISSUES -> 0xFFE3F2FD.toInt()  // light blue
+            AlertTypeDto.OUT_OF_STOCK -> 0xFFFFEBEE.toInt()
+            AlertTypeDto.LOW_STOCK -> 0xFFFFF8E1.toInt()
+            AlertTypeDto.TRANSFER_COMPLETE -> 0xFFE8F5E9.toInt()
+            AlertTypeDto.LARGE_MOVEMENT -> 0xFFF3E5F5.toInt()
+            AlertTypeDto.IMPORT_ISSUES -> 0xFFE3F2FD.toInt()
         }
 
         scope.launch {
             val extraDetails = fetchStockDetails(alert)
             val details = when (alert.alertType) {
-                AlertTypeDto.LOW_STOCK ->
-                    "Cantidad: ${alert.quantity}\nM\u00ednimo: ${alert.minQuantity}"
-                AlertTypeDto.OUT_OF_STOCK ->
-                    "Cantidad: ${alert.quantity}"
-                AlertTypeDto.LARGE_MOVEMENT ->
-                    "Unidades: ${alert.quantity}"
-                AlertTypeDto.TRANSFER_COMPLETE ->
-                    "Unidades: ${alert.quantity}"
-                AlertTypeDto.IMPORT_ISSUES ->
-                    "Incidencias: ${alert.quantity}"
+                AlertTypeDto.LOW_STOCK -> "Cantidad: ${alert.quantity}\nMinimo: ${alert.minQuantity}"
+                AlertTypeDto.OUT_OF_STOCK -> "Cantidad: ${alert.quantity}"
+                AlertTypeDto.LARGE_MOVEMENT -> "Unidades: ${alert.quantity}"
+                AlertTypeDto.TRANSFER_COMPLETE -> "Unidades: ${alert.quantity}"
+                AlertTypeDto.IMPORT_ISSUES -> "Incidencias: ${alert.quantity}"
             }
-            val parts = mutableListOf<String>()
             val message = SpannableStringBuilder()
             if (extraDetails != null) {
                 message.append(extraDetails)
@@ -218,7 +235,7 @@ object AlertsWebSocketManager {
                     AlertsBadgeUtil.refresh(owner.lifecycleScope, badge)
                 }
             } else {
-                val toast = Toast.makeText(context, "$title\n${message.toString()}", Toast.LENGTH_SHORT)
+                val toast = Toast.makeText(context, "$title\n${message}", Toast.LENGTH_SHORT)
                 toast.setGravity(Gravity.CENTER, 0, 0)
                 val view = toast.view
                 if (view != null) {
@@ -302,7 +319,7 @@ object AlertsWebSocketManager {
                     "Producto ${stock.productId}"
                 }
                 val locationLabel = stock.location ?: "N/D"
-                "Producto: $productName (ID ${stock.productId})\nUbicaci\u00f3n: $locationLabel\nStock ID: $stockId"
+                "Producto: $productName (ID ${stock.productId})\nUbicacion: $locationLabel\nStock ID: $stockId"
             } catch (_: Exception) {
                 "Stock ID: $stockId"
             }

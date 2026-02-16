@@ -20,7 +20,7 @@ from app.models.enums import (
     UserRole,
 )
 from app.repositories import location_repo
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 def run_seed(generate_labels: bool = False):
@@ -235,7 +235,7 @@ def run_seed(generate_labels: bool = False):
         def pick_user(index: int) -> int:
             return user_ids[index % len(user_ids)]
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         if db.query(Movement).first() is None:
             movements = [
             {

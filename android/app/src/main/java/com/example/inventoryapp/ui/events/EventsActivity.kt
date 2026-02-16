@@ -252,7 +252,16 @@ snack = SendSnack(binding.root)
                                 com.example.inventoryapp.R.drawable.ic_lock
                             )
                         } else {
-                            snack.showError("Error: ${ex?.message ?: "sin detalle"}")
+                            val uiError = buildCreateEventErrorUi(ex)
+                            loadingHandled = true
+                            loading.dismissThen {
+                                CreateUiFeedback.showErrorPopup(
+                                    activity = this@EventsActivity,
+                                    title = "No se pudo crear evento",
+                                    details = uiError.details,
+                                    animationRes = uiError.animationRes
+                                )
+                            }
                         }
                     }
                 }
@@ -269,7 +278,16 @@ snack = SendSnack(binding.root)
                 }
                 loadEvents(withSnack = false)
             } catch (e: Exception) {
-                snack.showError("Error: ${e.message}")
+                val uiError = buildCreateEventErrorUi(e)
+                loadingHandled = true
+                loading.dismissThen {
+                    CreateUiFeedback.showErrorPopup(
+                        activity = this@EventsActivity,
+                        title = "No se pudo crear evento",
+                        details = uiError.details,
+                        animationRes = uiError.animationRes
+                    )
+                }
             } finally {
                 if (!loadingHandled) {
                     loading.dismiss()
@@ -445,6 +463,89 @@ snack = SendSnack(binding.root)
     private fun isForbidden(ex: Throwable?): Boolean {
         val msg = ex?.message ?: return false
         return msg.contains("HTTP 403")
+    }
+
+    private data class EventCreateErrorUi(
+        val details: String,
+        val animationRes: Int
+    )
+
+    private fun buildCreateEventErrorUi(ex: Throwable?): EventCreateErrorUi {
+        val raw = ex?.message?.trim().orEmpty()
+        val code = extractHttpCode(raw)
+        val normalized = raw.lowercase()
+
+        val productNotFound =
+            (normalized.contains("producto") || normalized.contains("product")) &&
+                (normalized.contains("not found") || normalized.contains("no encontrado") || normalized.contains("no existe"))
+
+        val locationInvalid =
+            (normalized.contains("ubic") || normalized.contains("location")) &&
+                (normalized.contains("invalid") || normalized.contains("inval") || normalized.contains("not found") || normalized.contains("no existe"))
+
+        if (productNotFound || code == 404) {
+            val details = if (canShowTechnicalEventErrors()) {
+                buildString {
+                    append("No se puede crear el evento porque el producto no existe.")
+                    if (raw.isNotBlank()) append("\nDetalle: ${compactEventErrorDetail(raw)}")
+                    if (code > 0) append("\nHTTP $code")
+                }
+            } else {
+                "No se puede crear el evento porque el producto no existe."
+            }
+            return EventCreateErrorUi(details = details, animationRes = R.raw.notfound)
+        }
+
+        if (locationInvalid) {
+            val details = if (canShowTechnicalEventErrors()) {
+                buildString {
+                    append("No se puede crear el evento porque la ubicacion no es valida.")
+                    if (raw.isNotBlank()) append("\nDetalle: ${compactEventErrorDetail(raw)}")
+                    if (code > 0) append("\nHTTP $code")
+                }
+            } else {
+                "No se puede crear el evento porque la ubicacion no es valida."
+            }
+            return EventCreateErrorUi(details = details, animationRes = R.raw.wrong)
+        }
+
+        val generic = if (canShowTechnicalEventErrors()) {
+            buildString {
+                append(
+                    when (code) {
+                        400, 422 -> "Datos invalidos para crear evento."
+                        409 -> "Conflicto al crear evento."
+                        500 -> "Error interno del servidor al crear evento."
+                        else -> "No se pudo crear el evento."
+                    }
+                )
+                if (raw.isNotBlank()) append("\nDetalle: ${compactEventErrorDetail(raw)}")
+                if (code > 0) append("\nHTTP $code")
+            }
+        } else {
+            when (code) {
+                400, 422 -> "No se pudo crear el evento. Revisa los datos."
+                409 -> "No se pudo crear el evento por conflicto de datos."
+                500 -> "No se pudo crear el evento por un problema del servidor."
+                else -> "No se pudo crear el evento. Intentalo de nuevo."
+            }
+        }
+        return EventCreateErrorUi(details = generic, animationRes = R.raw.wrong)
+    }
+
+    private fun extractHttpCode(raw: String): Int {
+        val match = Regex("HTTP\\s+(\\d{3})").find(raw) ?: return 0
+        return match.groupValues.getOrNull(1)?.toIntOrNull() ?: 0
+    }
+
+    private fun compactEventErrorDetail(raw: String, maxLen: Int = 180): String {
+        val singleLine = raw.replace("\\s+".toRegex(), " ").trim()
+        return if (singleLine.length <= maxLen) singleLine else singleLine.take(maxLen) + "..."
+    }
+
+    private fun canShowTechnicalEventErrors(): Boolean {
+        val role = getSharedPreferences("ui_prefs", MODE_PRIVATE).getString("cached_role", null)
+        return role.equals("ADMIN", ignoreCase = true) || role.equals("MANAGER", ignoreCase = true)
     }
 
     private fun isUserRole(): Boolean {

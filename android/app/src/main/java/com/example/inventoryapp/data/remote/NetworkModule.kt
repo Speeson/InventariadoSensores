@@ -35,6 +35,7 @@ object NetworkModule {
     private const val KEY_CUSTOM_HOST = "custom_host"
     private const val KEY_MANUAL_OFFLINE = "manual_offline"
     private const val HEALTH_PING_MS = 5_000L
+    private const val SERVER_ERROR_ALERT_COOLDOWN_MS = 30_000L
 
     private fun isEmulator(): Boolean {
         return Build.FINGERPRINT.startsWith("generic")
@@ -91,6 +92,8 @@ object NetworkModule {
 
     @Volatile private var networkDown = false
     @Volatile private var lastProbeAt: Long = 0L
+    @Volatile private var lastServerErrorAlertAt: Long = 0L
+    @Volatile private var consecutiveServerErrors: Int = 0
     private const val OFFLINE_PROBE_MS = 10_000L
     private val authRedirectInProgress = AtomicBoolean(false)
     private val _offlineState = MutableStateFlow(false)
@@ -117,6 +120,7 @@ object NetworkModule {
     private fun notifyNetworkUpOnce() {
         if (!networkDown) return
         networkDown = false
+        consecutiveServerErrors = 0
         _offlineState.value = false
         val activity = ActivityTracker.getCurrent()
         if (activity != null) {
@@ -236,21 +240,13 @@ object NetworkModule {
 
                 try {
                     val response = chain.proceed(req)
-                    notifyNetworkUpOnce()
                     if (response.code >= 500) {
+                        consecutiveServerErrors = (consecutiveServerErrors + 1).coerceAtMost(1000)
+                        notifyNetworkDownOnce()
                         val path = response.request.url.encodedPath
-                        val userMessage = buildFriendlyServerError(path)
-                        val message = if (isAdminUser()) {
-                            "Error ${response.code} en $path. Revisa logs del backend."
-                        } else {
-                            userMessage
-                        }
-                        SystemAlertManager.record(
-                            appContext,
-                            SystemAlertType.SERVER_ERROR,
-                            "Servicio no disponible",
-                            message
-                        )
+                        maybeRecordServerUnavailable(path, response.code)
+                        response.close()
+                        throw IOException("Backend unavailable (HTTP ${response.code})")
                     } else if (response.code == 401) {
                         val path = response.request.url.encodedPath
                         if (path.startsWith("/auth/")) {
@@ -288,6 +284,8 @@ object NetworkModule {
                             }
                         }
                     }
+                    consecutiveServerErrors = 0
+                    notifyNetworkUpOnce()
                     response
                 } catch (e: IOException) {
                     notifyNetworkDownOnce()
@@ -344,5 +342,23 @@ object NetworkModule {
             path.startsWith("/reports/") -> "No se pudo cargar el reporte. Intenta de nuevo."
             else -> "Ha ocurrido un problema temporal en el servidor. Intenta de nuevo en unos minutos."
         }
+    }
+
+    private fun maybeRecordServerUnavailable(path: String, code: Int) {
+        val now = System.currentTimeMillis()
+        if (now - lastServerErrorAlertAt < SERVER_ERROR_ALERT_COOLDOWN_MS) return
+        lastServerErrorAlertAt = now
+        val message = if (isAdminUser()) {
+            "Error $code en $path. Backend no disponible temporalmente."
+        } else {
+            "Backend no disponible temporalmente. Trabajando en modo offline."
+        }
+        SystemAlertManager.record(
+            appContext,
+            SystemAlertType.SERVER_ERROR,
+            "Servicio no disponible",
+            message,
+            blocking = false
+        )
     }
 }

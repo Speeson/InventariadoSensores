@@ -16,6 +16,7 @@ import asyncio
 
 app = FastAPI(title="Sistema Inventariado Sensores")
 metrics_registry = MetricsRegistry()
+ws_listener_task: asyncio.Task | None = None
 
 
 cors_origins_env = os.getenv("CORS_ORIGINS", "")
@@ -106,4 +107,18 @@ def metrics():
 
 @app.on_event("startup")
 async def startup_ws_listener():
-    asyncio.create_task(start_redis_listener())
+    global ws_listener_task
+    ws_listener_task = asyncio.create_task(start_redis_listener())
+
+
+@app.on_event("shutdown")
+async def shutdown_ws_listener():
+    global ws_listener_task
+    if ws_listener_task is None:
+        return
+    ws_listener_task.cancel()
+    try:
+        await ws_listener_task
+    except asyncio.CancelledError:
+        pass
+    ws_listener_task = None

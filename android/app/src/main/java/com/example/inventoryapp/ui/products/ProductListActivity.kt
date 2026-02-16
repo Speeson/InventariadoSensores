@@ -654,7 +654,13 @@ class ProductListActivity : AppCompatActivity() {
                         com.example.inventoryapp.R.drawable.ic_lock
                     )
                 } else {
-                    UiNotifier.show(this@ProductListActivity, "Error ${res.code()}: ${res.errorBody()?.string()}")
+                    val raw = runCatching { res.errorBody()?.string() }.getOrNull()
+                    val details = formatDeleteProductError(res.code(), raw)
+                    CreateUiFeedback.showErrorPopup(
+                        activity = this@ProductListActivity,
+                        title = "No se pudo eliminar producto",
+                        details = details
+                    )
                 }
             } catch (e: IOException) {
                 val payload = OfflineSyncer.ProductDeletePayload(id)
@@ -662,7 +668,16 @@ class ProductListActivity : AppCompatActivity() {
                 UiNotifier.show(this@ProductListActivity, "Sin conexiÃ³n. Eliminado guardado offline")
                 resetAndLoad()
             } catch (e: Exception) {
-                UiNotifier.show(this@ProductListActivity, "Error: ${e.message}")
+                val details = if (canShowTechnicalCreateErrors()) {
+                    "Ha ocurrido un error inesperado al eliminar el producto.\n${e.javaClass.simpleName}: ${e.message ?: "sin detalle"}"
+                } else {
+                    "Ha ocurrido un error inesperado al eliminar el producto."
+                }
+                CreateUiFeedback.showErrorPopup(
+                    activity = this@ProductListActivity,
+                    title = "No se pudo eliminar producto",
+                    details = details
+                )
             }
         }
     }
@@ -1230,6 +1245,49 @@ class ProductListActivity : AppCompatActivity() {
                 409 -> "No se pudo crear el producto porque entra en conflicto con otro existente."
                 500 -> "No se pudo crear el producto por un problema del servidor. IntÃ©ntalo de nuevo."
                 else -> "No se pudo crear el producto. IntÃ©ntalo de nuevo."
+            }
+        }
+    }
+
+    private fun formatDeleteProductError(code: Int, rawError: String?): String {
+        val raw = rawError?.trim().orEmpty()
+        val normalized = raw.lowercase()
+        val technical = canShowTechnicalCreateErrors()
+        val hasMovementsConflict = normalized.contains("movements_product_id_fkey") ||
+            normalized.contains("movimientos historicos") ||
+            normalized.contains("referenced from table \"movements\"")
+
+        if (hasMovementsConflict || code == 409) {
+            return if (technical) {
+                buildString {
+                    append("No se puede eliminar el producto porque tiene movimientos historicos asociados.")
+                    if (raw.isNotBlank()) append("\nDetalle: ${compactErrorDetail(raw)}")
+                    if (code > 0) append("\nHTTP $code")
+                }
+            } else {
+                "No se puede eliminar el producto porque tiene movimientos historicos asociados."
+            }
+        }
+
+        return if (technical) {
+            buildString {
+                append(
+                    when (code) {
+                        400, 422 -> "Datos invalidos para eliminar producto."
+                        404 -> "El producto no existe o ya fue eliminado."
+                        500 -> "Error interno del servidor al eliminar producto."
+                        else -> "No se pudo eliminar el producto."
+                    }
+                )
+                if (raw.isNotBlank()) append("\nDetalle: ${compactErrorDetail(raw)}")
+                if (code > 0) append("\nHTTP $code")
+            }
+        } else {
+            when (code) {
+                400, 422 -> "No se pudo eliminar el producto. Revisa el estado actual."
+                404 -> "El producto ya no existe."
+                500 -> "No se pudo eliminar el producto por un problema del servidor. Intentalo de nuevo."
+                else -> "No se pudo eliminar el producto. Intentalo de nuevo."
             }
         }
     }

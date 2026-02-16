@@ -2,6 +2,7 @@
 from fastapi.responses import FileResponse
 import logging
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_roles
@@ -206,7 +207,16 @@ def delete_product(
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
     label_path = label_service.label_path_for(product.id)
-    product_repo.delete_product(db, product)
+    try:
+        product_repo.delete_product(db, product)
+    except IntegrityError as exc:
+        db.rollback()
+        if "movements_product_id_fkey" in str(exc.orig):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="No se puede eliminar el producto porque tiene movimientos historicos asociados.",
+            ) from exc
+        raise
     try:
         label_path.unlink()
     except OSError:

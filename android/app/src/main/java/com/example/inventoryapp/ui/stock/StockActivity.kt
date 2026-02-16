@@ -500,9 +500,9 @@ class StockActivity : AppCompatActivity() {
                     val created = res.body()
                     val name = productNameById[productId] ?: productId.toString()
                     val details = if (created != null) {
-                        "ID: ${created.id}\nProducto: $name\nUbicaciÃ³n: ${created.location}\nCantidad: ${created.quantity}"
+                        "ID: ${created.id}\nProducto: $name\nUbicacion: ${created.location}\nCantidad: ${created.quantity}"
                     } else {
-                        "Producto: $name\nUbicaciÃ³n: $location\nCantidad: $quantity"
+                        "Producto: $name\nUbicacion: $location\nCantidad: $quantity"
                     }
                     loadingHandled = true
                     loading.dismissThen {
@@ -537,7 +537,7 @@ class StockActivity : AppCompatActivity() {
                     CreateUiFeedback.showCreatedPopup(
                         this@StockActivity,
                         "Stock creado (offline)",
-                        "Producto: $name\nUbicaciÃ³n: $location\nCantidad: $quantity (offline)",
+                        "Producto: $name\nUbicacion: $location\nCantidad: $quantity (offline)",
                         accentColorRes = R.color.offline_text
                     )
                 }
@@ -577,7 +577,7 @@ class StockActivity : AppCompatActivity() {
 
         val productName = productNameById[stock.productId] ?: "Producto ${stock.productId}"
         title.text = "Editar: $productName (ID ${stock.id})"
-        meta.text = "UbicaciÃ³n: ${stock.location}"
+        meta.text = "Ubicacion: ${stock.location}"
         qtyInput.setText(stock.quantity.toString())
 
         val dialog = AlertDialog.Builder(this)
@@ -588,7 +588,7 @@ class StockActivity : AppCompatActivity() {
         btnSave.setOnClickListener {
             val newQty = qtyInput.text?.toString()?.toIntOrNull()
             if (newQty == null || newQty < 0) {
-                qtyInput.error = "Cantidad invÃ¡lida"
+                qtyInput.error = "Cantidad invalida"
                 return@setOnClickListener
             }
             updateStock(stock.id, StockUpdateDto(quantity = newQty))
@@ -637,7 +637,7 @@ class StockActivity : AppCompatActivity() {
             } catch (e: IOException) {
                 val payload = OfflineSyncer.StockUpdatePayload(stockId, body)
                 OfflineQueue(this@StockActivity).enqueue(PendingType.STOCK_UPDATE, gson.toJson(payload))
-                snack.showQueuedOffline("Sin conexiÃ³n. Update guardado offline")
+                snack.showQueuedOffline("Sin conexion. Update guardado offline")
 
             } catch (e: Exception) {
                 snack.showError("âŒ Error red: ${e.message}")
@@ -922,7 +922,7 @@ class StockActivity : AppCompatActivity() {
         if (showNotFoundDialog && hasActiveFilters() && filtered.isEmpty()) {
             CreateUiFeedback.showErrorPopup(
                 activity = this,
-                title = "No se encontrÃ³ stock",
+                title = "No se encontro stock",
                 details = buildStockSearchNotFoundDetails(productRaw, locationRaw, qtyRaw),
                 animationRes = R.raw.notfound
             )
@@ -971,15 +971,15 @@ class StockActivity : AppCompatActivity() {
             parts.add(productLabel)
         }
         if (locationRaw.isNotBlank()) {
-            parts.add("en ubicaciÃ³n \"$locationRaw\"")
+            parts.add("en ubicacion \"$locationRaw\"")
         }
         if (qtyRaw.isNotBlank()) {
             parts.add("con cantidad $qtyRaw")
         }
         return if (parts.isEmpty()) {
-            "No se encontrÃ³ stock con los filtros actuales."
+            "No se encontro stock con los filtros actuales."
         } else {
-            "No se encontrÃ³ stock ${parts.joinToString(separator = " ")}."
+            "No se encontro stock ${parts.joinToString(separator = " ")}."
         }
     }
 
@@ -1011,7 +1011,7 @@ class StockActivity : AppCompatActivity() {
         val backendMsg = extractBackendErrorMessage(detail)
         val detailLower = backendMsg.lowercase()
         val mapped = when (code) {
-            400 -> "Datos invÃ¡lidos para crear stock"
+            400 -> "Datos invalidos para crear stock"
             409 -> {
                 if (
                     detailLower.contains("location") ||
@@ -1019,7 +1019,7 @@ class StockActivity : AppCompatActivity() {
                     detailLower.contains("already exists") ||
                     detailLower.contains("ya existe")
                 ) {
-                    "Ya existe stock para ese producto en esa ubicaciÃ³n"
+                    "Ya existe stock para ese producto en esa ubicacion"
                 } else {
                     "Conflicto: ya existe un stock similar"
                 }
@@ -1029,7 +1029,7 @@ class StockActivity : AppCompatActivity() {
         }
 
         if (code == 400 && isDuplicateStockMessage(detailLower)) {
-            return "Ya existe stock para ese producto en esa ubicaciÃ³n"
+            return "Ya existe stock para ese producto en esa ubicacion"
         }
         if (technical && backendMsg.isNotBlank() && !isTooGenericBackendMessage(backendMsg)) {
             return backendMsg
@@ -1125,4 +1125,5 @@ class StockActivity : AppCompatActivity() {
         imm.hideSoftInputFromWindow(view.windowToken, 0)
     }
 }
+
 

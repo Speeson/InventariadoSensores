@@ -717,7 +717,7 @@ class ThresholdsActivity : AppCompatActivity() {
             parts.add(productLabel)
         }
         if (locationRaw.isNotBlank()) {
-            parts.add("en ubicaciÃ³n \"$locationRaw\"")
+            parts.add("en ubicacion \"$locationRaw\"")
         }
         return if (parts.isEmpty()) {
             "No se encontraron thresholds con los filtros actuales."
@@ -764,31 +764,31 @@ class ThresholdsActivity : AppCompatActivity() {
         if (locationInvalid) {
             return if (technical) {
                 buildString {
-                    append("No se puede crear: la ubicaciÃ³n indicada no es vÃ¡lida.")
+                    append("No se puede crear: la ubicacion indicada no es valida.")
                     if (raw.isNotBlank()) append("\nDetalle: ${compactThresholdErrorDetail(raw)}")
                     if (code > 0) append("\nHTTP $code")
                 }
             } else {
-                "No se puede crear el threshold porque la ubicaciÃ³n no es vÃ¡lida."
+                "No se puede crear el threshold porque la ubicacion no es valida."
             }
         }
 
         if (duplicateThreshold) {
             return if (technical) {
                 buildString {
-                    append("No se puede crear: ya existe un threshold para ese producto/ubicaciÃ³n.")
+                    append("No se puede crear: ya existe un threshold para ese producto/ubicacion.")
                     if (raw.isNotBlank()) append("\nDetalle: ${compactThresholdErrorDetail(raw)}")
                     if (code > 0) append("\nHTTP $code")
                 }
             } else {
-                "Ya existe un threshold para ese producto y ubicaciÃ³n."
+                "Ya existe un threshold para ese producto y ubicacion."
             }
         }
 
         if (invalidMinQty) {
             return if (technical) {
                 buildString {
-                    append("No se puede crear: valor de umbral invÃ¡lido.")
+                    append("No se puede crear: valor de umbral invalido.")
                     if (raw.isNotBlank()) append("\nDetalle: ${compactThresholdErrorDetail(raw)}")
                     if (code > 0) append("\nHTTP $code")
                 }
@@ -801,7 +801,7 @@ class ThresholdsActivity : AppCompatActivity() {
             buildString {
                 append(
                     when (code) {
-                        400, 422 -> "Datos invÃ¡lidos para crear threshold."
+                        400, 422 -> "Datos invalidos para crear threshold."
                         403 -> "No tienes permisos para crear thresholds."
                         409 -> "Conflicto al crear threshold."
                         500 -> "Error interno del servidor al crear threshold."
@@ -819,7 +819,7 @@ class ThresholdsActivity : AppCompatActivity() {
                 403 -> "No tienes permisos para crear thresholds."
                 409 -> "No se puede crear el threshold porque entra en conflicto con otro existente."
                 500 -> "No se puede crear el threshold por un problema del servidor."
-                else -> "No se pudo crear el threshold. IntÃ©ntalo de nuevo."
+                else -> "No se pudo crear el threshold. Intentalo de nuevo."
             }
         }
     }
@@ -1026,4 +1026,5 @@ class ThresholdsActivity : AppCompatActivity() {
     }
 
 }
+
 

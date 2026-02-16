@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import json
 import os
 from typing import Any
@@ -100,7 +101,13 @@ async def start_redis_listener() -> None:
             except Exception:
                 continue
             await manager.broadcast(payload)
+    except asyncio.CancelledError:
+        # Graceful shutdown on app stop.
+        raise
     finally:
-        await pubsub.unsubscribe(ALERTS_CHANNEL)
-        await pubsub.close()
-        await client.close()
+        with contextlib.suppress(Exception):
+            await pubsub.unsubscribe(ALERTS_CHANNEL)
+        with contextlib.suppress(Exception):
+            await pubsub.close()
+        with contextlib.suppress(Exception):
+            await client.close()
