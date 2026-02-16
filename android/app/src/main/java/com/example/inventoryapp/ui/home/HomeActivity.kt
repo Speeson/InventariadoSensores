@@ -21,7 +21,6 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.lifecycleScope
 import androidx.core.content.ContextCompat
 import com.example.inventoryapp.R
-import com.example.inventoryapp.data.local.OfflineSyncer
 import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.databinding.ActivityHomeBinding
@@ -40,8 +39,6 @@ import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.UiNotifier
-import com.example.inventoryapp.ui.common.SystemAlertManager
-import com.example.inventoryapp.data.local.SystemAlertType
 import com.example.inventoryapp.data.remote.model.AlertStatusDto
 import com.example.inventoryapp.ui.imports.ImportsActivity
 import com.example.inventoryapp.ui.audit.AuditActivity
@@ -234,32 +231,7 @@ class HomeActivity : AppCompatActivity() {
             updateDrawerHeader()
             updateAlertsBadge()
 
-            val report = OfflineSyncer.flush(this@HomeActivity)
-
-            if (report.sent > 0) {
-                UiNotifier.showBlocking(
-                    this@HomeActivity,
-                    "Pendientes procesados",
-                    "Se han enviado correctamente ${report.sent} pendientes offline.",
-                    com.example.inventoryapp.R.drawable.ic_check_green
-                )
-                SystemAlertManager.record(
-                    this@HomeActivity,
-                    SystemAlertType.OFFLINE_SYNC_OK,
-                    "SincronizaciÃ³n completada",
-                    "Se enviaron correctamente ${report.sent} pendientes offline.",
-                    blocking = false
-                )
-            }
-
-            if (report.movedToFailed > 0) {
-                UiNotifier.showBlocking(
-                    this@HomeActivity,
-                    "Pendientes con error",
-                    "${report.movedToFailed} pendientes han fallado. Revisa la pestaÃ±a de Pendientes offline.",
-                    com.example.inventoryapp.R.drawable.ic_error_red
-                )
-            }
+            NetworkModule.syncOfflineQueueWithUserNotice()
         }
         lifecycleScope.launch {
             NetworkModule.offlineState.collect { offline ->

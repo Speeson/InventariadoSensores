@@ -3,6 +3,7 @@
 import android.content.Context
 import android.os.Build
 import com.example.inventoryapp.BuildConfig
+import com.example.inventoryapp.data.local.OfflineSyncer
 import com.example.inventoryapp.data.local.SessionManager
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import com.example.inventoryapp.data.local.SystemAlertType
 import com.example.inventoryapp.ui.common.SystemAlertManager
 import com.example.inventoryapp.ui.common.ActivityTracker
+import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.auth.LoginActivity
 import com.example.inventoryapp.R
@@ -96,6 +98,7 @@ object NetworkModule {
     @Volatile private var consecutiveServerErrors: Int = 0
     private const val OFFLINE_PROBE_MS = 10_000L
     private val authRedirectInProgress = AtomicBoolean(false)
+    private val offlineSyncInProgress = AtomicBoolean(false)
     private val _offlineState = MutableStateFlow(false)
     val offlineState: StateFlow<Boolean> = _offlineState.asStateFlow()
 
@@ -132,6 +135,7 @@ object NetworkModule {
                 )
             }
         }
+        syncOfflineQueueWithUserNotice()
     }
 
     fun forceOnline() {
@@ -170,6 +174,67 @@ object NetworkModule {
         val next = !isManualOffline()
         setManualOffline(next)
         return next
+    }
+
+    fun syncOfflineQueueWithUserNotice() {
+        if (!::appContext.isInitialized) return
+        if (isManualOffline()) return
+        if (!offlineSyncInProgress.compareAndSet(false, true)) return
+
+        healthScope.launch {
+            try {
+                val report = OfflineSyncer.flush(appContext)
+                if (report.sent <= 0 && report.movedToFailed <= 0) return@launch
+
+                val (title, message, iconRes) = when {
+                    report.sent > 0 && report.movedToFailed > 0 -> Triple(
+                        "Sincronización offline parcial",
+                        "Se sincronizaron ${report.sent} elementos offline y ${report.movedToFailed} fallaron. Revisa Pendientes offline.",
+                        R.drawable.ic_error_red
+                    )
+                    report.sent > 0 -> Triple(
+                        "Sincronización offline",
+                        "Se han sincronizado correctamente ${report.sent} elementos offline.",
+                        R.drawable.ic_check_green
+                    )
+                    else -> Triple(
+                        "Pendientes con error",
+                        if (report.movedToFailed == 1) {
+                            "1 pendiente ha fallado. Revisa la pestaña de Pendientes offline."
+                        } else {
+                            "${report.movedToFailed} pendientes han fallado. Revisa la pestaña de Pendientes offline."
+                        },
+                        R.drawable.ic_error_red
+                    )
+                }
+
+                SystemAlertManager.record(
+                    appContext,
+                    SystemAlertType.OFFLINE_SYNC_OK,
+                    title,
+                    message,
+                    blocking = false
+                )
+
+                val activity = ActivityTracker.getCurrent()
+                if (activity != null) {
+                    activity.runOnUiThread {
+                        if (title == "Pendientes con error") {
+                            CreateUiFeedback.showErrorPopup(
+                                activity = activity,
+                                title = title,
+                                details = message,
+                                animationRes = R.raw.error
+                            )
+                        } else {
+                            UiNotifier.showBlocking(activity, title, message, iconRes)
+                        }
+                    }
+                }
+            } finally {
+                offlineSyncInProgress.set(false)
+            }
+        }
     }
 
     private suspend fun pingHealthOnce() {
