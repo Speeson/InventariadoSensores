@@ -9,28 +9,36 @@
   ],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "10s",
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
   "panels": [
     {
       "id": 1,
       "type": "stat",
-      "title": "Requests / sec",
+      "title": "Req/s (2m)",
       "gridPos": {
         "h": 4,
-        "w": 6,
+        "w": 3,
         "x": 0,
         "y": 0
       },
       "targets": [
         {
-          "expr": "rate(http_requests_total[1m])",
+          "expr": "sum(rate(http_requests_total[2m]))",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "reqps"
+          "unit": "reqps",
+          "decimals": 2
         },
         "overrides": []
       },
@@ -49,22 +57,40 @@
     {
       "id": 2,
       "type": "stat",
-      "title": "5xx / sec",
+      "title": "Success % (2m)",
       "gridPos": {
         "h": 4,
-        "w": 6,
-        "x": 6,
+        "w": 3,
+        "x": 3,
         "y": 0
       },
       "targets": [
         {
-          "expr": "rate(http_request_errors_5xx_total[5m])",
+          "expr": "100 * sum(rate(http_requests_by_route_method_status{status=~\"2..\"}[2m])) / clamp_min(sum(rate(http_requests_by_route_method_status[2m])), 0.000001)",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "reqps"
+          "unit": "percent",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 95
+              },
+              {
+                "color": "green",
+                "value": 99
+              }
+            ]
+          }
         },
         "overrides": []
       },
@@ -83,22 +109,23 @@
     {
       "id": 3,
       "type": "stat",
-      "title": "Avg latency (ms)",
+      "title": "Requests (2m)",
       "gridPos": {
         "h": 4,
-        "w": 6,
-        "x": 12,
+        "w": 3,
+        "x": 6,
         "y": 0
       },
       "targets": [
         {
-          "expr": "rate(http_request_duration_ms_sum[5m]) / rate(http_request_duration_ms_count[5m])",
+          "expr": "sum(increase(http_requests_total[2m]))",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "ms"
+          "unit": "short",
+          "decimals": 0
         },
         "overrides": []
       },
@@ -117,19 +144,30 @@
     {
       "id": 4,
       "type": "stat",
-      "title": "Total requests",
+      "title": "HTTP 2xx/s (2m)",
       "gridPos": {
         "h": 4,
-        "w": 6,
-        "x": 18,
+        "w": 3,
+        "x": 9,
         "y": 0
       },
       "targets": [
         {
-          "expr": "http_requests_total",
+          "expr": "sum(rate(http_requests_by_route_method_status{status=~\"2..\"}[2m]))",
           "refId": "A"
         }
       ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 2,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          }
+        },
+        "overrides": []
+      },
       "options": {
         "reduceOptions": {
           "calcs": [
@@ -144,38 +182,252 @@
     },
     {
       "id": 5,
-      "type": "timeseries",
-      "title": "Request rate by route",
+      "type": "stat",
+      "title": "HTTP 4xx/s (2m)",
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 4
+        "h": 4,
+        "w": 3,
+        "x": 12,
+        "y": 0
       },
       "targets": [
         {
-          "expr": "sum by (path,method) (rate(http_requests_by_route_method_status[5m]))",
-          "legendFormat": "{{method}} {{path}}",
+          "expr": "sum(rate(http_requests_by_route_method_status{status=~\"4..\"}[2m]))",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "reqps"
+          "unit": "reqps",
+          "decimals": 2,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "orange"
+          }
         },
         "overrides": []
       },
       "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom"
-        }
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value"
       }
     },
     {
       "id": 6,
+      "type": "stat",
+      "title": "HTTP 5xx/s (2m)",
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 15,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_by_route_method_status{status=~\"5..\"}[2m]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 2,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "red"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Avg Latency (2m)",
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 18,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_request_duration_ms_sum[2m])) / clamp_min(sum(rate(http_request_duration_ms_count[2m])), 0.000001)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Total Requests",
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 21,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "http_requests_total",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value"
+      }
+    },
+    {
+      "id": 9,
       "type": "timeseries",
-      "title": "Avg latency by route (ms)",
+      "title": "HTTP Requests by Status",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 4
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_by_route_method_status{status=~\"2..\"}[2m]))",
+          "legendFormat": "2xx",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(http_requests_by_route_method_status{status=~\"3..\"}[2m]))",
+          "legendFormat": "3xx",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(rate(http_requests_by_route_method_status{status=~\"4..\"}[2m]))",
+          "legendFormat": "4xx",
+          "refId": "C"
+        },
+        {
+          "expr": "sum(rate(http_requests_by_route_method_status{status=~\"5..\"}[2m]))",
+          "legendFormat": "5xx",
+          "refId": "D"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "drawStyle": "line",
+          "lineWidth": 2
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "2xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "4xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "5xx"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "HTTP Requests by Route",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -184,14 +436,16 @@
       },
       "targets": [
         {
-          "expr": "sum by (path,method) (rate(http_request_duration_ms_by_route_method_sum[5m])) / sum by (path,method) (rate(http_request_duration_ms_by_route_method_count[5m]))",
+          "expr": "topk(10, sum by (path,method) (rate(http_requests_by_route_method_status[2m])))",
           "legendFormat": "{{method}} {{path}}",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "ms"
+          "unit": "reqps",
+          "drawStyle": "line",
+          "lineWidth": 1
         },
         "overrides": []
       },
@@ -199,13 +453,16 @@
         "legend": {
           "displayMode": "table",
           "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
         }
       }
     },
     {
-      "id": 7,
+      "id": 11,
       "type": "timeseries",
-      "title": "5xx rate",
+      "title": "Latency by Route (avg ms)",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -214,28 +471,33 @@
       },
       "targets": [
         {
-          "expr": "rate(http_request_errors_5xx_total[5m])",
-          "legendFormat": "5xx/sec",
+          "expr": "topk(10, sum by (path,method) (rate(http_request_duration_ms_by_route_method_sum[2m])) / clamp_min(sum by (path,method) (rate(http_request_duration_ms_by_route_method_count[2m])), 0.000001))",
+          "legendFormat": "{{method}} {{path}}",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "reqps"
+          "unit": "ms",
+          "drawStyle": "line",
+          "lineWidth": 1
         },
         "overrides": []
       },
       "options": {
         "legend": {
-          "displayMode": "list",
+          "displayMode": "table",
           "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
         }
       }
     },
     {
-      "id": 8,
+      "id": 12,
       "type": "table",
-      "title": "Status rate by route",
+      "title": "HTTP Status by Route (2m)",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -244,7 +506,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (path,method,status) (rate(http_requests_by_route_method_status[5m]))",
+          "expr": "sum by (path,method,status) (rate(http_requests_by_route_method_status[2m]))",
           "format": "table",
           "instant": true,
           "refId": "A"
@@ -254,14 +516,5 @@
         "showHeader": true
       }
     }
-  ],
-  "templating": {
-    "list": []
-  },
-  "time": {
-    "from": "now-15m",
-    "to": "now"
-  },
-  "timepicker": {}
+  ]
 }
-

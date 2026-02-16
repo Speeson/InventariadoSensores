@@ -61,10 +61,13 @@ object AlertsWebSocketManager {
     @Volatile private var lastWsStatusAlertAt: Long = 0L
     private val mainHandler = Handler(Looper.getMainLooper())
     private val pendingQueue = ArrayDeque<AlertPopupData>()
+    private val recentAlertKeys = LinkedHashMap<String, Long>()
     @Volatile private var showingPopup = false
     @Volatile private var shownCountInBatch = 0
 
     private const val WS_STATUS_ALERT_COOLDOWN_MS = 30_000L
+    private const val ALERT_DEDUP_WINDOW_MS = 8_000L
+    private const val ALERT_DEDUP_MAX_KEYS = 300
 
     fun connect(context: Context) {
         if (shouldDeferRealtimeReconnect()) return
@@ -106,7 +109,7 @@ object AlertsWebSocketManager {
 
             override fun onMessage(webSocket: WebSocket, text: String) {
                 val alert = runCatching { gson.fromJson(text, AlertResponseDto::class.java) }.getOrNull()
-                if (alert != null) {
+                if (alert != null && shouldProcessRealtimeAlert(alert)) {
                     handleAlert(appContext, alert)
                     _alerts.tryEmit(alert)
                 }
@@ -174,6 +177,38 @@ object AlertsWebSocketManager {
         if (now - lastWsStatusAlertAt < WS_STATUS_ALERT_COOLDOWN_MS) return false
         lastWsStatusAlertAt = now
         return true
+    }
+
+    private fun shouldProcessRealtimeAlert(alert: AlertResponseDto): Boolean {
+        val key = listOf(
+            alert.id.toString(),
+            alert.stockId?.toString().orEmpty(),
+            alert.alertType.name,
+            alert.alertStatus.name,
+            alert.quantity.toString(),
+            alert.minQuantity.toString()
+        ).joinToString("|")
+
+        val now = System.currentTimeMillis()
+        synchronized(recentAlertKeys) {
+            val iterator = recentAlertKeys.entries.iterator()
+            while (iterator.hasNext()) {
+                val (_, ts) = iterator.next()
+                if (now - ts > ALERT_DEDUP_WINDOW_MS) iterator.remove()
+            }
+
+            val seenAt = recentAlertKeys[key]
+            if (seenAt != null && now - seenAt <= ALERT_DEDUP_WINDOW_MS) {
+                return false
+            }
+
+            recentAlertKeys[key] = now
+            while (recentAlertKeys.size > ALERT_DEDUP_MAX_KEYS) {
+                val firstKey = recentAlertKeys.entries.firstOrNull()?.key ?: break
+                recentAlertKeys.remove(firstKey)
+            }
+            return true
+        }
     }
 
     private fun handleAlert(context: Context, alert: AlertResponseDto) {

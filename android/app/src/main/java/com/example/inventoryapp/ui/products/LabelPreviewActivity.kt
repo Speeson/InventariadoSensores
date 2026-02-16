@@ -55,6 +55,7 @@ class LabelPreviewActivity : AppCompatActivity() {
     private val niimbotPackage = "com.gengcon.android.jccloudprinter"
     private var niimbotScanDialog: AlertDialog? = null
     private var niimbotPrintDialog: AlertDialog? = null
+    private var saveLabelLoadingHandle: CreateUiFeedback.LoadingHandle? = null
     private var btReceiverRegistered = false
     private val discoveredDevices = linkedMapOf<String, BluetoothDevice>()
     private val discoveredRows = mutableListOf<String>()
@@ -244,7 +245,13 @@ class LabelPreviewActivity : AppCompatActivity() {
             UiNotifier.show(this, "Etiqueta no disponible")
             return
         }
-        UiNotifier.show(this, "Guardando etiqueta...")
+        saveLabelLoadingHandle?.dismiss()
+        saveLabelLoadingHandle = CreateUiFeedback.showListLoading(
+            activity = this,
+            message = "Guardando etiqueta...",
+            animationRes = R.raw.loading_list,
+            minCycles = 1
+        )
         tryCaptureAndSaveLabel(attemptsLeft = 6)
     }
 
@@ -272,6 +279,8 @@ class LabelPreviewActivity : AppCompatActivity() {
                 if (attemptsLeft > 0) {
                     tryCaptureAndSaveLabel(attemptsLeft - 1)
                 } else {
+                    saveLabelLoadingHandle?.dismiss()
+                    saveLabelLoadingHandle = null
                     UiNotifier.show(this, "La etiqueta aun no esta lista")
                 }
                 return@postDelayed
@@ -279,9 +288,13 @@ class LabelPreviewActivity : AppCompatActivity() {
             val trimmed = trimVerticalWhitespace(raw)
             val filename = "label_${sku.ifBlank { productId.toString() }}_niimbot.png"
             if (saveToPictures(filename, trimmed)) {
+                saveLabelLoadingHandle?.dismiss()
+                saveLabelLoadingHandle = null
                 UiNotifier.show(this, "Etiqueta guardada en galeria")
                 openNiimbotApp()
             } else {
+                saveLabelLoadingHandle?.dismiss()
+                saveLabelLoadingHandle = null
                 UiNotifier.show(this, "No se pudo guardar la etiqueta")
             }
         }, 150)
@@ -401,8 +414,13 @@ class LabelPreviewActivity : AppCompatActivity() {
                 .setData(Uri.parse("package:$niimbotPackage"))
             startActivity(settingsIntent)
             UiNotifier.show(this, "No se encontró el launcher de Niimbot")
-        } catch (_: Exception) {
-            UiNotifier.show(this, "No se pudo abrir la app de Niimbot")
+        } catch (e: Exception) {
+            CreateUiFeedback.showErrorPopup(
+                activity = this,
+                title = "No se pudo abrir Niimbot",
+                details = e.message ?: "No se pudo abrir la app de Niimbot",
+                animationRes = R.raw.wrong
+            )
         }
     }
 
@@ -464,7 +482,13 @@ class LabelPreviewActivity : AppCompatActivity() {
             return false
         }
         if (!adapter.isEnabled) {
-            UiNotifier.show(this, "Activa Bluetooth para conectar con Niimbot")
+            CreateUiFeedback.showStatusPopup(
+                activity = this,
+                title = "Bluetooth desactivado",
+                details = "Activa Bluetooth para conectar con Niimbot",
+                animationRes = R.raw.bluetooth,
+                autoDismissMs = 3000L
+            )
             return false
         }
         return true
@@ -924,6 +948,8 @@ class LabelPreviewActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         stopBluetoothDiscovery()
+        saveLabelLoadingHandle?.dismiss()
+        saveLabelLoadingHandle = null
         dismissNiimbotPrintingDialog()
         niimbotScanDialog?.dismiss()
         niimbotScanDialog = null

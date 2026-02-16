@@ -619,7 +619,6 @@ class StockActivity : AppCompatActivity() {
             try {
                 val res = NetworkModule.api.updateStock(stockId, body)
                 if (res.isSuccessful) {
-                    snack.showSuccess("âœ… Stock actualizado")
                     cacheStore.invalidatePrefix("stocks")
                     loadStocks()
                 } else {                    if (res.code() == 403) {

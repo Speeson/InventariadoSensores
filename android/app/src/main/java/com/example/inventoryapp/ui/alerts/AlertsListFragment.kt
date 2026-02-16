@@ -21,6 +21,7 @@ import com.example.inventoryapp.data.remote.model.AlertTypeDto
 import com.example.inventoryapp.data.remote.model.EventResponseDto
 import com.example.inventoryapp.databinding.FragmentAlertsListBinding
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
+import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.example.inventoryapp.ui.common.GradientIconUtil
 import com.example.inventoryapp.ui.common.SendSnack
 import com.example.inventoryapp.ui.common.UiNotifier
@@ -81,7 +82,10 @@ class AlertsListFragment : Fragment() {
         binding.btnClearSystem.setOnClickListener {
             systemStore.clearAll()
             loadSystemAlerts()
-            snack.showSuccess("Alertas del sistema eliminadas")
+            showSuccessDialog(
+                title = "Operación completada",
+                details = "Alertas del sistema eliminadas"
+            )
         }
 
         binding.btnClearStock.setOnClickListener {
@@ -96,7 +100,10 @@ class AlertsListFragment : Fragment() {
             if (lastFailedRows.isNotEmpty()) {
                 dismissedStore.addAll(lastFailedRows.map { it.id })
                 loadFailedEvents()
-                snack.showSuccess("Eventos fallidos limpiados")
+                showSuccessDialog(
+                    title = "Operación completada",
+                    details = "Eventos fallidos limpiados"
+                )
             }
         }
 
@@ -141,7 +148,10 @@ class AlertsListFragment : Fragment() {
                 if (position in items.indices) {
                     systemStore.remove(items[position].id)
                     loadSystemAlerts()
-                    snack.showSuccess("Alerta eliminada")
+                    showSuccessDialog(
+                        title = "Operación completada",
+                        details = "Alerta eliminada"
+                    )
                 } else {
                     loadSystemAlerts()
                 }
@@ -240,7 +250,10 @@ class AlertsListFragment : Fragment() {
                 if (res.code() == 401) return@launch
 
                 if (res.isSuccessful) {
-                    snack.showSuccess("Alerta marcada como vista")
+                    showSuccessDialog(
+                        title = "Operación completada",
+                        details = "Alerta marcada como vista"
+                    )
                     loadAlerts()
                 } else if (res.code() == 403) {
                     showStockPermissionDenied()
@@ -264,12 +277,19 @@ class AlertsListFragment : Fragment() {
                 if (res.isSuccessful && res.body() != null) {
                     val items = res.body()!!.items
                     if (items.isEmpty()) {
-                        snack.showSuccess("No hay alertas de stock")
+                        showWarningDialog(
+                            title = "Sin pendientes",
+                            details = "No hay Alertas importantes pendientes",
+                            animationRes = com.example.inventoryapp.R.raw.notfound
+                        )
                         return@launch
                     }
                     items.forEach { NetworkModule.api.ackAlert(it.id) }
                     loadAlerts()
-                    snack.showSuccess("Alertas de stock marcadas como vistas")
+                    showSuccessDialog(
+                        title = "Operación completada",
+                        details = "Alertas importantes marcadas como vistas"
+                    )
                 } else if (res.code() == 403) {
                     showStockPermissionDenied()
                 } else {
@@ -339,6 +359,28 @@ class AlertsListFragment : Fragment() {
             "Permisos insuficientes",
             "No tienes permisos para gestionar alertas de stock.",
             com.example.inventoryapp.R.drawable.ic_lock
+        )
+    }
+
+    private fun showSuccessDialog(title: String, details: String) {
+        CreateUiFeedback.showStatusPopup(
+            activity = requireActivity(),
+            title = title,
+            details = details,
+            animationRes = com.example.inventoryapp.R.raw.correct_create
+        )
+    }
+
+    private fun showWarningDialog(
+        title: String,
+        details: String,
+        animationRes: Int = com.example.inventoryapp.R.raw.wrong
+    ) {
+        CreateUiFeedback.showErrorPopup(
+            activity = requireActivity(),
+            title = title,
+            details = details,
+            animationRes = animationRes
         )
     }
 
