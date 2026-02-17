@@ -38,6 +38,7 @@ import com.example.inventoryapp.ui.thresholds.ThresholdsActivity
 import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
+import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.data.remote.model.AlertStatusDto
 import com.example.inventoryapp.ui.imports.ImportsActivity
@@ -315,11 +316,19 @@ class HomeActivity : AppCompatActivity() {
             .setNegativeButton("Cancelar", null)
             .setNeutralButton("Limpiar") { _, _ ->
                 NetworkModule.setCustomHost(null)
-                UiNotifier.show(this, "Servidor restablecido")
+                CreateUiFeedback.showCreatedPopup(
+                    activity = this,
+                    title = "Servidor restablecido",
+                    details = "Se ha restaurado la configuracion del servidor."
+                )
             }
             .setPositiveButton("Guardar") { _, _ ->
                 NetworkModule.setCustomHost(input.text.toString())
-                UiNotifier.show(this, "Servidor actualizado")
+                CreateUiFeedback.showCreatedPopup(
+                    activity = this,
+                    title = "Servidor actualizado",
+                    details = "Nueva configuracion de servidor guardada."
+                )
             }
             .show()
     }

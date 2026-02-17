@@ -13,6 +13,7 @@ import com.example.inventoryapp.data.remote.AlertsWebSocketManager
 import com.example.inventoryapp.data.remote.FcmTokenManager
 import com.example.inventoryapp.data.remote.RegisterRequest
 import com.example.inventoryapp.databinding.ActivityLoginBinding
+import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.home.HomeActivity
 import kotlinx.coroutines.launch
@@ -366,12 +367,20 @@ class LoginActivity : AppCompatActivity() {
             .setNeutralButton("Limpiar") { _, _ ->
                 NetworkModule.setCustomHost(null)
                 NetworkModule.setManualOffline(false)
-                UiNotifier.show(this, "Servidor restablecido")
+                CreateUiFeedback.showCreatedPopup(
+                    activity = this,
+                    title = "Servidor restablecido",
+                    details = "Se ha restaurado la configuracion del servidor."
+                )
             }
             .setPositiveButton("Guardar") { _, _ ->
                 NetworkModule.setCustomHost(input.text.toString())
                 NetworkModule.setManualOffline(false)
-                UiNotifier.show(this, "Servidor actualizado")
+                CreateUiFeedback.showCreatedPopup(
+                    activity = this,
+                    title = "Servidor actualizado",
+                    details = "Nueva configuracion de servidor guardada."
+                )
             }
             .show()
     }

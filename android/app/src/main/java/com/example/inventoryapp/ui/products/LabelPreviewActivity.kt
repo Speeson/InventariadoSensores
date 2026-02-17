@@ -940,7 +940,12 @@ class LabelPreviewActivity : AppCompatActivity() {
             if (granted) {
                 startDirectNiimbotPrintFlow()
             } else {
-                UiNotifier.show(this, "Permisos Bluetooth requeridos para imprimir")
+                CreateUiFeedback.showErrorPopup(
+                    activity = this,
+                    title = "Permisos Bluetooth requeridos",
+                    details = "Permisos Bluetooth requeridos para imprimir",
+                    animationRes = R.raw.error
+                )
             }
         }
     }
