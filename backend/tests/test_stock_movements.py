@@ -1,19 +1,33 @@
 from uuid import uuid4
 
+from app.core.security import hash_password
 from app.models.category import Category
+from app.models.enums import UserRole
 from app.models.product import Product
+from app.models.user import User
 
 
 def _auth_header(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def _register_manager(client) -> str:
-    email = f"manager_{uuid4().hex}@test.local"
+def _login_manager(client, db) -> str:
+    email = f"manager_{uuid4().hex}@example.com"
+    username = f"manager_{uuid4().hex[:8]}"
     password = "Password123!"
+    db.add(
+        User(
+            email=email,
+            username=username,
+            password_hash=hash_password(password),
+            role=UserRole.MANAGER,
+        )
+    )
+    db.commit()
+
     response = client.post(
-        "/auth/register",
-        json={"email": email, "password": password, "role": "MANAGER"},
+        "/auth/login",
+        data={"username": email, "password": password},
     )
     assert response.status_code == 200
     return response.json()["access_token"]
@@ -36,7 +50,7 @@ def test_stock_and_movement_in(client, db):
     db.commit()
     db.refresh(product)
 
-    token = _register_manager(client)
+    token = _login_manager(client, db)
     headers = _auth_header(token)
 
     stock_response = client.post(

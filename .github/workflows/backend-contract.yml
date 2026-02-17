@@ -6,9 +6,6 @@ on:
       - "backend/**"
       - ".github/workflows/backend-contract.yml"
   push:
-    branches:
-      - main
-      - esteban
     paths:
       - "backend/**"
       - ".github/workflows/backend-contract.yml"

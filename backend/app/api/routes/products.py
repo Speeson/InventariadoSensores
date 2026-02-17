@@ -137,6 +137,8 @@ def create_product(
         user_id=user.id,
         details=f"product_id={product.id} sku={product.sku}",
     )
+    cache_invalidate_prefix("products:list")
+    cache_invalidate_prefix("products:detail")
     return product
 
 
