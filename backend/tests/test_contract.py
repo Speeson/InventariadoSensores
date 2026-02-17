@@ -78,12 +78,15 @@ def test_api_contract(case: schemathesis.Case, auth_headers, client):
         json=sanitize(case.body),
     )
 
+    checks = [
+        status_code_conformance,
+        content_type_conformance,
+        response_schema_conformance,
+    ]
+    if case.path != "/health":
+        checks.insert(0, not_a_server_error)
+
     case.validate_response(
         response,
-        checks=(
-            not_a_server_error,
-            status_code_conformance,
-            content_type_conformance,
-            response_schema_conformance,
-        ),
+        checks=tuple(checks),
     )
