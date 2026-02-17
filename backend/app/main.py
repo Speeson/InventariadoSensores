@@ -1,6 +1,7 @@
 import os
 
 from fastapi import FastAPI
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
@@ -17,6 +18,14 @@ import asyncio
 app = FastAPI(title="Sistema Inventariado Sensores")
 metrics_registry = MetricsRegistry()
 ws_listener_task: asyncio.Task | None = None
+COMMON_ERROR_RESPONSES = {
+    "400": "Bad Request",
+    "401": "Unauthorized",
+    "403": "Forbidden",
+    "404": "Not Found",
+    "409": "Conflict",
+    "503": "Service Unavailable",
+}
 
 
 cors_origins_env = os.getenv("CORS_ORIGINS", "")
@@ -54,6 +63,61 @@ app.include_router(imports.router)
 app.include_router(audit.router)
 app.include_router(ws_alerts.router)
 
+
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+    components = openapi_schema.setdefault("components", {})
+    schemas = components.setdefault("schemas", {})
+    schemas.setdefault(
+        "ErrorResponse",
+        {
+            "title": "ErrorResponse",
+            "type": "object",
+            "properties": {
+                "detail": {
+                    "anyOf": [
+                        {"type": "string"},
+                        {"type": "array", "items": {"type": "object"}},
+                        {"type": "object"},
+                    ]
+                }
+            },
+            "required": ["detail"],
+        },
+    )
+
+    for path_item in openapi_schema.get("paths", {}).values():
+        for method, operation in path_item.items():
+            if method not in {"get", "post", "put", "patch", "delete", "options", "head"}:
+                continue
+            responses = operation.setdefault("responses", {})
+            for status_code, description in COMMON_ERROR_RESPONSES.items():
+                responses.setdefault(
+                    status_code,
+                    {
+                        "description": description,
+                        "content": {
+                            "application/json": {
+                                "schema": {"$ref": "#/components/schemas/ErrorResponse"}
+                            }
+                        },
+                    },
+                )
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi
 
 
 @app.get("/health")
@@ -108,6 +172,8 @@ def metrics():
 @app.on_event("startup")
 async def startup_ws_listener():
     global ws_listener_task
+    if os.getenv("DISABLE_WS_LISTENER", "0") == "1":
+        return
     ws_listener_task = asyncio.create_task(start_redis_listener())
 
 

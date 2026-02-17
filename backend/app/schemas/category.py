@@ -1,5 +1,5 @@
-from datetime import datetime
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from datetime import datetime, timezone
+from pydantic import BaseModel, Field, ConfigDict, field_serializer, field_validator
 
 class CategoryBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=50)
@@ -33,3 +33,10 @@ class CategoryResponse(CategoryBase):
     created_at: datetime
     updated_at: datetime | None
     model_config = ConfigDict(from_attributes=True)
+
+    @field_serializer("created_at", "updated_at", when_used="json")
+    def serialize_datetime(self, value: datetime | None):
+        if value is None:
+            return None
+        dt = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+        return dt.isoformat()

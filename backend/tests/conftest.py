@@ -16,6 +16,7 @@ sys.path.append(str(ROOT))
 os.environ["DATABASE_URL"] = SQLITE_URL
 os.environ["JWT_SECRET"] = "test-secret"
 os.environ["JWT_ALGORITHM"] = "HS256"
+os.environ["DISABLE_WS_LISTENER"] = "1"
 
 from app.db import session as db_session  # noqa: E402
 from app.db.base import Base  # noqa: E402

@@ -67,5 +67,7 @@
 ## FORZAR ERRORES 5xx
 
 docker compose -f backend/docker-compose.yml stop db
+docker compose -f docker-compose.yml stop db
 
 docker compose -f backend/docker-compose.yml start db
+docker compose -f docker-compose.yml start db

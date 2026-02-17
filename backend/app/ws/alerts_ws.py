@@ -108,6 +108,6 @@ async def start_redis_listener() -> None:
         with contextlib.suppress(Exception):
             await pubsub.unsubscribe(ALERTS_CHANNEL)
         with contextlib.suppress(Exception):
-            await pubsub.close()
+            await pubsub.aclose()
         with contextlib.suppress(Exception):
-            await client.close()
+            await client.aclose()
