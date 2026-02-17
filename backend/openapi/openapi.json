@@ -3596,7 +3596,20 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "properties": {
+                    "checks": {
+                      "additionalProperties": {},
+                      "type": "object"
+                    },
+                    "status": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "checks"
+                  ],
+                  "type": "object"
                 }
               }
             },

@@ -103,27 +103,24 @@ def custom_openapi():
             # /health can legitimately return 503 with a custom payload {"status","checks"}.
             # Keep that response schema aligned with runtime output instead of generic ErrorResponse.
             if path == "/health":
-                responses.setdefault(
-                    "503",
-                    {
-                        "description": "Service Unavailable",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "required": ["status", "checks"],
-                                    "properties": {
-                                        "status": {"type": "string"},
-                                        "checks": {
-                                            "type": "object",
-                                            "additionalProperties": {},
-                                        },
+                responses["503"] = {
+                    "description": "Service Unavailable",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": ["status", "checks"],
+                                "properties": {
+                                    "status": {"type": "string"},
+                                    "checks": {
+                                        "type": "object",
+                                        "additionalProperties": {},
                                     },
-                                }
+                                },
                             }
-                        },
+                        }
                     },
-                )
+                }
             for status_code, description in COMMON_ERROR_RESPONSES.items():
                 if path == "/health" and status_code == "503":
                     continue
