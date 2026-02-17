@@ -125,6 +125,15 @@ Android:
 - Preparación de bitmap para etiqueta 50x30 con margen configurable.
 - Conservado el flujo anterior de "Abrir app Niimbot" como alternativa.
 
+Integración externa (SDK/API oficial):
+- Librerías oficiales integradas localmente:
+  - `android/app/libs/4.0.2-release.aar`
+  - `android/app/libs/image-1.9.5-20260121.aar`
+  - `android/app/libs/LPAPI-2019-11-20-R.jar`
+- Uso del SDK oficial vía `com.gengcon.www.jcprintersdk` en:
+  - `android/app/src/main/java/com/example/inventoryapp/ui/products/NiimbotSdkManager.kt`
+- Integración con app oficial Niimbot (`com.gengcon.android.jccloudprinter`) como fallback de apertura.
+
 UI/UX en `LabelPreview`:
 - Reorganización de botones:
   - Descargar SVG / Descargar PDF
@@ -718,16 +727,15 @@ Triggers:
 - `push` y `pull_request` sobre cambios en `backend/**` y en los propios workflows.
 - `workflow_dispatch` para ejecución manual desde GitHub Actions.
 
-Hardening aplicado:
-- Ambos workflows incluyen guard:
-  - `if: ${{ hashFiles('backend/requirements.txt') != '' }}`
-- Motivo:
-  - evitar fallos en ramas que aún no contienen el backend completo.
-
 ## Comandos de verificación para demo
 
 Contrato OpenAPI + snapshot:
 - `docker compose -f backend/docker-compose.yml exec -T api sh -lc "python -m pytest -q tests/test_openapi_snapshot.py tests/test_contract.py"`
+
+Contrato OpenAPI + snapshot (guardando log + XML):
+- `New-Item -ItemType Directory -Force backend/test-reports | Out-Null`
+- `docker compose -f backend/docker-compose.yml exec -T api sh -lc "python -m pytest -q tests/test_openapi_snapshot.py tests/test_contract.py --junitxml=/tmp/contract-latest.xml" | Tee-Object -FilePath backend/test-reports/contract-latest.log`
+- `docker compose -f backend/docker-compose.yml cp api:/tmp/contract-latest.xml backend/test-reports/contract-latest.xml`
 
 Suite backend completa:
 - `docker compose -f backend/docker-compose.yml exec -T api sh -lc "python -m pytest -q tests"`

@@ -46,6 +46,7 @@ Comunicación: **JSON sobre HTTP** y autenticación **JWT Bearer**.
 - Retrofit + OkHttp
 - CameraX + ML Kit (barcode scanning)
 - Sesión persistente (token)
+- Integración de API/SDK externo Niimbot (impresión Bluetooth B1)
 
 **SDK (según Gradle detectado):**
 - compileSdk: 34
@@ -143,6 +144,9 @@ Notas:
 - Pantalla de eventos con estado y cola offline
 - Pantalla de confirmación de escaneo (IN/OUT + cantidad/ubicación)
 - Pantalla de rotación con agregados por producto
+- Integración con etiquetadora Niimbot B1:
+  - impresión directa por SDK oficial (Bluetooth),
+  - fallback para abrir app oficial Niimbot.
 
 ---
 
@@ -153,14 +157,16 @@ Notas:
 | Auth con JWT + roles | ✅ | Implementado en backend |
 | CRUD productos/stocks | ✅ | Incluye filtros + paginación |
 | Escaneo móvil | ✅ | Android con ML Kit |
+| Integración API/SDK externo (Niimbot) | ✅ | SDK oficial integrado para impresión B1 |
 | Simulación de sensores | ✅ | Endpoints de eventos |
 | Procesamiento de eventos | ✅ | Asíncrono con Redis + Celery (cola + worker) |
 | Historial de movimientos | ✅ | Endpoint + filtros |
-| Auditoría de cambios | ⏳ | Planificado (S3) |
+| Auditoría de cambios | ✅ | Endpoint `/audit` (solo ADMIN) + trazabilidad por entidad |
 | Alertas stock bajo | ✅ | Celery Beat + notificación por email |
-| Importación CSV | ⏳ | Planificado (S3) |
+| Importación CSV | ✅ | Endpoints `/imports/*` + flujo de review (approve/reject) |
 | Reportes | ✅ | Top-consumed y turnover |
-| Tests/CI | ⏳ | Planificado / base preparada |
+| Tests/CI | ✅ | Pytest + Contract tests + GitHub Actions |
+| Contrato OpenAPI documentado | ✅ | Snapshot `openapi.json` + examples/responses en Swagger |
 
 Leyenda: ✅ hecho · ⚠️ parcial · ⏳ planificado
 
@@ -223,6 +229,35 @@ cd backend
 docker compose down -v
 docker compose up --build
 ```
+
+### Tests y CI/CD (Sprint 3)
+
+**Tests backend (local en contenedor):**
+```bash
+docker compose -f backend/docker-compose.yml exec -T api sh -lc "python -m pytest -q tests"
+```
+
+**Contrato OpenAPI + snapshot:**
+```bash
+docker compose -f backend/docker-compose.yml exec -T api sh -lc "python -m pytest -q tests/test_openapi_snapshot.py tests/test_contract.py"
+```
+
+**Contrato OpenAPI + snapshot guardando log y XML (PowerShell):**
+```powershell
+New-Item -ItemType Directory -Force backend/test-reports | Out-Null
+docker compose -f backend/docker-compose.yml exec -T api sh -lc "python -m pytest -q tests/test_openapi_snapshot.py tests/test_contract.py --junitxml=/tmp/contract-latest.xml" | Tee-Object -FilePath backend/test-reports/contract-latest.log
+docker compose -f backend/docker-compose.yml cp api:/tmp/contract-latest.xml backend/test-reports/contract-latest.xml
+```
+
+**Build de imágenes backend (validación de empaquetado):**
+```bash
+docker compose -f backend/docker-compose.yml build api worker beat
+```
+
+**GitHub Actions (automático):**
+- `backend-contract.yml`: snapshot + contract tests.
+- `backend-ci.yml`: suite `pytest` + build Docker.
+- Se ejecutan en `push` / `pull_request` cuando hay cambios en `backend/**` o en los workflows.
 
 ---
 
@@ -393,7 +428,7 @@ Una historia se considera terminada cuando:
 
 - **Sprint 1:** productos/stocks CRUD, escaneo móvil, eventos básicos.
 - **Sprint 2:** consumidor de eventos, alertas, reportes.
-- **Sprint 3:** importación CSV, auditoría, optimizaciones.
+- **Sprint 3:** importación CSV, auditoría, optimizaciones, contrato OpenAPI y CI/CD.
 
 ### Sprint 2 (implementado)
 
@@ -427,6 +462,36 @@ Android (UI/UX y nuevas pantallas):
   limpieza rapida por seccion y eventos fallidos.
 - Alertas del sistema con dialogo central ante caidas de servicios y guardado en historial.
 
+### Sprint 3 (implementado)
+
+Backend:
+- Importación CSV completa (`/imports/events/csv`, `/imports/transfers/csv`) con cuarentena y review.
+- Auditoría (`/audit`) con filtros por entidad/acción/usuario/fecha (solo ADMIN).
+- Contrato OpenAPI:
+  - snapshot versionado en `backend/openapi/openapi.json`,
+  - test de snapshot (`test_openapi_snapshot.py`),
+  - test de contrato Schemathesis (`test_contract.py`).
+- Documentación OpenAPI enriquecida con `examples` y `responses` de error por ruta.
+- Observabilidad operativa:
+  - métricas `/metrics`,
+  - stack Prometheus + Grafana provisionado.
+
+Calidad y CI/CD:
+- Workflow `backend-contract.yml`: valida snapshot + contrato OpenAPI.
+- Workflow `backend-ci.yml`: ejecuta tests backend y build Docker (`api/worker/beat`).
+- Reportes de tests en formato JUnit como artefacto de CI.
+
+Android:
+- Consolidación de UX offline/online con colas de sincronización y avisos globales.
+- Diálogos unificados para errores y estados de sincronización.
+- Integración de impresión Niimbot y mejoras de feedback visual.
+
+Documentacion de apoyo (backend/context):
+- `backend/context/README_tests_contrato_openapi.md`
+- `backend/context/README_observabilidad_prometheus_grafana.md`
+- `backend/context/README_import_swagger.md`
+- `backend/context/GUIA_DEFENSA_REQUISITOS_ACTIVIDAD4.md`
+
 ---
 
 ## 👥 Equipo (2º DAM)
@@ -443,298 +508,55 @@ Android (UI/UX y nuevas pantallas):
 ## 🗂️ Estructura completa del proyecto (todas las carpetas y archivos)
 
 ```text
-
 InventariadoSensores/
+├── .github/
+│   └── workflows/
+│       ├── backend-ci.yml
+│       └── backend-contract.yml
 ├── backend/
-│   ├── alembic/
-│   │   ├── versions/
-│   │   │   ├── 2f4c1b7f1b0d_remove_alert_ack_at_default.py
-│   │   │   ├── 3373e6b81640_add_location_id_to_movements_and_.py
-│   │   │   ├── 4f3c2a9b7e2c_add_transfer_id_to_movements.py
-│   │   │   ├── 6f8657d8911f_merge_heads.py
-│   │   │   ├── 8ec94a38e7f4_add_alerts_notifications.py
-│   │   │   ├── 9e75fa04121a_add_stock_thresholds_and_alerts_add_.py
-│   │   │   ├── b7a2c9d4e611_events_defaults_and_processed_at.py
-│   │   │   ├── c51f9fca7313_add_locations.py
-│   │   │   ├── c8ce14e1e339_add_indexes.py
-│   │   │   ├── d2b1c5f9a1a0_merge_event_defaults_and_locations.py
-│   │   │   └── dcc886ba14d3_initial_schema.py
-│   │   ├── env.py
-│   │   ├── README
-│   │   └── script.py.mako
 │   ├── app/
-│   │   ├── celery_app.py
-│   │   ├── __pycache__/
-│   │   │   └── main.cpython-313.pyc
-│   │   ├── api/
-│   │   │   ├── routers/
-│   │   │   │   └── __pycache__/
-│   │   │   │       └── events.cpython-313.pyc
-│   │   │   ├── routes/
-│   │   │   │   ├── alerts.py
-│   │   │   │   ├── auth.py
-│   │   │   │   ├── categories.py
-│   │   │   │   ├── events.py
-│   │   │   │   ├── locations.py
-│   │   │   │   ├── movements.py
-│   │   │   │   ├── products.py
-│   │   │   │   ├── reports.py
-│   │   │   │   ├── stocks.py
-│   │   │   │   ├── thresholds.py
-│   │   │   │   └── users.py
-│   │   │   ├── deps.py
-│   │   │   └── security.py
+│   │   ├── api/routes/
+│   │   ├── cache/
 │   │   ├── core/
-│   │   │   ├── __init__.py
-│   │   │   ├── config.py
-│   │   │   └── security.py
 │   │   ├── db/
-│   │   │   ├── __init__.py
-│   │   │   ├── base.py
-│   │   │   ├── deps.py
-│   │   │   └── session.py
 │   │   ├── models/
-│   │   │   ├── __init__.py
-│   │   │   ├── alert.py
-│   │   │   ├── audit_log.py
-│   │   │   ├── category.py
-│   │   │   ├── entity.py
-│   │   │   ├── enums.py
-│   │   │   ├── event.py
-│   │   │   ├── location.py
-│   │   │   ├── movement.py
-│   │   │   ├── product.py
-│   │   │   ├── stock.py
-│   │   │   ├── stock_threshold.py
-│   │   │   └── user.py
 │   │   ├── repositories/
-│   │   │   ├── __pycache__/
-│   │   │   │   └── memory_repo.cpython-313.pyc
-│   │   │   ├── alert_repo.py
-│   │   │   ├── category_repo.py
-│   │   │   ├── event_repo.py
-│   │   │   ├── location_repo.py
-│   │   │   ├── memory_repo.py
-│   │   │   ├── movement_repo.py
-│   │   │   ├── product_repo.py
-│   │   │   ├── report_repo.py
-│   │   │   ├── stock_repo.py
-│   │   │   ├── threshold_repo.py
-│   │   │   └── user_repo.py
 │   │   ├── schemas/
-│   │   │   ├── __pycache__/
-│   │   │   │   └── event.cpython-313.pyc
-│   │   │   ├── __init__.py
-│   │   │   ├── alert.py
-│   │   │   ├── auth.py
-│   │   │   ├── category.py
-│   │   │   ├── event.py
-│   │   │   ├── location.py
-│   │   │   ├── movement.py
-│   │   │   ├── product.py
-│   │   │   ├── report.py
-│   │   │   ├── stock.py
-│   │   │   ├── threshold.py
-│   │   │   └── user.py
 │   │   ├── services/
-│   │   │   ├── __pycache__/
-│   │   │   │   └── event_service.cpython-313.pyc
-│   │   │   ├── auth_service.py
-│   │   │   ├── event_service.py
-│   │   │   ├── inventory_service.py
-│   │   │   └── notification_service.py
-│   │   ├── __init__.py
 │   │   ├── tasks.py
 │   │   └── main.py
-│   ├── context/
-│   │   ├── backend_demo_guide.md
-│   │   ├── generate_barcodes_pdf.py
-│   │   ├── guion.md
-│   │   ├── productos_barcodes.pdf
-│   │   ├── Propuestas de proyectos 2DAM.pdf
-│   │   ├── roles_validations.txt
-│   │   └── sprint2.txt
+│   ├── alembic/
+│   │   └── versions/
+│   ├── observability/
+│   │   ├── grafana/
+│   │   └── prometheus/
+│   ├── openapi/
+│   │   └── openapi.json
 │   ├── scripts/
-│   │   ├── __init__.py
-│   │   ├── seed_db.py
-│   │   ├── simulate_events.py
-│   │   └── test_db.py
+│   │   ├── export_openapi.py
+│   │   └── seed_db.py
 │   ├── tests/
 │   │   ├── conftest.py
-│   │   ├── test_auth.py
-│   │   ├── test_events.py
-│   │   ├── test_health.py
-│   │   ├── test_products.py
-│   │   └── test_stock_movements.py
-│   ├── .dockerignore
-│   ├── .env
-│   ├── .env.example
-│   ├── alembic.ini
+│   │   ├── test_openapi_snapshot.py
+│   │   ├── test_contract.py
+│   │   ├── test_inventory_service_unit.py
+│   │   └── ...
+│   ├── test-reports/
+│   ├── context/
 │   ├── docker-compose.yml
 │   ├── Dockerfile
-│   ├── entrypoint.sh
-│   ├── requirements-dev.txt
-│   └── requirements.txt
+│   ├── requirements.txt
+│   └── requirements-dev.txt
 ├── android/
-│   ├── .idea/
-│   │   ├── codeStyles/
-│   │   │   ├── codeStyleConfig.xml
-│   │   │   └── Project.xml
-│   │   ├── .gitignore
-│   │   ├── .name
-│   │   ├── AndroidProjectSystem.xml
-│   │   ├── appInsightsSettings.xml
-│   │   ├── compiler.xml
-│   │   ├── deploymentTargetSelector.xml
-│   │   ├── deviceManager.xml
-│   │   ├── gradle.xml
-│   │   ├── markdown.xml
-│   │   ├── migrations.xml
-│   │   ├── misc.xml
-│   │   ├── runConfigurations.xml
-│   │   ├── studiobot.xml
-│   │   └── vcs.xml
 │   ├── app/
-│   │   ├── src/
-│   │   │   ├── androidTest/
-│   │   │   │   └── java/
-│   │   │   │       └── com/
-│   │   │   │           └── example/
-│   │   │   │               └── inventoryapp/
-│   │   │   │                   └── ExampleInstrumentedTest.kt
-│   │   │   ├── main/
-│   │   │   │   ├── java/
-│   │   │   │   │   └── com/
-│   │   │   │   │       └── example/
-│   │   │   │   │           └── inventoryapp/
-│   │   │   │   │               ├── data/
-│   │   │   │   │               │   ├── local/
-│   │   │   │   │               │   │   ├── OfflineQueue.kt
-│   │   │   │   │               │   │   ├── OfflineSyncer.kt
-│   │   │   │   │               │   │   └── SessionManager.kt
-│   │   │   │   │               │   ├── remote/
-│   │   │   │   │               │   │   ├── model/
-│   │   │   │   │               │   │   │   ├── EventDtos.kt
-│   │   │   │   │               │   │   │   ├── MovementDtos.kt
-│   │   │   │   │               │   │   │   ├── ProductDtos.kt
-│   │   │   │   │               │   │   │   ├── StockDtos.kt
-│   │   │   │   │               │   │   │   └── TokenResponse.kt
-│   │   │   │   │               │   │   ├── AuthInterceptor.kt
-│   │   │   │   │               │   │   ├── InventoryApi.kt
-│   │   │   │   │               │   │   └── NetworkModule.kt
-│   │   │   │   │               │   └── repository/
-│   │   │   │   │               │       ├── remote/
-│   │   │   │   │               │       │   └── RemoteScanRepository.kt
-│   │   │   │   │               │       └── MovementRepository.kt
-│   │   │   │   │               ├── domain/
-│   │   │   │   │               │   └── model/
-│   │   │   │   │               │       ├── Movement.kt
-│   │   │   │   │               │       ├── MovementType.kt
-│   │   │   │   │               │       └── Product.kt
-│   │   │   │   │               ├── ui/
-│   │   │   │   │               │   ├── auth/
-│   │   │   │   │               │   │   └── LoginActivity.kt
-│   │   │   │   │               │   ├── events/
-│   │   │   │   │               │   │   └── EventsActivity.kt
-│   │   │   │   │               │   ├── home/
-│   │   │   │   │               │   │   └── HomeActivity.kt
-│   │   │   │   │               │   ├── movements/
-│   │   │   │   │               │   │   ├── ConfirmMovementActivity.kt
-│   │   │   │   │               │   │   ├── MovimientosActivity.kt
-│   │   │   │   │               │   │   └── ResultActivity.kt
-│   │   │   │   │               │   ├── products/
-│   │   │   │   │               │   │   ├── ProductAdapter.kt
-│   │   │   │   │               │   │   ├── ProductDetailActivity.kt
-│   │   │   │   │               │   │   └── ProductListActivity.kt
-│   │   │   │   │               │   ├── stock/
-│   │   │   │   │               │   │   └── StockActivity.kt
-│   │   │   │   │               │   └── ScanActivity.kt
-│   │   │   │   │               ├── InventoryApp.kt
-│   │   │   │   │               └── MainActivity.kt
-│   │   │   │   ├── res/
-│   │   │   │   │   ├── drawable/
-│   │   │   │   │   │   ├── baseline_account_circle_24.xml
-│   │   │   │   │   │   ├── ic_company_logo.png
-│   │   │   │   │   │   ├── ic_launcher_background.xml
-│   │   │   │   │   │   ├── ic_launcher_foreground.xml
-│   │   │   │   │   │   ├── ic_profile.xml
-│   │   │   │   │   │   └── ic_status.xml
-│   │   │   │   │   ├── layout/
-│   │   │   │   │   │   ├── activity_confirm_movement.xml
-│   │   │   │   │   │   ├── activity_events.xml
-│   │   │   │   │   │   ├── activity_home.xml
-│   │   │   │   │   │   ├── activity_login.xml
-│   │   │   │   │   │   ├── activity_main.xml
-│   │   │   │   │   │   ├── activity_movimientos.xml
-│   │   │   │   │   │   ├── activity_product_detail.xml
-│   │   │   │   │   │   ├── activity_product_list.xml
-│   │   │   │   │   │   ├── activity_result.xml
-│   │   │   │   │   │   ├── activity_scan.xml
-│   │   │   │   │   │   ├── activity_stock.xml
-│   │   │   │   │   │   ├── dialog_register.xml
-│   │   │   │   │   │   └── item_product.xml
-│   │   │   │   │   ├── menu/
-│   │   │   │   │   │   └── home_menu.xml
-│   │   │   │   │   ├── mipmap-anydpi-v26/
-│   │   │   │   │   │   ├── ic_launcher.xml
-│   │   │   │   │   │   └── ic_launcher_round.xml
-│   │   │   │   │   ├── mipmap-hdpi/
-│   │   │   │   │   │   ├── ic_launcher.webp
-│   │   │   │   │   │   ├── ic_launcher_foreground.webp
-│   │   │   │   │   │   └── ic_launcher_round.webp
-│   │   │   │   │   ├── mipmap-mdpi/
-│   │   │   │   │   │   ├── ic_launcher.webp
-│   │   │   │   │   │   ├── ic_launcher_foreground.webp
-│   │   │   │   │   │   └── ic_launcher_round.webp
-│   │   │   │   │   ├── mipmap-xhdpi/
-│   │   │   │   │   │   ├── ic_launcher.webp
-│   │   │   │   │   │   ├── ic_launcher_foreground.webp
-│   │   │   │   │   │   └── ic_launcher_round.webp
-│   │   │   │   │   ├── mipmap-xxhdpi/
-│   │   │   │   │   │   ├── ic_launcher.webp
-│   │   │   │   │   │   ├── ic_launcher_foreground.webp
-│   │   │   │   │   │   └── ic_launcher_round.webp
-│   │   │   │   │   ├── mipmap-xxxhdpi/
-│   │   │   │   │   │   ├── ic_launcher.webp
-│   │   │   │   │   │   ├── ic_launcher_foreground.webp
-│   │   │   │   │   │   └── ic_launcher_round.webp
-│   │   │   │   │   ├── values/
-│   │   │   │   │   │   ├── colors.xml
-│   │   │   │   │   │   ├── strings.xml
-│   │   │   │   │   │   └── themes.xml
-│   │   │   │   │   ├── values-night/
-│   │   │   │   │   │   └── themes.xml
-│   │   │   │   │   └── xml/
-│   │   │   │   │       ├── backup_rules.xml
-│   │   │   │   │       └── data_extraction_rules.xml
-│   │   │   │   ├── AndroidManifest.xml
-│   │   │   │   └── ic_launcher-playstore.png
-│   │   │   └── test/
-│   │   │       └── java/
-│   │   │           └── com/
-│   │   │               └── example/
-│   │   │                   └── inventoryapp/
-│   │   │                       └── ExampleUnitTest.kt
-│   │   ├── .gitignore
-│   │   ├── build.gradle.kts
-│   │   └── proguard-rules.pro
-│   ├── gradle/
-│   │   ├── wrapper/
-│   │   │   ├── gradle-wrapper.jar
-│   │   │   └── gradle-wrapper.properties
-│   │   └── libs.versions.toml
-│   ├── .gitignore
+│   │   ├── src/main/java/com/example/inventoryapp/
+│   │   │   ├── data/
+│   │   │   ├── domain/
+│   │   │   └── ui/
+│   │   └── src/main/res/
 │   ├── build.gradle.kts
-│   ├── Documentacion.md
-│   ├── DocumentacionFront.md
-│   ├── gradle.properties
-│   ├── gradlew
-│   ├── gradlew.bat
 │   └── settings.gradle.kts
-├── .gitattributes
-├── .gitignore
-├── MER.png
-├── ReadmeCRUDsprint2.md
+├── readmeSprint3.md
 └── README.md
 ```
 
@@ -743,3 +565,10 @@ InventariadoSensores/
 ## 📄 Licencia
 
 Proyecto educativo (uso académico).
+
+---
+
+## Guías adicionales
+
+- Guía técnica de Sprint 3: `readmeSprint3.md`
+- Guía de uso para usuarios finales: `README_USUARIO.md`
