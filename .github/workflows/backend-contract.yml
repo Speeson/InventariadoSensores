@@ -13,7 +13,6 @@ on:
 
 jobs:
   contract:
-    if: ${{ hashFiles('backend/requirements.txt') != '' }}
     runs-on: ubuntu-latest
 
     steps:
