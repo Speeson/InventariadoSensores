@@ -1,6 +1,22 @@
 ﻿# Sprint 3 - Cambios y decisiones
 
-Fecha: 2026-02-05
+Fecha: 2026-02-05  
+Actualizado: 2026-02-17
+
+## Índice rápido
+
+- [Movimientos: añadir `delta` para auditoría](#movimientos-añadir-delta-para-auditoría)
+- [Etiquetas de producto (SVG Code 128)](#etiquetas-de-producto-svg-code-128)
+- [Cache híbrido (Redis + Room) y modo offline](#cache-híbrido-redis--room-y-modo-offline)
+- [Importación CSV (Eventos + Transferencias) con auditoría y review](#importación-csv-eventos--transferencias-con-auditoría-y-review)
+- [Alertas en tiempo real (WebSocket)](#alertas-en-tiempo-real-websocket)
+- [Firebase Cloud Messaging (FCM)](#firebase-cloud-messaging-fcm)
+- [Observabilidad avanzada: Prometheus + Grafana](#observabilidad-avanzada-prometheus--grafana)
+- [Ajustes de estabilidad y errores (API + Android)](#ajustes-de-estabilidad-y-errores-api--android)
+- [Tests de contrato OpenAPI (nuevo)](#tests-de-contrato-openapi-nuevo)
+- [Tests unitarios añadidos (nuevo)](#tests-unitarios-añadidos-nuevo)
+- [CI/CD para clase: tests + build Docker (nuevo)](#cicd-para-clase-tests--build-docker-nuevo)
+- [Comandos de verificación para demo](#comandos-de-verificación-para-demo)
 
 ## Movimientos: añadir `delta` para auditoría
 
@@ -613,3 +629,108 @@ Android:
   - Archivos:
     - `android/app/src/main/java/com/example/inventoryapp/ui/stock/StockActivity.kt`
     - `android/app/src/main/java/com/example/inventoryapp/ui/thresholds/ThresholdsActivity.kt`
+
+## Tests de contrato OpenAPI (nuevo)
+
+Objetivo: validar automáticamente que la API cumple el contrato OpenAPI y detectar roturas antes de llegar a Android.
+
+Implementación:
+- Snapshot del contrato:
+  - `backend/openapi/openapi.json`
+  - Test: `backend/tests/test_openapi_snapshot.py`
+- Contract testing con Schemathesis:
+  - Test: `backend/tests/test_contract.py`
+  - Validaciones activas:
+    - status code documentado
+    - content-type conforme
+    - schema de respuesta conforme
+  - Excepción controlada:
+    - para `/health` no se aplica `not_a_server_error`, porque `503` es válido cuando hay dependencias degradadas.
+
+Ajustes realizados para que el contrato sea estable:
+- `/health` documenta correctamente respuesta `503` con payload:
+  - `{"status": "...", "checks": {...}}`
+- El loader del contrato soporta BOM UTF-8:
+  - lectura con `encoding="utf-8-sig"` en `test_contract.py`.
+
+Resultado actual validado:
+- Suite contrato/snapshot en verde.
+- Suite backend completa en verde (`61 passed` en la última ejecución local).
+
+## Documentación OpenAPI con examples y errores (nuevo)
+
+Objetivo: mejorar Swagger/OpenAPI para defensa del proyecto y consumo por cliente Android.
+
+Aplicado:
+- `examples` en schemas clave de request/response:
+  - `auth`, `product`, `stock`, `movement`, `event`, `category`, `threshold`, `user`, `fcm`, `alert`.
+- `responses` explícitos por endpoint con estados de error frecuentes:
+  - `auth`: 400/401
+  - `products`: 400/404/409/500 (según ruta)
+  - `stocks`: 400/404
+  - `movements`: 400
+  - `events`: 200 idempotente, 404, 422, 503
+  - `categories`: 400/404
+  - `thresholds`: 400/404
+  - `users`: 401 en `/me`
+
+Resultado:
+- Swagger muestra ejemplos de payload y respuestas de error más claras.
+- Mejora de trazabilidad para QA/demo sin cambiar lógica de negocio.
+
+## Tests unitarios añadidos (nuevo)
+
+Objetivo: cubrir reglas de negocio críticas además del contrato API.
+
+Nuevos tests:
+- `backend/tests/test_inventory_service_unit.py`
+  - alta de stock crea movimiento y audit log
+  - baja con stock insuficiente lanza `InventoryError`
+  - transferencia con origen/destino iguales se rechaza
+- `backend/tests/test_alerts.py`
+  - usuario `USER` solo ve alertas `LOW_STOCK`/`OUT_OF_STOCK`
+- `backend/tests/test_products.py`
+  - borrado de producto con histórico devuelve `409 Conflict`
+
+Ajustes de soporte en tests:
+- `backend/tests/conftest.py`
+  - SQLite con `PRAGMA foreign_keys=ON` para simular restricciones reales.
+- helpers de login por rol actualizados (creación de usuario en DB + login real).
+
+## CI/CD para clase: tests + build Docker (nuevo)
+
+Objetivo: pipeline automático al hacer push/PR que valide calidad y empaquetado.
+
+Workflows:
+- `/.github/workflows/backend-contract.yml`
+  - instala dependencias
+  - ejecuta:
+    - `pytest -q backend/tests/test_openapi_snapshot.py`
+    - `pytest -q backend/tests/test_contract.py`
+- `/.github/workflows/backend-ci.yml`
+  - job `tests`:
+    - ejecuta `pytest -q backend/tests`
+    - publica artifact JUnit (`backend-tests.xml`)
+  - job `docker-build` (si tests pasan):
+    - `docker compose -f backend/docker-compose.yml build api worker beat`
+
+Triggers:
+- `push` y `pull_request` sobre cambios en `backend/**` y en los propios workflows.
+- `workflow_dispatch` para ejecución manual desde GitHub Actions.
+
+Hardening aplicado:
+- Ambos workflows incluyen guard:
+  - `if: ${{ hashFiles('backend/requirements.txt') != '' }}`
+- Motivo:
+  - evitar fallos en ramas que aún no contienen el backend completo.
+
+## Comandos de verificación para demo
+
+Contrato OpenAPI + snapshot:
+- `docker compose -f backend/docker-compose.yml exec -T api sh -lc "python -m pytest -q tests/test_openapi_snapshot.py tests/test_contract.py"`
+
+Suite backend completa:
+- `docker compose -f backend/docker-compose.yml exec -T api sh -lc "python -m pytest -q tests"`
+
+Build contenedores backend:
+- `docker compose -f backend/docker-compose.yml build api worker beat`

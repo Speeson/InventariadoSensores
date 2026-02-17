@@ -22,7 +22,17 @@ class StockListResponse(BaseModel):
 router = APIRouter(prefix="/stocks", tags=["stocks"])
 
 
-@router.get("/", response_model=StockListResponse, dependencies=[Depends(get_current_user)])
+@router.get(
+    "/",
+    response_model=StockListResponse,
+    dependencies=[Depends(get_current_user)],
+    responses={
+        400: {
+            "description": "Filtro u ordenacion invalida",
+            "content": {"application/json": {"example": {"detail": "order_by debe ser 'id'"}}},
+        }
+    },
+)
 def list_stocks(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
@@ -66,7 +76,17 @@ def list_stocks(
     return payload
 
 
-@router.get("/{stock_id}", response_model=StockResponse, dependencies=[Depends(get_current_user)])
+@router.get(
+    "/{stock_id}",
+    response_model=StockResponse,
+    dependencies=[Depends(get_current_user)],
+    responses={
+        404: {
+            "description": "Stock no encontrado",
+            "content": {"application/json": {"example": {"detail": "Stock no encontrado"}}},
+        }
+    },
+)
 def get_stock(stock_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)):
     cache_key = make_key("stocks:detail", user.id if user else None, {"id": stock_id})
     cached = cache_get(cache_key)
@@ -91,6 +111,12 @@ def get_stock(stock_id: int, db: Session = Depends(get_db), user=Depends(get_cur
     "/",
     response_model=StockResponse,
     status_code=status.HTTP_201_CREATED,
+    responses={
+        400: {
+            "description": "Producto inexistente o stock duplicado en ubicacion",
+            "content": {"application/json": {"example": {"detail": "Producto no existe"}}},
+        }
+    },
 )
 def create_stock(
     payload: StockCreate,
@@ -125,6 +151,16 @@ def create_stock(
 @router.patch(
     "/{stock_id}",
     response_model=StockResponse,
+    responses={
+        400: {
+            "description": "Ubicacion duplicada para el mismo producto",
+            "content": {"application/json": {"example": {"detail": "Ya existe stock para esta ubicacion"}}},
+        },
+        404: {
+            "description": "Stock no encontrado",
+            "content": {"application/json": {"example": {"detail": "Stock no encontrado"}}},
+        },
+    },
 )
 def update_stock(
     stock_id: int,

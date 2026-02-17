@@ -22,7 +22,16 @@ class EventListResponse(BaseModel):
 router = APIRouter(prefix="/events", tags=["events"])
 
 
-@router.get("/", response_model=EventListResponse)
+@router.get(
+    "/",
+    response_model=EventListResponse,
+    responses={
+        400: {
+            "description": "Ordenacion invalida",
+            "content": {"application/json": {"example": {"detail": "order_by debe ser 'created_at'"}}},
+        }
+    },
+)
 def list_events(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
@@ -72,6 +81,39 @@ def list_events(
     "/",
     response_model=EventResponse,
     status_code=status.HTTP_201_CREATED,
+    responses={
+        200: {
+            "description": "Evento ya existente (idempotencia)",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": 55,
+                        "event_type": "SENSOR_IN",
+                        "product_id": 1,
+                        "delta": 3,
+                        "source": "sensor_simulado",
+                        "processed": False,
+                        "event_status": "PENDING",
+                        "created_at": "2026-02-17T10:30:00Z",
+                    }
+                }
+            },
+        },
+        404: {
+            "description": "Producto no encontrado",
+            "content": {"application/json": {"example": {"detail": "Producto no encontrado"}}},
+        },
+        422: {
+            "description": "Payload invalido",
+            "content": {"application/json": {"example": {"detail": "location es obligatorio"}}},
+        },
+        503: {
+            "description": "No se pudo encolar el evento",
+            "content": {
+                "application/json": {"example": {"detail": "No se pudo encolar el evento: broker no disponible"}}
+            },
+        },
+    },
 )
 def create_event(
     payload: EventCreate,

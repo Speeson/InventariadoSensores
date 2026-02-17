@@ -7,7 +7,16 @@ from app.services import auth_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-@router.post("/register", response_model=TokenResponse)
+@router.post(
+    "/register",
+    response_model=TokenResponse,
+    responses={
+        400: {
+            "description": "Error de validacion de negocio en registro",
+            "content": {"application/json": {"example": {"detail": "El usuario ya existe"}}},
+        }
+    },
+)
 def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     try:
         token = auth_service.register(
@@ -21,7 +30,16 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     except auth_service.AuthError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-@router.post("/login", response_model=TokenResponse)
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    responses={
+        401: {
+            "description": "Credenciales invalidas",
+            "content": {"application/json": {"example": {"detail": "Credenciales invalidas"}}},
+        }
+    },
+)
 def login(
     email: str | None = Form(None),
     username: str | None = Form(None),

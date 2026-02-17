@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_roles
@@ -27,6 +27,16 @@ class MovementOperation(BaseModel):
     quantity: int = Field(..., gt=0)
     location: str = Field(..., min_length=1, max_length=100)
     movement_source: Source
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "product_id": 1,
+                "quantity": 5,
+                "location": "ALM-CENTRAL",
+                "movement_source": "SCAN",
+            }
+        }
+    )
 
 
 class MovementAdjustOperation(BaseModel):
@@ -34,6 +44,16 @@ class MovementAdjustOperation(BaseModel):
     delta: int = Field(..., ne=0)
     location: str = Field(..., min_length=1, max_length=100)
     movement_source: Source
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "product_id": 1,
+                "delta": -2,
+                "location": "ALM-CENTRAL",
+                "movement_source": "MANUAL",
+            }
+        }
+    )
 
 
 class MovementTransferOperation(BaseModel):
@@ -42,6 +62,17 @@ class MovementTransferOperation(BaseModel):
     from_location: str = Field(..., min_length=1, max_length=100)
     to_location: str = Field(..., min_length=1, max_length=100)
     movement_source: Source
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "product_id": 1,
+                "quantity": 3,
+                "from_location": "ALM-CENTRAL",
+                "to_location": "ALM-NORTE",
+                "movement_source": "SCAN",
+            }
+        }
+    )
 
 
 class MovementWithStockResponse(BaseModel):
@@ -59,7 +90,16 @@ class MovementTransferResponse(BaseModel):
 router = APIRouter(prefix="/movements", tags=["movements"])
 
 
-@router.get("/", response_model=MovementListResponse)
+@router.get(
+    "/",
+    response_model=MovementListResponse,
+    responses={
+        400: {
+            "description": "Rango de fechas u ordenacion invalida",
+            "content": {"application/json": {"example": {"detail": "order_by debe ser 'created_at'"}}},
+        }
+    },
+)
 def list_movements(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
@@ -122,6 +162,12 @@ def list_movements(
     "/in",
     response_model=MovementWithStockResponse,
     status_code=status.HTTP_201_CREATED,
+    responses={
+        400: {
+            "description": "Regla de negocio invalida",
+            "content": {"application/json": {"example": {"detail": "Producto no encontrado"}}},
+        }
+    },
 )
 def movement_in(
     payload: MovementOperation,
@@ -151,6 +197,12 @@ def movement_in(
     "/out",
     response_model=MovementWithStockResponse,
     status_code=status.HTTP_201_CREATED,
+    responses={
+        400: {
+            "description": "Regla de negocio invalida",
+            "content": {"application/json": {"example": {"detail": "Stock insuficiente"}}},
+        }
+    },
 )
 def movement_out(
     payload: MovementOperation,
@@ -180,6 +232,12 @@ def movement_out(
     "/adjust",
     response_model=MovementWithStockResponse,
     status_code=status.HTTP_201_CREATED,
+    responses={
+        400: {
+            "description": "Regla de negocio invalida",
+            "content": {"application/json": {"example": {"detail": "Producto no encontrado"}}},
+        }
+    },
 )
 def movement_adjust(
     payload: MovementAdjustOperation,
@@ -209,6 +267,14 @@ def movement_adjust(
     "/transfer",
     response_model=MovementTransferResponse,
     status_code=status.HTTP_201_CREATED,
+    responses={
+        400: {
+            "description": "Regla de negocio invalida",
+            "content": {
+                "application/json": {"example": {"detail": "La ubicacion origen y destino no pueden ser iguales"}}
+            },
+        }
+    },
 )
 def movement_transfer(
     payload: MovementTransferOperation,

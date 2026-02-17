@@ -17,7 +17,16 @@ class ThresholdListResponse(BaseModel):
 
 router = APIRouter(prefix="/thresholds", tags=["thresholds"])
 
-@router.get("/", response_model=ThresholdListResponse)
+@router.get(
+    "/",
+    response_model=ThresholdListResponse,
+    responses={
+        403: {
+            "description": "Permisos insuficientes",
+            "content": {"application/json": {"example": {"detail": "No autorizado"}}},
+        }
+    },
+)
 def list_thresholds(
     db: Session = Depends(get_db),
     user = Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value)),
@@ -39,7 +48,16 @@ def list_thresholds(
     cache_set(cache_key, payload, ttl_seconds=300)
     return payload
 
-@router.get("/{threshold_id}", response_model=ThresholdResponse)
+@router.get(
+    "/{threshold_id}",
+    response_model=ThresholdResponse,
+    responses={
+        404: {
+            "description": "Threshold no encontrado",
+            "content": {"application/json": {"example": {"detail": "Threshold no encontrado"}}},
+        }
+    },
+)
 def get_threshold(
     threshold_id: int,
     db: Session = Depends(get_db),
@@ -55,7 +73,17 @@ def get_threshold(
     cache_set(cache_key, threshold, ttl_seconds=300)
     return threshold
 
-@router.post("/", response_model=ThresholdResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=ThresholdResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        400: {
+            "description": "Producto inexistente o threshold duplicado",
+            "content": {"application/json": {"example": {"detail": "Producto no existe"}}},
+        }
+    },
+)
 def create_threshold(
     payload: ThresholdCreate,
     db: Session = Depends(get_db),
@@ -71,7 +99,20 @@ def create_threshold(
     cache_invalidate_prefix("thresholds:detail")
     return threshold
 
-@router.patch("/{threshold_id}", response_model=ThresholdResponse)
+@router.patch(
+    "/{threshold_id}",
+    response_model=ThresholdResponse,
+    responses={
+        400: {
+            "description": "Threshold duplicado para la ubicacion",
+            "content": {"application/json": {"example": {"detail": "Ya existe un threshold para esa ubicacion"}}},
+        },
+        404: {
+            "description": "Threshold no encontrado",
+            "content": {"application/json": {"example": {"detail": "Threshold no encontrado"}}},
+        },
+    },
+)
 def update_threshold(
     threshold_id: int,
     payload: ThresholdUpdate,
@@ -90,7 +131,16 @@ def update_threshold(
     cache_invalidate_prefix("thresholds:detail")
     return updated
 
-@router.delete("/{threshold_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{threshold_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        404: {
+            "description": "Threshold no encontrado",
+            "content": {"application/json": {"example": {"detail": "Threshold no encontrado"}}},
+        }
+    },
+)
 def delete_threshold(
     threshold_id: int,
     db: Session = Depends(get_db),

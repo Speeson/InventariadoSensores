@@ -42,6 +42,15 @@
         "type": "object"
       },
       "AlertResponse": {
+        "example": {
+          "alert_status": "PENDING",
+          "alert_type": "LOW_STOCK",
+          "created_at": "2026-02-17T10:40:00Z",
+          "id": 12,
+          "min_quantity": 5,
+          "quantity": 2,
+          "stock_id": 5
+        },
         "properties": {
           "ack_at": {
             "anyOf": [
@@ -274,8 +283,14 @@
         "type": "object"
       },
       "CategoryCreate": {
+        "example": {
+          "name": "Sensores"
+        },
         "properties": {
           "name": {
+            "examples": [
+              "Sensores"
+            ],
             "maxLength": 50,
             "minLength": 1,
             "title": "Name",
@@ -320,6 +335,12 @@
         "type": "object"
       },
       "CategoryResponse": {
+        "example": {
+          "created_at": "2026-02-17T10:00:00Z",
+          "id": 1,
+          "name": "Sensores",
+          "updated_at": "2026-02-17T10:05:00Z"
+        },
         "properties": {
           "created_at": {
             "format": "date-time",
@@ -331,6 +352,9 @@
             "type": "integer"
           },
           "name": {
+            "examples": [
+              "Sensores"
+            ],
             "maxLength": 50,
             "minLength": 1,
             "title": "Name",
@@ -359,6 +383,9 @@
         "type": "object"
       },
       "CategoryUpdate": {
+        "example": {
+          "name": "Sensores IoT"
+        },
         "properties": {
           "name": {
             "anyOf": [
@@ -418,16 +445,33 @@
         "type": "object"
       },
       "EventCreate": {
+        "example": {
+          "delta": 3,
+          "event_type": "SENSOR_IN",
+          "idempotency_key": "evt-001",
+          "location": "ALM-CENTRAL",
+          "product_id": 1,
+          "source": "sensor_simulado"
+        },
         "properties": {
           "delta": {
+            "examples": [
+              3
+            ],
             "exclusiveMinimum": 0.0,
             "title": "Delta",
             "type": "integer"
           },
           "event_type": {
-            "$ref": "#/components/schemas/EventType"
+            "$ref": "#/components/schemas/EventType",
+            "examples": [
+              "SENSOR_IN"
+            ]
           },
           "idempotency_key": {
+            "examples": [
+              "evt-001"
+            ],
             "maxLength": 100,
             "minLength": 1,
             "title": "Idempotency Key",
@@ -435,17 +479,26 @@
           },
           "location": {
             "default": "default",
+            "examples": [
+              "ALM-CENTRAL"
+            ],
             "maxLength": 100,
             "minLength": 1,
             "title": "Location",
             "type": "string"
           },
           "product_id": {
+            "examples": [
+              1
+            ],
             "title": "Product Id",
             "type": "integer"
           },
           "source": {
             "default": "sensor_simulado",
+            "examples": [
+              "sensor_simulado"
+            ],
             "title": "Source",
             "type": "string"
           }
@@ -491,6 +544,16 @@
         "type": "object"
       },
       "EventResponse": {
+        "example": {
+          "created_at": "2026-02-17T10:30:00Z",
+          "delta": 3,
+          "event_status": "PENDING",
+          "event_type": "SENSOR_IN",
+          "id": 55,
+          "processed": false,
+          "product_id": 1,
+          "source": "sensor_simulado"
+        },
         "properties": {
           "created_at": {
             "format": "date-time",
@@ -547,6 +610,11 @@
         "type": "string"
       },
       "FcmTokenUpsert": {
+        "example": {
+          "device_id": "pixel-7",
+          "platform": "android",
+          "token": "fcm-token-xyz"
+        },
         "properties": {
           "device_id": {
             "anyOf": [
@@ -557,16 +625,25 @@
                 "type": "null"
               }
             ],
+            "examples": [
+              "pixel-7"
+            ],
             "title": "Device Id"
           },
           "platform": {
             "default": "android",
+            "examples": [
+              "android"
+            ],
             "maxLength": 30,
             "minLength": 2,
             "title": "Platform",
             "type": "string"
           },
           "token": {
+            "examples": [
+              "fcm-token-xyz"
+            ],
             "minLength": 10,
             "title": "Token",
             "type": "string"
@@ -841,6 +918,12 @@
         "type": "object"
       },
       "MovementAdjustOperation": {
+        "example": {
+          "delta": -2,
+          "location": "ALM-CENTRAL",
+          "movement_source": "MANUAL",
+          "product_id": 1
+        },
         "properties": {
           "delta": {
             "ne": 0,
@@ -902,6 +985,12 @@
         "type": "object"
       },
       "MovementOperation": {
+        "example": {
+          "location": "ALM-CENTRAL",
+          "movement_source": "SCAN",
+          "product_id": 1,
+          "quantity": 5
+        },
         "properties": {
           "location": {
             "maxLength": 100,
@@ -932,6 +1021,18 @@
         "type": "object"
       },
       "MovementResponse": {
+        "example": {
+          "created_at": "2026-02-17T10:20:00Z",
+          "delta": 5,
+          "id": 100,
+          "location": "ALM-CENTRAL",
+          "location_id": 1,
+          "movement_source": "SCAN",
+          "movement_type": "IN",
+          "product_id": 1,
+          "quantity": 5,
+          "user_id": 2
+        },
         "properties": {
           "created_at": {
             "format": "date-time",
@@ -1021,6 +1122,13 @@
         "type": "object"
       },
       "MovementTransferOperation": {
+        "example": {
+          "from_location": "ALM-CENTRAL",
+          "movement_source": "SCAN",
+          "product_id": 1,
+          "quantity": 3,
+          "to_location": "ALM-NORTE"
+        },
         "properties": {
           "from_location": {
             "maxLength": 100,
@@ -1107,6 +1215,13 @@
         "type": "object"
       },
       "ProductCreate": {
+        "example": {
+          "active": true,
+          "barcode": "1234567890123",
+          "category_id": 1,
+          "name": "Sensor temperatura",
+          "sku": "SKU-001"
+        },
         "properties": {
           "active": {
             "anyOf": [
@@ -1128,16 +1243,25 @@
             "type": "string"
           },
           "category_id": {
+            "examples": [
+              1
+            ],
             "title": "Category Id",
             "type": "integer"
           },
           "name": {
+            "examples": [
+              "Sensor temperatura"
+            ],
             "maxLength": 100,
             "minLength": 1,
             "title": "Name",
             "type": "string"
           },
           "sku": {
+            "examples": [
+              "SKU-001"
+            ],
             "maxLength": 50,
             "minLength": 1,
             "title": "Sku",
@@ -1185,6 +1309,16 @@
         "type": "object"
       },
       "ProductResponse": {
+        "example": {
+          "active": true,
+          "barcode": "1234567890123",
+          "category_id": 1,
+          "created_at": "2026-02-17T10:00:00Z",
+          "id": 10,
+          "name": "Sensor temperatura",
+          "sku": "SKU-001",
+          "updated_at": "2026-02-17T10:00:00Z"
+        },
         "properties": {
           "active": {
             "anyOf": [
@@ -1209,9 +1343,15 @@
                 "type": "null"
               }
             ],
+            "examples": [
+              "1234567890123"
+            ],
             "title": "Barcode"
           },
           "category_id": {
+            "examples": [
+              1
+            ],
             "title": "Category Id",
             "type": "integer"
           },
@@ -1225,12 +1365,18 @@
             "type": "integer"
           },
           "name": {
+            "examples": [
+              "Sensor temperatura"
+            ],
             "maxLength": 100,
             "minLength": 1,
             "title": "Name",
             "type": "string"
           },
           "sku": {
+            "examples": [
+              "SKU-001"
+            ],
             "maxLength": 50,
             "minLength": 1,
             "title": "Sku",
@@ -1254,6 +1400,12 @@
         "type": "object"
       },
       "ProductUpdate": {
+        "example": {
+          "active": true,
+          "barcode": "1234567890999",
+          "category_id": 1,
+          "name": "Sensor temperatura v2"
+        },
         "properties": {
           "active": {
             "anyOf": [
@@ -1309,13 +1461,25 @@
         "type": "object"
       },
       "RegisterRequest": {
+        "example": {
+          "email": "admin@example.com",
+          "password": "Pass123!",
+          "role": "ADMIN",
+          "username": "admin"
+        },
         "properties": {
           "email": {
+            "examples": [
+              "admin@example.com"
+            ],
             "format": "email",
             "title": "Email",
             "type": "string"
           },
           "password": {
+            "examples": [
+              "Pass123!"
+            ],
             "maxLength": 128,
             "minLength": 8,
             "title": "Password",
@@ -1330,9 +1494,15 @@
                 "type": "null"
               }
             ],
+            "examples": [
+              "ADMIN"
+            ],
             "title": "Role"
           },
           "username": {
+            "examples": [
+              "admin"
+            ],
             "maxLength": 50,
             "minLength": 3,
             "title": "Username",
@@ -1356,18 +1526,32 @@
         "type": "string"
       },
       "StockCreate": {
+        "example": {
+          "location": "ALM-CENTRAL",
+          "product_id": 1,
+          "quantity": 10
+        },
         "properties": {
           "location": {
+            "examples": [
+              "ALM-CENTRAL"
+            ],
             "maxLength": 100,
             "minLength": 1,
             "title": "Location",
             "type": "string"
           },
           "product_id": {
+            "examples": [
+              1
+            ],
             "title": "Product Id",
             "type": "integer"
           },
           "quantity": {
+            "examples": [
+              10
+            ],
             "minimum": 0.0,
             "title": "Quantity",
             "type": "integer"
@@ -1413,6 +1597,14 @@
         "type": "object"
       },
       "StockResponse": {
+        "example": {
+          "created_at": "2026-02-17T10:00:00Z",
+          "id": 7,
+          "location": "ALM-CENTRAL",
+          "product_id": 1,
+          "quantity": 10,
+          "updated_at": "2026-02-17T10:10:00Z"
+        },
         "properties": {
           "created_at": {
             "format": "date-time",
@@ -1424,16 +1616,25 @@
             "type": "integer"
           },
           "location": {
+            "examples": [
+              "ALM-CENTRAL"
+            ],
             "maxLength": 100,
             "minLength": 1,
             "title": "Location",
             "type": "string"
           },
           "product_id": {
+            "examples": [
+              1
+            ],
             "title": "Product Id",
             "type": "integer"
           },
           "quantity": {
+            "examples": [
+              10
+            ],
             "minimum": 0.0,
             "title": "Quantity",
             "type": "integer"
@@ -1456,6 +1657,10 @@
         "type": "object"
       },
       "StockUpdate": {
+        "example": {
+          "location": "ALM-NORTE",
+          "quantity": 25
+        },
         "properties": {
           "location": {
             "anyOf": [
@@ -1487,6 +1692,11 @@
         "type": "object"
       },
       "ThresholdCreate": {
+        "example": {
+          "location": "ALM-CENTRAL",
+          "min_quantity": 5,
+          "product_id": 1
+        },
         "properties": {
           "location": {
             "anyOf": [
@@ -1499,14 +1709,23 @@
                 "type": "null"
               }
             ],
+            "examples": [
+              "ALM-CENTRAL"
+            ],
             "title": "Location"
           },
           "min_quantity": {
+            "examples": [
+              5
+            ],
             "minimum": 0.0,
             "title": "Min Quantity",
             "type": "integer"
           },
           "product_id": {
+            "examples": [
+              1
+            ],
             "title": "Product Id",
             "type": "integer"
           }
@@ -1550,6 +1769,15 @@
         "type": "object"
       },
       "ThresholdResponse": {
+        "example": {
+          "created_at": "2026-02-17T10:00:00Z",
+          "id": 3,
+          "location": "ALM-CENTRAL",
+          "location_id": 1,
+          "min_quantity": 5,
+          "product_id": 1,
+          "updated_at": "2026-02-17T10:20:00Z"
+        },
         "properties": {
           "created_at": {
             "format": "date-time",
@@ -1616,6 +1844,10 @@
         "type": "object"
       },
       "ThresholdUpdate": {
+        "example": {
+          "location": "ALM-NORTE",
+          "min_quantity": 7
+        },
         "properties": {
           "location": {
             "anyOf": [
@@ -1647,8 +1879,15 @@
         "type": "object"
       },
       "TokenResponse": {
+        "example": {
+          "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+          "token_type": "bearer"
+        },
         "properties": {
           "access_token": {
+            "examples": [
+              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            ],
             "title": "Access Token",
             "type": "string"
           },
@@ -1821,8 +2060,17 @@
         "type": "object"
       },
       "UserMeResponse": {
+        "example": {
+          "email": "admin@example.com",
+          "id": 1,
+          "role": "ADMIN",
+          "username": "admin"
+        },
         "properties": {
           "email": {
+            "examples": [
+              "admin@example.com"
+            ],
             "format": "email",
             "title": "Email",
             "type": "string"
@@ -1832,10 +2080,16 @@
             "type": "integer"
           },
           "role": {
+            "examples": [
+              "ADMIN"
+            ],
             "title": "Role",
             "type": "string"
           },
           "username": {
+            "examples": [
+              "admin"
+            ],
             "title": "Username",
             "type": "string"
           }
@@ -2463,12 +2717,12 @@
           "401": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Credenciales invalidas"
                 }
               }
             },
-            "description": "Unauthorized"
+            "description": "Credenciales invalidas"
           },
           "403": {
             "content": {
@@ -2554,12 +2808,12 @@
           "400": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "El usuario ya existe"
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Error de validacion de negocio en registro"
           },
           "401": {
             "content": {
@@ -2720,12 +2974,12 @@
           "400": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "order_by debe ser 'id'"
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Filtro u ordenacion invalida"
           },
           "401": {
             "content": {
@@ -2824,12 +3078,12 @@
           "400": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "La categoria ya existe"
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Categoria duplicada"
           },
           "401": {
             "content": {
@@ -2954,12 +3208,12 @@
           "404": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Categoria no encontrada"
                 }
               }
             },
-            "description": "Not Found"
+            "description": "Categoria no encontrada"
           },
           "409": {
             "content": {
@@ -3059,12 +3313,12 @@
           "404": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Categoria no encontrada"
                 }
               }
             },
-            "description": "Not Found"
+            "description": "Categoria no encontrada"
           },
           "409": {
             "content": {
@@ -3144,12 +3398,12 @@
           "400": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "La categoria ya existe"
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Categoria duplicada o payload invalido"
           },
           "401": {
             "content": {
@@ -3174,12 +3428,12 @@
           "404": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Categoria no encontrada"
                 }
               }
             },
-            "description": "Not Found"
+            "description": "Categoria no encontrada"
           },
           "409": {
             "content": {
@@ -3347,12 +3601,12 @@
           "400": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "order_by debe ser 'created_at'"
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Ordenacion invalida"
           },
           "401": {
             "content": {
@@ -3438,6 +3692,23 @@
           "required": true
         },
         "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "created_at": "2026-02-17T10:30:00Z",
+                  "delta": 3,
+                  "event_status": "PENDING",
+                  "event_type": "SENSOR_IN",
+                  "id": 55,
+                  "processed": false,
+                  "product_id": 1,
+                  "source": "sensor_simulado"
+                }
+              }
+            },
+            "description": "Evento ya existente (idempotencia)"
+          },
           "201": {
             "content": {
               "application/json": {
@@ -3481,12 +3752,12 @@
           "404": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Producto no encontrado"
                 }
               }
             },
-            "description": "Not Found"
+            "description": "Producto no encontrado"
           },
           "409": {
             "content": {
@@ -3501,22 +3772,22 @@
           "422": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                "example": {
+                  "detail": "location es obligatorio"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "Payload invalido"
           },
           "503": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "No se pudo encolar el evento: broker no disponible"
                 }
               }
             },
-            "description": "Service Unavailable"
+            "description": "No se pudo encolar el evento"
           }
         },
         "security": [
@@ -4615,12 +4886,12 @@
           "400": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "order_by debe ser 'created_at'"
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Rango de fechas u ordenacion invalida"
           },
           "401": {
             "content": {
@@ -4721,12 +4992,12 @@
           "400": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Producto no encontrado"
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Regla de negocio invalida"
           },
           "401": {
             "content": {
@@ -4827,12 +5098,12 @@
           "400": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Producto no encontrado"
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Regla de negocio invalida"
           },
           "401": {
             "content": {
@@ -4933,12 +5204,12 @@
           "400": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Stock insuficiente"
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Regla de negocio invalida"
           },
           "401": {
             "content": {
@@ -5039,12 +5310,12 @@
           "400": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "La ubicacion origen y destino no pueden ser iguales"
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Regla de negocio invalida"
           },
           "401": {
             "content": {
@@ -5274,12 +5545,12 @@
           "400": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "order_by debe ser uno de ['created_at', 'id']"
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Filtro u ordenacion invalida"
           },
           "401": {
             "content": {
@@ -5378,12 +5649,12 @@
           "400": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Categoria no existe"
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Categoria inexistente o SKU/Barcode duplicado"
           },
           "401": {
             "content": {
@@ -5508,22 +5779,22 @@
           "404": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Producto no encontrado"
                 }
               }
             },
-            "description": "Not Found"
+            "description": "Producto no encontrado"
           },
           "409": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "No se puede eliminar el producto porque tiene registros historicos asociados (eventos/movimientos)."
                 }
               }
             },
-            "description": "Conflict"
+            "description": "No se puede eliminar por historial asociado"
           },
           "422": {
             "content": {
@@ -5613,12 +5884,12 @@
           "404": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Producto no encontrado"
                 }
               }
             },
-            "description": "Not Found"
+            "description": "Producto no encontrado"
           },
           "409": {
             "content": {
@@ -5698,12 +5969,12 @@
           "400": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Barcode ya existe"
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Categoria inexistente o barcode duplicado"
           },
           "401": {
             "content": {
@@ -5728,12 +5999,12 @@
           "404": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Producto no encontrado"
                 }
               }
             },
-            "description": "Not Found"
+            "description": "Producto no encontrado"
           },
           "409": {
             "content": {
@@ -5803,12 +6074,12 @@
           "400": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Producto sin barcode"
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Producto sin barcode"
           },
           "401": {
             "content": {
@@ -5833,12 +6104,12 @@
           "404": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Producto no encontrado"
                 }
               }
             },
-            "description": "Not Found"
+            "description": "Producto no encontrado"
           },
           "409": {
             "content": {
@@ -5859,6 +6130,16 @@
               }
             },
             "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Error generando etiqueta"
+                }
+              }
+            },
+            "description": "Error al generar la etiqueta"
           },
           "503": {
             "content": {
@@ -5908,12 +6189,12 @@
           "400": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Producto sin barcode"
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Producto sin barcode"
           },
           "401": {
             "content": {
@@ -5938,12 +6219,12 @@
           "404": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Producto no encontrado"
                 }
               }
             },
-            "description": "Not Found"
+            "description": "Producto no encontrado"
           },
           "409": {
             "content": {
@@ -5964,6 +6245,16 @@
               }
             },
             "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "detail": "Error regenerando etiqueta"
+                }
+              }
+            },
+            "description": "Error al regenerar la etiqueta"
           },
           "503": {
             "content": {
@@ -6479,12 +6770,12 @@
           "400": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "order_by debe ser 'id'"
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Filtro u ordenacion invalida"
           },
           "401": {
             "content": {
@@ -6583,12 +6874,12 @@
           "400": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Producto no existe"
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Producto inexistente o stock duplicado en ubicacion"
           },
           "401": {
             "content": {
@@ -6720,12 +7011,12 @@
           "404": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Stock no encontrado"
                 }
               }
             },
-            "description": "Not Found"
+            "description": "Stock no encontrado"
           },
           "409": {
             "content": {
@@ -6805,12 +7096,12 @@
           "400": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Ya existe stock para esta ubicacion"
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Ubicacion duplicada para el mismo producto"
           },
           "401": {
             "content": {
@@ -6835,12 +7126,12 @@
           "404": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Stock no encontrado"
                 }
               }
             },
-            "description": "Not Found"
+            "description": "Stock no encontrado"
           },
           "409": {
             "content": {
@@ -6978,12 +7269,12 @@
           "403": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "No autorizado"
                 }
               }
             },
-            "description": "Forbidden"
+            "description": "Permisos insuficientes"
           },
           "404": {
             "content": {
@@ -7062,12 +7353,12 @@
           "400": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Producto no existe"
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Producto inexistente o threshold duplicado"
           },
           "401": {
             "content": {
@@ -7192,12 +7483,12 @@
           "404": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Threshold no encontrado"
                 }
               }
             },
-            "description": "Not Found"
+            "description": "Threshold no encontrado"
           },
           "409": {
             "content": {
@@ -7297,12 +7588,12 @@
           "404": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Threshold no encontrado"
                 }
               }
             },
-            "description": "Not Found"
+            "description": "Threshold no encontrado"
           },
           "409": {
             "content": {
@@ -7382,12 +7673,12 @@
           "400": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Ya existe un threshold para esa ubicacion"
                 }
               }
             },
-            "description": "Bad Request"
+            "description": "Threshold duplicado para la ubicacion"
           },
           "401": {
             "content": {
@@ -7412,12 +7703,12 @@
           "404": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Threshold no encontrado"
                 }
               }
             },
-            "description": "Not Found"
+            "description": "Threshold no encontrado"
           },
           "409": {
             "content": {
@@ -7562,10 +7853,13 @@
           "200": {
             "content": {
               "application/json": {
+                "example": {
+                  "ok": true
+                },
                 "schema": {}
               }
             },
-            "description": "Successful Response"
+            "description": "Token FCM registrado"
           },
           "400": {
             "content": {
@@ -7676,12 +7970,12 @@
           "401": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                "example": {
+                  "detail": "Not authenticated"
                 }
               }
             },
-            "description": "Unauthorized"
+            "description": "Token invalido o expirado"
           },
           "403": {
             "content": {

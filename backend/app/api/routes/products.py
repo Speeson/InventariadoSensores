@@ -27,7 +27,17 @@ router = APIRouter(prefix="/products", tags=["products"])
 logger = logging.getLogger(__name__)
 
 
-@router.get("/", response_model=ProductListResponse, dependencies=[Depends(get_current_user)])
+@router.get(
+    "/",
+    response_model=ProductListResponse,
+    dependencies=[Depends(get_current_user)],
+    responses={
+        400: {
+            "description": "Filtro u ordenacion invalida",
+            "content": {"application/json": {"example": {"detail": "order_by debe ser uno de ['created_at', 'id']"}}},
+        }
+    },
+)
 def list_products(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
@@ -82,7 +92,17 @@ def list_products(
     return payload
 
 
-@router.get("/{product_id}", response_model=ProductResponse, dependencies=[Depends(get_current_user)])
+@router.get(
+    "/{product_id}",
+    response_model=ProductResponse,
+    dependencies=[Depends(get_current_user)],
+    responses={
+        404: {
+            "description": "Producto no encontrado",
+            "content": {"application/json": {"example": {"detail": "Producto no encontrado"}}},
+        }
+    },
+)
 def get_product(product_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)):
     cache_key = make_key("products:detail", user.id if user else None, {"id": product_id})
     cached = cache_get(cache_key)
@@ -99,6 +119,12 @@ def get_product(product_id: int, db: Session = Depends(get_db), user=Depends(get
     "/",
     response_model=ProductResponse,
     status_code=status.HTTP_201_CREATED,
+    responses={
+        400: {
+            "description": "Categoria inexistente o SKU/Barcode duplicado",
+            "content": {"application/json": {"example": {"detail": "Categoria no existe"}}},
+        }
+    },
 )
 def create_product(
     payload: ProductCreate,
@@ -145,6 +171,16 @@ def create_product(
 @router.patch(
     "/{product_id}",
     response_model=ProductResponse,
+    responses={
+        400: {
+            "description": "Categoria inexistente o barcode duplicado",
+            "content": {"application/json": {"example": {"detail": "Barcode ya existe"}}},
+        },
+        404: {
+            "description": "Producto no encontrado",
+            "content": {"application/json": {"example": {"detail": "Producto no encontrado"}}},
+        },
+    },
 )
 def update_product(
     product_id: int,
@@ -199,6 +235,22 @@ def update_product(
 @router.delete(
     "/{product_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        404: {
+            "description": "Producto no encontrado",
+            "content": {"application/json": {"example": {"detail": "Producto no encontrado"}}},
+        },
+        409: {
+            "description": "No se puede eliminar por historial asociado",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "No se puede eliminar el producto porque tiene registros historicos asociados (eventos/movimientos)."
+                    }
+                }
+            },
+        },
+    },
 )
 def delete_product(
     product_id: int,
@@ -244,6 +296,20 @@ def delete_product(
 @router.get(
     "/{product_id}/label.svg",
     dependencies=[Depends(get_current_user)],
+    responses={
+        400: {
+            "description": "Producto sin barcode",
+            "content": {"application/json": {"example": {"detail": "Producto sin barcode"}}},
+        },
+        404: {
+            "description": "Producto no encontrado",
+            "content": {"application/json": {"example": {"detail": "Producto no encontrado"}}},
+        },
+        500: {
+            "description": "Error al generar la etiqueta",
+            "content": {"application/json": {"example": {"detail": "Error generando etiqueta"}}},
+        },
+    },
 )
 def get_product_label_svg(product_id: int, db: Session = Depends(get_db)):
     product = product_repo.get(db, product_id)
@@ -270,6 +336,20 @@ def get_product_label_svg(product_id: int, db: Session = Depends(get_db)):
 @router.post(
     "/{product_id}/label/regenerate",
     dependencies=[Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value))],
+    responses={
+        400: {
+            "description": "Producto sin barcode",
+            "content": {"application/json": {"example": {"detail": "Producto sin barcode"}}},
+        },
+        404: {
+            "description": "Producto no encontrado",
+            "content": {"application/json": {"example": {"detail": "Producto no encontrado"}}},
+        },
+        500: {
+            "description": "Error al regenerar la etiqueta",
+            "content": {"application/json": {"example": {"detail": "Error regenerando etiqueta"}}},
+        },
+    },
 )
 def regenerate_product_label(product_id: int, db: Session = Depends(get_db)):
     product = product_repo.get(db, product_id)

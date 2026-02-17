@@ -15,4 +15,19 @@ class AlertResponse(BaseModel):
     created_at: datetime
     ack_at: datetime | None
     ack_user_id: int | None
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            "example": {
+                "id": 12,
+                "stock_id": 5,
+                "quantity": 2,
+                "min_quantity": 5,
+                "alert_status": "PENDING",
+                "alert_type": "LOW_STOCK",
+                "created_at": "2026-02-17T10:40:00Z",
+                "ack_at": None,
+                "ack_user_id": None,
+            }
+        },
+    )

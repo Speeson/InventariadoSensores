@@ -11,7 +11,16 @@ from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/users", tags=["users"])
 
-@router.get("/me", response_model=UserMeResponse)
+@router.get(
+    "/me",
+    response_model=UserMeResponse,
+    responses={
+        401: {
+            "description": "Token invalido o expirado",
+            "content": {"application/json": {"example": {"detail": "Not authenticated"}}},
+        }
+    },
+)
 def me(user: User = Depends(get_current_user)):
     role = user.role.value if hasattr(user.role, "value") else user.role
     return UserMeResponse(id=user.id, username=user.username, email=user.email, role=role)
@@ -22,7 +31,15 @@ def admin_only(user: User = Depends(require_roles("ADMIN"))):
     return {"ok": True, "email": user.email, "role": role}
 
 
-@router.post("/fcm-token")
+@router.post(
+    "/fcm-token",
+    responses={
+        200: {
+            "description": "Token FCM registrado",
+            "content": {"application/json": {"example": {"ok": True}}},
+        }
+    },
+)
 def register_fcm_token(
     payload: FcmTokenUpsert,
     db: Session = Depends(get_db),

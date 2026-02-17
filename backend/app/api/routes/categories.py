@@ -17,7 +17,17 @@ class CategoryListResponse(BaseModel):
 
 router = APIRouter(prefix="/categories", tags=["categories"])
 
-@router.get("/", response_model=CategoryListResponse, dependencies=[Depends(get_current_user)])
+@router.get(
+    "/",
+    response_model=CategoryListResponse,
+    dependencies=[Depends(get_current_user)],
+    responses={
+        400: {
+            "description": "Filtro u ordenacion invalida",
+            "content": {"application/json": {"example": {"detail": "order_by debe ser 'id'"}}},
+        }
+    },
+)
 def list_categories(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
@@ -51,7 +61,17 @@ def list_categories(
     cache_set(cache_key, payload, ttl_seconds=3600)
     return payload
 
-@router.get("/{category_id}", response_model=CategoryResponse, dependencies=[Depends(get_current_user)])
+@router.get(
+    "/{category_id}",
+    response_model=CategoryResponse,
+    dependencies=[Depends(get_current_user)],
+    responses={
+        404: {
+            "description": "Categoria no encontrada",
+            "content": {"application/json": {"example": {"detail": "Categoria no encontrada"}}},
+        }
+    },
+)
 def get_category(category_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)):
     cache_key = make_key("categories:detail", user.id if user else None, {"id": category_id})
     cached = cache_get(cache_key)
@@ -68,6 +88,12 @@ def get_category(category_id: int, db: Session = Depends(get_db), user=Depends(g
     response_model=CategoryResponse,
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value))],
+    responses={
+        400: {
+            "description": "Categoria duplicada",
+            "content": {"application/json": {"example": {"detail": "La categoria ya existe"}}},
+        }
+    },
 )
 def create_category(payload: CategoryCreate, db: Session = Depends(get_db)):
     if category_repo.get_by_name(db, payload.name):
@@ -81,6 +107,16 @@ def create_category(payload: CategoryCreate, db: Session = Depends(get_db)):
     "/{category_id}",
     response_model=CategoryResponse,
     dependencies=[Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value))],
+    responses={
+        400: {
+            "description": "Categoria duplicada o payload invalido",
+            "content": {"application/json": {"example": {"detail": "La categoria ya existe"}}},
+        },
+        404: {
+            "description": "Categoria no encontrada",
+            "content": {"application/json": {"example": {"detail": "Categoria no encontrada"}}},
+        },
+    },
 )
 def update_category(category_id: int, payload: CategoryUpdate, db: Session = Depends(get_db)):
     category = category_repo.get(db, category_id)
@@ -99,6 +135,12 @@ def update_category(category_id: int, payload: CategoryUpdate, db: Session = Dep
     "/{category_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(require_roles(UserRole.MANAGER.value, UserRole.ADMIN.value))],
+    responses={
+        404: {
+            "description": "Categoria no encontrada",
+            "content": {"application/json": {"example": {"detail": "Categoria no encontrada"}}},
+        }
+    },
 )
 def delete_category(category_id: int, db: Session = Depends(get_db)):
     category = category_repo.get(db, category_id)
