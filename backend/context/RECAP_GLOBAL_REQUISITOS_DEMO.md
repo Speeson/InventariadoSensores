@@ -4,7 +4,7 @@ Objetivo: guion unico para defensa, mostrando que se implemento, como se demuest
 
 ## Sprint 1 - Base funcional (auth, inventario, app movil)
 
-### 1) Auth y roles
+### 1) Auth y roles Esteban
 - Explicacion: control de acceso por JWT y permisos por rol para proteger operaciones sensibles.
 - Evidencia:
   - Login/registro JWT.
@@ -13,7 +13,7 @@ Objetivo: guion unico para defensa, mostrando que se implemento, como se demuest
   1. Login como `USER` e intentar accion de manager/admin (bloqueo).
   2. Login como `ADMIN` y repetir accion (permitida).
 
-### 2) CRUD de productos y stock
+### 2) CRUD de productos y stock Carolina
 - Explicacion: ciclo completo de alta, consulta, edicion y baja del inventario.
 - Evidencia:
   - Endpoints `products` y `stocks`.
@@ -23,7 +23,7 @@ Objetivo: guion unico para defensa, mostrando que se implemento, como se demuest
   2. Ver producto en listado.
   3. Crear o ajustar stock y verificar cambio.
 
-### 3) Escaneo de codigos de barras (Android)
+### 3) Escaneo de codigos de barras (Android) Christian
 - Explicacion: captura rapida de identificadores para registrar movimientos sin entrada manual extensa.
 - Evidencia:
   - CameraX + ML Kit.
@@ -33,7 +33,7 @@ Objetivo: guion unico para defensa, mostrando que se implemento, como se demuest
   2. Confirmar tipo de movimiento y cantidad.
   3. Ver movimiento creado.
 
-### 4) Historial de movimientos
+### 4) Historial de movimientos Christian
 - Explicacion: trazabilidad operativa de entradas, salidas, transferencias y ajustes.
 - Evidencia:
   - `GET /movements` con filtros.
@@ -43,7 +43,7 @@ Objetivo: guion unico para defensa, mostrando que se implemento, como se demuest
   2. Filtrar por producto/tipo.
   3. Mostrar registro resultante.
 
-### 5) Busqueda por SKU/nombre/categoria + paginacion
+### 5) Busqueda por SKU/nombre/categoria + paginacion Natalia
 - Explicacion: acceso eficiente a datos y control de volumen en listados.
 - Evidencia:
   - Filtros y `limit/offset` en API.
@@ -52,9 +52,9 @@ Objetivo: guion unico para defensa, mostrando que se implemento, como se demuest
   1. Buscar por SKU, nombre y categoria.
   2. Cambiar pagina y verificar continuidad de resultados.
 
-## Sprint 2 - Eventos, alertas, reportes, tiempo real
+## Sprint 2 - Eventos, alertas, reportes, tiempo real 
 
-### 6) Simulacion de sensores
+### 6) Simulacion de sensores Christian 
 - Explicacion: emulacion de eventos IoT para validar logica sin hardware real.
 - Evidencia:
   - `POST /events`.
@@ -62,7 +62,7 @@ Objetivo: guion unico para defensa, mostrando que se implemento, como se demuest
   1. Enviar evento desde Swagger o app.
   2. Ver registro en listado de eventos (visual).
 
-### 7) Procesamiento de eventos y actualizacion de stock
+### 7) Procesamiento de eventos y actualizacion de stock Esteban
 - Explicacion: desacoplar recepcion y procesamiento usando cola para robustez.
 - Evidencia:
   - Redis broker + Celery worker.
@@ -78,7 +78,7 @@ Objetivo: guion unico para defensa, mostrando que se implemento, como se demuest
   5. (Opcional) guardar evidencia en archivo:
      - `docker compose -f backend/docker-compose.yml logs worker > backend/test-reports/worker-demo.log`
 
-### 8) Alertas de stock bajo (email/push)
+### 8) Alertas de stock bajo (email/push) Jorge
 - Explicacion: deteccion automatica de riesgo de rotura y aviso al usuario.
 - Evidencia:
   - Celery Beat escanea umbrales.
@@ -90,7 +90,7 @@ Objetivo: guion unico para defensa, mostrando que se implemento, como se demuest
   3. Ver alerta en app (visual).
   4. Confirmar ACK y cambio de estado (visual).
 
-### 9) Reportes (top consumidos, rotacion)
+### 9) Reportes (top consumidos, rotacion) Carolina
 - Explicacion: analitica para decisiones de reposicion y consumo.
 - Evidencia:
   - Endpoints de reportes con filtros/orden.
@@ -99,7 +99,7 @@ Objetivo: guion unico para defensa, mostrando que se implemento, como se demuest
   2. Abrir rotacion.
   3. Cambiar orden/rango y explicar diferencia.
 
-### 10) WebSocket tiempo real
+### 10) WebSocket tiempo real Jorge
 - Explicacion: canal push para evitar polling constante en alertas.
 - Evidencia:
   - Endpoint WS de alertas en backend.
@@ -110,7 +110,7 @@ Objetivo: guion unico para defensa, mostrando que se implemento, como se demuest
 
 ## Sprint 3 - Calidad, importacion, cache, observabilidad, CI/CD
 
-### 11) Importacion CSV (eventos/transferencias) con review
+### 11) Importacion CSV (eventos/transferencias) con review Esteban
 - Explicacion: carga masiva con validacion, cuarentena de errores y aprobacion manual de casos dudosos.
 - Evidencia:
   - Endpoints `/imports/*`, `dry-run`, `fuzzy_threshold`.
@@ -120,7 +120,7 @@ Objetivo: guion unico para defensa, mostrando que se implemento, como se demuest
   2. Subir CSV con errores.
   3. Aprobar/rechazar review y mostrar efecto.
 
-### 12) Auditoria de cambios
+### 12) Auditoria de cambios Maroto
 - Explicacion: registro de quien hizo que y cuando, para control y cumplimiento.
 - Evidencia:
   - Endpoint `/audit` (ADMIN).
@@ -128,7 +128,7 @@ Objetivo: guion unico para defensa, mostrando que se implemento, como se demuest
   1. Ejecutar alta/edicion/borrado.
   2. Consultar `/audit` y localizar esas operaciones.
 
-### 13) Cache hibrido (Redis + Room) y offline
+### 13) Cache hibrido (Redis + Room) y offline Esteban
 - Explicacion: acelerar lecturas online y mantener operativa la app en desconexion.
 - Evidencia:
   - Redis con TTL e invalidacion.
@@ -139,7 +139,7 @@ Objetivo: guion unico para defensa, mostrando que se implemento, como se demuest
   3. Navegar listados desde cache local (visual).
   4. Volver online y verificar refresco.
 
-### 14) Tests unitarios, integracion y contrato OpenAPI
+### 14) Tests unitarios, integracion y contrato OpenAPI Carolina
 - Explicacion: cobertura de logica interna, integracion de API y conformidad del contrato.
 - Evidencia:
   - `pytest`.
@@ -150,7 +150,7 @@ Objetivo: guion unico para defensa, mostrando que se implemento, como se demuest
      - `docker compose -f backend/docker-compose.yml exec -T api sh -lc "python -m pytest -q tests/test_openapi_snapshot.py tests/test_contract.py"`
   2. Mostrar resumen de tests y logs guardados en `backend/test-reports`.
 
-### 15) CI/CD (tests + build contenedores)
+### 15) CI/CD (tests + build contenedores) Carolina
 - Explicacion: validacion automatica por pipeline para evitar regresiones en cada push.
 - Evidencia:
   - `.github/workflows/backend-ci.yml`
@@ -160,7 +160,7 @@ Objetivo: guion unico para defensa, mostrando que se implemento, como se demuest
   2. Mostrar workflow de tests y workflow de contrato.
   3. Mostrar job de docker build completado.
 
-### 16) Observabilidad (Prometheus + Grafana)
+### 16) Observabilidad (Prometheus + Grafana) Natalia
 - Explicacion: visibilidad de salud, latencia, throughput y errores HTTP para operacion y diagnostico.
 - Evidencia:
   - `/metrics`.
@@ -175,7 +175,7 @@ Objetivo: guion unico para defensa, mostrando que se implemento, como se demuest
      - `powershell -ExecutionPolicy Bypass -File backend/scripts/demo_grafana_load.ps1 -VUs 20 -Duration 60s`
   3. En Grafana mostrar paneles `2xx/4xx/5xx`, `Avg latency`, `Req/s`, `Total requests` (visual).
 
-### 17) Documentacion OpenAPI con ejemplos y errores
+### 17) Documentacion OpenAPI con ejemplos y errores Jorge
 - Explicacion: contrato autoexplicativo para frontend, QA y defensa.
 - Evidencia:
   - `backend/openapi/openapi.json` versionado.
@@ -185,7 +185,7 @@ Objetivo: guion unico para defensa, mostrando que se implemento, como se demuest
   2. Mostrar endpoint con respuestas de error documentadas.
   3. Mostrar ejemplos de payload.
 
-### 18) Integracion externa Niimbot (SDK oficial)
+### 18) Integracion externa Niimbot (SDK oficial) Esteban
 - Explicacion: conexion con etiquetadora real para impresion directa desde la app.
 - Evidencia:
   - SDK oficial en `android/app/libs`.
@@ -197,7 +197,7 @@ Objetivo: guion unico para defensa, mostrando que se implemento, como se demuest
 
 ## Requisitos tecnicos transversales (fuera de sprint)
 
-### Seguridad (hash, JWT, permisos)
+### Seguridad (hash, JWT, permisos) 
 - Explicacion: base de seguridad de autenticacion y autorizacion.
 - Demo:
   1. Login.
@@ -216,13 +216,13 @@ Objetivo: guion unico para defensa, mostrando que se implemento, como se demuest
   1. `docker compose -f backend/docker-compose.yml up -d`
   2. `docker compose -f backend/docker-compose.yml ps`
 
-### SQLAlchemy + Alembic
+### SQLAlchemy + Alembic Maroto
 - Explicacion: modelo de datos y migraciones versionadas.
 - Demo:
   1. Mostrar carpeta `backend/alembic/versions`.
   2. Ejecutar migracion en entorno limpio y validar arranque.
 
-### PostgreSQL + SQLite (tests/dev)
+### PostgreSQL + SQLite (tests/dev) Maroto
 - Explicacion: motor principal robusto y alternativa ligera para pruebas.
 - Demo:
   1. Mostrar `db` PostgreSQL en compose.
