@@ -120,7 +120,7 @@ Objetivo: guion unico para defensa, mostrando que se implemento, como se demuest
   2. Subir CSV con errores.
   3. Aprobar/rechazar review y mostrar efecto.
 
-### 12) Auditoria de cambios Maroto
+### 12) Auditoria de cambios Christian
 - Explicacion: registro de quien hizo que y cuando, para control y cumplimiento.
 - Evidencia:
   - Endpoint `/audit` (ADMIN).
