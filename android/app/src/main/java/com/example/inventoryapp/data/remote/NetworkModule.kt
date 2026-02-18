@@ -36,7 +36,7 @@ object NetworkModule {
     private const val PREFS_NAME = "network_prefs"
     private const val KEY_CUSTOM_HOST = "custom_host"
     private const val KEY_MANUAL_OFFLINE = "manual_offline"
-    private const val HEALTH_PING_MS = 5_000L
+    private const val HEALTH_PING_MS = 15_000L
     private const val SERVER_ERROR_ALERT_COOLDOWN_MS = 30_000L
 
     private fun isEmulator(): Boolean {

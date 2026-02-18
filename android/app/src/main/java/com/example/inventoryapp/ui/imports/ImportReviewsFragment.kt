@@ -5,11 +5,13 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.inventoryapp.R
+import com.example.inventoryapp.data.local.cache.CacheStore
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.model.ImportReviewItemDto
 import com.example.inventoryapp.databinding.FragmentImportReviewsBinding
@@ -25,10 +27,19 @@ class ImportReviewsFragment : Fragment(R.layout.fragment_import_reviews) {
     private val binding get() = _binding!!
 
     private lateinit var adapter: ImportReviewAdapter
+    private lateinit var cacheStore: CacheStore
+    private val allReviews = mutableListOf<ImportReviewItemDto>()
+    private val pageSize = 5
+    private var currentOffset = 0
+
+    data class ImportReviewsCacheDto(
+        val items: List<ImportReviewItemDto>
+    )
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         _binding = FragmentImportReviewsBinding.bind(view)
+        cacheStore = CacheStore.getInstance(requireContext())
 
         adapter = ImportReviewAdapter(emptyList()) { review ->
             showReviewBottomSheet(review)
@@ -36,24 +47,175 @@ class ImportReviewsFragment : Fragment(R.layout.fragment_import_reviews) {
         binding.rvReviews.layoutManager = LinearLayoutManager(requireContext())
         binding.rvReviews.adapter = adapter
 
-        binding.btnRefreshReviews.setOnClickListener { loadReviews() }
-        loadReviews()
+        binding.btnPrevReviews.setOnClickListener {
+            if (currentOffset <= 0) return@setOnClickListener
+            currentOffset = (currentOffset - pageSize).coerceAtLeast(0)
+            renderPage()
+        }
+        binding.btnNextReviews.setOnClickListener {
+            if (currentOffset + pageSize >= allReviews.size) return@setOnClickListener
+            currentOffset += pageSize
+            renderPage()
+        }
+
+        binding.btnRefreshReviews.setOnClickListener { loadReviews(showFeedback = true) }
+        binding.btnRejectAllReviews.setOnClickListener { confirmRejectAll() }
+        loadCachedReviews()
+        loadReviews(showFeedback = false)
     }
 
-    private fun loadReviews() {
+    private fun confirmRejectAll() {
+        if (allReviews.isEmpty()) {
+            CreateUiFeedback.showErrorPopup(
+                activity = requireActivity(),
+                title = "Sin revisiones",
+                details = "No hay revisiones para rechazar.",
+                animationRes = R.raw.notfound
+            )
+            return
+        }
+        AlertDialog.Builder(requireContext())
+            .setTitle("Rechazar todas")
+            .setMessage("Se rechazaran ${allReviews.size} revisiones. Esta accion no se puede deshacer. Continuar?")
+            .setNegativeButton("Cancelar", null)
+            .setPositiveButton("Rechazar") { _, _ ->
+                rejectAllReviews()
+            }
+            .show()
+    }
+
+    private fun rejectAllReviews() {
+        lifecycleScope.launch {
+            binding.btnRejectAllReviews.isEnabled = false
+            binding.btnRefreshReviews.isEnabled = false
+            var rejected = 0
+            var failed = 0
+            val ids = allReviews.map { it.id }
+            for (id in ids) {
+                try {
+                    val res = NetworkModule.api.rejectImportReview(id)
+                    if (res.isSuccessful) rejected++ else failed++
+                } catch (_: Exception) {
+                    failed++
+                }
+            }
+            binding.btnRejectAllReviews.isEnabled = true
+            binding.btnRefreshReviews.isEnabled = true
+
+            loadReviews(showFeedback = false)
+            if (failed == 0) {
+                CreateUiFeedback.showStatusPopup(
+                    activity = requireActivity(),
+                    title = "Revisiones rechazadas",
+                    details = "Se rechazaron $rejected revisiones correctamente.",
+                    animationRes = R.raw.correct_create
+                )
+            } else {
+                CreateUiFeedback.showErrorPopup(
+                    activity = requireActivity(),
+                    title = "Rechazo parcial",
+                    details = "Rechazadas: $rejected. Fallidas: $failed.",
+                    animationRes = R.raw.error
+                )
+            }
+        }
+    }
+
+    private fun loadReviews(showFeedback: Boolean) {
         lifecycleScope.launch {
             try {
-                val res = NetworkModule.api.listImportReviews()
-                if (!res.isSuccessful || res.body() == null) {
-                    showError(ApiErrorFormatter.format(res.code()))
-                    return@launch
+                val merged = mutableListOf<ImportReviewItemDto>()
+                var offset = 0
+                val limit = 100
+                var total = Int.MAX_VALUE
+
+                while (offset < total) {
+                    val res = NetworkModule.api.listImportReviews(limit = limit, offset = offset)
+                    if (!res.isSuccessful || res.body() == null) {
+                        showError(ApiErrorFormatter.format(res.code()))
+                        return@launch
+                    }
+                    val body = res.body()!!
+                    merged.addAll(body.items)
+                    total = body.total
+                    offset += body.items.size
+                    if (body.items.isEmpty()) break
                 }
-                val body = res.body()!!
-                binding.tvReviewsInfo.text = "${body.total} revisiones"
-                adapter.submit(body.items)
+
+                allReviews.clear()
+                allReviews.addAll(merged.sortedBy { it.id })
+                currentOffset = if (allReviews.isNotEmpty()) {
+                    ((allReviews.size - 1) / pageSize) * pageSize
+                } else {
+                    0
+                }
+                saveReviewsCache()
+                renderPage()
+                if (showFeedback) {
+                    if (allReviews.isEmpty()) {
+                        CreateUiFeedback.showErrorPopup(
+                            activity = requireActivity(),
+                            title = "Sin revisiones",
+                            details = "No hay revisiones para mostrar.",
+                            animationRes = R.raw.notfound
+                        )
+                    } else {
+                        CreateUiFeedback.showStatusPopup(
+                            activity = requireActivity(),
+                            title = "Revisiones cargadas",
+                            details = "Se han cargado las revisiones correctamente.",
+                            animationRes = R.raw.correct_create
+                        )
+                    }
+                }
             } catch (e: Exception) {
+                val cached = cacheStore.get("imports_reviews:list", ImportReviewsCacheDto::class.java)
+                if (cached != null) {
+                    allReviews.clear()
+                    allReviews.addAll(cached.items.sortedBy { it.id })
+                    currentOffset = currentOffset.coerceAtMost(((allReviews.size - 1).coerceAtLeast(0) / pageSize) * pageSize)
+                    renderPage()
+                }
                 showError(e.message ?: "Error de importacion")
             }
+        }
+    }
+
+    private fun renderPage() {
+        if (_binding == null) return
+        val total = allReviews.size
+        if (total == 0) {
+            binding.tvReviewsInfo.text = "0 revisiones"
+            binding.btnPrevReviews.isEnabled = false
+            binding.btnNextReviews.isEnabled = false
+            adapter.submit(emptyList())
+            return
+        }
+
+        val from = currentOffset.coerceAtMost((total - 1).coerceAtLeast(0))
+        val to = (from + pageSize).coerceAtMost(total)
+        adapter.submit(allReviews.subList(from, to))
+
+        binding.tvReviewsInfo.text = "Mostrando $to/$total revisiones"
+        binding.btnPrevReviews.isEnabled = from > 0
+        binding.btnNextReviews.isEnabled = to < total
+    }
+
+    private fun loadCachedReviews() {
+        lifecycleScope.launch {
+            val cached = cacheStore.get("imports_reviews:list", ImportReviewsCacheDto::class.java) ?: return@launch
+            allReviews.clear()
+            allReviews.addAll(cached.items.sortedBy { it.id })
+            if (allReviews.isNotEmpty()) {
+                currentOffset = ((allReviews.size - 1) / pageSize) * pageSize
+            }
+            renderPage()
+        }
+    }
+
+    private fun saveReviewsCache() {
+        lifecycleScope.launch {
+            cacheStore.put("imports_reviews:list", ImportReviewsCacheDto(items = allReviews))
         }
     }
 
@@ -111,7 +273,10 @@ class ImportReviewsFragment : Fragment(R.layout.fragment_import_reviews) {
                         animationRes = R.raw.correct_create
                     )
                     dialog.dismiss()
-                    loadReviews()
+                    if (allReviews.size == 1 && currentOffset > 0) {
+                        currentOffset = (currentOffset - pageSize).coerceAtLeast(0)
+                    }
+                    loadReviews(showFeedback = false)
                 } catch (e: Exception) {
                     showError(e.message ?: "Error de importacion")
                 }
@@ -133,7 +298,10 @@ class ImportReviewsFragment : Fragment(R.layout.fragment_import_reviews) {
                         animationRes = R.raw.wrong
                     )
                     dialog.dismiss()
-                    loadReviews()
+                    if (allReviews.size == 1 && currentOffset > 0) {
+                        currentOffset = (currentOffset - pageSize).coerceAtLeast(0)
+                    }
+                    loadReviews(showFeedback = false)
                 } catch (e: Exception) {
                     showError(e.message ?: "Error de importacion")
                 }

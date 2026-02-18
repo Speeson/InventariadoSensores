@@ -26,101 +26,144 @@
                 android:orientation="vertical"
                 android:padding="16dp">
 
-                <TextView
-                    android:id="@+id/tvImportTitle"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Importar CSV"
-                    android:textStyle="bold"
-                    android:textSize="16sp"
-                    android:textColor="?attr/colorOnSurface" />
-
-                <Button
-                    android:id="@+id/btnSelectFile"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:background="@drawable/bg_button_soft_purple"
-                    android:backgroundTint="@null"
-                    app:backgroundTint="@null"
-                    android:text="Seleccionar CSV"
-                    android:textAllCaps="false"
-                    android:textColor="@android:color/white"
-                    android:textStyle="bold"
-                    android:textSize="14sp"
-                    android:paddingVertical="10dp" />
-
-                <TextView
-                    android:id="@+id/tvSelectedFile"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="Ningún archivo seleccionado"
-                    android:textSize="12sp"
-                    android:textColor="?attr/colorOnSurface" />
-
                 <LinearLayout
+                    android:id="@+id/layoutImportHeader"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:layout_marginTop="10dp">
+                    android:orientation="horizontal"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground">
+
+                    <ImageView
+                        android:id="@+id/ivImportSectionIcon"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:layout_marginEnd="10dp"
+                        android:src="@drawable/addfile"
+                        android:contentDescription="@null" />
 
                     <TextView
+                        android:id="@+id/tvImportTitle"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Dry-run (no guardar)"
-                        android:textSize="13sp"
+                        android:text="Importar CSV"
+                        android:textStyle="bold"
+                        android:textSize="16sp"
                         android:textColor="?attr/colorOnSurface" />
 
-                    <androidx.appcompat.widget.SwitchCompat
-                        android:id="@+id/switchDryRun"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="true" />
+                    <ImageView
+                        android:id="@+id/ivImportSectionToggle"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/down"
+                        android:contentDescription="@null" />
                 </LinearLayout>
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/tilFuzzy"
+                <LinearLayout
+                    android:id="@+id/layoutImportContent"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    app:boxBackgroundMode="outline">
+                    android:orientation="vertical">
 
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/etFuzzy"
+                    <Button
+                        android:id="@+id/btnSelectFile"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Fuzzy threshold (0.0 - 1.0)"
-                        android:inputType="numberDecimal"
-                        android:text="0.9"
-                        android:paddingStart="8dp"
-                        android:paddingEnd="8dp" />
-                </com.google.android.material.textfield.TextInputLayout>
+                        android:layout_marginTop="12dp"
+                        android:background="@drawable/bg_button_soft_purple"
+                        android:backgroundTint="@null"
+                        app:backgroundTint="@null"
+                        android:text="Seleccionar CSV"
+                        android:textAllCaps="false"
+                        android:textColor="@android:color/white"
+                        android:textStyle="bold"
+                        android:textSize="14sp"
+                        android:paddingVertical="10dp" />
 
-                <Button
-                    android:id="@+id/btnSendCsv"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:background="@drawable/bg_button_soft_purple"
-                    android:backgroundTint="@null"
-                    app:backgroundTint="@null"
-                    android:text="Enviar CSV"
-                    android:textAllCaps="false"
-                    android:textColor="@android:color/white"
-                    android:textStyle="bold"
-                    android:textSize="14sp"
-                    android:paddingVertical="10dp" />
+                    <TextView
+                        android:id="@+id/tvSelectedFile"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Ningun archivo seleccionado"
+                        android:textSize="12sp"
+                        android:textColor="?attr/colorOnSurface" />
 
-                <ProgressBar
-                    android:id="@+id/progressImport"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="8dp"
-                    android:visibility="gone" />
+                    <Button
+                        android:id="@+id/btnClearLocalImportCache"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Limpiar cache local"
+                        android:textAllCaps="false"
+                        android:textSize="12sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="10dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Dry-run (no guardar)"
+                            android:textSize="13sp"
+                            android:textColor="?attr/colorOnSurface" />
+
+                        <androidx.appcompat.widget.SwitchCompat
+                            android:id="@+id/switchDryRun"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="true" />
+                    </LinearLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilFuzzy"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        app:boxBackgroundMode="outline">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etFuzzy"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:hint="Fuzzy threshold (0.0 - 1.0)"
+                            android:inputType="numberDecimal"
+                            android:text="0.9"
+                            android:paddingStart="8dp"
+                            android:paddingEnd="8dp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <Button
+                        android:id="@+id/btnSendCsv"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:background="@drawable/bg_button_soft_purple"
+                        android:backgroundTint="@null"
+                        app:backgroundTint="@null"
+                        android:text="Enviar CSV"
+                        android:textAllCaps="false"
+                        android:textColor="@android:color/white"
+                        android:textStyle="bold"
+                        android:textSize="14sp"
+                        android:paddingVertical="10dp" />
+
+                    <ProgressBar
+                        android:id="@+id/progressImport"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginTop="8dp"
+                        android:visibility="gone" />
+                </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -140,6 +183,49 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/tvErrorsPageInfo"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Mostrando 0/0"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="12sp" />
+
+                    <Button
+                        android:id="@+id/btnPrevErrors"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:minHeight="0dp"
+                        android:minWidth="0dp"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="2dp"
+                        android:text="Anterior"
+                        android:textAllCaps="false"
+                        android:textSize="12sp" />
+
+                    <Button
+                        android:id="@+id/btnNextErrors"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:minWidth="0dp"
+                        android:minHeight="0dp"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="2dp"
+                        android:text="Siguiente"
+                        android:textAllCaps="false"
+                        android:textSize="12sp" />
+
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/tvSummary"

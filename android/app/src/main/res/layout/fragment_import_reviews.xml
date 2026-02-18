@@ -36,6 +36,15 @@
                 android:textSize="14sp"
                 android:paddingVertical="10dp" />
 
+            <Button
+                android:id="@+id/btnRejectAllReviews"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Rechazar todas"
+                android:textAllCaps="false"
+                android:textSize="13sp" />
+
             <TextView
                 android:id="@+id/tvReviewsInfo"
                 android:layout_width="match_parent"
@@ -44,6 +53,39 @@
                 android:text="0 revisiones"
                 android:textSize="12sp"
                 android:textColor="?attr/colorOnSurface" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnPrevReviews"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:minHeight="0dp"
+                    android:minWidth="0dp"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="2dp"
+                    android:text="Anterior"
+                    android:textAllCaps="false"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/btnNextReviews"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:minHeight="0dp"
+                    android:minWidth="0dp"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="2dp"
+                    android:text="Siguiente"
+                    android:textAllCaps="false"
+                    android:textSize="12sp" />
+            </LinearLayout>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 

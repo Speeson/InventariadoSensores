@@ -10,6 +10,7 @@ class ImportTransfersFragment : ImportFormFragment() {
     override val titleLabel: String = "Importar transferencias CSV"
     override val sendLabel: String = "Enviar CSV (Transferencias)"
     override val errorListIconRes: Int = com.example.inventoryapp.R.drawable.transfer
+    override val cacheKeyPrefix: String = "imports_transfers"
 
     override suspend fun uploadCsv(
         filePart: MultipartBody.Part,

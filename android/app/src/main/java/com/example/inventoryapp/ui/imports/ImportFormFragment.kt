@@ -8,6 +8,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.inventoryapp.R
+import com.example.inventoryapp.data.local.cache.CacheStore
 import com.example.inventoryapp.data.remote.model.ImportSummaryResponseDto
 import com.example.inventoryapp.databinding.FragmentImportFormBinding
 import com.example.inventoryapp.ui.common.CreateUiFeedback
@@ -21,6 +22,7 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
     protected abstract val titleLabel: String
     protected abstract val sendLabel: String
     protected abstract val errorListIconRes: Int
+    protected abstract val cacheKeyPrefix: String
     protected abstract suspend fun uploadCsv(
         filePart: MultipartBody.Part,
         dryRun: Boolean,
@@ -32,6 +34,16 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
 
     private var selectedUri: Uri? = null
     private var selectedName: String? = null
+    private lateinit var cacheStore: CacheStore
+    private val allErrorRows = mutableListOf<ImportErrorRow>()
+    private val pageSize = 5
+    private var currentOffset = 0
+    private var importExpanded = true
+
+    data class ImportUiCacheDto(
+        val rows: List<ImportErrorRow>,
+        val summary: String
+    )
 
     private val pickCsv = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
@@ -52,14 +64,26 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         _binding = FragmentImportFormBinding.bind(view)
+        cacheStore = CacheStore.getInstance(requireContext())
 
         binding.tvImportTitle.text = titleLabel
         binding.btnSendCsv.text = sendLabel
         binding.switchDryRun.isChecked = true
+        binding.ivImportSectionIcon.setImageResource(R.drawable.addfile)
+        applyImportSectionExpanded(expanded = true)
+
+        binding.layoutImportHeader.setOnClickListener {
+            applyImportSectionExpanded(!importExpanded)
+        }
 
         val errorAdapter = ImportErrorAdapter(emptyList())
         binding.rvErrors.layoutManager = LinearLayoutManager(requireContext())
         binding.rvErrors.adapter = errorAdapter
+        binding.btnClearLocalImportCache.setOnClickListener {
+            clearLocalCache(errorAdapter)
+        }
+        setupPagination(errorAdapter)
+        loadCachedErrors(errorAdapter)
 
         binding.btnSelectFile.setOnClickListener {
             pickCsv.launch(arrayOf("text/*", "application/vnd.ms-excel", "application/*"))
@@ -88,6 +112,36 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
             }
             val dryRun = binding.switchDryRun.isChecked
             upload(uri, selectedName ?: "import.csv", dryRun, fuzzy, errorAdapter)
+        }
+    }
+
+    private fun setupPagination(errorAdapter: ImportErrorAdapter) {
+        binding.btnPrevErrors.setOnClickListener {
+            if (currentOffset <= 0) return@setOnClickListener
+            currentOffset = (currentOffset - pageSize).coerceAtLeast(0)
+            renderPage(errorAdapter)
+        }
+        binding.btnNextErrors.setOnClickListener {
+            if (currentOffset + pageSize >= allErrorRows.size) return@setOnClickListener
+            currentOffset += pageSize
+            renderPage(errorAdapter)
+        }
+        renderPage(errorAdapter)
+    }
+
+    private fun loadCachedErrors(errorAdapter: ImportErrorAdapter) {
+        lifecycleScope.launch {
+            val key = "$cacheKeyPrefix:import_ui_state"
+            val cached = cacheStore.get(key, ImportUiCacheDto::class.java)
+            if (cached != null) {
+                allErrorRows.clear()
+                allErrorRows.addAll(cached.rows)
+                binding.tvSummary.text = cached.summary
+                if (allErrorRows.isNotEmpty()) {
+                    currentOffset = ((allErrorRows.size - 1) / pageSize) * pageSize
+                }
+                renderPage(errorAdapter)
+            }
         }
     }
 
@@ -136,7 +190,22 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
     }
 
     private fun showImportError(details: String) {
-        val isNotFound = details.lowercase().contains("no encontrado")
+        val detailLower = details.lowercase()
+        val isOfflineError = detailLower.contains("offline")
+            || detailLower.contains("backend unavailable")
+            || detailLower.contains("manual offline mode")
+            || detailLower.contains("sin conexión")
+            || detailLower.contains("sin conexion")
+        if (isOfflineError) {
+            CreateUiFeedback.showErrorPopup(
+                activity = requireActivity(),
+                title = "Modo offline",
+                details = "No se puede importar CSV sin conexion. Activa la red y vuelve a intentarlo.",
+                animationRes = R.raw.error
+            )
+            return
+        }
+        val isNotFound = detailLower.contains("no encontrado")
         CreateUiFeedback.showErrorPopup(
             activity = requireActivity(),
             title = if (isNotFound) "No encontrado" else "Error de importacion",
@@ -151,13 +220,21 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
             "$mode completado\n" +
             "Total: ${res.total_rows} | OK: ${res.ok_rows} | Errores: ${res.error_rows} | Reviews: ${res.review_rows}"
 
-        if (res.errors.isEmpty()) {
-            binding.tvErrorsEmpty.visibility = View.VISIBLE
-            errorAdapter.submit(emptyList(), res.batch_id, errorListIconRes)
-        } else {
-            binding.tvErrorsEmpty.visibility = View.GONE
-            errorAdapter.submit(res.errors, res.batch_id, errorListIconRes)
+        if (res.errors.isNotEmpty()) {
+            val appended = res.errors.map {
+                ImportErrorRow(
+                    rowNumber = it.row_number,
+                    errorCode = it.error_code,
+                    message = it.message,
+                    batchId = res.batch_id,
+                    iconRes = errorListIconRes
+                )
+            }
+            allErrorRows.addAll(appended)
+            currentOffset = ((allErrorRows.size - 1) / pageSize) * pageSize
         }
+        renderPage(errorAdapter)
+        saveUiCache()
 
         if (res.dry_run) {
             CreateUiFeedback.showStatusPopup(
@@ -174,6 +251,66 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
                 animationRes = R.raw.correct_create
             )
         }
+        applyImportSectionExpanded(expanded = false)
+    }
+
+    private fun renderPage(errorAdapter: ImportErrorAdapter) {
+        if (_binding == null) return
+        val total = allErrorRows.size
+        if (total == 0) {
+            binding.tvErrorsEmpty.visibility = View.VISIBLE
+            binding.tvErrorsPageInfo.text = "Mostrando 0/0"
+            binding.btnPrevErrors.isEnabled = false
+            binding.btnNextErrors.isEnabled = false
+            errorAdapter.submit(emptyList())
+            return
+        }
+
+        binding.tvErrorsEmpty.visibility = View.GONE
+        val from = currentOffset.coerceAtMost((total - 1).coerceAtLeast(0))
+        val to = (from + pageSize).coerceAtMost(total)
+        val pageItems = allErrorRows.subList(from, to)
+        errorAdapter.submit(pageItems)
+
+        binding.tvErrorsPageInfo.text = "Mostrando $to/$total"
+        binding.btnPrevErrors.isEnabled = from > 0
+        binding.btnNextErrors.isEnabled = to < total
+    }
+
+    private fun saveUiCache() {
+        lifecycleScope.launch {
+            val key = "$cacheKeyPrefix:import_ui_state"
+            cacheStore.put(
+                key,
+                ImportUiCacheDto(
+                    rows = allErrorRows,
+                    summary = binding.tvSummary.text?.toString() ?: "Resultado: -"
+                )
+            )
+        }
+    }
+
+    private fun clearLocalCache(errorAdapter: ImportErrorAdapter) {
+        lifecycleScope.launch {
+            allErrorRows.clear()
+            currentOffset = 0
+            binding.tvSummary.text = "Resultado: -"
+            val key = "$cacheKeyPrefix:import_ui_state"
+            cacheStore.invalidatePrefix(key)
+            renderPage(errorAdapter)
+            CreateUiFeedback.showStatusPopup(
+                activity = requireActivity(),
+                title = "Cache local limpiada",
+                details = "Se ha limpiado el historial local de importacion.",
+                animationRes = R.raw.correct_create
+            )
+        }
+    }
+
+    private fun applyImportSectionExpanded(expanded: Boolean) {
+        importExpanded = expanded
+        binding.layoutImportContent.visibility = if (expanded) View.VISIBLE else View.GONE
+        binding.ivImportSectionToggle.setImageResource(if (expanded) R.drawable.up else R.drawable.down)
     }
 
     private fun guessFileName(uri: Uri): String? {

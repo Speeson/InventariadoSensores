@@ -7,19 +7,13 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.inventoryapp.R
-import com.example.inventoryapp.data.remote.model.ImportErrorDto
 
 class ImportErrorAdapter(
-    private var items: List<ImportErrorDto>,
-    private var iconRes: Int = R.drawable.lote
+    private var items: List<ImportErrorRow>
 ) : RecyclerView.Adapter<ImportErrorAdapter.ViewHolder>() {
 
-    private var batchId: Int? = null
-
-    fun submit(list: List<ImportErrorDto>, batchId: Int? = this.batchId, iconRes: Int = this.iconRes) {
+    fun submit(list: List<ImportErrorRow>) {
         items = list
-        this.batchId = batchId
-        this.iconRes = iconRes
         notifyDataSetChanged()
     }
 
@@ -30,10 +24,10 @@ class ImportErrorAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
-        holder.ivBatchIcon.setImageResource(iconRes)
-        holder.tvBatchLabel.text = if (iconRes == R.drawable.transfer) "Transfer ID" else "Lote ID"
-        holder.tvBatchId.text = (batchId ?: "-").toString()
-        holder.tvTitle.text = "Fila ${item.row_number} - ${item.error_code}"
+        holder.ivBatchIcon.setImageResource(item.iconRes)
+        holder.tvBatchLabel.text = if (item.iconRes == R.drawable.transfer) "Transfer ID" else "Lote ID"
+        holder.tvBatchId.text = (item.batchId ?: "-").toString()
+        holder.tvTitle.text = "Fila ${item.rowNumber} - ${item.errorCode}"
         holder.tvMessage.text = item.message
     }
 
@@ -47,3 +41,11 @@ class ImportErrorAdapter(
         val tvMessage: TextView = view.findViewById(R.id.tvErrorMessage)
     }
 }
+
+data class ImportErrorRow(
+    val rowNumber: Int,
+    val errorCode: String,
+    val message: String,
+    val batchId: Int?,
+    val iconRes: Int
+)
