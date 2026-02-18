@@ -68,10 +68,15 @@ Objetivo: guion unico para defensa, mostrando que se implemento, como se demuest
   - Redis broker + Celery worker.
   - Eventos procesados generan movimientos/stock.
 - Demo:
-  1. Ejecutar `docker compose -f backend/docker-compose.yml logs -f worker`.
-  2. Lanzar `POST /events`.
-  3. Ver en logs del worker que toma la tarea y la procesa.
+  1. Terminal 1: `docker compose -f backend/docker-compose.yml logs -f worker`
+  2. Terminal 2: lanzar `POST /events` (desde Swagger o app).
+  3. Ver en el worker lineas tipo:
+     - `process_event started event_id=...`
+     - `process_event processed event_id=... status=PROCESSED ...`
+     - o `process_event requeued ...` / `process_event failed_final ...` si hay error.
   4. Consultar stock actualizado (visual).
+  5. (Opcional) guardar evidencia en archivo:
+     - `docker compose -f backend/docker-compose.yml logs worker > backend/test-reports/worker-demo.log`
 
 ### 8) Alertas de stock bajo (email/push)
 - Explicacion: deteccion automatica de riesgo de rotura y aviso al usuario.
@@ -232,9 +237,16 @@ Objetivo: guion unico para defensa, mostrando que se implemento, como se demuest
 ### Celery + Beat
 - Explicacion: procesamiento en background y tareas periodicas.
 - Demo:
-  1. `docker compose -f backend/docker-compose.yml logs -f worker`
-  2. `docker compose -f backend/docker-compose.yml logs -f beat`
-  3. Disparar evento y ver consumo en worker.
+  1. Terminal 1 (worker): `docker compose -f backend/docker-compose.yml logs -f worker`
+  2. Terminal 2 (beat): `docker compose -f backend/docker-compose.yml logs -f beat`
+  3. En beat, mostrar evidencia del scheduler:
+     - `Scheduler: Sending due task requeue-pending-events (app.tasks.requeue_pending_events)`
+     - `Scheduler: Sending due task scan-low-stock (app.tasks.scan_low_stock)`
+  4. En worker, mostrar que ejecuta tareas enviadas por beat y/o `process_event`.
+  5. (Opcional) guardar evidencias:
+     - `docker compose -f backend/docker-compose.yml logs beat > backend/test-reports/beat-demo.log`
+     - `docker compose -f backend/docker-compose.yml logs worker > backend/test-reports/worker-demo.log`
+  6. Nota logs: por defecto se emiten a `stdout/stderr` de los contenedores y se consultan con `docker compose logs`; no se guardan en el repo salvo que los exportes manualmente.
 
 ### Android stack base (Kotlin, Retrofit, Room, MVVM, WorkManager, FCM)
 - Explicacion: arquitectura y librerias para networking, persistencia local, estado UI y jobs diferidos.

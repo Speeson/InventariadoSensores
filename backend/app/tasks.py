@@ -1,5 +1,6 @@
 from sqlalchemy import select
 from datetime import datetime, timezone, timedelta
+import logging
 from app.celery_app import celery_app
 from app.db.session import SessionLocal
 from app.models.enums import EventStatus, MovementType
@@ -16,6 +17,7 @@ from app.repositories import alert_repo
 
 # Numero maximo de intentos para reintentar una tarea en caso de error retryable
 MAX_RETRIES = 3
+logger = logging.getLogger("app.tasks")
 
 @celery_app.task(name="app.tasks.scan_low_stock")
 def scan_low_stock() -> dict:
@@ -95,15 +97,22 @@ def is_retryable_error(exc: Exception) -> bool:
 
 @celery_app.task(name="app.tasks.process_event")
 def process_event(event_id: int) -> dict:
+    logger.info("process_event started event_id=%s", event_id)
     with SessionLocal() as db:
         event = db.get(Event, event_id)
 
         # 1) Validaciones basicas del evento
         if not event:
+            logger.warning("process_event event_not_found event_id=%s", event_id)
             return {"ok": False, "reason": "event_not_found", "event_id": event_id}
 
         if event.event_status != EventStatus.PENDING:
             # idempotencia: si ya esta PROCESSED/ERROR no lo reproceses
+            logger.info(
+                "process_event already_processed event_id=%s status=%s",
+                event_id,
+                event.event_status.value,
+            )
             return {"ok": True, "reason": "already_processed", "status": event.event_status.value}
 
         if event.delta <= 0:
@@ -112,6 +121,7 @@ def process_event(event_id: int) -> dict:
             event.retry_count += 1
             event.processed_at = datetime.now(timezone.utc)
             db.commit()
+            logger.warning("process_event invalid_delta event_id=%s", event_id)
             return {"ok": False, "reason": "invalid_delta"}
 
         # Validar producto
@@ -122,6 +132,7 @@ def process_event(event_id: int) -> dict:
             event.retry_count += 1
             event.processed_at = datetime.now(timezone.utc)
             db.commit()
+            logger.warning("process_event product_not_found event_id=%s product_id=%s", event_id, event.product_id)
             return {"ok": False, "reason": "product_not_found"}
 
         # Validar ubicacion
@@ -131,6 +142,7 @@ def process_event(event_id: int) -> dict:
             event.retry_count += 1
             event.processed_at = datetime.now(timezone.utc)
             db.commit()
+            logger.warning("process_event location_missing event_id=%s", event_id)
             return {"ok": False, "reason": "location_missing"}
 
         location = db.get(Location, event.location_id)
@@ -140,6 +152,7 @@ def process_event(event_id: int) -> dict:
             event.retry_count += 1
             event.processed_at = datetime.now(timezone.utc)
             db.commit()
+            logger.warning("process_event location_not_found event_id=%s location_id=%s", event_id, event.location_id)
             return {"ok": False, "reason": "location_not_found"}
 
         # 2) Resolver tipo de movimiento y delta a aplicar
@@ -155,6 +168,7 @@ def process_event(event_id: int) -> dict:
             event.retry_count += 1
             event.processed_at = datetime.now(timezone.utc)
             db.commit()
+            logger.warning("process_event invalid_event_type event_id=%s type=%s", event_id, event.event_type)
             return {"ok": False, "reason": "invalid_event_type"}
 
         # 3) Transaccion: ajustar stock + crear movement + marcar evento PROCESSED
@@ -165,9 +179,15 @@ def process_event(event_id: int) -> dict:
             )
 
             if not event:
+                logger.warning("process_event event_not_found_locked event_id=%s", event_id)
                 return {"ok": False, "reason": "event_not_found", "event_id": event_id}
 
             if event.event_status != EventStatus.PENDING:
+                logger.info(
+                    "process_event already_processed_locked event_id=%s status=%s",
+                    event_id,
+                    event.event_status.value,
+                )
                 return {"ok": True, "reason": "already_processed", "status": event.event_status.value}
             # <<< FIN CAMBIO ANADIDO
 
@@ -213,6 +233,13 @@ def process_event(event_id: int) -> dict:
             db.add(event)
 
             db.commit()
+            logger.info(
+                "process_event processed event_id=%s status=%s stock_delta=%s movement_type=%s",
+                event.id,
+                event.event_status.value,
+                stock_delta,
+                movement_type.value,
+            )
             return {"ok": True, "event_id": event.id, "status": event.event_status.value}
 
         except Exception as exc:
@@ -234,6 +261,26 @@ def process_event(event_id: int) -> dict:
             # Si sigue siendo PENDING, reencolamos
             if event.event_status == EventStatus.PENDING:
                 process_event.delay(event.id)
+                logger.info(
+                    "process_event requeued event_id=%s retry_count=%s error=%s",
+                    event.id,
+                    event.retry_count,
+                    event.last_error,
+                )
+            else:
+                logger.warning(
+                    "process_event failed_final event_id=%s retry_count=%s error=%s",
+                    event.id,
+                    event.retry_count,
+                    event.last_error,
+                )
+
+            logger.exception(
+                "process_event exception event_id=%s status=%s retry_count=%s",
+                event.id,
+                event.event_status.value,
+                event.retry_count,
+            )
 
             return {
                 "ok": False,
@@ -263,4 +310,5 @@ def requeue_pending_events() -> dict:
             process_event.delay(event.id)
             requeued += 1
 
+    logger.info("requeue_pending_events done requeued=%s", requeued)
     return {"requeued": requeued}
