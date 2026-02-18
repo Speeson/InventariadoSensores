@@ -9,7 +9,7 @@
   ],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 2,
+  "version": 3,
   "refresh": "10s",
   "time": {
     "from": "now-30m",
@@ -26,7 +26,7 @@
       "gridPos": {
         "h": 4,
         "w": 3,
-        "x": 0,
+        "x": 15,
         "y": 0
       },
       "targets": [
@@ -61,7 +61,7 @@
       "gridPos": {
         "h": 4,
         "w": 3,
-        "x": 3,
+        "x": 0,
         "y": 0
       },
       "targets": [
@@ -113,7 +113,7 @@
       "gridPos": {
         "h": 4,
         "w": 3,
-        "x": 6,
+        "x": 18,
         "y": 0
       },
       "targets": [
@@ -148,7 +148,7 @@
       "gridPos": {
         "h": 4,
         "w": 3,
-        "x": 9,
+        "x": 3,
         "y": 0
       },
       "targets": [
@@ -187,7 +187,7 @@
       "gridPos": {
         "h": 4,
         "w": 3,
-        "x": 12,
+        "x": 6,
         "y": 0
       },
       "targets": [
@@ -226,7 +226,7 @@
       "gridPos": {
         "h": 4,
         "w": 3,
-        "x": 15,
+        "x": 9,
         "y": 0
       },
       "targets": [
@@ -265,7 +265,7 @@
       "gridPos": {
         "h": 4,
         "w": 3,
-        "x": 18,
+        "x": 12,
         "y": 0
       },
       "targets": [

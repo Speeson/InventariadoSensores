@@ -703,7 +703,12 @@ class LabelPreviewActivity : AppCompatActivity() {
                 },
                 onSuccess = {
                     dismissNiimbotPrintingDialog()
-                    UiNotifier.show(this@LabelPreviewActivity, "Etiqueta enviada a Niimbot")
+                    CreateUiFeedback.showStatusPopup(
+                        activity = this@LabelPreviewActivity,
+                        title = "Etiqueta impresa",
+                        details = "Etiqueta impresa correctamente",
+                        animationRes = R.raw.correct_create
+                    )
                 },
                 onError = { msg ->
                     dismissNiimbotPrintingDialog()
