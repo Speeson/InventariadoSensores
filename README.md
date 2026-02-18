@@ -259,6 +259,14 @@ docker compose -f backend/docker-compose.yml build api worker beat
 - `backend-ci.yml`: suite `pytest` + build Docker.
 - Se ejecutan en `push` / `pull_request` cuando hay cambios en `backend/**` o en los workflows.
 
+
+**Scripts de demo (observabilidad y flujo):**
+```powershell
+powershell -ExecutionPolicy Bypass -File backend/scripts/demo_grafana_errors.ps1 -Quick1m -Include403
+powershell -ExecutionPolicy Bypass -File backend/scripts/demo_grafana_load.ps1 -VUs 20 -Duration 60s
+powershell -ExecutionPolicy Bypass -File backend/scripts/generate_flowchart_png.ps1
+```
+- Script base de carga k6: `backend/scripts/k6_grafana_load.js`
 ---
 
 ## 🔐 Ejemplos rápidos (curl)
@@ -505,59 +513,77 @@ Documentacion de apoyo (backend/context):
 
 ---
 
-## 🗂️ Estructura completa del proyecto (todas las carpetas y archivos)
+## Estructura completa del proyecto (todas las carpetas y archivos)
 
 ```text
 InventariadoSensores/
-├── .github/
-│   └── workflows/
-│       ├── backend-ci.yml
-│       └── backend-contract.yml
-├── backend/
-│   ├── app/
-│   │   ├── api/routes/
-│   │   ├── cache/
-│   │   ├── core/
-│   │   ├── db/
-│   │   ├── models/
-│   │   ├── repositories/
-│   │   ├── schemas/
-│   │   ├── services/
-│   │   ├── tasks.py
-│   │   └── main.py
-│   ├── alembic/
-│   │   └── versions/
-│   ├── observability/
-│   │   ├── grafana/
-│   │   └── prometheus/
-│   ├── openapi/
-│   │   └── openapi.json
-│   ├── scripts/
-│   │   ├── export_openapi.py
-│   │   └── seed_db.py
-│   ├── tests/
-│   │   ├── conftest.py
-│   │   ├── test_openapi_snapshot.py
-│   │   ├── test_contract.py
-│   │   ├── test_inventory_service_unit.py
-│   │   └── ...
-│   ├── test-reports/
-│   ├── context/
-│   ├── docker-compose.yml
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   └── requirements-dev.txt
-├── android/
-│   ├── app/
-│   │   ├── src/main/java/com/example/inventoryapp/
-│   │   │   ├── data/
-│   │   │   ├── domain/
-│   │   │   └── ui/
-│   │   └── src/main/res/
-│   ├── build.gradle.kts
-│   └── settings.gradle.kts
-├── readmeSprint3.md
-└── README.md
+|-- .github/
+|   `-- workflows/
+|       |-- backend-ci.yml
+|       `-- backend-contract.yml
+|-- backend/
+|   |-- app/
+|   |   |-- api/routes/
+|   |   |-- cache/
+|   |   |-- core/
+|   |   |-- db/
+|   |   |-- models/
+|   |   |-- repositories/
+|   |   |-- schemas/
+|   |   |-- services/
+|   |   |-- tasks.py
+|   |   `-- main.py
+|   |-- alembic/
+|   |   `-- versions/
+|   |-- observability/
+|   |   |-- grafana/
+|   |   `-- prometheus/
+|   |-- openapi/
+|   |   `-- openapi.json
+|   |-- scripts/
+|   |   |-- export_openapi.py
+|   |   |-- seed_db.py
+|   |   |-- seed2_db.py
+|   |   |-- demo_grafana_errors.ps1
+|   |   |-- demo_grafana_load.ps1
+|   |   |-- k6_grafana_load.js
+|   |   `-- generate_flowchart_png.ps1
+|   |-- tests/
+|   |   |-- conftest.py
+|   |   |-- test_openapi_snapshot.py
+|   |   |-- test_contract.py
+|   |   |-- test_inventory_service_unit.py
+|   |   `-- ...
+|   |-- test-reports/
+|   |-- context/
+|   |   |-- GUIA_DEFENSA_REQUISITOS_ACTIVIDAD4.md
+|   |   |-- GUIA_DEMOSTRACIONES_REQUISITOS.md
+|   |   |-- RECAP_GLOBAL_REQUISITOS_DEMO.md
+|   |   |-- RECAP_GLOBAL_REQUISITOS_DEMO.pdf
+|   |   |-- DIAGRAMA_FLUJO_APP.md
+|   |   |-- DIAGRAMA_FLUJO_APP.png
+|   |   |-- README_import_swagger.md
+|   |   |-- README_observabilidad_prometheus_grafana.md
+|   |   |-- README_tests_contrato_openapi.md
+|   |   `-- import_samples/
+|   |       |-- README_stress_pack.md
+|   |       `-- *.csv
+|   |-- docker-compose.yml
+|   |-- Dockerfile
+|   |-- requirements.txt
+|   `-- requirements-dev.txt
+|-- android/
+|   |-- app/
+|   |   |-- src/main/java/com/example/inventoryapp/
+|   |   |   |-- data/
+|   |   |   |-- domain/
+|   |   |   `-- ui/
+|   |   `-- src/main/res/
+|   |-- build.gradle.kts
+|   `-- settings.gradle.kts
+|-- readmeSprint3.md
+|-- README_USUARIO.md
+`-- README.md
 ```
 
 ---

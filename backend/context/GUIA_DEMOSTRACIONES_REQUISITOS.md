@@ -11,15 +11,15 @@ Demostrar que el dashboard refleja correctamente exito, errores de cliente y err
 1. Levantar stack completo:
    - `docker compose -f backend/docker-compose.yml up -d`
 2. Abrir Grafana:
-   - `http://localhost:3000`
+   - `http://localhost:3001`
 3. Verificar API:
    - `http://localhost:8000/health`
 
 ### Ejecucion automatizada
 1. Lanzar script:
-   - powershell -ExecutionPolicy Bypass -File backend/scripts/demo_grafana_errors.ps1 -Include403
+   - `powershell -ExecutionPolicy Bypass -File backend/scripts/demo_grafana_errors.ps1 -Include403`
 2. Perfil corto recomendado (menos duracion, buen volumen):
-   - powershell -ExecutionPolicy Bypass -File backend/scripts/demo_grafana_errors.ps1 -Quick1m -Include403
+   - `powershell -ExecutionPolicy Bypass -File backend/scripts/demo_grafana_errors.ps1 -Quick1m -Include403`
 3. Esperar a que termine (el script baja y vuelve a subir DB automaticamente).
 
 ### Que debe verse en Grafana
@@ -50,7 +50,7 @@ Demostrar comportamiento de latencia, `Req/s` y volumen total bajo carga concurr
 
 ### Ejecucion automatizada
 1. Carga base (recomendada para demo):
-   - powershell -ExecutionPolicy Bypass -File backend/scripts/demo_grafana_load.ps1 -VUs 25 -Duration 60s
+   - `powershell -ExecutionPolicy Bypass -File backend/scripts/demo_grafana_load.ps1 -VUs 20 -Duration 60s`
 2. Carga media:
    - `powershell -ExecutionPolicy Bypass -File backend/scripts/demo_grafana_load.ps1 -VUs 40 -Duration 90s`
 3. Carga alta:
