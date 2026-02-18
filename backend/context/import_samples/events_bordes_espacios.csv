@@ -1,0 +1,8 @@
+﻿type,sku,barcode,name,category_id,location_id,quantity
+ IN , SKU-WS-001 , BC-WS-001 , Sensor con espacios , 1 , 1 , 5 
+OUT,SKU-WS-001,BC-WS-001,Sensor con espacios,1,1,1
+ADJUST,SKU-WS-002,BC-WS-002,Sensor ajuste,1,1,-1
+IN,SKU-WS-REVIEW,BC-WS-REVIEW,   ,1,1,2
+IN,SKU-WS-BADINT,BC-WS-BADINT,Sensor int,1,uno,2
+IN,SKU-WS-BADQTY,BC-WS-BADQTY,Sensor qty,1,1,dos
+

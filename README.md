@@ -287,7 +287,7 @@ curl http://localhost:8000/users/me \
 - admin / manager / user
 - password: `Pass123!`
 
-**Demo rÃ¡pida (PowerShell):**
+**Demo rápida (PowerShell):**
 ```powershell
 $token = (Invoke-RestMethod -Method Post -Uri "http://localhost:8000/auth/login" -Form @{ email="admin@demo.local"; password="Pass123!" }).access_token
 $auth = @{ Authorization = "Bearer $token" }
@@ -338,7 +338,7 @@ Invoke-RestMethod -Headers $auth -Uri "http://localhost:8000/reports/turnover?da
 Detectado en el repo:
 - BASE_URL: `http://10.0.2.2:8000/`
 
-**Cambiar IP desde el movil (sin recompilar):**
+**Cambiar IP desde el móvil (sin recompilar):**
 - Long-press en el logo de Login o en la toolbar de Home.
 - Escribe la IP del PC (host) y guarda.
 - Se aplica solo en ese dispositivo.
@@ -459,8 +459,8 @@ Android (UI/UX y nuevas pantallas):
 - Nueva pantalla de categorias (listar, crear, editar, eliminar y filtrar por id).
 - Nueva pantalla de umbrales (thresholds) con layout tipo login y acceso directo desde home.
 - Nueva pantalla de alertas con pestañas (alertas del sistema / pendientes offline),
-  limpieza rapida por seccion y eventos fallidos.
-- Alertas del sistema con dialogo central ante caidas de servicios y guardado en historial.
+  limpieza rápida por sección y eventos fallidos.
+- Alertas del sistema con diálogo central ante caídas de servicios y guardado en historial.
 
 ### Sprint 3 (implementado)
 

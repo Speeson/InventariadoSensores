@@ -13,35 +13,74 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
+        android:orientation="horizontal"
         android:padding="12dp">
 
-        <TextView
-            android:id="@+id/tvReviewTitle"
-            android:layout_width="match_parent"
+        <LinearLayout
+            android:layout_width="90dp"
             android:layout_height="wrap_content"
-            android:text="Fila 0"
-            android:textStyle="bold"
-            android:textSize="13sp"
-            android:textColor="?attr/colorOnSurface" />
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
 
-        <TextView
-            android:id="@+id/tvReviewMeta"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="SKU · Qty"
-            android:textSize="12sp"
-            android:textColor="?attr/colorOnSurface" />
+            <ImageView
+                android:id="@+id/ivReviewBatchIcon"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:src="@drawable/addfile"
+                android:contentDescription="Review icon" />
 
-        <TextView
-            android:id="@+id/tvReviewReason"
+            <TextView
+                android:id="@+id/tvReviewBatchLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="Lote ID"
+                android:textStyle="bold"
+                android:textSize="11sp"
+                android:textColor="?attr/colorOnSurface" />
+
+            <TextView
+                android:id="@+id/tvReviewBatchId"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="-"
+                android:textSize="11sp"
+                android:textColor="?attr/colorOnSurface" />
+        </LinearLayout>
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="Reason"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:textColor="@android:color/holo_orange_dark" />
+            android:layout_marginStart="10dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvReviewTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Fila 0"
+                android:textStyle="bold"
+                android:textSize="13sp"
+                android:textColor="?attr/colorOnSurface" />
+
+            <TextView
+                android:id="@+id/tvReviewMeta"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="SKU - Qty"
+                android:textSize="12sp"
+                android:textColor="?attr/colorOnSurface" />
+
+            <TextView
+                android:id="@+id/tvReviewReason"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Reason"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="@android:color/holo_orange_dark" />
+        </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

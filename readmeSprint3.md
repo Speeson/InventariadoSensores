@@ -225,6 +225,14 @@ Endpoints:
 - `POST /imports/reviews/{id}/approve`
 - `POST /imports/reviews/{id}/reject`
 
+Parámetros añadidos en importación:
+- `dry_run` (query param, `true/false`):
+  - Ejecuta todas las validaciones y calcula el resumen del lote (`ok/error/review`) **sin persistir cambios** en base de datos.
+  - Se usa para prevalidar un CSV antes de importarlo de forma definitiva.
+- `fuzzy_threshold` (query param, `0.0` a `1.0`, default `0.9`):
+  - Controla el umbral de similitud para detectar posibles productos duplicados por nombre.
+  - Cuanto más alto, más estricta la detección (menos coincidencias); cuanto más bajo, más sensible (más filas enviadas a `review`).
+
 CSV ejemplos (carpeta):
 - `backend/context/import_samples/events_sample.csv`
 - `backend/context/import_samples/events_sample_review.csv`
@@ -297,31 +305,37 @@ Backend:
 - Para Docker: **no usar `--reload`** en Uvicorn (rompe WS). Se controla con `UVICORN_RELOAD=0/1` en `backend/entrypoint.sh`.
 
 Frontend (Android):
-- Cliente WS activo y reconexiÃ³n automÃ¡tica al volver al foreground.
-- Popup centrado con tÃ­tulo, detalles e icono segÃºn tipo:
-  - Stock bajo (amarillo), Stock agotado (rojo), Transferencia completa (verde), Movimiento grande (violeta), ImportaciÃ³n con errores (azul).
+- Cliente WS activo y reconexión automática al volver al foreground.
+- Popup centrado con título, detalles e icono según tipo:
+  - Stock bajo (amarillo), Stock agotado (rojo), Transferencia completa (verde), Movimiento grande (violeta), Importación con errores (azul).
+- Tipos de alerta añadidos al WebSocket:
+  - `LOW_STOCK` (stock bajo)
+  - `OUT_OF_STOCK` (stock agotado)
+  - `LARGE_MOVEMENT` (movimiento grande)
+  - `TRANSFER_COMPLETE` (transferencia completada)
+  - `IMPORT_ISSUES` (importación con errores)
 - Auto-cierre a los 10s si no se cierra manualmente.
-- Tarjeta flotante con sombreado, fondo atenuado (dim) y animaciÃ³n de entrada/salida.
-- Color de tarjeta segÃºn tipo de alerta + animaciÃ³n pulse en el icono.
+- Tarjeta flotante con sombreado, fondo atenuado (dim) y animación de entrada/salida.
+- Color de tarjeta según tipo de alerta + animación pulse en el icono.
 - Colas de alertas: si llegan varias, se muestran una a una con contador "1 de N".
 - Badge de notificaciones se refresca en tiempo real al recibir alertas WS.
 
 ## Firebase Cloud Messaging (FCM)
 
-Objetivo: push notifications cuando la app estÃ¡ en background o cerrada.
+Objetivo: push notifications cuando la app está en background o cerrada.
 
 Backend:
 - Tabla `fcm_tokens` (user_id, token, device_id, platform).
 - Endpoint `POST /users/fcm-token` para registrar/actualizar token.
-- Envio FCM al crear alertas:
-  - Stock bajo, Stock agotado, Movimiento grande, ImportaciÃ³n con errores.
-- ImportaciÃ³n completada: push si `total_rows` >= `IMPORT_COMPLETED_PUSH_MIN_ROWS` (default 50).
+- Envío FCM al crear alertas:
+  - Stock bajo, Stock agotado, Movimiento grande, Importación con errores.
+- Importación completada: push si `total_rows` >= `IMPORT_COMPLETED_PUSH_MIN_ROWS` (default 50).
 - Requiere credenciales Firebase: `FCM_CREDENTIALS_JSON=/path/service-account.json`.
 
 Android:
 - Firebase Messaging integrado (`firebase-messaging`).
-- Registro automÃ¡tico de token al login y en refresh (`onNewToken`).
-- Servicio `FcmService` muestra notificaciÃ³n del sistema.
+- Registro automático de token al login y en refresh (`onNewToken`).
+- Servicio `FcmService` muestra notificación del sistema.
 - Requiere `google-services.json` en `android/app/`.
 
 Infra:
@@ -331,42 +345,42 @@ Infra:
 
 ## WorkManager (sync offline en background)
 
-Objetivo: enviar la cola offline aunque la app estÃ© cerrada, con reintentos y restricciones de red.
+Objetivo: enviar la cola offline aunque la app esté cerrada, con reintentos y restricciones de red.
 
 Android:
 - Dependencia: `androidx.work:work-runtime-ktx`.
-- Worker `OfflineSyncWorker` llama a `OfflineSyncer.flush()` y registra `SystemAlert` cuando hay envÃ­os o motivo de parada.
-- Periodic work cada 15 minutos (mÃ­nimo permitido) con `NetworkType.CONNECTED`.
+- Worker `OfflineSyncWorker` llama a `OfflineSyncer.flush()` y registra `SystemAlert` cuando hay envíos o motivo de parada.
+- Periodic work cada 15 minutos (mínimo permitido) con `NetworkType.CONNECTED`.
 - One‑time work al iniciar la app para vaciar la cola cuanto antes.
 - Al encolar un pendiente offline, se programa un one‑time adicional (si hay red) para intentar vaciar la cola pronto.
 - Backoff exponencial en reintentos (`10s` base).
-- En mÃ³vil (no emulador) el worker se eleva a foreground si hay permiso de notificaciones, para aumentar fiabilidad.
-- NotificaciÃ³n del worker: canal `offline_sync` con texto “Sincronizando pendientes”.
+- En móvil (no emulador) el worker se eleva a foreground si hay permiso de notificaciones, para aumentar fiabilidad.
+- Notificación del worker: canal `offline_sync` con texto “Sincronizando pendientes”.
 
 ## Unificacion de mensajes y permisos (UI)
 
 Objetivo: eliminar duplicados, mejorar claridad y centralizar respuestas visuales por tipo de evento.
 
-- Reemplazo progresivo de mensajes planos por dialogos unificados:
+- Reemplazo progresivo de mensajes planos por diálogos unificados:
   - Cargando lista (`loading_list.json`)
   - Lista cargada (icono exito)
   - Creacion en curso / creacion completada
   - Errores de creacion (`dialog_create_failure`)
   - Permisos insuficientes (`dialog_permission_denied` con `locked.json`)
 - Politica de aviso cache/offline:
-  - "Mostrando X en cache y pendientes offline" solo una vez por sesion offline.
-  - Se resetea al recuperar conexion.
-- En varios flujos de edicion/accion se eliminaron mensajes redundantes de tipo "sending..." cuando no aportan valor.
-- En pantallas restringidas para `USER`, acceso bloqueado en cabecera/boton con dialogo de permisos en lugar de mensaje plano.
+- "Mostrando X en cache y pendientes offline" solo una vez por sesión offline.
+  - Se resetea al recuperar conexión.
+- En varios flujos de edición/acción se eliminaron mensajes redundantes de tipo "sending..." cuando no aportan valor.
+- En pantallas restringidas para `USER`, acceso bloqueado en cabecera/botón con diálogo de permisos en lugar de mensaje plano.
 - Ajuste de animacion de permisos:
-  - `locked.json` configurada para iniciar en frame 45 en el dialogo de permisos.
+- `locked.json` configurada para iniciar en frame 45 en el diálogo de permisos.
 
 ## Estado del sistema y health-check
 
 Objetivo: mejorar diagnostico visual y evitar falsos offline en cliente.
 
 Frontend:
-- "Estado del sistema" redisenado como dialogo con componentes:
+- "Estado del sistema" rediseñado como diálogo con componentes:
   - API
   - Base de datos
   - Redis
@@ -375,7 +389,7 @@ Frontend:
 
 Backend:
 - Ajuste de `/health` para no forzar 503 global por estado de Celery en escenarios de arranque parcial.
-- Correccion de variables de entorno en contenedores `worker` y `beat` (`JWT_SECRET`, `JWT_ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES`) para evitar caida de Celery por configuracion faltante.
+- Corrección de variables de entorno en contenedores `worker` y `beat` (`JWT_SECRET`, `JWT_ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES`) para evitar caída de Celery por configuración faltante.
 
 ## Optimizaciones aplicadas (requisito Sprint 3)
 
@@ -634,7 +648,7 @@ Android:
     - `android/app/src/main/java/com/example/inventoryapp/ui/events/EventsActivity.kt`
 
 - Mensajes de `notfound` y ubicación:
-  - Correcciones de texto en `Stock` y `Thresholds` para evitar cadenas corruptas (`Ã`) y mantener formato consistente (`ubicacion`).
+- Correcciones de texto en `Stock` y `Thresholds` para evitar caracteres corruptos de codificación y mantener formato consistente (`ubicación`).
   - Archivos:
     - `android/app/src/main/java/com/example/inventoryapp/ui/stock/StockActivity.kt`
     - `android/app/src/main/java/com/example/inventoryapp/ui/thresholds/ThresholdsActivity.kt`

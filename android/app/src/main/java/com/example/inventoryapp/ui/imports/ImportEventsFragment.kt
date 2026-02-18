@@ -9,6 +9,7 @@ class ImportEventsFragment : ImportFormFragment() {
 
     override val titleLabel: String = "Importar eventos CSV"
     override val sendLabel: String = "Enviar CSV (Eventos)"
+    override val errorListIconRes: Int = com.example.inventoryapp.R.drawable.lote
 
     override suspend fun uploadCsv(
         filePart: MultipartBody.Part,

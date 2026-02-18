@@ -1,0 +1,11 @@
+﻿sku,barcode,name,category_id,from_location_id,to_location_id,quantity
+SKU-TR-001,BC-TR-001,Producto Tr1,1,1,2,3
+SKU-TR-002,BC-TR-002,Producto Tr2,1,1,1,3
+SKU-TR-003,BC-TR-003,Producto Tr3,1,1,2,0
+SKU-TR-004,BC-TR-004,Producto Tr4,1,1,2,-2
+SKU-TR-005,,Producto Tr5,1,1,2,2
+,BC-TR-006,Producto Tr6,1,1,2,2
+SKU-TR-007,BC-TR-007,Producto Tr7,abc,1,2,2
+SKU-TR-008,BC-TR-008,Producto Tr8,1,9999,2,2
+SKU-TR-009,BC-TR-009,Producto Tr9,1,1,9999,2
+SKU-TR-REVIEW-1,BC-TR-REVIEW-1,,1,1,2,2

@@ -1,10 +1,11 @@
-package com.example.inventoryapp.ui.imports
+﻿package com.example.inventoryapp.ui.imports
 
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -13,10 +14,9 @@ import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.model.ImportReviewItemDto
 import com.example.inventoryapp.databinding.FragmentImportReviewsBinding
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
-import com.example.inventoryapp.ui.common.UiNotifier
+import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.gson.GsonBuilder
-import androidx.core.content.ContextCompat
 import kotlinx.coroutines.launch
 
 class ImportReviewsFragment : Fragment(R.layout.fragment_import_reviews) {
@@ -45,14 +45,14 @@ class ImportReviewsFragment : Fragment(R.layout.fragment_import_reviews) {
             try {
                 val res = NetworkModule.api.listImportReviews()
                 if (!res.isSuccessful || res.body() == null) {
-                    UiNotifier.show(requireActivity(), ApiErrorFormatter.format(res.code()))
+                    showError(ApiErrorFormatter.format(res.code()))
                     return@launch
                 }
                 val body = res.body()!!
                 binding.tvReviewsInfo.text = "${body.total} revisiones"
                 adapter.submit(body.items)
             } catch (e: Exception) {
-                UiNotifier.show(requireActivity(), "Error: ${e.message}")
+                showError(e.message ?: "Error de importacion")
             }
         }
     }
@@ -72,14 +72,14 @@ class ImportReviewsFragment : Fragment(R.layout.fragment_import_reviews) {
         val btnApprove = sheet.findViewById<View>(R.id.btnApprove)
         val btnReject = sheet.findViewById<View>(R.id.btnReject)
 
-        tvTitle.text = "Review #${review.id} · Fila ${review.row_number}"
+        tvTitle.text = "Review #${review.id} - Fila ${review.row_number}"
         tvReason.text = review.reason
 
         layoutFields.removeAllViews()
         addField(layoutFields, "SKU", review.payload["sku"])
         addField(layoutFields, "Barcode", review.payload["barcode"])
         addField(layoutFields, "Nombre", review.payload["name"])
-        addField(layoutFields, "Categoría", review.payload["category_id"])
+        addField(layoutFields, "Categoria", review.payload["category_id"])
         addField(layoutFields, "Location", review.payload["location_id"])
         addField(layoutFields, "Tipo", review.payload["type"])
         addField(layoutFields, "Cantidad", review.payload["quantity"])
@@ -101,14 +101,19 @@ class ImportReviewsFragment : Fragment(R.layout.fragment_import_reviews) {
                 try {
                     val res = NetworkModule.api.approveImportReview(review.id)
                     if (!res.isSuccessful) {
-                        UiNotifier.show(requireActivity(), ApiErrorFormatter.format(res.code()))
+                        showError(ApiErrorFormatter.format(res.code()))
                         return@launch
                     }
-                    UiNotifier.show(requireActivity(), "Review aprobada")
+                    CreateUiFeedback.showStatusPopup(
+                        activity = requireActivity(),
+                        title = "Review aprobada",
+                        details = "Review aprobada",
+                        animationRes = R.raw.correct_create
+                    )
                     dialog.dismiss()
                     loadReviews()
                 } catch (e: Exception) {
-                    UiNotifier.show(requireActivity(), "Error: ${e.message}")
+                    showError(e.message ?: "Error de importacion")
                 }
             }
         }
@@ -118,19 +123,34 @@ class ImportReviewsFragment : Fragment(R.layout.fragment_import_reviews) {
                 try {
                     val res = NetworkModule.api.rejectImportReview(review.id)
                     if (!res.isSuccessful) {
-                        UiNotifier.show(requireActivity(), ApiErrorFormatter.format(res.code()))
+                        showError(ApiErrorFormatter.format(res.code()))
                         return@launch
                     }
-                    UiNotifier.show(requireActivity(), "Review rechazada")
+                    CreateUiFeedback.showErrorPopup(
+                        activity = requireActivity(),
+                        title = "Review rechazada",
+                        details = "Review rechazada",
+                        animationRes = R.raw.wrong
+                    )
                     dialog.dismiss()
                     loadReviews()
                 } catch (e: Exception) {
-                    UiNotifier.show(requireActivity(), "Error: ${e.message}")
+                    showError(e.message ?: "Error de importacion")
                 }
             }
         }
 
         dialog.show()
+    }
+
+    private fun showError(details: String) {
+        val isNotFound = details.lowercase().contains("no encontrado")
+        CreateUiFeedback.showErrorPopup(
+            activity = requireActivity(),
+            title = if (isNotFound) "No encontrado" else "Error de importacion",
+            details = details,
+            animationRes = if (isNotFound) R.raw.notfound else R.raw.error
+        )
     }
 
     private fun addField(container: ViewGroup, label: String, value: Any?) {
@@ -152,7 +172,7 @@ class ImportReviewsFragment : Fragment(R.layout.fragment_import_reviews) {
             val sku = map["sku"]?.toString() ?: "-"
             val barcode = map["barcode"]?.toString() ?: "-"
             val sim = map["similarity"]?.toString() ?: "-"
-            "$name · $sku · $barcode · sim=$sim"
+            "$name | $sku | $barcode | sim=$sim"
         }
         return lines.joinToString("\n")
     }

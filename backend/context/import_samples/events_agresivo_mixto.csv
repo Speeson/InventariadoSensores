@@ -1,0 +1,13 @@
+﻿type,sku,barcode,name,category_id,location_id,quantity
+IN,SKU-STR-001,BC-STR-001,Sensor Alpha,1,1,10
+OUT,SKU-STR-001,BC-STR-001,Sensor Alpha,1,1,3
+ADJUST,SKU-STR-001,BC-STR-001,Sensor Alpha,1,1,-2
+BADTYPE,SKU-STR-002,BC-STR-002,Sensor Beta,1,1,5
+IN,,BC-STR-003,Sensor Gamma,1,1,4
+IN,SKU-STR-004,,Sensor Delta,1,1,4
+IN,SKU-STR-005,BC-STR-005,Sensor Epsilon,abc,1,4
+IN,SKU-STR-006,BC-STR-006,Sensor Zeta,1,1,0
+ADJUST,SKU-STR-007,BC-STR-007,Sensor Eta,1,1,0
+IN,SKU-STR-008,BC-STR-008,Sensor Theta,9999,1,4
+IN,SKU-STR-009,BC-STR-009,Sensor Iota,1,9999,4
+IN,SKU-STR-REVIEW-1,BC-STR-REVIEW-1,,1,1,2
