@@ -269,7 +269,8 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
         binding.tvErrorsEmpty.visibility = View.GONE
         val from = currentOffset.coerceAtMost((total - 1).coerceAtLeast(0))
         val to = (from + pageSize).coerceAtMost(total)
-        val pageItems = allErrorRows.subList(from, to)
+        // Use a snapshot list to avoid invalidating adapter data when allErrorRows mutates.
+        val pageItems = allErrorRows.subList(from, to).toList()
         errorAdapter.submit(pageItems)
 
         binding.tvErrorsPageInfo.text = "Mostrando $to/$total"

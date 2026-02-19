@@ -194,7 +194,7 @@ class ImportReviewsFragment : Fragment(R.layout.fragment_import_reviews) {
 
         val from = currentOffset.coerceAtMost((total - 1).coerceAtLeast(0))
         val to = (from + pageSize).coerceAtMost(total)
-        adapter.submit(allReviews.subList(from, to))
+        adapter.submit(allReviews.subList(from, to).toList())
 
         binding.tvReviewsInfo.text = "Mostrando $to/$total revisiones"
         binding.btnPrevReviews.isEnabled = from > 0
