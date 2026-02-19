@@ -247,6 +247,24 @@ Objetivo: guion unico para defensa, mostrando que se implemento, como se demuest
      - `docker compose -f backend/docker-compose.yml logs beat > backend/test-reports/beat-demo.log`
      - `docker compose -f backend/docker-compose.yml logs worker > backend/test-reports/worker-demo.log`
   6. Nota logs: por defecto se emiten a `stdout/stderr` de los contenedores y se consultan con `docker compose logs`; no se guardan en el repo salvo que los exportes manualmente.
+  
+
+  $loginBody = "email=admin@example.com&password=Pass123!"
+$token = (Invoke-RestMethod -Method Post -Uri "http://localhost:8000/auth/login" -ContentType "application/x-www-form-urlencoded" -Body $loginBody).access_token
+
+$auth = @{ Authorization = "Bearer $token" }
+
+$body = @{
+  event_type      = "SENSOR_IN"
+  product_id      = 1
+  delta           = 3
+  source          = "sensor_simulado"
+  location        = "Oficina Central"
+  idempotency_key = "demo-" + [guid]::NewGuid().ToString()
+} | ConvertTo-Json
+
+Invoke-RestMethod -Method Post -Headers $auth -Uri "http://localhost:8000/events/" -ContentType "application/json" -Body $body
+
 
 ### Android stack base (Kotlin, Retrofit, Room, MVVM, WorkManager, FCM)
 - Explicacion: arquitectura y librerias para networking, persistencia local, estado UI y jobs diferidos.

@@ -43,3 +43,4 @@
 10. Forecast básico de consumo y rotación
    - Funcionalidad: proyección simple por histórico (consumo semanal/mensual) y sugerencia de umbrales.
    - Valor: pasar de gestión reactiva a planificación proactiva.
+sss
