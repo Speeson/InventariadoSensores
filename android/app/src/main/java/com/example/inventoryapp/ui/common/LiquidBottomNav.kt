@@ -21,6 +21,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.ListView
 import android.widget.TextView
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
@@ -188,15 +189,21 @@ object LiquidBottomNav {
     }
 
     private fun ensureBottomSpace(contentRoot: View, nav: View) {
-        val initial = (contentRoot.getTag(R.id.tag_liquid_nav_original_padding_bottom) as? Int)
-            ?: contentRoot.paddingBottom.also {
-                contentRoot.setTag(R.id.tag_liquid_nav_original_padding_bottom, it)
+        val target = if (contentRoot is DrawerLayout && contentRoot.childCount > 0) {
+            contentRoot.getChildAt(0)
+        } else {
+            contentRoot
+        }
+
+        val initial = (target.getTag(R.id.tag_liquid_nav_original_padding_bottom) as? Int)
+            ?: target.paddingBottom.also {
+                target.setTag(R.id.tag_liquid_nav_original_padding_bottom, it)
             }
 
         val extra = nav.height + dp(nav, 8)
         val targetBottom = initial + extra
-        if (contentRoot.paddingBottom < targetBottom) {
-            contentRoot.updatePadding(bottom = targetBottom)
+        if (target.paddingBottom < targetBottom) {
+            target.updatePadding(bottom = targetBottom)
         }
     }
 
