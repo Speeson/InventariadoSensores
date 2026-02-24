@@ -6,6 +6,9 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.net.Uri
+import android.os.Bundle
+import android.provider.Settings
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.Gravity
@@ -21,6 +24,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.ListView
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
@@ -30,8 +34,10 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.updatePadding
+import androidx.fragment.app.Fragment
 import com.example.inventoryapp.R
 import com.example.inventoryapp.ui.audit.AuditActivity
 import com.example.inventoryapp.ui.categories.CategoriesActivity
@@ -69,6 +75,8 @@ object LiquidBottomNav {
     private const val ACTION_MANUAL = "manual"
     private const val ACTION_SCAN = "scan"
     private const val ACTION_PROFILE = "profile"
+    private const val CAMERA_PERMISSION_FRAGMENT_TAG = "liquid_camera_permission_fragment"
+    private var cameraPermissionDeniedCount = 0
 
     private val excluded = setOf(
         "com.example.inventoryapp.ui.auth.LoginActivity",
@@ -352,11 +360,18 @@ object LiquidBottomNav {
         }
         view.findViewById<Button>(R.id.btnScanPopupOpen).setOnClickListener {
             dialog.dismiss()
-            if (!hasCameraPermission(activity)) {
-                showScanCancelWarning(activity)
-                return@setOnClickListener
-            }
-            showQuickScanCameraPopup(activity)
+            requestCameraPermission(
+                activity = activity,
+                onGranted = {
+                    resetCameraDeniedCount()
+                    showQuickScanCameraPopup(activity)
+                },
+                onDenied = { _ ->
+                    val deniedCount = incrementCameraDeniedCount()
+                    val showSettings = deniedCount >= 2
+                    showScanCancelWarning(activity, showSettings)
+                }
+            )
         }
         dialog.setOnDismissListener { onDismiss?.invoke() }
         styleDialog(dialog)
@@ -434,11 +449,72 @@ object LiquidBottomNav {
         return ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
     }
 
-    private fun showScanCancelWarning(activity: AppCompatActivity) {
+    private fun requestCameraPermission(
+        activity: AppCompatActivity,
+        onGranted: () -> Unit,
+        onDenied: (permanentlyDenied: Boolean) -> Unit,
+    ) {
+        if (hasCameraPermission(activity)) {
+            onGranted()
+            return
+        }
+        val fm = activity.supportFragmentManager
+        val existing = fm.findFragmentByTag(CAMERA_PERMISSION_FRAGMENT_TAG)
+        if (existing != null) {
+            fm.beginTransaction().remove(existing).commitAllowingStateLoss()
+            fm.executePendingTransactions()
+        }
+
+        if (fm.isStateSaved) {
+            val permanentlyDenied = !ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.CAMERA)
+            onDenied(permanentlyDenied)
+            return
+        }
+
+        val fragment = CameraPermissionRequestFragment().apply {
+            setCallbacks(onGranted, onDenied)
+        }
+        fm.beginTransaction()
+            .add(fragment, CAMERA_PERMISSION_FRAGMENT_TAG)
+            .commitNow()
+    }
+
+    private fun showScanCancelWarning(activity: AppCompatActivity, permanentlyDenied: Boolean = false) {
         val view = LayoutInflater.from(activity).inflate(R.layout.dialog_liquid_scan_warning, null)
         val dialog = AlertDialog.Builder(activity).setView(view).create()
-        view.findViewById<Button>(R.id.btnScanWarnClose).setOnClickListener { dialog.dismiss() }
+        val messageView = view.findViewById<TextView>(R.id.tvScanWarnMessage)
+        val closeButton = view.findViewById<Button>(R.id.btnScanWarnClose)
+
+        if (permanentlyDenied) {
+            messageView.text = "El permiso de camara esta desactivado. Activalo en Ajustes para escanear codigos."
+            closeButton.text = "Abrir ajustes"
+            closeButton.setOnClickListener {
+                openAppSettings(activity)
+                dialog.dismiss()
+            }
+        } else {
+            messageView.text = "Es necesario otorgar permiso de camara para escanear codigos."
+            closeButton.text = "Entendido"
+            closeButton.setOnClickListener { dialog.dismiss() }
+        }
+
         styleDialog(dialog)
+    }
+
+    private fun openAppSettings(activity: AppCompatActivity) {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.fromParts("package", activity.packageName, null)
+        }
+        activity.startActivity(intent)
+    }
+
+    private fun incrementCameraDeniedCount(): Int {
+        cameraPermissionDeniedCount += 1
+        return cameraPermissionDeniedCount
+    }
+
+    private fun resetCameraDeniedCount() {
+        cameraPermissionDeniedCount = 0
     }
 
     private fun showProfilePopup(activity: AppCompatActivity, nav: View) {
@@ -526,5 +602,54 @@ object LiquidBottomNav {
 
     private fun dp(view: View, value: Int): Int {
         return (value * view.resources.displayMetrics.density).toInt()
+    }
+}
+
+class CameraPermissionRequestFragment : Fragment() {
+
+    private var onGranted: (() -> Unit)? = null
+    private var onDenied: ((Boolean) -> Unit)? = null
+    private var requested = false
+
+    private val permissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            onGranted?.invoke()
+        } else {
+            val permanentlyDenied = !shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)
+            onDenied?.invoke(permanentlyDenied)
+        }
+        removeSelf()
+    }
+
+    fun setCallbacks(onGranted: () -> Unit, onDenied: (Boolean) -> Unit) {
+        this.onGranted = onGranted
+        this.onDenied = onDenied
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (requested) return
+        requested = true
+
+        val granted = ContextCompat.checkSelfPermission(
+            requireContext(),
+            Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+        if (granted) {
+            onGranted?.invoke()
+            removeSelf()
+            return
+        }
+        permissionLauncher.launch(Manifest.permission.CAMERA)
+    }
+
+    private fun removeSelf() {
+        if (isAdded) {
+            parentFragmentManager.beginTransaction()
+                .remove(this)
+                .commitAllowingStateLoss()
+        }
     }
 }
