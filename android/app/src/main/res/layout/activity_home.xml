@@ -132,13 +132,14 @@
                         android:foreground="?attr/selectableItemBackground"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="0dp"
-                        android:background="@drawable/bg_liquid_card_glass"
-                        app:cardBackgroundColor="#99FFFFFF">
+                        android:background="@drawable/bg_liquid_nav"
+                        app:cardBackgroundColor="#00000000">
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:orientation="vertical"
-                            android:gravity="center">
+                            android:gravity="center"
+                            android:background="@drawable/bg_liquid_nav">
                             <ImageView
                                 android:id="@+id/ivScanIcon"
                                 android:layout_width="48dp"
@@ -166,13 +167,14 @@
                         android:foreground="?attr/selectableItemBackground"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="0dp"
-                        android:background="@drawable/bg_liquid_card_glass"
-                        app:cardBackgroundColor="#99FFFFFF">
+                        android:background="@drawable/bg_liquid_nav"
+                        app:cardBackgroundColor="#00000000">
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:orientation="vertical"
-                            android:gravity="center">
+                            android:gravity="center"
+                            android:background="@drawable/bg_liquid_nav">
                             <ImageView
                                 android:id="@+id/ivEventsIcon"
                                 android:layout_width="48dp"
@@ -200,13 +202,14 @@
                         android:foreground="?attr/selectableItemBackground"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="0dp"
-                        android:background="@drawable/bg_liquid_card_glass"
-                        app:cardBackgroundColor="#99FFFFFF">
+                        android:background="@drawable/bg_liquid_nav"
+                        app:cardBackgroundColor="#00000000">
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:orientation="vertical"
-                            android:gravity="center">
+                            android:gravity="center"
+                            android:background="@drawable/bg_liquid_nav">
                             <ImageView
                                 android:id="@+id/ivProductsIcon"
                                 android:layout_width="48dp"
@@ -234,13 +237,14 @@
                         android:foreground="?attr/selectableItemBackground"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="0dp"
-                        android:background="@drawable/bg_liquid_card_glass"
-                        app:cardBackgroundColor="#99FFFFFF">
+                        android:background="@drawable/bg_liquid_nav"
+                        app:cardBackgroundColor="#00000000">
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:orientation="vertical"
-                            android:gravity="center">
+                            android:gravity="center"
+                            android:background="@drawable/bg_liquid_nav">
                             <ImageView
                                 android:id="@+id/ivStockIcon"
                                 android:layout_width="48dp"
@@ -268,13 +272,14 @@
                         android:foreground="?attr/selectableItemBackground"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="0dp"
-                        android:background="@drawable/bg_liquid_card_glass"
-                        app:cardBackgroundColor="#99FFFFFF">
+                        android:background="@drawable/bg_liquid_nav"
+                        app:cardBackgroundColor="#00000000">
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:orientation="vertical"
-                            android:gravity="center">
+                            android:gravity="center"
+                            android:background="@drawable/bg_liquid_nav">
                             <ImageView
                                 android:id="@+id/ivMovementsIcon"
                                 android:layout_width="48dp"
@@ -302,13 +307,14 @@
                         android:foreground="?attr/selectableItemBackground"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="0dp"
-                        android:background="@drawable/bg_liquid_card_glass"
-                        app:cardBackgroundColor="#99FFFFFF">
+                        android:background="@drawable/bg_liquid_nav"
+                        app:cardBackgroundColor="#00000000">
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:orientation="vertical"
-                            android:gravity="center">
+                            android:gravity="center"
+                            android:background="@drawable/bg_liquid_nav">
                             <ImageView
                                 android:id="@+id/ivCategoriesIcon"
                                 android:layout_width="48dp"
@@ -337,13 +343,14 @@
                         android:foreground="?attr/selectableItemBackground"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="0dp"
-                        android:background="@drawable/bg_liquid_card_glass"
-                        app:cardBackgroundColor="#99FFFFFF">
+                        android:background="@drawable/bg_liquid_nav"
+                        app:cardBackgroundColor="#00000000">
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:orientation="vertical"
-                            android:gravity="center">
+                            android:gravity="center"
+                            android:background="@drawable/bg_liquid_nav">
                             <ImageView
                                 android:id="@+id/ivRotationIcon"
                                 android:layout_width="48dp"
@@ -372,13 +379,14 @@
                         android:foreground="?attr/selectableItemBackground"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="0dp"
-                        android:background="@drawable/bg_liquid_card_glass"
-                        app:cardBackgroundColor="#99FFFFFF">
+                        android:background="@drawable/bg_liquid_nav"
+                        app:cardBackgroundColor="#00000000">
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:orientation="vertical"
-                            android:gravity="center">
+                            android:gravity="center"
+                            android:background="@drawable/bg_liquid_nav">
                             <ImageView
                                 android:id="@+id/ivReportsIcon"
                                 android:layout_width="48dp"
@@ -407,13 +415,14 @@
                         android:foreground="?attr/selectableItemBackground"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="0dp"
-                        android:background="@drawable/bg_liquid_card_glass"
-                        app:cardBackgroundColor="#99FFFFFF">
+                        android:background="@drawable/bg_liquid_nav"
+                        app:cardBackgroundColor="#00000000">
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:orientation="vertical"
                             android:gravity="center"
+                            android:background="@drawable/bg_liquid_nav"
                             android:padding="12dp">
                             <ImageView
                                 android:id="@+id/ivThresholdsIcon"
@@ -444,13 +453,14 @@
                         android:foreground="?attr/selectableItemBackground"
                         app:cardCornerRadius="16dp"
                         app:cardElevation="0dp"
-                        android:background="@drawable/bg_liquid_card_glass"
-                        app:cardBackgroundColor="#99FFFFFF">
+                        android:background="@drawable/bg_liquid_nav"
+                        app:cardBackgroundColor="#00000000">
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:orientation="vertical"
-                            android:gravity="center">
+                            android:gravity="center"
+                            android:background="@drawable/bg_liquid_nav">
                             <ImageView
                                 android:id="@+id/ivImportsIcon"
                                 android:layout_width="48dp"
@@ -504,6 +514,8 @@
     </LinearLayout>
 
 </androidx.drawerlayout.widget.DrawerLayout>
+
+
 
 
 

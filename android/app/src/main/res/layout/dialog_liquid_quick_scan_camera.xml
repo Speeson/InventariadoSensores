@@ -17,7 +17,7 @@
             android:layout_height="wrap_content"
             android:gravity="center_horizontal"
             android:text="Escaneo rapido"
-            android:textColor="@android:color/white"
+            android:textColor="@color/liquid_popup_title"
             android:textSize="20sp"
             android:textStyle="bold" />
 
@@ -110,6 +110,7 @@
         android:layout_marginTop="10dp"
         android:gravity="center"
         android:text="Apunta al codigo dentro del recuadro"
-        android:textColor="#E6F0FF"
+        android:textColor="@color/liquid_popup_body"
         android:textSize="14sp" />
 </LinearLayout>
+

@@ -17,7 +17,7 @@
             android:layout_height="wrap_content"
             android:gravity="center_horizontal"
             android:text="Busqueda"
-            android:textColor="@android:color/white"
+            android:textColor="@color/liquid_popup_title"
             android:textSize="20sp"
             android:textStyle="bold" />
 
@@ -47,8 +47,8 @@
         android:maxLines="1"
         android:paddingLeft="12dp"
         android:paddingRight="12dp"
-        android:textColor="@android:color/white"
-        android:textColorHint="#4A678A" />
+        android:textColor="@color/liquid_popup_text"
+        android:textColorHint="@color/liquid_popup_hint" />
 
     <ListView
         android:id="@+id/lvQuickNav"
@@ -56,5 +56,6 @@
         android:layout_height="448dp"
         android:layout_marginTop="10dp"
         android:background="@drawable/bg_liquid_input"
+        android:divider="@color/liquid_popup_divider"
         android:dividerHeight="1dp" />
 </LinearLayout>

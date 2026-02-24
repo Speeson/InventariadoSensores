@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="liquid_popup_title">#EAF2FF</color>
+    <color name="liquid_popup_body">#C8D7EE</color>
+    <color name="liquid_popup_text">#EAF2FF</color>
+    <color name="liquid_popup_hint">#8EA4C3</color>
+    <color name="liquid_popup_button_text">#EAF2FF</color>
+    <color name="liquid_popup_list_text">#EAF2FF</color>
+    <color name="liquid_popup_divider">#558AA3C7</color>
+</resources>

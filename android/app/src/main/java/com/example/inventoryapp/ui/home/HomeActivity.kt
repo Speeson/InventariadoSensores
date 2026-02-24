@@ -55,6 +55,7 @@ class HomeActivity : AppCompatActivity() {
     private var currentRole: String? = null
     private val prefs by lazy { getSharedPreferences("ui_prefs", MODE_PRIVATE) }
     private var gradientIconCache: MutableMap<Int, Bitmap> = mutableMapOf()
+    private var neonIconCache: MutableMap<String, Bitmap> = mutableMapOf()
     private var offlineNoticeShown = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -71,7 +72,7 @@ class HomeActivity : AppCompatActivity() {
             if (isDark) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
         )
 
-        // Ã¢Å“â€¦ Si no hay token, fuera
+        // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Si no hay token, fuera
         if (session.getToken().isNullOrBlank()) {
             goToLogin()
             return
@@ -79,7 +80,7 @@ class HomeActivity : AppCompatActivity() {
         if (session.isTokenExpired() && !NetworkModule.isManualOffline()) {
             session.clearToken()
             clearCachedRole()
-            UiNotifier.showBlockingTimed(this@HomeActivity, "SesiÃƒÂ³n caducada. Inicia sesiÃƒÂ³n.", R.drawable.expired)
+            UiNotifier.showBlockingTimed(this@HomeActivity, "SesiÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n caducada. Inicia sesiÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n.", R.drawable.expired)
             goToLogin()
             return
         }
@@ -94,11 +95,11 @@ class HomeActivity : AppCompatActivity() {
             true
         }
 
-        // Pop-up bienvenida si venÃƒÂ­as de registro
+        // Pop-up bienvenida si venÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­as de registro
         intent.getStringExtra("welcome_email")?.takeIf { it.isNotBlank() }?.let { email ->
             AlertDialog.Builder(this)
                 .setTitle("Bienvenido")
-                .setMessage("Ã‚Â¡Bienvenido, $email!")
+                .setMessage("ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡Bienvenido, $email!")
                 .setPositiveButton("OK", null)
                 .show()
         }
@@ -310,7 +311,7 @@ class HomeActivity : AppCompatActivity() {
 
         AlertDialog.Builder(this)
             .setTitle("Configurar servidor")
-            .setMessage("Se guardarÃƒÂ¡ solo en este dispositivo.")
+            .setMessage("Se guardarÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ solo en este dispositivo.")
             .setView(input)
             .setNegativeButton("Cancelar", null)
             .setNeutralButton("Limpiar") { _, _ ->
@@ -347,7 +348,7 @@ class HomeActivity : AppCompatActivity() {
                 } else if (res.code() != 401) {
                     AlertDialog.Builder(this@HomeActivity)
                         .setTitle("Mi perfil")
-                        .setMessage("Error ${res.code()} Ã¢ÂÅ’")
+                        .setMessage("Error ${res.code()} ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢")
                         .setPositiveButton("OK", null)
                         .show()
                 }
@@ -529,14 +530,14 @@ class HomeActivity : AppCompatActivity() {
             label.setTextColor(Color.DKGRAY)
             icon.setImageResource(R.drawable.ic_lock)
             icon.setColorFilter(Color.parseColor("#9E9E9E"))
-            card.setCardBackgroundColor(Color.parseColor("#E0E0E0"))
-            card.alpha = 0.75f
+            card.setCardBackgroundColor(Color.parseColor("#00000000"))
+            card.alpha = 1.0f
         } else {
             label.text = label.tag as String
             label.setTextColor(Color.parseColor("#111111"))
-            icon.setImageBitmap(getGradientBitmap(originalIconRes))
+            setNeonImage(icon, originalIconRes)
             icon.clearColorFilter()
-            card.setCardBackgroundColor(Color.parseColor("#99FFFFFF"))
+            card.setCardBackgroundColor(Color.parseColor("#00000000"))
             card.alpha = 1.0f
         }
     }
@@ -545,7 +546,7 @@ class HomeActivity : AppCompatActivity() {
         UiNotifier.showBlocking(
             this,
             "Permisos insuficientes",
-            "Esta funcionalidad estÃ¡ disponible solo para admin/manager.",
+            "Esta funcionalidad estÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ disponible solo para admin/manager.",
             R.drawable.ic_lock
         )
     }
@@ -695,22 +696,22 @@ private fun confirmLogout() {
         setGradientImage(binding.btnAlertsQuick, R.drawable.ic_bell)
         setGradientImage(binding.btnMenu, R.drawable.menu)
         binding.root.findViewById<ImageView>(R.id.ivScanIcon)
-            ?.let { setGradientImage(it, R.drawable.scaner) }
+            ?.let { setNeonImage(it, R.drawable.scaner) }
         binding.root.findViewById<ImageView>(R.id.ivEventsIcon)
-            ?.let { setGradientImage(it, R.drawable.events) }
+            ?.let { setNeonImage(it, R.drawable.events) }
         binding.root.findViewById<ImageView>(R.id.ivProductsIcon)
-            ?.let { setGradientImage(it, R.drawable.products) }
+            ?.let { setNeonImage(it, R.drawable.products) }
         binding.root.findViewById<ImageView>(R.id.ivStockIcon)
-            ?.let { setGradientImage(it, R.drawable.stock) }
+            ?.let { setNeonImage(it, R.drawable.stock) }
         binding.root.findViewById<ImageView>(R.id.ivMovementsIcon)
-            ?.let { setGradientImage(it, R.drawable.movements) }
+            ?.let { setNeonImage(it, R.drawable.movements) }
 
         // Restricted icons handled in setRestrictedCardState when needed
-        setGradientImage(binding.ivCategoriesIcon, R.drawable.category)
-        setGradientImage(binding.ivRotationIcon, R.drawable.rotation)
-        setGradientImage(binding.ivReportsIcon, R.drawable.reports)
-        setGradientImage(binding.ivThresholdsIcon, R.drawable.umbral)
-        setGradientImage(binding.ivImportsIcon, R.drawable.addfile)
+        setNeonImage(binding.ivCategoriesIcon, R.drawable.category)
+        setNeonImage(binding.ivRotationIcon, R.drawable.rotation)
+        setNeonImage(binding.ivReportsIcon, R.drawable.reports)
+        setNeonImage(binding.ivThresholdsIcon, R.drawable.umbral)
+        setNeonImage(binding.ivImportsIcon, R.drawable.addfile)
 
         applyGradientToMenu(binding.navViewMain)
         applyGradientToMenu(binding.navViewBottom)
@@ -772,6 +773,67 @@ private fun confirmLogout() {
         view.setImageBitmap(getGradientBitmapFromDrawable(drawable))
     }
 
+    private fun setNeonImage(view: ImageView, resId: Int) {
+        view.setImageBitmap(getNeonBitmap(resId))
+    }
+
+    private fun getNeonBitmap(resId: Int): Bitmap {
+        val (c1, c2) = neonColorsFor(resId)
+        val key = "$resId:$c1:$c2"
+        neonIconCache[key]?.let { return it }
+
+        val src = BitmapFactory.decodeResource(resources, resId)
+        if (src == null) {
+            val d = ContextCompat.getDrawable(this, resId)
+            if (d != null) return getGradientBitmapFromDrawable(d)
+            return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        }
+
+        val out = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(out)
+        val shader = LinearGradient(
+            0f,
+            0f,
+            src.width.toFloat(),
+            src.height.toFloat(),
+            intArrayOf(c1, c2),
+            floatArrayOf(0f, 1f),
+            Shader.TileMode.CLAMP
+        )
+        val glow = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            this.shader = shader
+            alpha = 255
+        }
+        canvas.drawRect(0f, 0f, src.width.toFloat(), src.height.toFloat(), glow)
+
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.shader = shader }
+        paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
+        canvas.drawBitmap(src, 0f, 0f, paint)
+        paint.xfermode = null
+
+        neonIconCache[key] = out
+        return out
+    }
+
+    private fun neonColorsFor(resId: Int): Pair<Int, Int> {
+        return when (resId) {
+            R.drawable.scaner -> Pair(Color.parseColor("#00FF3B"), Color.parseColor("#A6FF00"))
+            R.drawable.products -> Pair(Color.parseColor("#FF0033"), Color.parseColor("#FF5F7E"))
+            R.drawable.events -> Pair(Color.parseColor("#FFE600"), Color.parseColor("#FFF59D"))
+            R.drawable.stock -> Pair(Color.parseColor("#00FF8A"), Color.parseColor("#6CFFB8"))
+            R.drawable.movements -> Pair(Color.parseColor("#00F0FF"), Color.parseColor("#A2F9FF"))
+            R.drawable.category -> Pair(Color.parseColor("#E100FF"), Color.parseColor("#F6A7FF"))
+            R.drawable.rotation -> Pair(Color.parseColor("#FF7A00"), Color.parseColor("#FFBE7A"))
+            R.drawable.reports -> Pair(Color.parseColor("#0080FF"), Color.parseColor("#8CC7FF"))
+            R.drawable.umbral -> Pair(Color.parseColor("#FF2E73"), Color.parseColor("#FF92B8"))
+            R.drawable.addfile -> Pair(Color.parseColor("#7A2BFF"), Color.parseColor("#C0A0FF"))
+            else -> Pair(
+                ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_start),
+                ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_end)
+            )
+        }
+    }
+
     private fun getGradientBitmapFromDrawable(drawable: android.graphics.drawable.Drawable): Bitmap {
         val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 64
         val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 64
@@ -804,6 +866,8 @@ private fun confirmLogout() {
         return out
     }
 }
+
+
 
 
 

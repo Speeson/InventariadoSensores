@@ -20,6 +20,7 @@ import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.ListView
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
@@ -262,7 +263,15 @@ object LiquidBottomNav {
         val list = dialogView.findViewById<ListView>(R.id.lvQuickNav)
 
         val labels = quickTargets.map { it.label }
-        val adapter = ArrayAdapter(activity, android.R.layout.simple_list_item_1, labels.toMutableList())
+        val adapter = object : ArrayAdapter<String>(activity, android.R.layout.simple_list_item_1, labels.toMutableList()) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val view = super.getView(position, convertView, parent)
+                (view.findViewById<TextView>(android.R.id.text1))?.setTextColor(
+                    ContextCompat.getColor(activity, R.color.liquid_popup_list_text)
+                )
+                return view
+            }
+        }
         list.adapter = adapter
 
         val dialog = AlertDialog.Builder(activity)

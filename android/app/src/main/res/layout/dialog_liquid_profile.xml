@@ -48,7 +48,7 @@
         android:layout_marginTop="12dp"
         android:gravity="center"
         android:text="Perfil"
-        android:textColor="@android:color/white"
+        android:textColor="@color/liquid_popup_title"
         android:textSize="20sp"
         android:textStyle="bold" />
 
@@ -56,7 +56,7 @@
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginTop="12dp"
-        android:background="#CDE2F9" />
+        android:background="@color/liquid_popup_divider" />
 
     <TextView
         android:layout_width="match_parent"
@@ -64,6 +64,8 @@
         android:layout_marginTop="12dp"
         android:gravity="center"
         android:text="Pantalla de perfil pendiente de implementar"
-        android:textColor="#E6F0FF"
+        android:textColor="@color/liquid_popup_body"
         android:textSize="15sp" />
 </LinearLayout>
+
+

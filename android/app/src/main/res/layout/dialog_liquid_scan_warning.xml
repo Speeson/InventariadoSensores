@@ -23,7 +23,7 @@
         android:layout_marginTop="10dp"
         android:gravity="center"
         android:text="Es necesario acceder a la camara para escanear codigos."
-        android:textColor="@android:color/white"
+        android:textColor="@color/liquid_popup_title"
         android:textSize="15sp" />
 
     <Button
@@ -36,6 +36,7 @@
         android:backgroundTint="@null"
         android:text="Entendido"
         android:textAllCaps="false"
-        android:textColor="#173D62"
+        android:textColor="@color/liquid_popup_button_text"
         app:backgroundTint="@null" />
 </LinearLayout>
+
