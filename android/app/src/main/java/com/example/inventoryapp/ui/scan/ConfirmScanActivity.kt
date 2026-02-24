@@ -4,6 +4,9 @@ import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 import android.content.Intent
 import android.os.Bundle
 import android.widget.ArrayAdapter
+import android.widget.Button
+import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
@@ -90,7 +93,7 @@ binding.btnBack.setOnClickListener { finish() }
                             ContextCompat.getColor(this@ConfirmScanActivity, android.R.color.holo_red_dark)
                         )
                         productExists = false
-                        snack.showError("Producto no encontrado")
+                        showProductNotFoundWarning(barcode)
                     }
                 } catch (_: Exception) {
                     isOfflineMode = true
@@ -106,7 +109,7 @@ binding.btnBack.setOnClickListener { finish() }
 
         binding.btnConfirm.setOnClickListener {
             if (!productExists && !isOfflineMode) {
-                snack.showError("Producto no encontrado")
+                showProductNotFoundWarning(barcode)
                 return@setOnClickListener
             }
 
@@ -292,5 +295,17 @@ binding.btnBack.setOnClickListener { finish() }
             paint.shader = shader
             binding.tvConfirmTitle.invalidate()
         }
+    }
+
+    private fun showProductNotFoundWarning(barcode: String) {
+        val view = layoutInflater.inflate(R.layout.dialog_liquid_scan_warning, null)
+        val dialog = AlertDialog.Builder(this).setView(view).create()
+        view.findViewById<TextView>(R.id.tvScanWarnMessage).text =
+            "No se ha encontrado un producto con el codigo de barras $barcode."
+        view.findViewById<Button>(R.id.btnScanWarnClose).setOnClickListener { dialog.dismiss() }
+        dialog.show()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        val width = (resources.displayMetrics.widthPixels * 0.9f).toInt()
+        dialog.window?.setLayout(width, android.view.WindowManager.LayoutParams.WRAP_CONTENT)
     }
 }

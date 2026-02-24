@@ -9,9 +9,64 @@
     android:paddingBottom="12dp">
 
     <LinearLayout
+        android:id="@+id/centerExpandPanel"
+        android:layout_width="180dp"
+        android:layout_height="52dp"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="68dp"
+        android:alpha="0"
+        android:background="@drawable/bg_liquid_nav"
+        android:elevation="20dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingLeft="8dp"
+        android:paddingRight="8dp"
+        android:scaleX="0.8"
+        android:translationY="16dp"
+        android:visibility="gone">
+
+        <ImageButton
+            android:id="@+id/btnCenterManualAction"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginLeft="4dp"
+            android:layout_marginRight="4dp"
+            android:background="@drawable/bg_liquid_button"
+            android:contentDescription="Codigo manual"
+            android:padding="9dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/code_manual" />
+
+        <ImageButton
+            android:id="@+id/btnCenterClose"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginLeft="4dp"
+            android:layout_marginRight="4dp"
+            android:background="@drawable/bg_liquid_button"
+            android:contentDescription="Cerrar opciones"
+            android:padding="9dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_close_red" />
+
+        <ImageButton
+            android:id="@+id/btnCenterScanAction"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginLeft="4dp"
+            android:layout_marginRight="4dp"
+            android:background="@drawable/bg_liquid_button"
+            android:contentDescription="Escaner rapido"
+            android:padding="9dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/scaner" />
+    </LinearLayout>
+
+    <LinearLayout
         android:id="@+id/liquidBar"
         android:layout_width="match_parent"
         android:layout_height="64dp"
+        android:layout_gravity="bottom"
         android:background="@drawable/bg_liquid_nav"
         android:elevation="14dp"
         android:gravity="center"
@@ -43,17 +98,18 @@
             android:layout_weight="1"
             android:foregroundGravity="center">
 
-            <ImageButton
-                android:id="@+id/btnLiquidManual"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_gravity="center"
-                android:background="@android:color/transparent"
-                android:contentDescription="Codigo manual"
-                android:padding="9dp"
-                android:scaleType="centerInside"
-                android:src="@drawable/code_manual" />
-        </FrameLayout>
+                <ImageButton
+                    android:id="@+id/btnLiquidTheme"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_gravity="center"
+                    android:background="@android:color/transparent"
+                    android:contentDescription="Busqueda rapida"
+                    android:padding="9dp"
+                    android:scaleType="centerInside"
+                    android:translationX="-3dp"
+                    android:src="@drawable/search" />
+            </FrameLayout>
 
         <FrameLayout
             android:layout_width="0dp"
@@ -71,7 +127,7 @@
                 android:elevation="8dp"
                 android:padding="10dp"
                 android:scaleType="centerInside"
-                android:src="@drawable/scaner" />
+                android:src="@drawable/plus" />
         </FrameLayout>
 
         <FrameLayout
@@ -86,10 +142,11 @@
                 android:layout_height="40dp"
                 android:layout_gravity="center"
                 android:background="@android:color/transparent"
-                android:contentDescription="Busqueda rapida"
+                android:contentDescription="Auditoria"
                 android:padding="9dp"
                 android:scaleType="centerInside"
-                android:src="@drawable/search" />
+                android:translationX="3dp"
+                android:src="@drawable/reports" />
         </FrameLayout>
 
         <FrameLayout
@@ -112,4 +169,3 @@
 
     </LinearLayout>
 </FrameLayout>
-

@@ -2,4 +2,5 @@
 <resources>
     <item name="tag_liquid_nav_original_padding_bottom" type="id" />
     <item name="tag_liquid_nav_attached" type="id" />
+    <item name="liquid_center_dismiss_overlay" type="id" />
 </resources>

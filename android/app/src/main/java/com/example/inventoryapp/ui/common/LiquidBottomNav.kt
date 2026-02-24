@@ -1,4 +1,4 @@
-﻿package com.example.inventoryapp.ui.common
+package com.example.inventoryapp.ui.common
 
 import android.Manifest
 import android.app.Activity
@@ -50,9 +50,9 @@ object LiquidBottomNav {
 
     private enum class NavTab {
         HOME,
-        MANUAL,
-        SCAN,
         SEARCH,
+        SCAN,
+        AUDIT,
         PROFILE,
         NONE,
     }
@@ -74,27 +74,29 @@ object LiquidBottomNav {
     )
 
     private val quickTargets = listOf(
-        SearchTarget("Home", ACTION_HOME, HomeActivity::class.java),
         SearchTarget("Productos", "products", ProductListActivity::class.java),
         SearchTarget("Stock", "stock", StockActivity::class.java),
         SearchTarget("Movimientos", "movements", MovementsMenuActivity::class.java),
         SearchTarget("Eventos", "events", EventsActivity::class.java),
-        SearchTarget("Escanear", ACTION_SCAN),
-        SearchTarget("Manual codigo", ACTION_MANUAL),
         SearchTarget("Categorias", "categories", CategoriesActivity::class.java),
         SearchTarget("Umbrales", "thresholds", ThresholdsActivity::class.java),
         SearchTarget("Importaciones", "imports", ImportsActivity::class.java),
         SearchTarget("Reportes", "reports", ReportsActivity::class.java),
         SearchTarget("Rotacion", "rotation", RotationActivity::class.java),
-        SearchTarget("Auditoria", "audit", AuditActivity::class.java),
-        SearchTarget("Perfil", ACTION_PROFILE),
     )
 
     fun install(activity: AppCompatActivity) {
         if (excluded.contains(activity.javaClass.name)) return
 
         val content = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
-        if (content.findViewById<View>(R.id.liquidBottomNavRoot) != null) return
+        val existingNav = content.findViewById<View>(R.id.liquidBottomNavRoot)
+        if (existingNav != null) {
+            ensureDismissOverlay(activity, content, existingNav)
+            applyIconStyle(existingNav)
+            highlightCurrentTab(activity, existingNav)
+            collapseCenterMenu(existingNav, animate = false)
+            return
+        }
         content.setBackgroundResource(R.drawable.bg_home_gradient)
 
         val originalChild = content.getChildAt(0) ?: return
@@ -104,32 +106,76 @@ object LiquidBottomNav {
             ViewGroup.LayoutParams.WRAP_CONTENT,
             Gravity.BOTTOM,
         )
+        ensureDismissOverlay(activity, content, nav)
         content.addView(nav, params)
 
         bindActions(activity, nav)
         applyIconStyle(nav)
         highlightCurrentTab(activity, nav)
+        setupCenterMenu(activity, nav)
 
         nav.post {
             ensureBottomSpace(originalChild, nav)
         }
     }
 
+    private fun ensureDismissOverlay(activity: AppCompatActivity, content: ViewGroup, nav: View) {
+        val existing = content.findViewById<View>(R.id.liquid_center_dismiss_overlay)
+        if (existing != null) {
+            existing.setOnClickListener {
+                collapseCenterMenu(nav, true)
+                restoreCurrentSelection(activity, nav)
+            }
+            return
+        }
+        val overlay = View(activity).apply {
+            id = R.id.liquid_center_dismiss_overlay
+            visibility = View.GONE
+            isClickable = true
+            isFocusable = false
+            setBackgroundColor(Color.TRANSPARENT)
+            setOnClickListener {
+                collapseCenterMenu(nav, true)
+                restoreCurrentSelection(activity, nav)
+            }
+        }
+        content.addView(
+            overlay,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+    }
+
     private fun bindActions(activity: AppCompatActivity, nav: View) {
         nav.findViewById<ImageButton>(R.id.btnLiquidHome).setOnClickListener {
+            collapseCenterMenu(nav, true)
+            setActiveTab(nav, NavTab.HOME)
             open(activity, HomeActivity::class.java)
         }
-        nav.findViewById<ImageButton>(R.id.btnLiquidManual).setOnClickListener {
-            showManualPopup(activity)
+        nav.findViewById<ImageButton>(R.id.btnLiquidTheme).setOnClickListener {
+            collapseCenterMenu(nav, true)
+            setActiveTab(nav, NavTab.SEARCH)
+            showQuickSearch(activity, nav)
         }
         nav.findViewById<ImageButton>(R.id.btnLiquidScan).setOnClickListener {
-            showScanPopup(activity)
+            if (isCenterMenuExpanded(nav)) {
+                collapseCenterMenu(nav, true)
+                return@setOnClickListener
+            }
+            setActiveTab(nav, NavTab.SCAN)
+            expandCenterMenu(nav)
         }
         nav.findViewById<ImageButton>(R.id.btnLiquidSearch).setOnClickListener {
-            showQuickSearch(activity)
+            collapseCenterMenu(nav, true)
+            setActiveTab(nav, NavTab.AUDIT)
+            open(activity, AuditActivity::class.java)
         }
         nav.findViewById<ImageButton>(R.id.btnLiquidProfile).setOnClickListener {
-            showProfilePopup(activity)
+            collapseCenterMenu(nav, true)
+            setActiveTab(nav, NavTab.PROFILE)
+            showProfilePopup(activity, nav)
         }
     }
 
@@ -155,25 +201,35 @@ object LiquidBottomNav {
 
     private fun applyIconStyle(nav: View) {
         GradientIconUtil.applyGradient(nav.findViewById<ImageButton>(R.id.btnLiquidHome), R.drawable.home)
-        GradientIconUtil.applyGradient(nav.findViewById<ImageButton>(R.id.btnLiquidManual), R.drawable.code_manual)
-        GradientIconUtil.applyGradient(nav.findViewById<ImageButton>(R.id.btnLiquidScan), R.drawable.scaner)
-        GradientIconUtil.applyGradient(nav.findViewById<ImageButton>(R.id.btnLiquidSearch), R.drawable.search)
+        GradientIconUtil.applyGradient(nav.findViewById<ImageButton>(R.id.btnLiquidTheme), R.drawable.search)
+        GradientIconUtil.applyGradient(nav.findViewById<ImageButton>(R.id.btnLiquidScan), R.drawable.plus)
+        GradientIconUtil.applyGradient(nav.findViewById<ImageButton>(R.id.btnLiquidSearch), R.drawable.reports)
         GradientIconUtil.applyGradient(nav.findViewById<ImageButton>(R.id.btnLiquidProfile), R.drawable.user)
     }
 
     private fun highlightCurrentTab(activity: AppCompatActivity, nav: View) {
         val tab = currentTab(activity)
+        setActiveTab(nav, tab)
+    }
+
+    private fun setActiveTab(nav: View, tab: NavTab) {
         setSelected(nav.findViewById(R.id.btnLiquidHome), tab == NavTab.HOME)
-        setSelected(nav.findViewById(R.id.btnLiquidManual), tab == NavTab.MANUAL)
+        setSelected(nav.findViewById(R.id.btnLiquidTheme), tab == NavTab.SEARCH)
         setSelected(nav.findViewById(R.id.btnLiquidScan), tab == NavTab.SCAN)
-        setSelected(nav.findViewById(R.id.btnLiquidSearch), tab == NavTab.SEARCH)
+        setSelected(nav.findViewById(R.id.btnLiquidSearch), tab == NavTab.AUDIT)
         setSelected(nav.findViewById(R.id.btnLiquidProfile), tab == NavTab.PROFILE)
+    }
+
+    private fun clearSelection(nav: View) = setActiveTab(nav, NavTab.NONE)
+    private fun restoreCurrentSelection(activity: AppCompatActivity, nav: View) {
+        setActiveTab(nav, currentTab(activity))
     }
 
     private fun currentTab(activity: AppCompatActivity): NavTab {
         return when (activity) {
             is HomeActivity -> NavTab.HOME
             is ConfirmScanActivity -> NavTab.SCAN
+            is AuditActivity -> NavTab.AUDIT
             else -> NavTab.NONE
         }
     }
@@ -183,18 +239,24 @@ object LiquidBottomNav {
         if (isCenter) {
             button.setBackgroundResource(R.drawable.bg_liquid_center_square)
             button.imageAlpha = if (selected) 255 else 235
+            button.scaleX = if (selected) 1.06f else 1.0f
+            button.scaleY = if (selected) 1.06f else 1.0f
             return
         }
         if (selected) {
             button.setBackgroundResource(R.drawable.bg_liquid_icon_selected)
             button.imageAlpha = 255
+            button.scaleX = 1.04f
+            button.scaleY = 1.04f
         } else {
             button.setBackgroundColor(Color.TRANSPARENT)
             button.imageAlpha = 230
+            button.scaleX = 1.0f
+            button.scaleY = 1.0f
         }
     }
 
-    private fun showQuickSearch(activity: AppCompatActivity) {
+    private fun showQuickSearch(activity: AppCompatActivity, nav: View) {
         val dialogView = LayoutInflater.from(activity).inflate(R.layout.dialog_quick_nav_search, null)
         val input = dialogView.findViewById<EditText>(R.id.etQuickNavSearch)
         val list = dialogView.findViewById<ListView>(R.id.lvQuickNav)
@@ -229,28 +291,30 @@ object LiquidBottomNav {
             override fun afterTextChanged(s: Editable?) = Unit
         })
 
+        dialog.setOnDismissListener { restoreCurrentSelection(activity, nav) }
         styleDialog(dialog)
     }
 
     private fun dispatchTarget(activity: AppCompatActivity, target: SearchTarget) {
+        val nav = activity.findViewById<View>(R.id.liquidBottomNavRoot)
         when (target.action) {
             ACTION_HOME -> open(activity, HomeActivity::class.java)
             ACTION_MANUAL -> showManualPopup(activity)
             ACTION_SCAN -> showScanPopup(activity)
-            ACTION_PROFILE -> showProfilePopup(activity)
+            ACTION_PROFILE -> if (nav != null) showProfilePopup(activity, nav)
             else -> target.activityClass?.let { open(activity, it) }
         }
     }
 
-    private fun showManualPopup(activity: AppCompatActivity) {
+    private fun showManualPopup(activity: AppCompatActivity, onDismiss: (() -> Unit)? = null) {
         val view = LayoutInflater.from(activity).inflate(R.layout.dialog_liquid_manual, null)
         val dialog = AlertDialog.Builder(activity).setView(view).create()
         val input = view.findViewById<EditText>(R.id.etManualBarcode)
         view.findViewById<Button>(R.id.btnManualCancel).setOnClickListener { dialog.dismiss() }
         view.findViewById<Button>(R.id.btnManualAccept).setOnClickListener {
             val code = input.text?.toString()?.trim().orEmpty()
-            if (code.isBlank()) {
-                input.error = "Codigo requerido"
+            if (!code.matches(Regex("^\\d{13}$"))) {
+                input.error = "Introduce 13 digitos"
                 return@setOnClickListener
             }
             dialog.dismiss()
@@ -259,10 +323,11 @@ object LiquidBottomNav {
                 .putExtra("offline", false)
             activity.startActivity(intent)
         }
+        dialog.setOnDismissListener { onDismiss?.invoke() }
         styleDialog(dialog)
     }
 
-    private fun showScanPopup(activity: AppCompatActivity) {
+    private fun showScanPopup(activity: AppCompatActivity, onDismiss: (() -> Unit)? = null) {
         val view = LayoutInflater.from(activity).inflate(R.layout.dialog_liquid_scan, null)
         val dialog = AlertDialog.Builder(activity).setView(view).create()
         view.findViewById<Button>(R.id.btnScanPopupCancel).setOnClickListener {
@@ -277,6 +342,7 @@ object LiquidBottomNav {
             }
             showQuickScanCameraPopup(activity)
         }
+        dialog.setOnDismissListener { onDismiss?.invoke() }
         styleDialog(dialog)
     }
 
@@ -359,7 +425,7 @@ object LiquidBottomNav {
         styleDialog(dialog)
     }
 
-    private fun showProfilePopup(activity: AppCompatActivity) {
+    private fun showProfilePopup(activity: AppCompatActivity, nav: View) {
         val view = LayoutInflater.from(activity).inflate(R.layout.dialog_liquid_profile, null)
         val dialog = AlertDialog.Builder(activity).setView(view).create()
         view.findViewById<ImageView>(R.id.ivProfileIconPopup)?.let {
@@ -367,7 +433,72 @@ object LiquidBottomNav {
         }
         val closeBtn = view.findViewById<ImageButton>(R.id.btnProfilePopupClose)
         closeBtn.setOnClickListener { dialog.dismiss() }
+        dialog.setOnDismissListener { restoreCurrentSelection(activity, nav) }
         styleDialog(dialog, widthPercent = 0.9f)
+    }
+
+    private fun setupCenterMenu(activity: AppCompatActivity, nav: View) {
+        val closeBtn = nav.findViewById<ImageButton>(R.id.btnCenterClose)
+        val scanBtn = nav.findViewById<ImageButton>(R.id.btnCenterScanAction)
+        val manualBtn = nav.findViewById<ImageButton>(R.id.btnCenterManualAction)
+
+        GradientIconUtil.applyGradient(scanBtn, R.drawable.scaner)
+        GradientIconUtil.applyGradient(manualBtn, R.drawable.code_manual)
+
+        closeBtn.setOnClickListener {
+            collapseCenterMenu(nav, true)
+            restoreCurrentSelection(activity, nav)
+        }
+        scanBtn.setOnClickListener {
+            collapseCenterMenu(nav, true)
+            setActiveTab(nav, NavTab.SCAN)
+            showScanPopup(activity) { restoreCurrentSelection(activity, nav) }
+        }
+        manualBtn.setOnClickListener {
+            collapseCenterMenu(nav, true)
+            setActiveTab(nav, NavTab.SCAN)
+            showManualPopup(activity) { restoreCurrentSelection(activity, nav) }
+        }
+    }
+
+    private fun isCenterMenuExpanded(nav: View): Boolean {
+        return nav.findViewById<View>(R.id.centerExpandPanel).visibility == View.VISIBLE
+    }
+
+    private fun expandCenterMenu(nav: View) {
+        val panel = nav.findViewById<View>(R.id.centerExpandPanel)
+        val center = nav.findViewById<View>(R.id.btnLiquidScan)
+        val overlay = nav.rootView.findViewById<View>(R.id.liquid_center_dismiss_overlay)
+        overlay?.visibility = View.VISIBLE
+        panel.visibility = View.VISIBLE
+        panel.alpha = 0f
+        panel.scaleX = 0.8f
+        panel.translationY = dp(nav, 14).toFloat()
+        center.animate().alpha(0f).setDuration(120L).withEndAction {
+            center.visibility = View.INVISIBLE
+        }.start()
+        panel.animate().alpha(1f).scaleX(1f).translationY(0f).setDuration(200L).start()
+    }
+
+    private fun collapseCenterMenu(nav: View, animate: Boolean) {
+        val panel = nav.findViewById<View>(R.id.centerExpandPanel)
+        val center = nav.findViewById<View>(R.id.btnLiquidScan)
+        val overlay = nav.rootView.findViewById<View>(R.id.liquid_center_dismiss_overlay)
+        if (panel.visibility != View.VISIBLE) return
+        val endAction = {
+            panel.visibility = View.GONE
+            panel.alpha = 0f
+            overlay?.visibility = View.GONE
+            center.visibility = View.VISIBLE
+            center.animate().alpha(1f).setDuration(140L).start()
+        }
+        if (!animate) {
+            endAction.invoke()
+            return
+        }
+        panel.animate().alpha(0f).scaleX(0.85f).translationY(dp(nav, 10).toFloat()).setDuration(150L)
+            .withEndAction { endAction.invoke() }
+            .start()
     }
 
     private fun styleDialog(dialog: AlertDialog, widthPercent: Float = 0.9f) {
@@ -381,4 +512,3 @@ object LiquidBottomNav {
         return (value * view.resources.displayMetrics.density).toInt()
     }
 }
-

@@ -1,4 +1,4 @@
-﻿package com.example.inventoryapp.ui.home
+package com.example.inventoryapp.ui.home
 
 import android.content.Intent
 import android.os.Bundle
@@ -71,7 +71,7 @@ class HomeActivity : AppCompatActivity() {
             if (isDark) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
         )
 
-        // âœ… Si no hay token, fuera
+        // Ã¢Å“â€¦ Si no hay token, fuera
         if (session.getToken().isNullOrBlank()) {
             goToLogin()
             return
@@ -79,7 +79,7 @@ class HomeActivity : AppCompatActivity() {
         if (session.isTokenExpired() && !NetworkModule.isManualOffline()) {
             session.clearToken()
             clearCachedRole()
-            UiNotifier.showBlockingTimed(this@HomeActivity, "SesiÃ³n caducada. Inicia sesiÃ³n.", R.drawable.expired)
+            UiNotifier.showBlockingTimed(this@HomeActivity, "SesiÃƒÂ³n caducada. Inicia sesiÃƒÂ³n.", R.drawable.expired)
             goToLogin()
             return
         }
@@ -94,11 +94,11 @@ class HomeActivity : AppCompatActivity() {
             true
         }
 
-        // Pop-up bienvenida si venÃ­as de registro
+        // Pop-up bienvenida si venÃƒÂ­as de registro
         intent.getStringExtra("welcome_email")?.takeIf { it.isNotBlank() }?.let { email ->
             AlertDialog.Builder(this)
                 .setTitle("Bienvenido")
-                .setMessage("Â¡Bienvenido, $email!")
+                .setMessage("Ã‚Â¡Bienvenido, $email!")
                 .setPositiveButton("OK", null)
                 .show()
         }
@@ -310,7 +310,7 @@ class HomeActivity : AppCompatActivity() {
 
         AlertDialog.Builder(this)
             .setTitle("Configurar servidor")
-            .setMessage("Se guardarÃ¡ solo en este dispositivo.")
+            .setMessage("Se guardarÃƒÂ¡ solo en este dispositivo.")
             .setView(input)
             .setNegativeButton("Cancelar", null)
             .setNeutralButton("Limpiar") { _, _ ->
@@ -347,7 +347,7 @@ class HomeActivity : AppCompatActivity() {
                 } else if (res.code() != 401) {
                     AlertDialog.Builder(this@HomeActivity)
                         .setTitle("Mi perfil")
-                        .setMessage("Error ${res.code()} âŒ")
+                        .setMessage("Error ${res.code()} Ã¢ÂÅ’")
                         .setPositiveButton("OK", null)
                         .show()
                 }
@@ -533,10 +533,10 @@ class HomeActivity : AppCompatActivity() {
             card.alpha = 0.75f
         } else {
             label.text = label.tag as String
-            label.setTextColor(Color.parseColor("#EAF4FF"))
+            label.setTextColor(Color.parseColor("#111111"))
             icon.setImageBitmap(getGradientBitmap(originalIconRes))
             icon.clearColorFilter()
-            card.setCardBackgroundColor(Color.parseColor("#CCFFFFFF"))
+            card.setCardBackgroundColor(Color.parseColor("#99FFFFFF"))
             card.alpha = 1.0f
         }
     }
@@ -545,7 +545,7 @@ class HomeActivity : AppCompatActivity() {
         UiNotifier.showBlocking(
             this,
             "Permisos insuficientes",
-            "Esta funcionalidad está disponible solo para admin/manager.",
+            "Esta funcionalidad estÃ¡ disponible solo para admin/manager.",
             R.drawable.ic_lock
         )
     }
@@ -804,6 +804,7 @@ private fun confirmLogout() {
         return out
     }
 }
+
 
 
 
