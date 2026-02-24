@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="tag_liquid_nav_original_padding_bottom" type="id" />
+    <item name="tag_liquid_nav_attached" type="id" />
+</resources>

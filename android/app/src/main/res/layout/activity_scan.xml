@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/home_bg">
+    android:background="@drawable/bg_home_gradient">
 
     <View
         android:id="@+id/viewNetworkBar"
@@ -100,7 +100,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Escaneo (cámara)"
+                        android:text="Escaneo (cAmara)"
                         android:textStyle="bold"
                         android:textColor="?attr/colorOnSurface"
                         android:layout_marginBottom="8dp" />
@@ -112,7 +112,7 @@
                         android:background="@drawable/bg_button_soft_purple"
                         android:backgroundTint="@null"
                         app:backgroundTint="@null"
-                        android:text="Activar escáner"
+                        android:text="Activar escAner"
                         android:textAllCaps="false"
                         android:textColor="@android:color/white"
                         android:textStyle="bold"
@@ -127,7 +127,7 @@
                         android:background="@drawable/bg_button_soft_purple"
                         android:backgroundTint="@null"
                         app:backgroundTint="@null"
-                        android:text="Cerrar escáner"
+                        android:text="Cerrar escAner"
                         android:textAllCaps="false"
                         android:textColor="@android:color/white"
                         android:textStyle="bold"
@@ -178,7 +178,7 @@
                             android:id="@+id/etBarcode"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Introduce el código manual"
+                            android:hint="Introduce el cA³digo manual"
                             android:inputType="number"
                             android:maxLength="13"
                             android:paddingStart="8dp"
@@ -206,3 +206,4 @@
     </ScrollView>
 
 </FrameLayout>
+

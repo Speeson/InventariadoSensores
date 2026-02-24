@@ -6,6 +6,8 @@
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_empty_icon</item>
         <item name="android:windowSplashScreenAnimationDuration">120</item>
         <item name="android:windowSplashScreenBackground">#6A31F6</item>
+        <item name="android:windowBackground">@drawable/bg_home_gradient</item>
+        <item name="android:navigationBarColor">#0D3F70</item>
     </style>
 
     <style name="Theme.Inventoryapp" parent="Base.Theme.Inventoryapp" />

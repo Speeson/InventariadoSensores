@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/liquidBottomNavRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_gravity="bottom"
+    android:paddingLeft="12dp"
+    android:paddingRight="12dp"
+    android:paddingBottom="12dp">
+
+    <LinearLayout
+        android:id="@+id/liquidBar"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:background="@drawable/bg_liquid_nav"
+        android:elevation="14dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingLeft="8dp"
+        android:paddingRight="8dp">
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:foregroundGravity="center">
+
+            <ImageButton
+                android:id="@+id/btnLiquidHome"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_gravity="center"
+                android:background="@android:color/transparent"
+                android:contentDescription="Home"
+                android:padding="9dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/home" />
+        </FrameLayout>
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:foregroundGravity="center">
+
+            <ImageButton
+                android:id="@+id/btnLiquidManual"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_gravity="center"
+                android:background="@android:color/transparent"
+                android:contentDescription="Codigo manual"
+                android:padding="9dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/code_manual" />
+        </FrameLayout>
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:foregroundGravity="center">
+
+            <ImageButton
+                android:id="@+id/btnLiquidScan"
+                android:layout_width="46dp"
+                android:layout_height="46dp"
+                android:layout_gravity="center"
+                android:background="@drawable/bg_liquid_center_square"
+                android:contentDescription="Escanear"
+                android:elevation="8dp"
+                android:padding="10dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/scaner" />
+        </FrameLayout>
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:foregroundGravity="center">
+
+            <ImageButton
+                android:id="@+id/btnLiquidSearch"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_gravity="center"
+                android:background="@android:color/transparent"
+                android:contentDescription="Busqueda rapida"
+                android:padding="9dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/search" />
+        </FrameLayout>
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:foregroundGravity="center">
+
+            <ImageButton
+                android:id="@+id/btnLiquidProfile"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_gravity="center"
+                android:background="@android:color/transparent"
+                android:contentDescription="Perfil"
+                android:padding="9dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/user" />
+        </FrameLayout>
+
+    </LinearLayout>
+</FrameLayout>
+

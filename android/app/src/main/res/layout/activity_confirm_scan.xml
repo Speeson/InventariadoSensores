@@ -8,7 +8,7 @@
 
     android:layout_height="match_parent"
 
-    android:background="@color/home_bg">
+    android:background="@drawable/bg_home_gradient">
 
     <View
         android:id="@+id/viewNetworkBar"
@@ -207,7 +207,7 @@
 
                         android:layout_height="wrap_content"
 
-                        android:text="C�digo de barras:"
+                        android:text="Ci½digo de barras:"
                         android:layout_marginBottom="12dp" />
 
 
@@ -352,6 +352,7 @@
 
 
 </FrameLayout>
+
 
 
 

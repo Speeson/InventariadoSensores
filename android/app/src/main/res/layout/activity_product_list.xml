@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/home_bg">
+    android:background="@drawable/bg_home_gradient">
 
     <View
         android:id="@+id/viewNetworkBar"
@@ -196,7 +196,7 @@
                             android:id="@+id/etBarcode"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Código de barras (13 dígitos)"
+                            android:hint="CA³digo de barras (13 dA­gitos)"
                             android:inputType="number"
                             android:maxLength="13"
                             android:paddingStart="8dp"
@@ -217,7 +217,7 @@
                             android:id="@+id/etCategory"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Categoría"
+                            android:hint="CategorA­a"
                             android:minHeight="56dp"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />
@@ -289,7 +289,7 @@
                             android:id="@+id/etSearchBarcode"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Código de barras"
+                            android:hint="CA³digo de barras"
                             android:inputType="number"
                             android:maxLength="13"
                             android:paddingStart="8dp"
@@ -310,7 +310,7 @@
                             android:id="@+id/etSearchCategory"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Categoría"
+                            android:hint="CategorA­a"
                             android:minHeight="56dp"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />
@@ -469,3 +469,4 @@
     </LinearLayout>
 
 </FrameLayout>
+

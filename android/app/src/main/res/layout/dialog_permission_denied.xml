@@ -61,7 +61,7 @@
                     android:maxWidth="210dp"
                     android:textSize="14sp"
                     android:textColor="@android:color/black"
-                    android:text="No tienes permisos para acceder a esta sección." />
+                    android:text="No tienes permisos para acceder a esta seccion." />
             </LinearLayout>
         </LinearLayout>
 

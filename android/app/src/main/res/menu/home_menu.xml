@@ -16,7 +16,7 @@
 
     <item
         android:id="@+id/action_logout"
-        android:title="Cerrar sesión"
+        android:title="Cerrar sesion"
         android:icon="@android:drawable/ic_lock_power_off"
         app:showAsAction="ifRoom" />
 </menu>

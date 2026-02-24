@@ -65,7 +65,6 @@ class HomeActivity : AppCompatActivity() {
 
         session = SessionManager(this)
         NetworkModule.forceOnline()
-        applyTitleGradient()
 
         val isDark = prefs.getBoolean("dark_mode", false)
         AppCompatDelegate.setDefaultNightMode(
@@ -534,10 +533,10 @@ class HomeActivity : AppCompatActivity() {
             card.alpha = 0.75f
         } else {
             label.text = label.tag as String
-            label.setTextColor(MaterialColors.getColor(label, com.google.android.material.R.attr.colorOnSurface))
+            label.setTextColor(Color.parseColor("#EAF4FF"))
             icon.setImageBitmap(getGradientBitmap(originalIconRes))
             icon.clearColorFilter()
-            card.setCardBackgroundColor(MaterialColors.getColor(card, com.google.android.material.R.attr.colorSurface))
+            card.setCardBackgroundColor(Color.parseColor("#CCFFFFFF"))
             card.alpha = 1.0f
         }
     }
@@ -658,29 +657,6 @@ private fun confirmLogout() {
             "Simular API offline: ON"
         } else {
             "Simular API offline: OFF"
-        }
-    }
-
-    private fun applyTitleGradient() {
-        binding.tvHomeTitle.post {
-            val paint = binding.tvHomeTitle.paint
-            val width = paint.measureText(binding.tvHomeTitle.text.toString())
-            if (width <= 0f) return@post
-            val shader = android.graphics.LinearGradient(
-                0f,
-                0f,
-                width,
-                0f,
-                intArrayOf(
-                    ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_start),
-                    ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_mid2),
-                    ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_end)
-                ),
-                floatArrayOf(0f, 0.55f, 1f),
-                android.graphics.Shader.TileMode.CLAMP
-            )
-            paint.shader = shader
-            binding.tvHomeTitle.invalidate()
         }
     }
 

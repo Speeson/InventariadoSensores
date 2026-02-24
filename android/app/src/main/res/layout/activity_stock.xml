@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/home_bg">
+    android:background="@drawable/bg_home_gradient">
 
     <View
         android:id="@+id/viewNetworkBar"
@@ -184,7 +184,7 @@
                             android:id="@+id/etLocation"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Ubicación"
+                            android:hint="UbicaciA³n"
                             android:minHeight="56dp"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />
@@ -260,7 +260,7 @@
                             android:id="@+id/etSearchLocation"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Ubicación"
+                            android:hint="UbicaciA³n"
                             android:minHeight="56dp"
                             android:paddingStart="8dp"
                             android:paddingEnd="8dp" />
@@ -413,3 +413,4 @@
     </LinearLayout>
 
 </FrameLayout>
+

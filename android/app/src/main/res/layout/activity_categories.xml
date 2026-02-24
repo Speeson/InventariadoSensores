@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/home_bg">
+    android:background="@drawable/bg_home_gradient">
 
     <View
         android:id="@+id/viewNetworkBar"
@@ -44,7 +44,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:gravity="center"
-                android:text="Categorías"
+                android:text="CategorA­as"
                 android:textStyle="bold"
                 android:textSize="22sp"
                 android:textColor="?attr/colorOnSurface" />
@@ -177,7 +177,7 @@
                         android:background="@drawable/bg_button_soft_purple"
                         android:backgroundTint="@null"
                         app:backgroundTint="@null"
-                        android:text="Crear categoría"
+                        android:text="Crear categorA­a"
                         android:textAllCaps="false"
                         android:textColor="@android:color/white"
                         android:textStyle="bold"
@@ -277,7 +277,7 @@
                     android:background="@drawable/bg_button_soft_purple"
                     android:backgroundTint="@null"
                     app:backgroundTint="@null"
-                    android:text="Recargar categorías"
+                    android:text="Recargar categorA­as"
                     android:textAllCaps="false"
                     android:textColor="@android:color/white"
                     android:textStyle="bold"
@@ -341,3 +341,4 @@
     </LinearLayout>
 
 </FrameLayout>
+

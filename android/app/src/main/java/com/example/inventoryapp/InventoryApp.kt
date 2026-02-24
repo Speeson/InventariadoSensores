@@ -8,11 +8,13 @@ import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.AlertsWebSocketManager
 import com.example.inventoryapp.data.remote.FcmTokenManager
 import com.example.inventoryapp.ui.common.ActivityTracker
+import com.example.inventoryapp.ui.common.LiquidBottomNav
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import android.widget.TextView
 import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 import com.example.inventoryapp.data.local.OfflineSyncScheduler
+import androidx.appcompat.app.AppCompatActivity
 
 class InventoryApp : Application() {
     override fun onCreate() {
@@ -31,6 +33,7 @@ class InventoryApp : Application() {
         registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
             override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
                 ActivityTracker.setCurrent(activity)
+                (activity as? AppCompatActivity)?.let { LiquidBottomNav.install(it) }
             }
 
             override fun onActivityStarted(activity: Activity) {
@@ -39,6 +42,7 @@ class InventoryApp : Application() {
 
             override fun onActivityResumed(activity: Activity) {
                 ActivityTracker.setCurrent(activity)
+                (activity as? AppCompatActivity)?.let { LiquidBottomNav.install(it) }
                 AlertsWebSocketManager.connect(this@InventoryApp)
                 val badge = activity.findViewById<TextView>(R.id.tvAlertsBadge)
                 val owner = activity as? LifecycleOwner
