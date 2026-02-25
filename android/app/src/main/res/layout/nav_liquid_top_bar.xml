@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <com.example.inventoryapp.ui.common.NotchedLiquidTopBarView
+        android:id="@+id/topLiquidBar"
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:layout_gravity="top"
+        android:elevation="24dp"
+        android:translationZ="24dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_gravity="top"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingLeft="8dp"
+        android:paddingRight="8dp">
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:foregroundGravity="center">
+
+            <ImageButton
+                android:id="@+id/btnMenu"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_gravity="center"
+                android:background="@android:color/transparent"
+                android:contentDescription="Menu"
+                android:padding="10dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/menu" />
+        </FrameLayout>
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:foregroundGravity="center">
+
+            <ImageButton
+                android:id="@+id/btnTopMidLeft"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_gravity="center"
+                android:background="@android:color/transparent"
+                android:contentDescription="Accion superior 1"
+                android:padding="9dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/search" />
+        </FrameLayout>
+
+        <Space
+            android:layout_width="56dp"
+            android:layout_height="match_parent" />
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:foregroundGravity="center">
+
+            <ImageButton
+                android:id="@+id/btnTopMidRight"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_gravity="center"
+                android:background="@android:color/transparent"
+                android:contentDescription="Accion superior 2"
+                android:padding="9dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/user" />
+        </FrameLayout>
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:foregroundGravity="center">
+
+            <FrameLayout
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_gravity="center">
+
+                <ImageButton
+                    android:id="@+id/btnAlertsQuick"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:background="@android:color/transparent"
+                    android:contentDescription="Alertas"
+                    android:padding="10dp"
+                    android:scaleType="centerInside"
+                    android:src="@drawable/ic_bell" />
+
+                <TextView
+                    android:id="@+id/tvAlertsBadge"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_gravity="end|top"
+                    android:layout_marginEnd="2dp"
+                    android:layout_marginTop="1dp"
+                    android:background="@drawable/bg_badge_red"
+                    android:gravity="center"
+                    android:text="0"
+                    android:textColor="@android:color/white"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+            </FrameLayout>
+        </FrameLayout>
+    </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/btnTopCenterMain"
+        android:layout_width="@dimen/top_center_button_size"
+        android:layout_height="@dimen/top_center_button_size"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="34dp"
+        android:background="@drawable/bg_liquid_center_top"
+        android:contentDescription="Menu central superior"
+        android:elevation="60dp"
+        android:padding="10dp"
+        android:scaleType="centerInside"
+        android:translationZ="60dp"
+        android:src="@drawable/plus" />
+
+    <LinearLayout
+        android:id="@+id/topCenterExpandPanel"
+        android:layout_width="180dp"
+        android:layout_height="52dp"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="64dp"
+        android:alpha="1"
+        android:background="@drawable/bg_liquid_nav"
+        android:elevation="58dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:paddingLeft="8dp"
+        android:paddingRight="8dp"
+        android:scaleX="0"
+        android:translationY="-8dp"
+        android:translationZ="58dp"
+        android:visibility="gone">
+
+        <ImageButton
+            android:id="@+id/btnTopCenterActionOne"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginLeft="4dp"
+            android:layout_marginRight="4dp"
+            android:background="@drawable/bg_liquid_button"
+            android:contentDescription="Accion central 1"
+            android:padding="9dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/code_manual" />
+
+        <Space
+            android:layout_width="48dp"
+            android:layout_height="40dp" />
+
+        <ImageButton
+            android:id="@+id/btnTopCenterActionTwo"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginLeft="4dp"
+            android:layout_marginRight="4dp"
+            android:background="@drawable/bg_liquid_button"
+            android:contentDescription="Accion central 2"
+            android:padding="9dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/scaner" />
+    </LinearLayout>
+
+</merge>

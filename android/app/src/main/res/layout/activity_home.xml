@@ -9,7 +9,9 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:background="@drawable/bg_home_gradient">
+        android:background="@drawable/bg_home_gradient"
+        android:clipChildren="false"
+        android:clipToPadding="false">
 
         <View
             android:id="@+id/viewNetworkBar"
@@ -20,17 +22,24 @@
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:background="@android:color/transparent"
-            android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
-            app:contentInsetStart="16dp"
-            app:contentInsetStartWithNavigation="16dp"
-            app:title=""
-            app:popupTheme="@style/ThemeOverlay.AppCompat.Dark">
+            android:elevation="0dp"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            app:contentInsetStart="0dp"
+            app:contentInsetStartWithNavigation="0dp"
+            app:title="">
 
             <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent">
+                android:layout_height="match_parent"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:paddingLeft="12dp"
+                android:paddingTop="0dp"
+                android:paddingRight="12dp"
+                android:paddingBottom="0dp">
 
                 <TextView
                     android:id="@+id/tvToolbarTitle"
@@ -39,76 +48,20 @@
                     android:gravity="center"
                     android:text=""
                     android:textSize="1sp" />
-
-                <FrameLayout
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_gravity="start|center_vertical"
-                    android:layout_marginStart="16dp"
-                    android:layout_marginTop="8dp">
-
-                    <ImageButton
-                        android:id="@+id/btnMenu"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:background="@android:color/transparent"
-                        android:contentDescription="Menu"
-                        android:src="@drawable/menu" />
-                </FrameLayout>
-
-                <ProgressBar
-                    android:id="@+id/themeSpinner"
-                    style="?android:attr/progressBarStyleSmall"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:layout_gravity="center"
-                    android:indeterminate="true"
-                    android:visibility="gone" />
-
-                <FrameLayout
-                    android:layout_width="64dp"
-                    android:layout_height="64dp"
-                    android:layout_gravity="end|center_vertical"
-                    android:layout_marginEnd="16dp"
-                    android:layout_marginTop="8dp">
-
-                    <ImageButton
-                        android:id="@+id/btnAlertsQuick"
-                        android:layout_width="64dp"
-                        android:layout_height="64dp"
-                        android:background="@android:color/transparent"
-                        android:contentDescription="Alertas"
-                        android:scaleType="centerInside"
-                        android:scaleX="1.0"
-                        android:scaleY="1.0"
-                        android:padding="0dp"
-                        android:src="@drawable/ic_bell" />
-
-                    <TextView
-                        android:id="@+id/tvAlertsBadge"
-                        android:layout_width="18dp"
-                        android:layout_height="18dp"
-                        android:layout_gravity="end|top"
-                        android:layout_marginEnd="6dp"
-                        android:layout_marginTop="2dp"
-                        android:background="@drawable/bg_badge_red"
-                        android:textColor="@android:color/white"
-                        android:textSize="10sp"
-                        android:textStyle="bold"
-                        android:gravity="center"
-                        android:visibility="gone"
-                        android:text="0" />
-                </FrameLayout>
             </FrameLayout>
         </androidx.appcompat.widget.Toolbar>
 
-        <ScrollView
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="0dp"
+            android:layout_marginBottom="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
+                android:gravity="center_vertical"
                 android:orientation="vertical"
                 android:padding="16dp">
 
@@ -119,14 +72,14 @@
                     android:columnCount="2"
                     android:rowCount="5"
                     android:useDefaultMargins="true"
-                    android:layout_marginTop="4dp">
+                    android:layout_marginTop="0dp">
 
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/btnScan"
                         android:layout_width="0dp"
                         android:layout_height="112dp"
                         android:layout_columnWeight="1"
-                        android:layout_margin="6dp"
+                        android:layout_margin="4dp"
                         android:clickable="true"
                         android:focusable="true"
                         android:foreground="?attr/selectableItemBackground"
@@ -161,7 +114,7 @@
                         android:layout_width="0dp"
                         android:layout_height="112dp"
                         android:layout_columnWeight="1"
-                        android:layout_margin="6dp"
+                        android:layout_margin="4dp"
                         android:clickable="true"
                         android:focusable="true"
                         android:foreground="?attr/selectableItemBackground"
@@ -196,7 +149,7 @@
                         android:layout_width="0dp"
                         android:layout_height="112dp"
                         android:layout_columnWeight="1"
-                        android:layout_margin="6dp"
+                        android:layout_margin="4dp"
                         android:clickable="true"
                         android:focusable="true"
                         android:foreground="?attr/selectableItemBackground"
@@ -231,7 +184,7 @@
                         android:layout_width="0dp"
                         android:layout_height="112dp"
                         android:layout_columnWeight="1"
-                        android:layout_margin="6dp"
+                        android:layout_margin="4dp"
                         android:clickable="true"
                         android:focusable="true"
                         android:foreground="?attr/selectableItemBackground"
@@ -266,7 +219,7 @@
                         android:layout_width="0dp"
                         android:layout_height="112dp"
                         android:layout_columnWeight="1"
-                        android:layout_margin="6dp"
+                        android:layout_margin="4dp"
                         android:clickable="true"
                         android:focusable="true"
                         android:foreground="?attr/selectableItemBackground"
@@ -301,7 +254,7 @@
                         android:layout_width="0dp"
                         android:layout_height="112dp"
                         android:layout_columnWeight="1"
-                        android:layout_margin="6dp"
+                        android:layout_margin="4dp"
                         android:clickable="true"
                         android:focusable="true"
                         android:foreground="?attr/selectableItemBackground"
@@ -337,7 +290,7 @@
                         android:layout_width="0dp"
                         android:layout_height="112dp"
                         android:layout_columnWeight="1"
-                        android:layout_margin="6dp"
+                        android:layout_margin="4dp"
                         android:clickable="true"
                         android:focusable="true"
                         android:foreground="?attr/selectableItemBackground"
@@ -373,7 +326,7 @@
                         android:layout_width="0dp"
                         android:layout_height="112dp"
                         android:layout_columnWeight="1"
-                        android:layout_margin="6dp"
+                        android:layout_margin="4dp"
                         android:clickable="true"
                         android:focusable="true"
                         android:foreground="?attr/selectableItemBackground"
@@ -409,7 +362,7 @@
                         android:layout_width="0dp"
                         android:layout_height="112dp"
                         android:layout_columnWeight="1"
-                        android:layout_margin="6dp"
+                        android:layout_margin="4dp"
                         android:clickable="true"
                         android:focusable="true"
                         android:foreground="?attr/selectableItemBackground"
@@ -447,7 +400,7 @@
                         android:layout_width="0dp"
                         android:layout_height="112dp"
                         android:layout_columnWeight="1"
-                        android:layout_margin="6dp"
+                        android:layout_margin="4dp"
                         android:clickable="true"
                         android:focusable="true"
                         android:foreground="?attr/selectableItemBackground"
@@ -481,9 +434,45 @@
                 </GridLayout>
 
             </LinearLayout>
-        </ScrollView>
+        </FrameLayout>
 
     </LinearLayout>
+
+    <View
+        android:id="@+id/topCenterDismissOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/transparent"
+        android:clickable="true"
+        android:focusable="false"
+        android:visibility="gone" />
+
+    <FrameLayout
+        android:id="@+id/topMenuHost"
+        android:layout_width="match_parent"
+        android:layout_height="96dp"
+        android:layout_marginTop="12dp"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:elevation="40dp"
+        android:translationZ="40dp"
+        android:paddingLeft="12dp"
+        android:paddingTop="0dp"
+        android:paddingRight="12dp"
+        android:paddingBottom="0dp">
+
+        <include layout="@layout/nav_liquid_top_bar" />
+
+        <ProgressBar
+            android:id="@+id/themeSpinner"
+            style="?android:attr/progressBarStyleSmall"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="top|center_horizontal"
+            android:layout_marginTop="12dp"
+            android:indeterminate="true"
+            android:visibility="gone" />
+    </FrameLayout>
 
     <LinearLayout
         android:layout_width="wrap_content"

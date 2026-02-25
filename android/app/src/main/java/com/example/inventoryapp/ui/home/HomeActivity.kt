@@ -14,10 +14,16 @@ import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.graphics.Shader
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ValueAnimator
+import android.view.View
+import android.widget.ImageButton
 import androidx.core.view.GravityCompat
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.lifecycleScope
 import androidx.core.content.ContextCompat
 import com.example.inventoryapp.R
@@ -39,6 +45,8 @@ import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.CreateUiFeedback
+import com.example.inventoryapp.ui.common.GradientIconUtil
+import com.example.inventoryapp.ui.common.NotchedLiquidTopBarView
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.data.remote.model.AlertStatusDto
 import com.example.inventoryapp.ui.imports.ImportsActivity
@@ -51,17 +59,26 @@ import com.google.android.material.navigation.NavigationView
 class HomeActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityHomeBinding
+    private var btnTopMenu: ImageButton? = null
+    private var btnTopAlerts: ImageButton? = null
+    private var tvTopAlertsBadge: TextView? = null
     private lateinit var session: SessionManager
     private var currentRole: String? = null
     private val prefs by lazy { getSharedPreferences("ui_prefs", MODE_PRIVATE) }
     private var gradientIconCache: MutableMap<Int, Bitmap> = mutableMapOf()
     private var neonIconCache: MutableMap<String, Bitmap> = mutableMapOf()
     private var offlineNoticeShown = false
+    private var topMenuExpanded = false
+    private var topCenterDropDy = 0f
+    private var topCenterAnimator: ValueAnimator? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityHomeBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        btnTopMenu = findViewById(R.id.btnMenu)
+        btnTopAlerts = findViewById(R.id.btnAlertsQuick)
+        tvTopAlertsBadge = findViewById(R.id.tvAlertsBadge)
         NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
 
         session = SessionManager(this)
@@ -87,13 +104,8 @@ class HomeActivity : AppCompatActivity() {
         syncCachedRoleWithToken()
 
         setSupportActionBar(binding.toolbar)
-        binding.btnMenu.setOnClickListener {
-            binding.drawerLayout.openDrawer(GravityCompat.START)
-        }
-        binding.btnMenu.setOnLongClickListener {
-            showHostDialog()
-            true
-        }
+        setupTopLiquidMenu()
+        findViewById<View>(R.id.topMenuHost)?.bringToFront()
 
         // Pop-up bienvenida si venÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­as de registro
         intent.getStringExtra("welcome_email")?.takeIf { it.isNotBlank() }?.let { email ->
@@ -162,17 +174,12 @@ class HomeActivity : AppCompatActivity() {
             }
             startActivity(Intent(this, ImportsActivity::class.java))
         }
-        binding.btnAlertsQuick.setOnClickListener {
-            startActivity(Intent(this, AlertsActivity::class.java))
-            binding.tvAlertsBadge.visibility = android.view.View.GONE
-        }
-
         binding.navViewMain.setNavigationItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_system_status -> showSystemStatus()
                 R.id.nav_alerts -> {
                     startActivity(Intent(this, AlertsActivity::class.java))
-                    binding.tvAlertsBadge.visibility = android.view.View.GONE
+                    tvTopAlertsBadge?.visibility = android.view.View.GONE
                 }
                 R.id.nav_audit -> {
                     if (!currentRole.equals("ADMIN", ignoreCase = true)) {
@@ -226,6 +233,9 @@ class HomeActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        btnTopMenu?.let { updateTopButtonState(it, false) }
+        btnTopAlerts?.let { updateTopButtonState(it, false) }
+        if (topMenuExpanded) toggleTopCenterMenu(forceClose = true)
 
         lifecycleScope.launch {
             ensureValidSession()
@@ -242,6 +252,151 @@ class HomeActivity : AppCompatActivity() {
             }
         }
     }
+
+    private fun setupTopLiquidMenu() {
+        btnTopMenu?.let { GradientIconUtil.applyGradient(it, R.drawable.menu) }
+        btnTopAlerts?.let { GradientIconUtil.applyGradient(it, R.drawable.ic_bell) }
+        findViewById<ImageButton>(R.id.btnTopMidLeft)?.let {
+            GradientIconUtil.applyGradient(it, R.drawable.search)
+        }
+        findViewById<ImageButton>(R.id.btnTopMidRight)?.let {
+            GradientIconUtil.applyGradient(it, R.drawable.user)
+        }
+        findViewById<ImageButton>(R.id.btnTopCenterMain)?.let {
+            GradientIconUtil.applyGradient(it, R.drawable.plus)
+            it.setOnClickListener { toggleTopCenterMenu() }
+        }
+        findViewById<ImageButton>(R.id.btnTopCenterActionOne)?.setOnClickListener {
+            UiNotifier.show(this, "Accion superior central 1 pendiente")
+            toggleTopCenterMenu(forceClose = true)
+        }
+        findViewById<ImageButton>(R.id.btnTopCenterActionTwo)?.setOnClickListener {
+            UiNotifier.show(this, "Accion superior central 2 pendiente")
+            toggleTopCenterMenu(forceClose = true)
+        }
+        findViewById<ImageButton>(R.id.btnTopMidLeft)?.setOnClickListener {
+            UiNotifier.show(this, "Accion superior izquierda pendiente")
+        }
+        findViewById<ImageButton>(R.id.btnTopMidRight)?.setOnClickListener {
+            UiNotifier.show(this, "Accion superior derecha pendiente")
+        }
+
+        btnTopMenu?.setOnClickListener {
+            btnTopMenu?.let { button -> updateTopButtonState(button, true) }
+            binding.drawerLayout.openDrawer(GravityCompat.START)
+        }
+        btnTopMenu?.setOnLongClickListener {
+            showHostDialog()
+            true
+        }
+        btnTopAlerts?.setOnClickListener {
+            btnTopAlerts?.let { button -> updateTopButtonState(button, true) }
+            startActivity(Intent(this, AlertsActivity::class.java))
+            tvTopAlertsBadge?.visibility = View.GONE
+        }
+
+        binding.drawerLayout.addDrawerListener(object : DrawerLayout.SimpleDrawerListener() {
+            override fun onDrawerOpened(drawerView: View) {
+                btnTopMenu?.let { updateTopButtonState(it, true) }
+            }
+
+            override fun onDrawerClosed(drawerView: View) {
+                btnTopMenu?.let { updateTopButtonState(it, false) }
+            }
+        })
+    }
+
+    private fun updateTopButtonState(button: ImageButton, active: Boolean) {
+        if (active) {
+            button.setBackgroundResource(R.drawable.bg_liquid_icon_selected)
+            button.imageAlpha = 255
+            button.scaleX = 1.04f
+            button.scaleY = 1.04f
+        } else {
+            button.setBackgroundColor(Color.TRANSPARENT)
+            button.imageAlpha = 235
+            button.scaleX = 1.0f
+            button.scaleY = 1.0f
+        }
+    }
+
+    private fun toggleTopCenterMenu(forceClose: Boolean = false) {
+        val centerBtn = findViewById<ImageButton>(R.id.btnTopCenterMain) ?: return
+        val panel = findViewById<View>(R.id.topCenterExpandPanel) ?: return
+        val dismissOverlay = findViewById<View>(R.id.topCenterDismissOverlay)
+        val actionOne = findViewById<ImageButton>(R.id.btnTopCenterActionOne)
+        val actionTwo = findViewById<ImageButton>(R.id.btnTopCenterActionTwo)
+        val topBar = findViewById<NotchedLiquidTopBarView>(R.id.topLiquidBar)
+        val shouldOpen = !topMenuExpanded && !forceClose
+        if (topMenuExpanded == shouldOpen) return
+        topMenuExpanded = shouldOpen
+        val centerBtnCenterY = centerBtn.y + centerBtn.height / 2f
+        val panelCenterY = panel.y + panel.height / 2f
+        topCenterDropDy = (panelCenterY - centerBtnCenterY + dp(12f)).coerceAtLeast(dp(34f))
+        topCenterAnimator?.cancel()
+        findViewById<View>(R.id.topMenuHost)?.bringToFront()
+        panel.bringToFront()
+        centerBtn.bringToFront()
+        dismissOverlay?.setOnClickListener {
+            toggleTopCenterMenu(forceClose = true)
+        }
+        dismissOverlay?.visibility = if (shouldOpen) View.VISIBLE else View.GONE
+
+        panel.visibility = View.VISIBLE
+        centerBtn.visibility = View.VISIBLE
+        actionOne?.alpha = 1f
+        actionTwo?.alpha = 1f
+        actionOne?.scaleX = 1f
+        actionOne?.scaleY = 1f
+        actionTwo?.scaleX = 1f
+        actionTwo?.scaleY = 1f
+
+        if (!shouldOpen) {
+            GradientIconUtil.applyGradient(centerBtn, R.drawable.plus)
+            centerBtn.rotation = 45f
+        } else {
+            GradientIconUtil.applyGradient(centerBtn, R.drawable.plus)
+            centerBtn.rotation = 0f
+        }
+
+        val from = if (shouldOpen) 0f else 1f
+        val to = if (shouldOpen) 1f else 0f
+        topCenterAnimator = ValueAnimator.ofFloat(from, to).apply {
+            duration = if (shouldOpen) 260L else 220L
+            addUpdateListener { anim ->
+                val t = easeInOut(anim.animatedValue as Float)
+                centerBtn.translationY = topCenterDropDy * t
+                centerBtn.rotation = 45f * t
+                panel.translationY = -topCenterDropDy * (1f - t)
+                panel.scaleX = t
+                panel.scaleY = 0.95f + (1f - 0.95f) * t
+                topBar?.notchProgress = 1f - t
+            }
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    if (!topMenuExpanded) {
+                        panel.visibility = View.GONE
+                        panel.scaleX = 0f
+                        panel.scaleY = 0.95f
+                        panel.translationY = -topCenterDropDy
+                        centerBtn.rotation = 0f
+                        GradientIconUtil.applyGradient(centerBtn, R.drawable.plus)
+                        dismissOverlay?.visibility = View.GONE
+                    } else {
+                        centerBtn.rotation = 0f
+                        centerBtn.setImageResource(R.drawable.ic_close_red)
+                    }
+                }
+            })
+            start()
+        }
+    }
+
+    private fun easeInOut(t: Float): Float {
+        return (t * t * (3f - 2f * t)).coerceIn(0f, 1f)
+    }
+
+    private fun dp(value: Float): Float = value * resources.displayMetrics.density
     private fun showSystemStatus() {
         lifecycleScope.launch {
             try {
@@ -362,7 +517,7 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
-    
+
     private suspend fun ensureValidSession() {
         try {
             val res = NetworkModule.api.me()
@@ -556,19 +711,19 @@ class HomeActivity : AppCompatActivity() {
         try {
             val res = NetworkModule.api.listAlerts(status = AlertStatusDto.PENDING, limit = 1, offset = 0)
             if (!res.isSuccessful || res.body() == null) {
-                binding.tvAlertsBadge.visibility = android.view.View.GONE
+                tvTopAlertsBadge?.visibility = android.view.View.GONE
                 return
             }
             val total = res.body()!!.total
             if (total > 0) {
                 val label = if (total > 99) "99+" else total.toString()
-                binding.tvAlertsBadge.text = label
-                binding.tvAlertsBadge.visibility = android.view.View.VISIBLE
+                tvTopAlertsBadge?.text = label
+                tvTopAlertsBadge?.visibility = android.view.View.VISIBLE
             } else {
-                binding.tvAlertsBadge.visibility = android.view.View.GONE
+                tvTopAlertsBadge?.visibility = android.view.View.GONE
             }
         } catch (_: Exception) {
-            binding.tvAlertsBadge.visibility = android.view.View.GONE
+            tvTopAlertsBadge?.visibility = android.view.View.GONE
         }
     }
 
@@ -693,8 +848,8 @@ private fun confirmLogout() {
     }
 
     private fun applyGradientIcons() {
-        setGradientImage(binding.btnAlertsQuick, R.drawable.ic_bell)
-        setGradientImage(binding.btnMenu, R.drawable.menu)
+        btnTopAlerts?.let { setGradientImage(it, R.drawable.ic_bell) }
+        btnTopMenu?.let { setGradientImage(it, R.drawable.menu) }
         binding.root.findViewById<ImageView>(R.id.ivScanIcon)
             ?.let { setNeonImage(it, R.drawable.scaner) }
         binding.root.findViewById<ImageView>(R.id.ivEventsIcon)
@@ -800,11 +955,18 @@ private fun confirmLogout() {
             floatArrayOf(0f, 1f),
             Shader.TileMode.CLAMP
         )
-        val glow = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        val glowBase = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             this.shader = shader
-            alpha = 255
+            alpha = 235
         }
-        canvas.drawRect(0f, 0f, src.width.toFloat(), src.height.toFloat(), glow)
+        // First glow pass.
+        canvas.drawRect(0f, 0f, src.width.toFloat(), src.height.toFloat(), glowBase)
+        // Second glow pass to intensify neon effect.
+        val glowBoost = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            this.shader = shader
+            alpha = 210
+        }
+        canvas.drawRect(0f, 0f, src.width.toFloat(), src.height.toFloat(), glowBoost)
 
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.shader = shader }
         paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
@@ -817,16 +979,16 @@ private fun confirmLogout() {
 
     private fun neonColorsFor(resId: Int): Pair<Int, Int> {
         return when (resId) {
-            R.drawable.scaner -> Pair(Color.parseColor("#00FF3B"), Color.parseColor("#A6FF00"))
-            R.drawable.products -> Pair(Color.parseColor("#FF0033"), Color.parseColor("#FF5F7E"))
-            R.drawable.events -> Pair(Color.parseColor("#FFE600"), Color.parseColor("#FFF59D"))
-            R.drawable.stock -> Pair(Color.parseColor("#00FF8A"), Color.parseColor("#6CFFB8"))
-            R.drawable.movements -> Pair(Color.parseColor("#00F0FF"), Color.parseColor("#A2F9FF"))
-            R.drawable.category -> Pair(Color.parseColor("#E100FF"), Color.parseColor("#F6A7FF"))
-            R.drawable.rotation -> Pair(Color.parseColor("#FF7A00"), Color.parseColor("#FFBE7A"))
-            R.drawable.reports -> Pair(Color.parseColor("#0080FF"), Color.parseColor("#8CC7FF"))
-            R.drawable.umbral -> Pair(Color.parseColor("#FF2E73"), Color.parseColor("#FF92B8"))
-            R.drawable.addfile -> Pair(Color.parseColor("#7A2BFF"), Color.parseColor("#C0A0FF"))
+            R.drawable.scaner -> Pair(Color.parseColor("#00FF2A"), Color.parseColor("#CCFF00"))
+            R.drawable.products -> Pair(Color.parseColor("#FF0030"), Color.parseColor("#FF3D6E"))
+            R.drawable.events -> Pair(Color.parseColor("#FFE100"), Color.parseColor("#FFF56A"))
+            R.drawable.stock -> Pair(Color.parseColor("#00FFA0"), Color.parseColor("#44FFD1"))
+            R.drawable.movements -> Pair(Color.parseColor("#00F5FF"), Color.parseColor("#6EFCFF"))
+            R.drawable.category -> Pair(Color.parseColor("#F000FF"), Color.parseColor("#FF77FF"))
+            R.drawable.rotation -> Pair(Color.parseColor("#FF7A00"), Color.parseColor("#FFC547"))
+            R.drawable.reports -> Pair(Color.parseColor("#0088FF"), Color.parseColor("#4AB6FF"))
+            R.drawable.umbral -> Pair(Color.parseColor("#FF006B"), Color.parseColor("#FF4D94"))
+            R.drawable.addfile -> Pair(Color.parseColor("#6B00FF"), Color.parseColor("#B067FF"))
             else -> Pair(
                 ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_start),
                 ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_end)
@@ -866,12 +1028,3 @@ private fun confirmLogout() {
         return out
     }
 }
-
-
-
-
-
-
-
-
-

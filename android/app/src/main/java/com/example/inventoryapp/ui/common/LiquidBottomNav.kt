@@ -125,7 +125,9 @@ object LiquidBottomNav {
         setupCenterMenu(activity, nav)
 
         nav.post {
-            ensureBottomSpace(originalChild, nav)
+            if (activity !is HomeActivity) {
+                ensureBottomSpace(originalChild, nav)
+            }
         }
     }
 
