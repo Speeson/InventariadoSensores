@@ -50,7 +50,6 @@ import com.example.inventoryapp.ui.common.NotchedLiquidTopBarView
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.data.remote.model.AlertStatusDto
 import com.example.inventoryapp.ui.imports.ImportsActivity
-import com.example.inventoryapp.ui.audit.AuditActivity
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.navigation.NavigationView
@@ -177,48 +176,21 @@ class HomeActivity : AppCompatActivity() {
         binding.navViewMain.setNavigationItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_system_status -> showSystemStatus()
-                R.id.nav_alerts -> {
-                    startActivity(Intent(this, AlertsActivity::class.java))
-                    tvTopAlertsBadge?.visibility = android.view.View.GONE
-                }
-                R.id.nav_audit -> {
-                    if (!currentRole.equals("ADMIN", ignoreCase = true)) {
-                        showRestrictedPermissionDialog()
+                R.id.nav_settings -> {
+                    val enabled = NetworkModule.toggleManualOffline()
+                    updateDebugOfflineMenuItem()
+                    val msg = if (enabled) {
+                        "Modo debug offline activado"
                     } else {
-                        startActivity(Intent(this, AuditActivity::class.java))
+                        "Modo debug offline desactivado"
                     }
+                    UiNotifier.show(this, msg)
                 }
+                R.id.nav_logout -> confirmLogout()
             }
             binding.drawerLayout.closeDrawer(GravityCompat.START)
             true
         }
-
-        binding.navViewBottom.setNavigationItemSelectedListener { item ->
-            if (item.itemId == R.id.nav_settings) {
-                val enabled = NetworkModule.toggleManualOffline()
-                updateDebugOfflineMenuItem()
-                val msg = if (enabled) {
-                    "Modo debug offline activado"
-                } else {
-                    "Modo debug offline desactivado"
-                }
-                UiNotifier.show(this, msg)
-                binding.drawerLayout.closeDrawer(GravityCompat.START)
-                return@setNavigationItemSelectedListener true
-            }
-            if (item.itemId == R.id.nav_logout) {
-                binding.drawerLayout.closeDrawer(GravityCompat.START)
-                confirmLogout()
-                return@setNavigationItemSelectedListener true
-            }
-            if (item.itemId == R.id.nav_toggle_theme) {
-                toggleTheme()
-                return@setNavigationItemSelectedListener true
-            }
-            false
-        }
-
-        updateThemeMenuItem()
         updateDebugOfflineMenuItem()
         applyGradientIcons()
         applyCachedRoleToToggle()
@@ -259,9 +231,7 @@ class HomeActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btnTopMidLeft)?.let {
             GradientIconUtil.applyGradient(it, R.drawable.search)
         }
-        findViewById<ImageButton>(R.id.btnTopMidRight)?.let {
-            GradientIconUtil.applyGradient(it, R.drawable.user)
-        }
+        updateTopThemeButtonIcon()
         findViewById<ImageButton>(R.id.btnTopCenterMain)?.let {
             GradientIconUtil.applyGradient(it, R.drawable.plus)
             it.setOnClickListener { toggleTopCenterMenu() }
@@ -278,7 +248,7 @@ class HomeActivity : AppCompatActivity() {
             UiNotifier.show(this, "Accion superior izquierda pendiente")
         }
         findViewById<ImageButton>(R.id.btnTopMidRight)?.setOnClickListener {
-            UiNotifier.show(this, "Accion superior derecha pendiente")
+            toggleTheme(reopenDrawer = false)
         }
 
         btnTopMenu?.setOnClickListener {
@@ -317,6 +287,14 @@ class HomeActivity : AppCompatActivity() {
             button.imageAlpha = 235
             button.scaleX = 1.0f
             button.scaleY = 1.0f
+        }
+    }
+
+    private fun updateTopThemeButtonIcon() {
+        val isDark = prefs.getBoolean("dark_mode", false)
+        val iconRes = if (isDark) R.drawable.ic_sun else R.drawable.ic_moon
+        findViewById<ImageButton>(R.id.btnTopMidRight)?.let {
+            GradientIconUtil.applyGradient(it, iconRes)
         }
     }
 
@@ -531,12 +509,6 @@ class HomeActivity : AppCompatActivity() {
 
     private suspend fun updateDrawerHeader() {
         try {
-            val header = binding.navViewMain.getHeaderView(0)
-            val tvName = header.findViewById<android.widget.TextView>(com.example.inventoryapp.R.id.tvUserName)
-            val tvEmail = header.findViewById<android.widget.TextView>(com.example.inventoryapp.R.id.tvUserEmail)
-            val tvRole = header.findViewById<android.widget.TextView>(com.example.inventoryapp.R.id.tvUserRole)
-            val rowToggle = header.findViewById<android.view.View>(com.example.inventoryapp.R.id.rowRestrictedToggle)
-            val toggle = header.findViewById<androidx.appcompat.widget.SwitchCompat>(com.example.inventoryapp.R.id.switchShowRestricted)
             val res = NetworkModule.api.me()
             if (res.isSuccessful && res.body() != null) {
                 val me = res.body()!!
@@ -546,20 +518,7 @@ class HomeActivity : AppCompatActivity() {
                     .putInt("cached_user_id", me.id)
                     .putString("cached_token", session.getToken())
                     .apply()
-                tvName.text = me.username
-                tvEmail.text = me.email
-                tvRole.text = me.role
-
                 val showRestricted = prefs.getBoolean("show_restricted_cards", false)
-                val isUser = me.role.equals("USER", ignoreCase = true)
-                rowToggle.visibility = if (isUser) android.view.View.VISIBLE else android.view.View.GONE
-                binding.navViewMain.menu.findItem(R.id.nav_audit)?.isVisible = me.role.equals("ADMIN", ignoreCase = true)
-                toggle.setOnCheckedChangeListener(null)
-                toggle.isChecked = showRestricted
-                toggle.setOnCheckedChangeListener { _, isChecked ->
-                    prefs.edit().putBoolean("show_restricted_cards", isChecked).apply()
-                    applyRestrictedUi(isChecked)
-                }
                 applyRestrictedUi(showRestricted)
             }
         } catch (_: Exception) {
@@ -777,12 +736,12 @@ private fun confirmLogout() {
         }
     }
 
-    private fun toggleTheme() {
+    private fun toggleTheme(reopenDrawer: Boolean = false) {
         val isDark = prefs.getBoolean("dark_mode", false)
         val newMode = !isDark
         prefs.edit()
             .putBoolean("dark_mode", newMode)
-            .putBoolean("reopen_drawer", true)
+            .putBoolean("reopen_drawer", reopenDrawer)
             .putBoolean("theme_loading", true)
             .apply()
         val mode = if (newMode) {
@@ -794,20 +753,8 @@ private fun confirmLogout() {
         recreate()
     }
 
-    private fun updateThemeMenuItem() {
-        val isDark = prefs.getBoolean("dark_mode", false)
-        val item = binding.navViewBottom.menu.findItem(R.id.nav_toggle_theme)
-        if (isDark) {
-            item.title = "Tema claro"
-            item.setIcon(R.drawable.ic_sun)
-        } else {
-            item.title = "Tema oscuro"
-            item.setIcon(R.drawable.ic_moon)
-        }
-    }
-
     private fun updateDebugOfflineMenuItem() {
-        val item = binding.navViewBottom.menu.findItem(R.id.nav_settings)
+        val item = binding.navViewMain.menu.findItem(R.id.nav_settings)
         val enabled = NetworkModule.isManualOffline()
         item.title = if (enabled) {
             "Simular API offline: ON"
@@ -826,24 +773,12 @@ private fun confirmLogout() {
     }
 
     private fun applyCachedRoleToToggle() {
-        val header = binding.navViewMain.getHeaderView(0)
-        val rowToggle = header.findViewById<android.view.View>(com.example.inventoryapp.R.id.rowRestrictedToggle)
-        val toggle = header.findViewById<androidx.appcompat.widget.SwitchCompat>(com.example.inventoryapp.R.id.switchShowRestricted)
         val cachedRole = prefs.getString("cached_role", null)
         val cachedUserId = prefs.getInt("cached_user_id", -1)
         if (cachedRole.isNullOrBlank()) return
         if (cachedUserId <= 0) return
         currentRole = cachedRole
-        binding.navViewMain.menu.findItem(R.id.nav_audit)?.isVisible = cachedRole.equals("ADMIN", ignoreCase = true)
         val showRestricted = prefs.getBoolean("show_restricted_cards", false)
-        val isUser = cachedRole.equals("USER", ignoreCase = true)
-        rowToggle.visibility = if (isUser) android.view.View.VISIBLE else android.view.View.GONE
-        toggle.setOnCheckedChangeListener(null)
-        toggle.isChecked = showRestricted
-        toggle.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit().putBoolean("show_restricted_cards", isChecked).apply()
-            applyRestrictedUi(isChecked)
-        }
         applyRestrictedUi(showRestricted)
     }
 
@@ -869,7 +804,6 @@ private fun confirmLogout() {
         setNeonImage(binding.ivImportsIcon, R.drawable.addfile)
 
         applyGradientToMenu(binding.navViewMain)
-        applyGradientToMenu(binding.navViewBottom)
     }
 
     private fun applyGradientToMenu(nav: NavigationView) {

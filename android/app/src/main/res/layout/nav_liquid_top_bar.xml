@@ -70,10 +70,10 @@
                 android:layout_height="40dp"
                 android:layout_gravity="center"
                 android:background="@android:color/transparent"
-                android:contentDescription="Accion superior 2"
+                android:contentDescription="Cambiar tema"
                 android:padding="9dp"
                 android:scaleType="centerInside"
-                android:src="@drawable/user" />
+                android:src="@drawable/ic_moon" />
         </FrameLayout>
 
         <FrameLayout
