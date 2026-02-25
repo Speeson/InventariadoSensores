@@ -114,23 +114,51 @@ class NotchedLiquidTopBarView @JvmOverloads constructor(
 
         canvas.drawPath(shapePath, fillPaint)
         if (statusTintColor != 0) {
+            val highlight = blendRgb(
+                statusTintColor,
+                0xFFFFFFFF.toInt(),
+                0.16f
+            )
+            val deep = blendRgb(
+                statusTintColor,
+                0xFF1A1A1A.toInt(),
+                0.22f
+            )
+            val topAlpha = 176
+            val midAlpha = 126
+            val lowAlpha = 72
             statusPaint.shader = LinearGradient(
                 0f,
                 0f,
                 0f,
                 barHeight,
                 intArrayOf(
-                    withAlpha(statusTintColor, 70),
-                    withAlpha(statusTintColor, 24),
+                    withAlpha(highlight, topAlpha),
+                    withAlpha(statusTintColor, midAlpha),
+                    withAlpha(deep, lowAlpha),
                     withAlpha(statusTintColor, 0)
                 ),
-                floatArrayOf(0f, 0.45f, 1f),
+                floatArrayOf(0f, 0.20f, 0.62f, 1f),
                 Shader.TileMode.CLAMP
             )
             canvas.drawPath(shapePath, statusPaint)
         }
         canvas.drawPath(shapePath, strokePaint)
         canvas.drawPath(shapePath, innerStrokePaint)
+    }
+
+    private fun blendRgb(from: Int, to: Int, ratio: Float): Int {
+        val t = ratio.coerceIn(0f, 1f)
+        val fromR = (from shr 16) and 0xFF
+        val fromG = (from shr 8) and 0xFF
+        val fromB = from and 0xFF
+        val toR = (to shr 16) and 0xFF
+        val toG = (to shr 8) and 0xFF
+        val toB = to and 0xFF
+        val outR = (fromR + ((toR - fromR) * t)).toInt().coerceIn(0, 255)
+        val outG = (fromG + ((toG - fromG) * t)).toInt().coerceIn(0, 255)
+        val outB = (fromB + ((toB - fromB) * t)).toInt().coerceIn(0, 255)
+        return (0xFF shl 24) or (outR shl 16) or (outG shl 8) or outB
     }
 
     private fun withAlpha(color: Int, alpha: Int): Int {

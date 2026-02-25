@@ -13,10 +13,12 @@ import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
+import android.graphics.Rect
 import android.graphics.Shader
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
+import android.view.MotionEvent
 import android.view.View
 import android.widget.ImageButton
 import androidx.core.view.GravityCompat
@@ -48,6 +50,7 @@ import com.example.inventoryapp.ui.common.GradientIconUtil
 import com.example.inventoryapp.ui.common.NotchedLiquidTopBarView
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.data.remote.model.AlertStatusDto
+import com.example.inventoryapp.data.remote.model.LocationResponseDto
 import com.example.inventoryapp.ui.imports.ImportsActivity
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.card.MaterialCardView
@@ -179,26 +182,16 @@ class HomeActivity : AppCompatActivity() {
             handleCompactDrawerAction(item.itemId)
             true
         }
-        binding.navViewMain.menu.findItem(R.id.nav_system_status)?.setOnMenuItemClickListener {
-            handleCompactDrawerAction(R.id.nav_system_status)
-            true
-        }
-        binding.navViewMain.menu.findItem(R.id.nav_settings)?.setOnMenuItemClickListener {
-            handleCompactDrawerAction(R.id.nav_settings)
-            true
-        }
-        binding.navViewMain.menu.findItem(R.id.nav_logout)?.setOnMenuItemClickListener {
-            handleCompactDrawerAction(R.id.nav_logout)
-            true
-        }
+        updateThemeMenuItem()
         updateDebugOfflineMenuItem()
+        updateLocationSelectorHint()
         applyGradientIcons()
         applyCachedRoleToToggle()
         showThemeLoaderIfNeeded()
 
         if (prefs.getBoolean("reopen_drawer", false)) {
             prefs.edit().putBoolean("reopen_drawer", false).apply()
-            binding.drawerLayout.openDrawer(binding.navViewMain)
+            binding.drawerLayout.openDrawer(GravityCompat.START)
         }
 
     }
@@ -207,6 +200,9 @@ class HomeActivity : AppCompatActivity() {
         super.onResume()
         btnTopMenu?.let { updateTopButtonState(it, false) }
         btnTopAlerts?.let { updateTopButtonState(it, false) }
+        updateThemeMenuItem()
+        updateDebugOfflineMenuItem()
+        updateLocationSelectorHint()
         if (topMenuExpanded) toggleTopCenterMenu(forceClose = true)
         findViewById<View>(R.id.topCenterDismissOverlay)?.visibility = View.GONE
         collapseBottomCenterMenuOverlay()
@@ -228,33 +224,69 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (::binding.isInitialized &&
+            ev.actionMasked == MotionEvent.ACTION_DOWN &&
+            binding.drawerLayout.isDrawerOpen(GravityCompat.START)
+        ) {
+            val drawerBounds = Rect()
+            binding.drawerContainer.getGlobalVisibleRect(drawerBounds)
+            if (!drawerBounds.contains(ev.rawX.toInt(), ev.rawY.toInt())) {
+                binding.drawerLayout.closeDrawer(GravityCompat.START)
+                return true
+            }
+        }
+        return super.dispatchTouchEvent(ev)
+    }
+
     private fun setupTopLiquidMenu() {
         btnTopMenu?.let { GradientIconUtil.applyGradient(it, R.drawable.menu) }
         btnTopAlerts?.let { GradientIconUtil.applyGradient(it, R.drawable.ic_bell) }
         findViewById<ImageButton>(R.id.btnTopMidLeft)?.let {
-            GradientIconUtil.applyGradient(it, R.drawable.search)
+            GradientIconUtil.applyGradient(it, R.drawable.stock)
         }
-        updateTopThemeButtonIcon()
+        findViewById<ImageButton>(R.id.btnTopMidRight)?.let {
+            GradientIconUtil.applyGradient(it, R.drawable.ajustes)
+        }
         findViewById<ImageButton>(R.id.btnTopCenterMain)?.let {
             GradientIconUtil.applyGradient(it, R.drawable.plus)
             it.setOnClickListener { toggleTopCenterMenu() }
         }
-        findViewById<ImageButton>(R.id.btnTopCenterActionOne)?.setOnClickListener {
-            UiNotifier.show(this, "Accion superior central 1 pendiente")
-            toggleTopCenterMenu(forceClose = true)
+        findViewById<ImageButton>(R.id.btnTopCenterActionOne)?.let { profileButton ->
+            GradientIconUtil.applyGradient(profileButton, R.drawable.user)
+            profileButton.setOnClickListener {
+                toggleTopCenterMenu(forceClose = true)
+                showProfile()
+            }
         }
-        findViewById<ImageButton>(R.id.btnTopCenterActionTwo)?.setOnClickListener {
-            UiNotifier.show(this, "Accion superior central 2 pendiente")
-            toggleTopCenterMenu(forceClose = true)
+        findViewById<ImageButton>(R.id.btnTopCenterActionTwo)?.let { logoutButton ->
+            GradientIconUtil.applyGradient(logoutButton, R.drawable.logout)
+            logoutButton.setOnClickListener {
+                toggleTopCenterMenu(forceClose = true)
+                confirmLogout()
+            }
         }
         findViewById<ImageButton>(R.id.btnTopMidLeft)?.setOnClickListener {
-            UiNotifier.show(this, "Accion superior izquierda pendiente")
+            showLocationSelectorDialog()
+        }
+        findViewById<ImageButton>(R.id.btnTopMidLeft)?.setOnLongClickListener {
+            val current = prefs.getString("selected_location_code", null)
+            if (current.isNullOrBlank()) {
+                UiNotifier.show(this, "Ubicacion activa: no seleccionada")
+            } else {
+                UiNotifier.show(this, "Ubicacion activa: $current")
+            }
+            true
         }
         findViewById<ImageButton>(R.id.btnTopMidRight)?.setOnClickListener {
-            toggleTheme(reopenDrawer = false)
+            UiNotifier.show(this, "Atajo superior derecho pendiente")
         }
 
         btnTopMenu?.setOnClickListener {
+            if (binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                binding.drawerLayout.closeDrawer(GravityCompat.START)
+                return@setOnClickListener
+            }
             btnTopMenu?.let { button -> updateTopButtonState(button, true) }
             if (topMenuExpanded) toggleTopCenterMenu(forceClose = true)
             findViewById<View>(R.id.topCenterDismissOverlay)?.apply {
@@ -262,7 +294,7 @@ class HomeActivity : AppCompatActivity() {
                 isClickable = false
             }
             collapseBottomCenterMenuOverlay()
-            binding.drawerLayout.openDrawer(binding.navViewMain)
+            binding.drawerLayout.openDrawer(GravityCompat.START)
         }
         btnTopMenu?.setOnLongClickListener {
             showHostDialog()
@@ -308,17 +340,99 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateTopThemeButtonIcon() {
-        val isDark = prefs.getBoolean("dark_mode", false)
-        val iconRes = if (isDark) R.drawable.ic_sun else R.drawable.ic_moon
-        findViewById<ImageButton>(R.id.btnTopMidRight)?.let {
-            GradientIconUtil.applyGradient(it, iconRes)
+    private fun updateLocationSelectorHint() {
+        val currentCode = prefs.getString("selected_location_code", null)
+        findViewById<ImageButton>(R.id.btnTopMidLeft)?.contentDescription = if (currentCode.isNullOrBlank()) {
+            "Seleccionar ubicacion"
+        } else {
+            "Ubicacion activa: $currentCode"
         }
+    }
+
+    private fun showLocationSelectorDialog() {
+        lifecycleScope.launch {
+            try {
+                val res = NetworkModule.api.listLocations(limit = 200, offset = 0)
+                if (!res.isSuccessful || res.body() == null) {
+                    val msg = if (res.code() > 0) {
+                        ApiErrorFormatter.format(res.code())
+                    } else {
+                        "No se pudo cargar ubicaciones"
+                    }
+                    UiNotifier.show(this@HomeActivity, msg)
+                    return@launch
+                }
+                val locations = res.body()!!.items
+                    .sortedWith(compareBy<LocationResponseDto> { it.code.lowercase() }.thenBy { it.id })
+                if (locations.isEmpty()) {
+                    UiNotifier.show(this@HomeActivity, "No hay ubicaciones disponibles")
+                    return@launch
+                }
+
+                val labels = locations.map { location ->
+                    val desc = location.description?.takeIf { it.isNotBlank() }?.let { " - $it" } ?: ""
+                    "(${location.id}) ${location.code}$desc"
+                }.toTypedArray()
+                val selectedId = prefs.getInt("selected_location_id", -1)
+                var selectedIndex = locations.indexOfFirst { it.id == selectedId }
+
+                AlertDialog.Builder(this@HomeActivity)
+                    .setTitle("Seleccionar ubicacion activa")
+                    .setSingleChoiceItems(labels, selectedIndex) { _, which ->
+                        selectedIndex = which
+                    }
+                    .setNegativeButton("Cancelar", null)
+                    .setNeutralButton("Limpiar") { dialog, _ ->
+                        prefs.edit()
+                            .remove("selected_location_id")
+                            .remove("selected_location_code")
+                            .remove("selected_location_description")
+                            .apply()
+                        updateLocationSelectorHint()
+                        UiNotifier.show(this@HomeActivity, "Ubicacion activa limpiada")
+                        dialog.dismiss()
+                    }
+                    .setPositiveButton("Aplicar") { dialog, _ ->
+                        if (selectedIndex !in locations.indices) {
+                            dialog.dismiss()
+                            return@setPositiveButton
+                        }
+                        val location = locations[selectedIndex]
+                        prefs.edit()
+                            .putInt("selected_location_id", location.id)
+                            .putString("selected_location_code", location.code)
+                            .putString("selected_location_description", location.description ?: "")
+                            .apply()
+                        updateLocationSelectorHint()
+                        UiNotifier.show(this@HomeActivity, "Ubicacion activa: ${location.code}")
+                        dialog.dismiss()
+                    }
+                    .show()
+            } catch (e: Exception) {
+                UiNotifier.show(
+                    this@HomeActivity,
+                    UiNotifier.buildConnectionMessage(this@HomeActivity, e.message)
+                )
+            }
+        }
+    }
+
+    private fun updateThemeMenuItem() {
+        val item = binding.navViewMain.menu.findItem(R.id.nav_theme) ?: return
+        val isDark = prefs.getBoolean("dark_mode", false)
+        if (isDark) {
+            item.title = "Tema: Oscuro"
+            item.setIcon(R.drawable.ic_sun)
+        } else {
+            item.title = "Tema: Claro"
+            item.setIcon(R.drawable.ic_moon)
+        }
+        applyGradientToMenu(binding.navViewMain)
     }
 
     private fun updateTopBarConnectionTint(offline: Boolean) {
         val tintColor = if (offline) {
-            Color.parseColor("#F44336")
+            Color.parseColor("#FF2A3D")
         } else {
             Color.parseColor("#36C96A")
         }
@@ -326,9 +440,14 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun handleCompactDrawerAction(itemId: Int) {
+        var shouldCloseDrawer = true
         when (itemId) {
+            R.id.nav_theme -> {
+                shouldCloseDrawer = false
+                toggleTheme(reopenDrawer = true)
+            }
             R.id.nav_system_status -> showSystemStatus()
-            R.id.nav_settings -> {
+            R.id.nav_offline -> {
                 val enabled = NetworkModule.toggleManualOffline()
                 updateDebugOfflineMenuItem()
                 updateTopBarConnectionTint(enabled)
@@ -339,9 +458,10 @@ class HomeActivity : AppCompatActivity() {
                 }
                 UiNotifier.show(this, msg)
             }
-            R.id.nav_logout -> confirmLogout()
         }
-        binding.drawerLayout.closeDrawer(binding.navViewMain)
+        if (shouldCloseDrawer) {
+            binding.drawerLayout.closeDrawer(GravityCompat.START)
+        }
     }
 
     private fun collapseBottomCenterMenuOverlay() {
@@ -536,33 +656,17 @@ class HomeActivity : AppCompatActivity() {
 
 
     private fun showProfile() {
-        lifecycleScope.launch {
-            try {
-                val res = NetworkModule.api.me()
-                if (res.isSuccessful && res.body() != null) {
-                    val me = res.body()!!
-                    AlertDialog.Builder(this@HomeActivity)
-                        .setTitle("Mi perfil")
-                        .setMessage("Email: ${me.email}\nRol: ${me.role}\nID: ${me.id}")
-                        .setPositiveButton("OK", null)
-                        .show()
-                } else if (res.code() != 401) {
-                    AlertDialog.Builder(this@HomeActivity)
-                        .setTitle("Mi perfil")
-                        .setMessage("Error ${res.code()} ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢")
-                        .setPositiveButton("OK", null)
-                        .show()
-                }
-            } catch (e: Exception) {
-                AlertDialog.Builder(this@HomeActivity)
-                    .setTitle("Mi perfil")
-                    .setMessage(UiNotifier.buildConnectionMessage(this@HomeActivity, e.message))
-                    .setPositiveButton("OK", null)
-                    .show()
-            }
+        val view = layoutInflater.inflate(R.layout.dialog_liquid_profile, null)
+        val dialog = AlertDialog.Builder(this).setView(view).create()
+        view.findViewById<ImageView>(R.id.ivProfileIconPopup)?.let {
+            GradientIconUtil.applyGradient(it, R.drawable.user)
         }
+        view.findViewById<ImageButton>(R.id.btnProfilePopupClose)?.setOnClickListener {
+            dialog.dismiss()
+        }
+        dialog.show()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
     }
-
 
     private suspend fun ensureValidSession() {
         try {
@@ -821,7 +925,7 @@ private fun confirmLogout() {
     }
 
     private fun updateDebugOfflineMenuItem() {
-        val item = binding.navViewMain.menu.findItem(R.id.nav_settings)
+        val item = binding.navViewMain.menu.findItem(R.id.nav_offline) ?: return
         val enabled = NetworkModule.isManualOffline()
         item.title = if (enabled) {
             "Simular API offline: ON"
@@ -1029,3 +1133,4 @@ private fun confirmLogout() {
         return out
     }
 }
+

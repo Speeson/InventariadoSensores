@@ -50,10 +50,10 @@
                 android:layout_height="40dp"
                 android:layout_gravity="center"
                 android:background="@android:color/transparent"
-                android:contentDescription="Accion superior 1"
+                android:contentDescription="Seleccionar ubicacion"
                 android:padding="9dp"
                 android:scaleType="centerInside"
-                android:src="@drawable/search" />
+                android:src="@drawable/stock" />
         </FrameLayout>
 
         <Space
@@ -72,10 +72,10 @@
                 android:layout_height="40dp"
                 android:layout_gravity="center"
                 android:background="@android:color/transparent"
-                android:contentDescription="Cambiar tema"
+                android:contentDescription="Accion superior derecha"
                 android:padding="9dp"
                 android:scaleType="centerInside"
-                android:src="@drawable/ic_moon" />
+                android:src="@drawable/ajustes" />
         </FrameLayout>
 
         <FrameLayout
@@ -156,10 +156,10 @@
             android:layout_marginLeft="5dp"
             android:layout_marginRight="5dp"
             android:background="@drawable/bg_liquid_button"
-            android:contentDescription="Accion central 1"
+            android:contentDescription="Perfil de usuario"
             android:padding="10dp"
             android:scaleType="centerInside"
-            android:src="@drawable/code_manual" />
+            android:src="@drawable/user" />
 
         <Space
             android:layout_width="56dp"
@@ -172,10 +172,10 @@
             android:layout_marginLeft="5dp"
             android:layout_marginRight="5dp"
             android:background="@drawable/bg_liquid_button"
-            android:contentDescription="Accion central 2"
+            android:contentDescription="Cerrar sesion"
             android:padding="10dp"
             android:scaleType="centerInside"
-            android:src="@drawable/scaner" />
+            android:src="@drawable/logout" />
     </LinearLayout>
 
 </merge>

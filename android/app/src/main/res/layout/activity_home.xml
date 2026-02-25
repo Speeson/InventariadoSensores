@@ -475,6 +475,7 @@
     </FrameLayout>
 
     <FrameLayout
+        android:id="@+id/drawerContainer"
         android:layout_width="272dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
@@ -501,7 +502,6 @@
     </FrameLayout>
 
 </androidx.drawerlayout.widget.DrawerLayout>
-
 
 
 

@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
+        android:id="@+id/nav_theme"
+        android:title="Tema: Claro"
+        android:icon="@drawable/ic_moon" />
+    <item
         android:id="@+id/nav_system_status"
         android:title="Estado del sistema"
         android:icon="@drawable/system" />
     <item
-        android:id="@+id/nav_settings"
+        android:id="@+id/nav_offline"
         android:title="Simular API offline: OFF"
-        android:icon="@drawable/ajustes" />
-    <item
-        android:id="@+id/nav_logout"
-        android:title="Cerrar sesion"
-        android:icon="@android:drawable/ic_lock_power_off" />
+        android:icon="@drawable/offline" />
 </menu>

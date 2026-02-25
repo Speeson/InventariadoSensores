@@ -142,11 +142,11 @@
                 android:layout_height="40dp"
                 android:layout_gravity="center"
                 android:background="@android:color/transparent"
-                android:contentDescription="Auditoria"
+                android:contentDescription="Asistente IA"
                 android:padding="9dp"
                 android:scaleType="centerInside"
                 android:translationX="3dp"
-                android:src="@drawable/reports" />
+                android:src="@drawable/sync" />
         </FrameLayout>
 
         <FrameLayout
@@ -161,10 +161,10 @@
                 android:layout_height="40dp"
                 android:layout_gravity="center"
                 android:background="@android:color/transparent"
-                android:contentDescription="Perfil"
+                android:contentDescription="Auditoria"
                 android:padding="9dp"
                 android:scaleType="centerInside"
-                android:src="@drawable/user" />
+                android:src="@drawable/reports" />
         </FrameLayout>
 
     </LinearLayout>

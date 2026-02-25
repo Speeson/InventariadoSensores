@@ -51,7 +51,6 @@
         <activity android:name=".ui.movements.ResultActivity" />
         <activity android:name=".ui.imports.ImportsActivity" />
         <activity android:name=".ui.audit.AuditActivity" />
-        <activity android:name=".ui.profile.ProfileActivity" />
         <activity android:name=".ui.home.HomeActivity" />
         <activity android:name=".MainActivity" />
 

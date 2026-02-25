@@ -6,6 +6,7 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.graphics.Rect
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
@@ -15,13 +16,13 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.view.WindowManager
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
-import android.widget.ImageView
 import android.widget.ListView
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
@@ -36,6 +37,8 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
 import com.example.inventoryapp.R
@@ -60,8 +63,8 @@ object LiquidBottomNav {
         HOME,
         SEARCH,
         SCAN,
+        ASSISTANT,
         AUDIT,
-        PROFILE,
         NONE,
     }
 
@@ -74,7 +77,6 @@ object LiquidBottomNav {
     private const val ACTION_HOME = "home"
     private const val ACTION_MANUAL = "manual"
     private const val ACTION_SCAN = "scan"
-    private const val ACTION_PROFILE = "profile"
     private const val CAMERA_PERMISSION_FRAGMENT_TAG = "liquid_camera_permission_fragment"
     private var cameraPermissionDeniedCount = 0
 
@@ -105,6 +107,8 @@ object LiquidBottomNav {
             applyIconStyle(existingNav)
             highlightCurrentTab(activity, existingNav)
             collapseCenterMenu(existingNav, animate = false)
+            val contentRoot = content.getChildAt(0) ?: content
+            setupKeyboardAwareBehavior(activity, content, contentRoot, existingNav)
             return
         }
         content.setBackgroundResource(R.drawable.bg_home_gradient)
@@ -126,9 +130,10 @@ object LiquidBottomNav {
 
         nav.post {
             if (activity !is HomeActivity) {
-                ensureBottomSpace(originalChild, nav)
+                ensureBottomSpace(originalChild, nav, includeNavHeight = true)
             }
         }
+        setupKeyboardAwareBehavior(activity, content, originalChild, nav)
     }
 
     private fun ensureDismissOverlay(activity: AppCompatActivity, content: ViewGroup, nav: View) {
@@ -181,13 +186,13 @@ object LiquidBottomNav {
         }
         nav.findViewById<ImageButton>(R.id.btnLiquidSearch).setOnClickListener {
             collapseCenterMenu(nav, true)
-            setActiveTab(nav, NavTab.AUDIT)
-            open(activity, AuditActivity::class.java)
+            setActiveTab(nav, NavTab.ASSISTANT)
+            showAssistantPlaceholder(activity, nav)
         }
         nav.findViewById<ImageButton>(R.id.btnLiquidProfile).setOnClickListener {
             collapseCenterMenu(nav, true)
-            setActiveTab(nav, NavTab.PROFILE)
-            showProfilePopup(activity, nav)
+            setActiveTab(nav, NavTab.AUDIT)
+            open(activity, AuditActivity::class.java)
         }
     }
 
@@ -198,22 +203,90 @@ object LiquidBottomNav {
         activity.startActivity(intent)
     }
 
-    private fun ensureBottomSpace(contentRoot: View, nav: View) {
-        val target = if (contentRoot is DrawerLayout && contentRoot.childCount > 0) {
-            contentRoot.getChildAt(0)
-        } else {
-            contentRoot
-        }
-
+    private fun ensureBottomSpace(contentRoot: View, nav: View, includeNavHeight: Boolean) {
+        val target = resolvePaddingTarget(contentRoot)
         val initial = (target.getTag(R.id.tag_liquid_nav_original_padding_bottom) as? Int)
             ?: target.paddingBottom.also {
                 target.setTag(R.id.tag_liquid_nav_original_padding_bottom, it)
             }
 
-        val extra = nav.height + dp(nav, 8)
+        val extra = if (includeNavHeight) nav.height + dp(nav, 8) else 0
         val targetBottom = initial + extra
-        if (target.paddingBottom < targetBottom) {
+        if (target.paddingBottom != targetBottom) {
             target.updatePadding(bottom = targetBottom)
+        }
+    }
+
+    private fun resolvePaddingTarget(contentRoot: View): View {
+        return if (contentRoot is DrawerLayout && contentRoot.childCount > 0) {
+            contentRoot.getChildAt(0)
+        } else {
+            contentRoot
+        }
+    }
+
+    private fun setupKeyboardAwareBehavior(
+        activity: AppCompatActivity,
+        content: ViewGroup,
+        contentRoot: View,
+        nav: View
+    ) {
+        val alreadyAttached = (nav.getTag(R.id.tag_liquid_nav_attached) as? Boolean) == true
+        if (alreadyAttached) {
+            return
+        }
+        nav.setTag(R.id.tag_liquid_nav_attached, true)
+
+        var lastImeVisible: Boolean? = null
+        val applyKeyboardState: (Boolean) -> Unit = apply@{ imeVisible ->
+            if (lastImeVisible == imeVisible) return@apply
+            lastImeVisible = imeVisible
+            val shouldShowNav = !imeVisible
+            if (!shouldShowNav) {
+                collapseCenterMenu(nav, animate = false)
+                content.findViewById<View>(R.id.liquid_center_dismiss_overlay)?.visibility = View.GONE
+            }
+            nav.visibility = if (shouldShowNav) View.VISIBLE else View.GONE
+            if (activity !is HomeActivity) {
+                nav.post {
+                    ensureBottomSpace(contentRoot, nav, includeNavHeight = shouldShowNav)
+                }
+            }
+        }
+
+        ViewCompat.setOnApplyWindowInsetsListener(content) { _, insets ->
+            val imeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
+            applyKeyboardState(imeVisible)
+            insets
+        }
+
+        val rootView = content.rootView
+        val visibleFrame = Rect()
+        val globalLayoutListener = ViewTreeObserver.OnGlobalLayoutListener {
+            rootView.getWindowVisibleDisplayFrame(visibleFrame)
+            val heightDiff = rootView.height - visibleFrame.height()
+            val imeVisible = heightDiff > dp(nav, 120)
+            applyKeyboardState(imeVisible)
+        }
+        rootView.viewTreeObserver.addOnGlobalLayoutListener(globalLayoutListener)
+        nav.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) = Unit
+
+            override fun onViewDetachedFromWindow(v: View) {
+                if (rootView.viewTreeObserver.isAlive) {
+                    rootView.viewTreeObserver.removeOnGlobalLayoutListener(globalLayoutListener)
+                }
+                nav.setTag(R.id.tag_liquid_nav_attached, false)
+                nav.removeOnAttachStateChangeListener(this)
+            }
+        })
+
+        ViewCompat.requestApplyInsets(content)
+        nav.post {
+            rootView.getWindowVisibleDisplayFrame(visibleFrame)
+            val heightDiff = rootView.height - visibleFrame.height()
+            val imeVisible = heightDiff > dp(nav, 120)
+            applyKeyboardState(imeVisible)
         }
     }
 
@@ -221,8 +294,8 @@ object LiquidBottomNav {
         GradientIconUtil.applyGradient(nav.findViewById<ImageButton>(R.id.btnLiquidHome), R.drawable.home)
         GradientIconUtil.applyGradient(nav.findViewById<ImageButton>(R.id.btnLiquidTheme), R.drawable.search)
         GradientIconUtil.applyGradient(nav.findViewById<ImageButton>(R.id.btnLiquidScan), R.drawable.plus)
-        GradientIconUtil.applyGradient(nav.findViewById<ImageButton>(R.id.btnLiquidSearch), R.drawable.reports)
-        GradientIconUtil.applyGradient(nav.findViewById<ImageButton>(R.id.btnLiquidProfile), R.drawable.user)
+        GradientIconUtil.applyGradient(nav.findViewById<ImageButton>(R.id.btnLiquidSearch), R.drawable.sync)
+        GradientIconUtil.applyGradient(nav.findViewById<ImageButton>(R.id.btnLiquidProfile), R.drawable.reports)
     }
 
     private fun highlightCurrentTab(activity: AppCompatActivity, nav: View) {
@@ -234,8 +307,8 @@ object LiquidBottomNav {
         setSelected(nav.findViewById(R.id.btnLiquidHome), tab == NavTab.HOME)
         setSelected(nav.findViewById(R.id.btnLiquidTheme), tab == NavTab.SEARCH)
         setSelected(nav.findViewById(R.id.btnLiquidScan), tab == NavTab.SCAN)
-        setSelected(nav.findViewById(R.id.btnLiquidSearch), tab == NavTab.AUDIT)
-        setSelected(nav.findViewById(R.id.btnLiquidProfile), tab == NavTab.PROFILE)
+        setSelected(nav.findViewById(R.id.btnLiquidSearch), tab == NavTab.ASSISTANT)
+        setSelected(nav.findViewById(R.id.btnLiquidProfile), tab == NavTab.AUDIT)
     }
 
     private fun clearSelection(nav: View) = setActiveTab(nav, NavTab.NONE)
@@ -322,14 +395,17 @@ object LiquidBottomNav {
     }
 
     private fun dispatchTarget(activity: AppCompatActivity, target: SearchTarget) {
-        val nav = activity.findViewById<View>(R.id.liquidBottomNavRoot)
         when (target.action) {
             ACTION_HOME -> open(activity, HomeActivity::class.java)
             ACTION_MANUAL -> showManualPopup(activity)
             ACTION_SCAN -> showScanPopup(activity)
-            ACTION_PROFILE -> if (nav != null) showProfilePopup(activity, nav)
             else -> target.activityClass?.let { open(activity, it) }
         }
+    }
+
+    private fun showAssistantPlaceholder(activity: AppCompatActivity, nav: View) {
+        UiNotifier.show(activity, "Asistente IA pendiente de implementacion")
+        restoreCurrentSelection(activity, nav)
     }
 
     private fun showManualPopup(activity: AppCompatActivity, onDismiss: (() -> Unit)? = null) {
@@ -517,18 +593,6 @@ object LiquidBottomNav {
 
     private fun resetCameraDeniedCount() {
         cameraPermissionDeniedCount = 0
-    }
-
-    private fun showProfilePopup(activity: AppCompatActivity, nav: View) {
-        val view = LayoutInflater.from(activity).inflate(R.layout.dialog_liquid_profile, null)
-        val dialog = AlertDialog.Builder(activity).setView(view).create()
-        view.findViewById<ImageView>(R.id.ivProfileIconPopup)?.let {
-            GradientIconUtil.applyGradient(it, R.drawable.user)
-        }
-        val closeBtn = view.findViewById<ImageButton>(R.id.btnProfilePopupClose)
-        closeBtn.setOnClickListener { dialog.dismiss() }
-        dialog.setOnDismissListener { restoreCurrentSelection(activity, nav) }
-        styleDialog(dialog, widthPercent = 0.9f)
     }
 
     private fun setupCenterMenu(activity: AppCompatActivity, nav: View) {
