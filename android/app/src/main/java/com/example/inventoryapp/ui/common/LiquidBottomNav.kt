@@ -78,6 +78,7 @@ object LiquidBottomNav {
     private const val ACTION_MANUAL = "manual"
     private const val ACTION_SCAN = "scan"
     private const val CAMERA_PERMISSION_FRAGMENT_TAG = "liquid_camera_permission_fragment"
+    private const val MENU_CONTENT_GAP_DP = 6
     private var cameraPermissionDeniedCount = 0
 
     private val excluded = setOf(
@@ -210,7 +211,7 @@ object LiquidBottomNav {
                 target.setTag(R.id.tag_liquid_nav_original_padding_bottom, it)
             }
 
-        val extra = if (includeNavHeight) nav.height + dp(nav, 8) else 0
+        val extra = if (includeNavHeight) nav.height + dp(nav, MENU_CONTENT_GAP_DP) else 0
         val targetBottom = initial + extra
         if (target.paddingBottom != targetBottom) {
             target.updatePadding(bottom = targetBottom)
@@ -218,11 +219,16 @@ object LiquidBottomNav {
     }
 
     private fun resolvePaddingTarget(contentRoot: View): View {
-        return if (contentRoot is DrawerLayout && contentRoot.childCount > 0) {
-            contentRoot.getChildAt(0)
-        } else {
-            contentRoot
+        if (contentRoot is DrawerLayout) {
+            val wrapped = contentRoot.findViewById<ViewGroup>(R.id.liquidTopDrawerContentContainer)
+                ?.getChildAt(0)
+            if (wrapped != null) return wrapped
+            return if (contentRoot.childCount > 0) contentRoot.getChildAt(0) else contentRoot
         }
+        if (contentRoot.id == R.id.liquidTopDrawerContentContainer && contentRoot is ViewGroup && contentRoot.childCount > 0) {
+            return contentRoot.getChildAt(0)
+        }
+        return contentRoot
     }
 
     private fun setupKeyboardAwareBehavior(
