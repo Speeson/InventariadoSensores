@@ -122,7 +122,7 @@
                 android:layout_width="@dimen/top_center_button_size"
                 android:layout_height="@dimen/top_center_button_size"
                 android:layout_gravity="center"
-                android:background="@drawable/bg_liquid_center_top_blue"
+                android:background="@android:color/transparent"
                 android:contentDescription="Escanear"
                 android:padding="8dp"
                 android:scaleType="centerInside"

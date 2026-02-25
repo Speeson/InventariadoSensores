@@ -467,10 +467,10 @@ class HomeActivity : AppCompatActivity() {
         val item = binding.navViewMain.menu.findItem(R.id.nav_theme) ?: return
         val isDark = prefs.getBoolean("dark_mode", false)
         if (isDark) {
-            item.title = "Tema: Oscuro"
+            item.title = "Activar tema claro"
             item.setIcon(R.drawable.glass_sun)
         } else {
-            item.title = "Tema: Claro"
+            item.title = "Activar tema oscuro"
             item.setIcon(R.drawable.glass_moon)
         }
         applyGradientToMenu(binding.navViewMain)
@@ -486,11 +486,11 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun handleCompactDrawerAction(itemId: Int) {
-        var shouldCloseDrawer = true
         when (itemId) {
             R.id.nav_theme -> {
-                shouldCloseDrawer = false
-                toggleTheme(reopenDrawer = true)
+                binding.drawerLayout.closeDrawer(GravityCompat.START)
+                toggleTheme(reopenDrawer = false)
+                return
             }
             R.id.nav_system_status -> showSystemStatus()
             R.id.nav_offline -> {
@@ -505,9 +505,7 @@ class HomeActivity : AppCompatActivity() {
                 UiNotifier.show(this, msg)
             }
         }
-        if (shouldCloseDrawer) {
-            binding.drawerLayout.closeDrawer(GravityCompat.START)
-        }
+        binding.drawerLayout.closeDrawer(GravityCompat.START)
     }
 
     private fun collapseBottomCenterMenuOverlay() {

@@ -313,7 +313,6 @@ object LiquidBottomNav {
     private fun setActiveTab(nav: View, tab: NavTab) {
         setSelected(nav.findViewById(R.id.btnLiquidHome), tab == NavTab.HOME)
         setSelected(nav.findViewById(R.id.btnLiquidTheme), tab == NavTab.SEARCH)
-        setSelected(nav.findViewById(R.id.btnLiquidScan), tab == NavTab.SCAN)
         setSelected(nav.findViewById(R.id.btnLiquidSearch), tab == NavTab.ASSISTANT)
         setSelected(nav.findViewById(R.id.btnLiquidProfile), tab == NavTab.AUDIT)
     }
@@ -333,18 +332,6 @@ object LiquidBottomNav {
     }
 
     private fun setSelected(button: ImageButton, selected: Boolean) {
-        val isCenter = button.id == R.id.btnLiquidScan
-        if (isCenter) {
-            button.setBackgroundResource(R.drawable.bg_liquid_center_top_blue)
-            button.imageAlpha = if (selected) 255 else 245
-            button.scaleX = if (selected) 1.10f else 1.0f
-            button.scaleY = if (selected) 1.10f else 1.0f
-            button.setColorFilter(
-                Color.parseColor(if (selected) LIQUID_CRYSTAL_BLUE_ACTIVE else LIQUID_CRYSTAL_BLUE),
-                PorterDuff.Mode.SRC_IN
-            )
-            return
-        }
         if (selected) {
             button.setBackgroundResource(R.drawable.bg_liquid_icon_selected)
             button.imageAlpha = 255

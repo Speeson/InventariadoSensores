@@ -398,10 +398,10 @@ object LiquidTopNav {
         val prefs = activity.getSharedPreferences(PREFS_UI, Context.MODE_PRIVATE)
         val isDark = prefs.getBoolean("dark_mode", false)
         if (isDark) {
-            item.title = "Tema: Oscuro"
+            item.title = "Activar tema claro"
             item.setIcon(R.drawable.glass_sun)
         } else {
-            item.title = "Tema: Claro"
+            item.title = "Activar tema oscuro"
             item.setIcon(R.drawable.glass_moon)
         }
     }
