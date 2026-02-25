@@ -486,7 +486,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical|start"
             android:layout_marginStart="12dp"
-            android:background="@drawable/bg_liquid_nav"
+            android:background="@drawable/bg_liquid_menu_panel"
             android:padding="8dp">
 
             <com.google.android.material.navigation.NavigationView
@@ -502,7 +502,6 @@
     </FrameLayout>
 
 </androidx.drawerlayout.widget.DrawerLayout>
-
 
 
 

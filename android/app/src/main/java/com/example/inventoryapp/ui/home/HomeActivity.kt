@@ -26,6 +26,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.drawerlayout.widget.DrawerLayout
+import android.content.res.ColorStateList
 import androidx.lifecycle.lifecycleScope
 import androidx.core.content.ContextCompat
 import com.example.inventoryapp.R
@@ -71,6 +72,9 @@ class HomeActivity : AppCompatActivity() {
     private var topMenuExpanded = false
     private var topCenterDropDy = 0f
     private var topCenterAnimator: ValueAnimator? = null
+    private val liquidCrystalBlue = Color.parseColor("#7FD8FF")
+    private val liquidCrystalBlueActive = Color.parseColor("#2CB8FF")
+    private var selectedTopButtonId: Int? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -197,8 +201,13 @@ class HomeActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        btnTopMenu?.let { updateTopButtonState(it, false) }
-        btnTopAlerts?.let { updateTopButtonState(it, false) }
+        if (selectedTopButtonId == R.id.btnAlertsQuick) {
+            selectedTopButtonId = null
+        }
+        if (selectedTopButtonId == R.id.btnMenu && !binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            selectedTopButtonId = null
+        }
+        applyTopButtonsSelection()
         updateThemeMenuItem()
         updateDebugOfflineMenuItem()
         updateLocationSelectorHint()
@@ -242,7 +251,7 @@ class HomeActivity : AppCompatActivity() {
         btnTopMenu?.let { setLiquidImage(it, R.drawable.glass_menu) }
         btnTopAlerts?.let { setLiquidImage(it, R.drawable.glass_noti) }
         findViewById<ImageButton>(R.id.btnTopMidLeft)?.let {
-            setLiquidImage(it, R.drawable.glass_stock)
+            setLiquidImage(it, R.drawable.glass_location)
         }
         findViewById<ImageButton>(R.id.btnTopMidRight)?.let {
             setLiquidImage(it, R.drawable.glass_setting)
@@ -253,6 +262,8 @@ class HomeActivity : AppCompatActivity() {
         }
         findViewById<ImageButton>(R.id.btnTopCenterActionOne)?.let { profileButton ->
             setLiquidImage(profileButton, R.drawable.glass_user)
+            profileButton.imageAlpha = 255
+            profileButton.setColorFilter(liquidCrystalBlueActive, PorterDuff.Mode.SRC_IN)
             profileButton.setOnClickListener {
                 toggleTopCenterMenu(forceClose = true)
                 showProfile()
@@ -260,12 +271,15 @@ class HomeActivity : AppCompatActivity() {
         }
         findViewById<ImageButton>(R.id.btnTopCenterActionTwo)?.let { logoutButton ->
             setLiquidImage(logoutButton, R.drawable.glass_logout)
+            logoutButton.imageAlpha = 255
+            logoutButton.setColorFilter(liquidCrystalBlueActive, PorterDuff.Mode.SRC_IN)
             logoutButton.setOnClickListener {
                 toggleTopCenterMenu(forceClose = true)
                 confirmLogout()
             }
         }
         findViewById<ImageButton>(R.id.btnTopMidLeft)?.setOnClickListener {
+            setTopButtonSelection(R.id.btnTopMidLeft)
             showLocationSelectorDialog()
         }
         findViewById<ImageButton>(R.id.btnTopMidLeft)?.setOnLongClickListener {
@@ -278,7 +292,13 @@ class HomeActivity : AppCompatActivity() {
             true
         }
         findViewById<ImageButton>(R.id.btnTopMidRight)?.setOnClickListener {
+            setTopButtonSelection(R.id.btnTopMidRight)
             UiNotifier.show(this, "Atajo superior derecho pendiente")
+            findViewById<ImageButton>(R.id.btnTopMidRight)?.postDelayed({
+                if (selectedTopButtonId == R.id.btnTopMidRight) {
+                    setTopButtonSelection(null)
+                }
+            }, 300L)
         }
 
         btnTopMenu?.setOnClickListener {
@@ -286,7 +306,7 @@ class HomeActivity : AppCompatActivity() {
                 binding.drawerLayout.closeDrawer(GravityCompat.START)
                 return@setOnClickListener
             }
-            btnTopMenu?.let { button -> updateTopButtonState(button, true) }
+            setTopButtonSelection(R.id.btnMenu)
             if (topMenuExpanded) toggleTopCenterMenu(forceClose = true)
             findViewById<View>(R.id.topCenterDismissOverlay)?.apply {
                 visibility = View.GONE
@@ -300,14 +320,14 @@ class HomeActivity : AppCompatActivity() {
             true
         }
         btnTopAlerts?.setOnClickListener {
-            btnTopAlerts?.let { button -> updateTopButtonState(button, true) }
+            setTopButtonSelection(R.id.btnAlertsQuick)
             startActivity(Intent(this, AlertsActivity::class.java))
             tvTopAlertsBadge?.visibility = View.GONE
         }
 
         binding.drawerLayout.addDrawerListener(object : DrawerLayout.SimpleDrawerListener() {
             override fun onDrawerOpened(drawerView: View) {
-                btnTopMenu?.let { updateTopButtonState(it, true) }
+                setTopButtonSelection(R.id.btnMenu)
                 if (topMenuExpanded) toggleTopCenterMenu(forceClose = true)
                 findViewById<View>(R.id.topCenterDismissOverlay)?.apply {
                     visibility = View.GONE
@@ -320,9 +340,25 @@ class HomeActivity : AppCompatActivity() {
             }
 
             override fun onDrawerClosed(drawerView: View) {
-                btnTopMenu?.let { updateTopButtonState(it, false) }
+                if (selectedTopButtonId == R.id.btnMenu) {
+                    setTopButtonSelection(null)
+                }
             }
         })
+    }
+
+    private fun setTopButtonSelection(buttonId: Int?) {
+        selectedTopButtonId = buttonId
+        applyTopButtonsSelection()
+    }
+
+    private fun applyTopButtonsSelection() {
+        btnTopMenu?.let { updateTopButtonState(it, selectedTopButtonId == R.id.btnMenu) }
+        btnTopAlerts?.let { updateTopButtonState(it, selectedTopButtonId == R.id.btnAlertsQuick) }
+        findViewById<ImageButton>(R.id.btnTopMidLeft)
+            ?.let { updateTopButtonState(it, selectedTopButtonId == R.id.btnTopMidLeft) }
+        findViewById<ImageButton>(R.id.btnTopMidRight)
+            ?.let { updateTopButtonState(it, selectedTopButtonId == R.id.btnTopMidRight) }
     }
 
     private fun updateTopButtonState(button: ImageButton, active: Boolean) {
@@ -331,11 +367,13 @@ class HomeActivity : AppCompatActivity() {
             button.imageAlpha = 255
             button.scaleX = 1.08f
             button.scaleY = 1.08f
+            button.setColorFilter(liquidCrystalBlueActive, PorterDuff.Mode.SRC_IN)
         } else {
             button.setBackgroundColor(Color.TRANSPARENT)
-            button.imageAlpha = 235
+            button.imageAlpha = 245
             button.scaleX = 1.0f
             button.scaleY = 1.0f
+            button.setColorFilter(liquidCrystalBlue, PorterDuff.Mode.SRC_IN)
         }
     }
 
@@ -406,8 +444,17 @@ class HomeActivity : AppCompatActivity() {
                         UiNotifier.show(this@HomeActivity, "Ubicacion activa: ${location.code}")
                         dialog.dismiss()
                     }
-                    .show()
+                    .show().also { dlg ->
+                        dlg.setOnDismissListener {
+                            if (selectedTopButtonId == R.id.btnTopMidLeft) {
+                                setTopButtonSelection(null)
+                            }
+                        }
+                    }
             } catch (e: Exception) {
+                if (selectedTopButtonId == R.id.btnTopMidLeft) {
+                    setTopButtonSelection(null)
+                }
                 UiNotifier.show(
                     this@HomeActivity,
                     UiNotifier.buildConnectionMessage(this@HomeActivity, e.message)
@@ -514,21 +561,25 @@ class HomeActivity : AppCompatActivity() {
         actionTwo?.scaleY = 1f
 
         if (!shouldOpen) {
-            setLiquidImage(centerBtn, R.drawable.glass_add)
-            centerBtn.rotation = 45f
-        } else {
+            centerBtn.setBackgroundResource(R.drawable.bg_liquid_center_top_blue)
             setLiquidImage(centerBtn, R.drawable.glass_add)
             centerBtn.rotation = 0f
+            centerBtn.setColorFilter(liquidCrystalBlue, PorterDuff.Mode.SRC_IN)
+        } else {
+            centerBtn.setBackgroundResource(R.drawable.bg_liquid_menu_button)
+            setLiquidImage(centerBtn, R.drawable.glass_x)
+            centerBtn.rotation = 0f
+            centerBtn.setColorFilter(liquidCrystalBlueActive, PorterDuff.Mode.SRC_IN)
         }
 
         val from = if (shouldOpen) 0f else 1f
         val to = if (shouldOpen) 1f else 0f
+        val expandedCenterY = topCenterDropDy - resources.displayMetrics.density * 3f
         topCenterAnimator = ValueAnimator.ofFloat(from, to).apply {
             duration = if (shouldOpen) 260L else 220L
             addUpdateListener { anim ->
                 val t = easeInOut(anim.animatedValue as Float)
-                centerBtn.translationY = topCenterDropDy * t
-                centerBtn.rotation = 45f * t
+                centerBtn.translationY = expandedCenterY * t
                 panel.translationY = -topCenterDropDy * (1f - t)
                 panel.scaleX = t
                 panel.scaleY = 0.95f + (1f - 0.95f) * t
@@ -543,13 +594,17 @@ class HomeActivity : AppCompatActivity() {
                         panel.translationY = -topCenterDropDy
                         centerBtn.translationY = 0f
                         centerBtn.rotation = 0f
+                        centerBtn.setBackgroundResource(R.drawable.bg_liquid_center_top_blue)
                         setLiquidImage(centerBtn, R.drawable.glass_add)
+                        centerBtn.setColorFilter(liquidCrystalBlue, PorterDuff.Mode.SRC_IN)
                         dismissOverlay?.visibility = View.GONE
                         dismissOverlay?.isClickable = false
                     } else {
-                        centerBtn.translationY = topCenterDropDy
-                        centerBtn.rotation = 45f
-                        setLiquidImage(centerBtn, R.drawable.glass_add)
+                        centerBtn.translationY = expandedCenterY
+                        centerBtn.rotation = 0f
+                        centerBtn.setBackgroundResource(R.drawable.bg_liquid_menu_button)
+                        setLiquidImage(centerBtn, R.drawable.glass_x)
+                        centerBtn.setColorFilter(liquidCrystalBlueActive, PorterDuff.Mode.SRC_IN)
                     }
                 }
             })
@@ -977,7 +1032,7 @@ private fun confirmLogout() {
     }
 
     private fun applyGradientToMenu(nav: NavigationView) {
-        nav.itemIconTintList = null
+        nav.itemIconTintList = ColorStateList.valueOf(liquidCrystalBlue)
     }
 
     private fun getGradientBitmap(resId: Int): Bitmap {
@@ -1026,9 +1081,10 @@ private fun confirmLogout() {
     }
 
     private fun setLiquidImage(view: ImageView, resId: Int) {
-        view.imageTintList = null
-        view.clearColorFilter()
         view.setImageResource(resId)
+        view.imageTintList = null
+        view.setColorFilter(liquidCrystalBlue, PorterDuff.Mode.SRC_IN)
+        view.imageAlpha = 245
     }
 
     private fun setNeonImage(view: ImageView, resId: Int) {
@@ -1131,4 +1187,3 @@ private fun confirmLogout() {
         return out
     }
 }
-

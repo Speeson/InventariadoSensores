@@ -74,7 +74,7 @@ class NotchedLiquidTopBarView @JvmOverloads constructor(
             0f,
             0f,
             barHeight,
-            intArrayOf(0xB3FFFFFF.toInt(), 0x66E9F2FF.toInt(), 0x66D5E3FF.toInt()),
+            intArrayOf(0xCFE7F6FF.toInt(), 0x89B8E4FF.toInt(), 0x5E8FC9FF.toInt()),
             floatArrayOf(0f, 0.5f, 1f),
             Shader.TileMode.CLAMP
         )
@@ -138,7 +138,7 @@ class NotchedLiquidTopBarView @JvmOverloads constructor(
                     withAlpha(deep, lowAlpha),
                     withAlpha(statusTintColor, 0)
                 ),
-                floatArrayOf(0f, 0.20f, 0.62f, 1f),
+                floatArrayOf(0f, 0.12f, 0.34f, 0.5f),
                 Shader.TileMode.CLAMP
             )
             canvas.drawPath(shapePath, statusPaint)

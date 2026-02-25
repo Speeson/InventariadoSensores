@@ -6,6 +6,7 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.graphics.PorterDuff
 import android.graphics.Rect
 import android.net.Uri
 import android.os.Bundle
@@ -79,11 +80,12 @@ object LiquidBottomNav {
     private const val ACTION_SCAN = "scan"
     private const val CAMERA_PERMISSION_FRAGMENT_TAG = "liquid_camera_permission_fragment"
     private const val MENU_CONTENT_GAP_DP = 6
+    private const val LIQUID_CRYSTAL_BLUE = "#7FD8FF"
+    private const val LIQUID_CRYSTAL_BLUE_ACTIVE = "#2CB8FF"
     private var cameraPermissionDeniedCount = 0
 
     private val excluded = setOf(
         "com.example.inventoryapp.ui.auth.LoginActivity",
-        "com.example.inventoryapp.ui.alerts.AlertsActivity",
     )
 
     private val quickTargets = listOf(
@@ -182,7 +184,6 @@ object LiquidBottomNav {
                 collapseCenterMenu(nav, true)
                 return@setOnClickListener
             }
-            setActiveTab(nav, NavTab.SCAN)
             expandCenterMenu(nav)
         }
         nav.findViewById<ImageButton>(R.id.btnLiquidSearch).setOnClickListener {
@@ -334,10 +335,14 @@ object LiquidBottomNav {
     private fun setSelected(button: ImageButton, selected: Boolean) {
         val isCenter = button.id == R.id.btnLiquidScan
         if (isCenter) {
-            button.setBackgroundResource(R.drawable.bg_liquid_center_square)
-            button.imageAlpha = if (selected) 255 else 235
+            button.setBackgroundResource(R.drawable.bg_liquid_center_top_blue)
+            button.imageAlpha = if (selected) 255 else 245
             button.scaleX = if (selected) 1.10f else 1.0f
             button.scaleY = if (selected) 1.10f else 1.0f
+            button.setColorFilter(
+                Color.parseColor(if (selected) LIQUID_CRYSTAL_BLUE_ACTIVE else LIQUID_CRYSTAL_BLUE),
+                PorterDuff.Mode.SRC_IN
+            )
             return
         }
         if (selected) {
@@ -345,11 +350,13 @@ object LiquidBottomNav {
             button.imageAlpha = 255
             button.scaleX = 1.08f
             button.scaleY = 1.08f
+            button.setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE_ACTIVE), PorterDuff.Mode.SRC_IN)
         } else {
             button.setBackgroundColor(Color.TRANSPARENT)
-            button.imageAlpha = 230
+            button.imageAlpha = 245
             button.scaleX = 1.0f
             button.scaleY = 1.0f
+            button.setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE), PorterDuff.Mode.SRC_IN)
         }
     }
 
@@ -608,6 +615,13 @@ object LiquidBottomNav {
 
         setLiquidIcon(scanBtn, R.drawable.glass_scanner)
         setLiquidIcon(manualBtn, R.drawable.glass_scanmanual)
+        setLiquidIcon(closeBtn, R.drawable.glass_x)
+        scanBtn.imageAlpha = 255
+        manualBtn.imageAlpha = 255
+        closeBtn.imageAlpha = 255
+        scanBtn.setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE_ACTIVE), PorterDuff.Mode.SRC_IN)
+        manualBtn.setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE_ACTIVE), PorterDuff.Mode.SRC_IN)
+        closeBtn.setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE_ACTIVE), PorterDuff.Mode.SRC_IN)
 
         closeBtn.setOnClickListener {
             collapseCenterMenu(nav, true)
@@ -677,9 +691,10 @@ object LiquidBottomNav {
     }
 
     private fun setLiquidIcon(button: ImageButton, resId: Int) {
-        button.imageTintList = null
-        button.clearColorFilter()
         button.setImageResource(resId)
+        button.imageTintList = null
+        button.setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE), PorterDuff.Mode.SRC_IN)
+        button.imageAlpha = 245
     }
 }
 
