@@ -387,10 +387,10 @@ object LiquidTopNav {
         val isDark = prefs.getBoolean("dark_mode", false)
         if (isDark) {
             item.title = "Tema: Oscuro"
-            item.setIcon(R.drawable.ic_sun)
+            item.setIcon(R.drawable.glass_sun)
         } else {
             item.title = "Tema: Claro"
-            item.setIcon(R.drawable.ic_moon)
+            item.setIcon(R.drawable.glass_moon)
         }
     }
 
@@ -484,13 +484,13 @@ object LiquidTopNav {
     }
 
     private fun applyIconStyle(host: View) {
-        GradientIconUtil.applyGradient(host.findViewById<ImageButton>(R.id.btnMenu), R.drawable.back2)
-        GradientIconUtil.applyGradient(host.findViewById<ImageButton>(R.id.btnTopMidLeft), R.drawable.stock)
-        GradientIconUtil.applyGradient(host.findViewById<ImageButton>(R.id.btnTopMidRight), R.drawable.ajustes)
-        GradientIconUtil.applyGradient(host.findViewById<ImageButton>(R.id.btnAlertsQuick), R.drawable.ic_bell)
-        GradientIconUtil.applyGradient(host.findViewById<ImageButton>(R.id.btnTopCenterMain), R.drawable.plus)
-        GradientIconUtil.applyGradient(host.findViewById<ImageButton>(R.id.btnTopCenterActionOne), R.drawable.user)
-        GradientIconUtil.applyGradient(host.findViewById<ImageButton>(R.id.btnTopCenterActionTwo), R.drawable.logout)
+        setLiquidIcon(host.findViewById(R.id.btnMenu), R.drawable.glass_back)
+        setLiquidIcon(host.findViewById(R.id.btnTopMidLeft), R.drawable.glass_stock)
+        setLiquidIcon(host.findViewById(R.id.btnTopMidRight), R.drawable.glass_setting)
+        setLiquidIcon(host.findViewById(R.id.btnAlertsQuick), R.drawable.glass_noti)
+        setLiquidIcon(host.findViewById(R.id.btnTopCenterMain), R.drawable.glass_add)
+        setLiquidIcon(host.findViewById(R.id.btnTopCenterActionOne), R.drawable.glass_user)
+        setLiquidIcon(host.findViewById(R.id.btnTopCenterActionTwo), R.drawable.glass_logout)
     }
 
     private fun updateStatusTint(host: View) {
@@ -524,16 +524,12 @@ object LiquidTopNav {
             .setDuration(190L)
             .start()
 
-        GradientIconUtil.applyGradient(centerBtn, R.drawable.plus)
+        setLiquidIcon(centerBtn, R.drawable.glass_add)
         centerBtn.rotation = 0f
         centerBtn.animate()
             .translationY(dropDy)
             .rotation(45f)
             .setDuration(190L)
-            .withEndAction {
-                centerBtn.rotation = 0f
-                centerBtn.setImageResource(R.drawable.ic_close_red)
-            }
             .start()
         topBar?.notchProgress = 0f
     }
@@ -555,14 +551,14 @@ object LiquidTopNav {
             dismissOverlay.isClickable = false
             centerBtn.translationY = 0f
             centerBtn.rotation = 0f
-            GradientIconUtil.applyGradient(centerBtn, R.drawable.plus)
+            setLiquidIcon(centerBtn, R.drawable.glass_add)
             topBar?.notchProgress = 1f
         }
         if (!animate) {
             endAction.invoke()
             return
         }
-        GradientIconUtil.applyGradient(centerBtn, R.drawable.plus)
+        setLiquidIcon(centerBtn, R.drawable.glass_add)
         centerBtn.rotation = 45f
         panel.animate()
             .alpha(0f)
@@ -675,7 +671,9 @@ object LiquidTopNav {
         val view = LayoutInflater.from(activity).inflate(R.layout.dialog_liquid_profile, null)
         val dialog = AlertDialog.Builder(activity).setView(view).create()
         view.findViewById<ImageView>(R.id.ivProfileIconPopup)?.let {
-            GradientIconUtil.applyGradient(it, R.drawable.user)
+            it.imageTintList = null
+            it.clearColorFilter()
+            it.setImageResource(R.drawable.glass_user)
         }
         view.findViewById<ImageButton>(R.id.btnProfilePopupClose)?.setOnClickListener {
             dialog.dismiss()
@@ -730,5 +728,11 @@ object LiquidTopNav {
 
     private fun dp(view: View, value: Int): Int {
         return (value * view.resources.displayMetrics.density).toInt()
+    }
+
+    private fun setLiquidIcon(button: ImageButton, resId: Int) {
+        button.imageTintList = null
+        button.clearColorFilter()
+        button.setImageResource(resId)
     }
 }

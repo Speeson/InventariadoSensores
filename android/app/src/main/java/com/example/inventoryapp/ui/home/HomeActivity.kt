@@ -46,7 +46,6 @@ import com.example.inventoryapp.ui.thresholds.ThresholdsActivity
 import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.CreateUiFeedback
-import com.example.inventoryapp.ui.common.GradientIconUtil
 import com.example.inventoryapp.ui.common.NotchedLiquidTopBarView
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.data.remote.model.AlertStatusDto
@@ -240,27 +239,27 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun setupTopLiquidMenu() {
-        btnTopMenu?.let { GradientIconUtil.applyGradient(it, R.drawable.menu) }
-        btnTopAlerts?.let { GradientIconUtil.applyGradient(it, R.drawable.ic_bell) }
+        btnTopMenu?.let { setLiquidImage(it, R.drawable.glass_menu) }
+        btnTopAlerts?.let { setLiquidImage(it, R.drawable.glass_noti) }
         findViewById<ImageButton>(R.id.btnTopMidLeft)?.let {
-            GradientIconUtil.applyGradient(it, R.drawable.stock)
+            setLiquidImage(it, R.drawable.glass_stock)
         }
         findViewById<ImageButton>(R.id.btnTopMidRight)?.let {
-            GradientIconUtil.applyGradient(it, R.drawable.ajustes)
+            setLiquidImage(it, R.drawable.glass_setting)
         }
         findViewById<ImageButton>(R.id.btnTopCenterMain)?.let {
-            GradientIconUtil.applyGradient(it, R.drawable.plus)
+            setLiquidImage(it, R.drawable.glass_add)
             it.setOnClickListener { toggleTopCenterMenu() }
         }
         findViewById<ImageButton>(R.id.btnTopCenterActionOne)?.let { profileButton ->
-            GradientIconUtil.applyGradient(profileButton, R.drawable.user)
+            setLiquidImage(profileButton, R.drawable.glass_user)
             profileButton.setOnClickListener {
                 toggleTopCenterMenu(forceClose = true)
                 showProfile()
             }
         }
         findViewById<ImageButton>(R.id.btnTopCenterActionTwo)?.let { logoutButton ->
-            GradientIconUtil.applyGradient(logoutButton, R.drawable.logout)
+            setLiquidImage(logoutButton, R.drawable.glass_logout)
             logoutButton.setOnClickListener {
                 toggleTopCenterMenu(forceClose = true)
                 confirmLogout()
@@ -330,8 +329,8 @@ class HomeActivity : AppCompatActivity() {
         if (active) {
             button.setBackgroundResource(R.drawable.bg_liquid_icon_selected)
             button.imageAlpha = 255
-            button.scaleX = 1.04f
-            button.scaleY = 1.04f
+            button.scaleX = 1.08f
+            button.scaleY = 1.08f
         } else {
             button.setBackgroundColor(Color.TRANSPARENT)
             button.imageAlpha = 235
@@ -422,10 +421,10 @@ class HomeActivity : AppCompatActivity() {
         val isDark = prefs.getBoolean("dark_mode", false)
         if (isDark) {
             item.title = "Tema: Oscuro"
-            item.setIcon(R.drawable.ic_sun)
+            item.setIcon(R.drawable.glass_sun)
         } else {
             item.title = "Tema: Claro"
-            item.setIcon(R.drawable.ic_moon)
+            item.setIcon(R.drawable.glass_moon)
         }
         applyGradientToMenu(binding.navViewMain)
     }
@@ -515,10 +514,10 @@ class HomeActivity : AppCompatActivity() {
         actionTwo?.scaleY = 1f
 
         if (!shouldOpen) {
-            GradientIconUtil.applyGradient(centerBtn, R.drawable.plus)
+            setLiquidImage(centerBtn, R.drawable.glass_add)
             centerBtn.rotation = 45f
         } else {
-            GradientIconUtil.applyGradient(centerBtn, R.drawable.plus)
+            setLiquidImage(centerBtn, R.drawable.glass_add)
             centerBtn.rotation = 0f
         }
 
@@ -544,13 +543,13 @@ class HomeActivity : AppCompatActivity() {
                         panel.translationY = -topCenterDropDy
                         centerBtn.translationY = 0f
                         centerBtn.rotation = 0f
-                        GradientIconUtil.applyGradient(centerBtn, R.drawable.plus)
+                        setLiquidImage(centerBtn, R.drawable.glass_add)
                         dismissOverlay?.visibility = View.GONE
                         dismissOverlay?.isClickable = false
                     } else {
                         centerBtn.translationY = topCenterDropDy
-                        centerBtn.rotation = 0f
-                        centerBtn.setImageResource(R.drawable.ic_close_red)
+                        centerBtn.rotation = 45f
+                        setLiquidImage(centerBtn, R.drawable.glass_add)
                     }
                 }
             })
@@ -659,7 +658,7 @@ class HomeActivity : AppCompatActivity() {
         val view = layoutInflater.inflate(R.layout.dialog_liquid_profile, null)
         val dialog = AlertDialog.Builder(this).setView(view).create()
         view.findViewById<ImageView>(R.id.ivProfileIconPopup)?.let {
-            GradientIconUtil.applyGradient(it, R.drawable.user)
+            setLiquidImage(it, R.drawable.glass_user)
         }
         view.findViewById<ImageButton>(R.id.btnProfilePopupClose)?.setOnClickListener {
             dialog.dismiss()
@@ -954,8 +953,8 @@ private fun confirmLogout() {
     }
 
     private fun applyGradientIcons() {
-        btnTopAlerts?.let { setGradientImage(it, R.drawable.ic_bell) }
-        btnTopMenu?.let { setGradientImage(it, R.drawable.menu) }
+        btnTopAlerts?.let { setLiquidImage(it, R.drawable.glass_noti) }
+        btnTopMenu?.let { setLiquidImage(it, R.drawable.glass_menu) }
         binding.root.findViewById<ImageView>(R.id.ivScanIcon)
             ?.let { setNeonImage(it, R.drawable.scaner) }
         binding.root.findViewById<ImageView>(R.id.ivEventsIcon)
@@ -979,13 +978,6 @@ private fun confirmLogout() {
 
     private fun applyGradientToMenu(nav: NavigationView) {
         nav.itemIconTintList = null
-        val menu = nav.menu
-        for (i in 0 until menu.size()) {
-            val item = menu.getItem(i)
-            val icon = item.icon ?: continue
-            val bmp = getGradientBitmapFromDrawable(icon)
-            item.icon = android.graphics.drawable.BitmapDrawable(resources, bmp)
-        }
     }
 
     private fun getGradientBitmap(resId: Int): Bitmap {
@@ -1031,6 +1023,12 @@ private fun confirmLogout() {
             return
         }
         view.setImageBitmap(getGradientBitmapFromDrawable(drawable))
+    }
+
+    private fun setLiquidImage(view: ImageView, resId: Int) {
+        view.imageTintList = null
+        view.clearColorFilter()
+        view.setImageResource(resId)
     }
 
     private fun setNeonImage(view: ImageView, resId: Int) {

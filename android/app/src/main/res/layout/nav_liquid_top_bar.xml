@@ -28,14 +28,14 @@
 
             <ImageButton
                 android:id="@+id/btnMenu"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:layout_gravity="center"
                 android:background="@android:color/transparent"
                 android:contentDescription="Menu"
-                android:padding="10dp"
+                android:padding="8dp"
                 android:scaleType="centerInside"
-                android:src="@drawable/menu" />
+                android:src="@drawable/glass_menu" />
         </FrameLayout>
 
         <FrameLayout
@@ -46,14 +46,14 @@
 
             <ImageButton
                 android:id="@+id/btnTopMidLeft"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
                 android:layout_gravity="center"
                 android:background="@android:color/transparent"
                 android:contentDescription="Seleccionar ubicacion"
-                android:padding="9dp"
+                android:padding="7dp"
                 android:scaleType="centerInside"
-                android:src="@drawable/stock" />
+                android:src="@drawable/glass_stock" />
         </FrameLayout>
 
         <Space
@@ -68,14 +68,14 @@
 
             <ImageButton
                 android:id="@+id/btnTopMidRight"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
                 android:layout_gravity="center"
                 android:background="@android:color/transparent"
                 android:contentDescription="Accion superior derecha"
-                android:padding="9dp"
+                android:padding="7dp"
                 android:scaleType="centerInside"
-                android:src="@drawable/ajustes" />
+                android:src="@drawable/glass_setting" />
         </FrameLayout>
 
         <FrameLayout
@@ -85,19 +85,19 @@
             android:foregroundGravity="center">
 
             <FrameLayout
-                android:layout_width="44dp"
-                android:layout_height="44dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:layout_gravity="center">
 
                 <ImageButton
                     android:id="@+id/btnAlertsQuick"
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
                     android:background="@android:color/transparent"
                     android:contentDescription="Alertas"
-                    android:padding="10dp"
+                    android:padding="8dp"
                     android:scaleType="centerInside"
-                    android:src="@drawable/ic_bell" />
+                    android:src="@drawable/glass_noti" />
 
                 <TextView
                     android:id="@+id/tvAlertsBadge"
@@ -126,10 +126,10 @@
         android:background="@drawable/bg_liquid_center_top"
         android:contentDescription="Menu central superior"
         android:elevation="60dp"
-        android:padding="10dp"
+        android:padding="8dp"
         android:scaleType="centerInside"
         android:translationZ="60dp"
-        android:src="@drawable/plus" />
+        android:src="@drawable/glass_add" />
 
     <LinearLayout
         android:id="@+id/topCenterExpandPanel"
@@ -151,15 +151,15 @@
 
         <ImageButton
             android:id="@+id/btnTopCenterActionOne"
-            android:layout_width="46dp"
-            android:layout_height="46dp"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
             android:layout_marginLeft="5dp"
             android:layout_marginRight="5dp"
             android:background="@drawable/bg_liquid_button"
             android:contentDescription="Perfil de usuario"
-            android:padding="10dp"
+            android:padding="8dp"
             android:scaleType="centerInside"
-            android:src="@drawable/user" />
+            android:src="@drawable/glass_user" />
 
         <Space
             android:layout_width="56dp"
@@ -167,15 +167,15 @@
 
         <ImageButton
             android:id="@+id/btnTopCenterActionTwo"
-            android:layout_width="46dp"
-            android:layout_height="46dp"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
             android:layout_marginLeft="5dp"
             android:layout_marginRight="5dp"
             android:background="@drawable/bg_liquid_button"
             android:contentDescription="Cerrar sesion"
-            android:padding="10dp"
+            android:padding="8dp"
             android:scaleType="centerInside"
-            android:src="@drawable/logout" />
+            android:src="@drawable/glass_logout" />
     </LinearLayout>
 
 </merge>

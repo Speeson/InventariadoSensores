@@ -297,11 +297,11 @@ object LiquidBottomNav {
     }
 
     private fun applyIconStyle(nav: View) {
-        GradientIconUtil.applyGradient(nav.findViewById<ImageButton>(R.id.btnLiquidHome), R.drawable.home)
-        GradientIconUtil.applyGradient(nav.findViewById<ImageButton>(R.id.btnLiquidTheme), R.drawable.search)
-        GradientIconUtil.applyGradient(nav.findViewById<ImageButton>(R.id.btnLiquidScan), R.drawable.plus)
-        GradientIconUtil.applyGradient(nav.findViewById<ImageButton>(R.id.btnLiquidSearch), R.drawable.sync)
-        GradientIconUtil.applyGradient(nav.findViewById<ImageButton>(R.id.btnLiquidProfile), R.drawable.reports)
+        setLiquidIcon(nav.findViewById(R.id.btnLiquidHome), R.drawable.glass_home)
+        setLiquidIcon(nav.findViewById(R.id.btnLiquidTheme), R.drawable.glass_search)
+        setLiquidIcon(nav.findViewById(R.id.btnLiquidScan), R.drawable.glass_add)
+        setLiquidIcon(nav.findViewById(R.id.btnLiquidSearch), R.drawable.glass_cloud)
+        setLiquidIcon(nav.findViewById(R.id.btnLiquidProfile), R.drawable.glass_audit)
     }
 
     private fun highlightCurrentTab(activity: AppCompatActivity, nav: View) {
@@ -336,15 +336,15 @@ object LiquidBottomNav {
         if (isCenter) {
             button.setBackgroundResource(R.drawable.bg_liquid_center_square)
             button.imageAlpha = if (selected) 255 else 235
-            button.scaleX = if (selected) 1.06f else 1.0f
-            button.scaleY = if (selected) 1.06f else 1.0f
+            button.scaleX = if (selected) 1.10f else 1.0f
+            button.scaleY = if (selected) 1.10f else 1.0f
             return
         }
         if (selected) {
             button.setBackgroundResource(R.drawable.bg_liquid_icon_selected)
             button.imageAlpha = 255
-            button.scaleX = 1.04f
-            button.scaleY = 1.04f
+            button.scaleX = 1.08f
+            button.scaleY = 1.08f
         } else {
             button.setBackgroundColor(Color.TRANSPARENT)
             button.imageAlpha = 230
@@ -606,8 +606,8 @@ object LiquidBottomNav {
         val scanBtn = nav.findViewById<ImageButton>(R.id.btnCenterScanAction)
         val manualBtn = nav.findViewById<ImageButton>(R.id.btnCenterManualAction)
 
-        GradientIconUtil.applyGradient(scanBtn, R.drawable.scaner)
-        GradientIconUtil.applyGradient(manualBtn, R.drawable.code_manual)
+        setLiquidIcon(scanBtn, R.drawable.glass_scanner)
+        setLiquidIcon(manualBtn, R.drawable.glass_scanmanual)
 
         closeBtn.setOnClickListener {
             collapseCenterMenu(nav, true)
@@ -674,6 +674,12 @@ object LiquidBottomNav {
 
     private fun dp(view: View, value: Int): Int {
         return (value * view.resources.displayMetrics.density).toInt()
+    }
+
+    private fun setLiquidIcon(button: ImageButton, resId: Int) {
+        button.imageTintList = null
+        button.clearColorFilter()
+        button.setImageResource(resId)
     }
 }
 

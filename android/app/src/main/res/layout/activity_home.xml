@@ -494,15 +494,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@android:color/transparent"
-                app:itemIconSize="28dp"
-                app:itemIconTint="#4A7BF7"
-                app:itemTextColor="#1A1A1A"
+                app:itemIconSize="32dp"
+                app:itemIconTint="@null"
+                app:itemTextColor="@color/liquid_popup_list_text"
                 app:menu="@menu/drawer_menu_compact" />
         </LinearLayout>
     </FrameLayout>
 
 </androidx.drawerlayout.widget.DrawerLayout>
-
 
 
 

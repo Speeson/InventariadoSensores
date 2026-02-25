@@ -27,39 +27,39 @@
 
         <ImageButton
             android:id="@+id/btnCenterManualAction"
-            android:layout_width="46dp"
-            android:layout_height="46dp"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
             android:layout_marginLeft="5dp"
             android:layout_marginRight="5dp"
             android:background="@drawable/bg_liquid_button"
             android:contentDescription="Codigo manual"
-            android:padding="10dp"
+            android:padding="8dp"
             android:scaleType="centerInside"
-            android:src="@drawable/code_manual" />
+            android:src="@drawable/glass_scanmanual" />
 
         <ImageButton
             android:id="@+id/btnCenterClose"
-            android:layout_width="46dp"
-            android:layout_height="46dp"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
             android:layout_marginLeft="5dp"
             android:layout_marginRight="5dp"
             android:background="@drawable/bg_liquid_button"
             android:contentDescription="Cerrar opciones"
-            android:padding="10dp"
+            android:padding="8dp"
             android:scaleType="centerInside"
-            android:src="@drawable/ic_close_red" />
+            android:src="@drawable/glass_x" />
 
         <ImageButton
             android:id="@+id/btnCenterScanAction"
-            android:layout_width="46dp"
-            android:layout_height="46dp"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
             android:layout_marginLeft="5dp"
             android:layout_marginRight="5dp"
             android:background="@drawable/bg_liquid_button"
             android:contentDescription="Escaner rapido"
-            android:padding="10dp"
+            android:padding="8dp"
             android:scaleType="centerInside"
-            android:src="@drawable/scaner" />
+            android:src="@drawable/glass_scanner" />
     </LinearLayout>
 
     <LinearLayout
@@ -82,14 +82,14 @@
 
             <ImageButton
                 android:id="@+id/btnLiquidHome"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
                 android:layout_gravity="center"
                 android:background="@android:color/transparent"
                 android:contentDescription="Home"
-                android:padding="9dp"
+                android:padding="7dp"
                 android:scaleType="centerInside"
-                android:src="@drawable/home" />
+                android:src="@drawable/glass_home" />
         </FrameLayout>
 
         <FrameLayout
@@ -100,15 +100,15 @@
 
                 <ImageButton
                     android:id="@+id/btnLiquidTheme"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
                     android:layout_gravity="center"
                     android:background="@android:color/transparent"
                     android:contentDescription="Busqueda rapida"
-                    android:padding="9dp"
+                    android:padding="7dp"
                     android:scaleType="centerInside"
                     android:translationX="-3dp"
-                    android:src="@drawable/search" />
+                    android:src="@drawable/glass_search" />
             </FrameLayout>
 
         <FrameLayout
@@ -119,15 +119,15 @@
 
             <ImageButton
                 android:id="@+id/btnLiquidScan"
-                android:layout_width="46dp"
-                android:layout_height="46dp"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
                 android:layout_gravity="center"
                 android:background="@drawable/bg_liquid_center_square"
                 android:contentDescription="Escanear"
                 android:elevation="8dp"
-                android:padding="10dp"
+                android:padding="8dp"
                 android:scaleType="centerInside"
-                android:src="@drawable/plus" />
+                android:src="@drawable/glass_add" />
         </FrameLayout>
 
         <FrameLayout
@@ -138,15 +138,15 @@
 
             <ImageButton
                 android:id="@+id/btnLiquidSearch"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
                 android:layout_gravity="center"
                 android:background="@android:color/transparent"
                 android:contentDescription="Asistente IA"
-                android:padding="9dp"
+                android:padding="7dp"
                 android:scaleType="centerInside"
                 android:translationX="3dp"
-                android:src="@drawable/sync" />
+                android:src="@drawable/glass_cloud" />
         </FrameLayout>
 
         <FrameLayout
@@ -157,14 +157,14 @@
 
             <ImageButton
                 android:id="@+id/btnLiquidProfile"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
                 android:layout_gravity="center"
                 android:background="@android:color/transparent"
                 android:contentDescription="Auditoria"
-                android:padding="9dp"
+                android:padding="7dp"
                 android:scaleType="centerInside"
-                android:src="@drawable/reports" />
+                android:src="@drawable/glass_audit" />
         </FrameLayout>
 
     </LinearLayout>

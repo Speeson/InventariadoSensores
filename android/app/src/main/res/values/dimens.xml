@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <dimen name="top_center_button_size">42dp</dimen>
-    <dimen name="top_center_button_notch_gap">4dp</dimen>
+    <dimen name="top_center_button_size">46dp</dimen>
+    <dimen name="top_center_button_notch_gap">8dp</dimen>
     <dimen name="top_center_drop_dy">44dp</dimen>
 </resources>
