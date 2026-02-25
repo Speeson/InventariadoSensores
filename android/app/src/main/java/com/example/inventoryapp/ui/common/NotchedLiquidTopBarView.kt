@@ -31,6 +31,8 @@ class NotchedLiquidTopBarView @JvmOverloads constructor(
     }
     private val shapePath = Path()
     private val cornerRadius = dp(16f)
+    private var statusTintColor: Int = 0
+    private val statusPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     var notchProgress: Float = 1f
         set(value) {
             val clamped = value.coerceIn(0f, 1f)
@@ -45,6 +47,13 @@ class NotchedLiquidTopBarView @JvmOverloads constructor(
             field = value
             notchProgress = if (value) 1f else 0f
         }
+
+    fun setStatusTintColor(color: Int) {
+        if (statusTintColor != color) {
+            statusTintColor = color
+            invalidate()
+        }
+    }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
@@ -104,8 +113,29 @@ class NotchedLiquidTopBarView @JvmOverloads constructor(
         shapePath.addPath(barPath)
 
         canvas.drawPath(shapePath, fillPaint)
+        if (statusTintColor != 0) {
+            statusPaint.shader = LinearGradient(
+                0f,
+                0f,
+                0f,
+                barHeight,
+                intArrayOf(
+                    withAlpha(statusTintColor, 70),
+                    withAlpha(statusTintColor, 24),
+                    withAlpha(statusTintColor, 0)
+                ),
+                floatArrayOf(0f, 0.45f, 1f),
+                Shader.TileMode.CLAMP
+            )
+            canvas.drawPath(shapePath, statusPaint)
+        }
         canvas.drawPath(shapePath, strokePaint)
         canvas.drawPath(shapePath, innerStrokePaint)
+    }
+
+    private fun withAlpha(color: Int, alpha: Int): Int {
+        val a = (alpha.coerceIn(0, 255) shl 24)
+        return (color and 0x00FFFFFF) or a
     }
 
     private fun dp(value: Float): Float = value * resources.displayMetrics.density

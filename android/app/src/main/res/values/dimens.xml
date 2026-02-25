@@ -2,4 +2,5 @@
 <resources>
     <dimen name="top_center_button_size">42dp</dimen>
     <dimen name="top_center_button_notch_gap">4dp</dimen>
+    <dimen name="top_center_drop_dy">44dp</dimen>
 </resources>

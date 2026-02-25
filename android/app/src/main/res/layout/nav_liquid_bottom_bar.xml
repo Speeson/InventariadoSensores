@@ -10,10 +10,10 @@
 
     <LinearLayout
         android:id="@+id/centerExpandPanel"
-        android:layout_width="180dp"
-        android:layout_height="52dp"
+        android:layout_width="214dp"
+        android:layout_height="62dp"
         android:layout_gravity="bottom|center_horizontal"
-        android:layout_marginBottom="68dp"
+        android:layout_marginBottom="72dp"
         android:alpha="0"
         android:background="@drawable/bg_liquid_nav"
         android:elevation="20dp"
@@ -27,37 +27,37 @@
 
         <ImageButton
             android:id="@+id/btnCenterManualAction"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginLeft="4dp"
-            android:layout_marginRight="4dp"
+            android:layout_width="46dp"
+            android:layout_height="46dp"
+            android:layout_marginLeft="5dp"
+            android:layout_marginRight="5dp"
             android:background="@drawable/bg_liquid_button"
             android:contentDescription="Codigo manual"
-            android:padding="9dp"
+            android:padding="10dp"
             android:scaleType="centerInside"
             android:src="@drawable/code_manual" />
 
         <ImageButton
             android:id="@+id/btnCenterClose"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginLeft="4dp"
-            android:layout_marginRight="4dp"
+            android:layout_width="46dp"
+            android:layout_height="46dp"
+            android:layout_marginLeft="5dp"
+            android:layout_marginRight="5dp"
             android:background="@drawable/bg_liquid_button"
             android:contentDescription="Cerrar opciones"
-            android:padding="9dp"
+            android:padding="10dp"
             android:scaleType="centerInside"
             android:src="@drawable/ic_close_red" />
 
         <ImageButton
             android:id="@+id/btnCenterScanAction"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginLeft="4dp"
-            android:layout_marginRight="4dp"
+            android:layout_width="46dp"
+            android:layout_height="46dp"
+            android:layout_marginLeft="5dp"
+            android:layout_marginRight="5dp"
             android:background="@drawable/bg_liquid_button"
             android:contentDescription="Escaner rapido"
-            android:padding="9dp"
+            android:padding="10dp"
             android:scaleType="centerInside"
             android:src="@drawable/scaner" />
     </LinearLayout>

@@ -475,24 +475,29 @@
     </FrameLayout>
 
     <FrameLayout
-        android:layout_width="256dp"
-        android:layout_height="wrap_content"
-        android:layout_gravity="start|center_vertical"
-        android:layout_marginStart="12dp"
-        android:layout_marginEnd="12dp"
-        android:background="@drawable/bg_liquid_nav"
-        android:elevation="18dp"
-        android:padding="8dp">
+        android:layout_width="272dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:elevation="80dp">
 
-        <com.google.android.material.navigation.NavigationView
-            android:id="@+id/navViewMain"
-            android:layout_width="match_parent"
+        <LinearLayout
+            android:layout_width="256dp"
             android:layout_height="wrap_content"
-            android:background="@android:color/transparent"
-            app:itemIconSize="28dp"
-            app:itemIconTint="#4A7BF7"
-            app:itemTextColor="#1A1A1A"
-            app:menu="@menu/drawer_menu_compact" />
+            android:layout_gravity="center_vertical|start"
+            android:layout_marginStart="12dp"
+            android:background="@drawable/bg_liquid_nav"
+            android:padding="8dp">
+
+            <com.google.android.material.navigation.NavigationView
+                android:id="@+id/navViewMain"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@android:color/transparent"
+                app:itemIconSize="28dp"
+                app:itemIconTint="#4A7BF7"
+                app:itemTextColor="#1A1A1A"
+                app:menu="@menu/drawer_menu_compact" />
+        </LinearLayout>
     </FrameLayout>
 
 </androidx.drawerlayout.widget.DrawerLayout>

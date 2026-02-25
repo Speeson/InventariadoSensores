@@ -42,7 +42,6 @@ import kotlinx.coroutines.launch
 import com.example.inventoryapp.ui.categories.CategoriesActivity
 import com.example.inventoryapp.ui.thresholds.ThresholdsActivity
 import com.example.inventoryapp.ui.alerts.AlertsActivity
-import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.example.inventoryapp.ui.common.GradientIconUtil
@@ -78,10 +77,11 @@ class HomeActivity : AppCompatActivity() {
         btnTopMenu = findViewById(R.id.btnMenu)
         btnTopAlerts = findViewById(R.id.btnAlertsQuick)
         tvTopAlertsBadge = findViewById(R.id.tvAlertsBadge)
-        NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
+        findViewById<View>(R.id.viewNetworkBar)?.visibility = View.GONE
 
         session = SessionManager(this)
         NetworkModule.forceOnline()
+        updateTopBarConnectionTint(NetworkModule.isManualOffline())
 
         val isDark = prefs.getBoolean("dark_mode", false)
         AppCompatDelegate.setDefaultNightMode(
@@ -105,6 +105,8 @@ class HomeActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
         setupTopLiquidMenu()
         findViewById<View>(R.id.topMenuHost)?.bringToFront()
+        binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
+        binding.navViewMain.bringToFront()
 
         // Pop-up bienvenida si venÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­as de registro
         intent.getStringExtra("welcome_email")?.takeIf { it.isNotBlank() }?.let { email ->
@@ -174,21 +176,19 @@ class HomeActivity : AppCompatActivity() {
             startActivity(Intent(this, ImportsActivity::class.java))
         }
         binding.navViewMain.setNavigationItemSelectedListener { item ->
-            when (item.itemId) {
-                R.id.nav_system_status -> showSystemStatus()
-                R.id.nav_settings -> {
-                    val enabled = NetworkModule.toggleManualOffline()
-                    updateDebugOfflineMenuItem()
-                    val msg = if (enabled) {
-                        "Modo debug offline activado"
-                    } else {
-                        "Modo debug offline desactivado"
-                    }
-                    UiNotifier.show(this, msg)
-                }
-                R.id.nav_logout -> confirmLogout()
-            }
-            binding.drawerLayout.closeDrawer(GravityCompat.START)
+            handleCompactDrawerAction(item.itemId)
+            true
+        }
+        binding.navViewMain.menu.findItem(R.id.nav_system_status)?.setOnMenuItemClickListener {
+            handleCompactDrawerAction(R.id.nav_system_status)
+            true
+        }
+        binding.navViewMain.menu.findItem(R.id.nav_settings)?.setOnMenuItemClickListener {
+            handleCompactDrawerAction(R.id.nav_settings)
+            true
+        }
+        binding.navViewMain.menu.findItem(R.id.nav_logout)?.setOnMenuItemClickListener {
+            handleCompactDrawerAction(R.id.nav_logout)
             true
         }
         updateDebugOfflineMenuItem()
@@ -198,7 +198,7 @@ class HomeActivity : AppCompatActivity() {
 
         if (prefs.getBoolean("reopen_drawer", false)) {
             prefs.edit().putBoolean("reopen_drawer", false).apply()
-            binding.drawerLayout.openDrawer(GravityCompat.START)
+            binding.drawerLayout.openDrawer(binding.navViewMain)
         }
 
     }
@@ -208,6 +208,8 @@ class HomeActivity : AppCompatActivity() {
         btnTopMenu?.let { updateTopButtonState(it, false) }
         btnTopAlerts?.let { updateTopButtonState(it, false) }
         if (topMenuExpanded) toggleTopCenterMenu(forceClose = true)
+        findViewById<View>(R.id.topCenterDismissOverlay)?.visibility = View.GONE
+        collapseBottomCenterMenuOverlay()
 
         lifecycleScope.launch {
             ensureValidSession()
@@ -218,6 +220,7 @@ class HomeActivity : AppCompatActivity() {
         }
         lifecycleScope.launch {
             NetworkModule.offlineState.collect { offline ->
+                updateTopBarConnectionTint(offline)
                 if (!offline) {
                     offlineNoticeShown = false
                 }
@@ -253,7 +256,13 @@ class HomeActivity : AppCompatActivity() {
 
         btnTopMenu?.setOnClickListener {
             btnTopMenu?.let { button -> updateTopButtonState(button, true) }
-            binding.drawerLayout.openDrawer(GravityCompat.START)
+            if (topMenuExpanded) toggleTopCenterMenu(forceClose = true)
+            findViewById<View>(R.id.topCenterDismissOverlay)?.apply {
+                visibility = View.GONE
+                isClickable = false
+            }
+            collapseBottomCenterMenuOverlay()
+            binding.drawerLayout.openDrawer(binding.navViewMain)
         }
         btnTopMenu?.setOnLongClickListener {
             showHostDialog()
@@ -268,6 +277,15 @@ class HomeActivity : AppCompatActivity() {
         binding.drawerLayout.addDrawerListener(object : DrawerLayout.SimpleDrawerListener() {
             override fun onDrawerOpened(drawerView: View) {
                 btnTopMenu?.let { updateTopButtonState(it, true) }
+                if (topMenuExpanded) toggleTopCenterMenu(forceClose = true)
+                findViewById<View>(R.id.topCenterDismissOverlay)?.apply {
+                    visibility = View.GONE
+                    isClickable = false
+                    setOnTouchListener(null)
+                    setOnClickListener(null)
+                }
+                collapseBottomCenterMenuOverlay()
+                drawerView.bringToFront()
             }
 
             override fun onDrawerClosed(drawerView: View) {
@@ -298,6 +316,49 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
+    private fun updateTopBarConnectionTint(offline: Boolean) {
+        val tintColor = if (offline) {
+            Color.parseColor("#F44336")
+        } else {
+            Color.parseColor("#36C96A")
+        }
+        findViewById<NotchedLiquidTopBarView>(R.id.topLiquidBar)?.setStatusTintColor(tintColor)
+    }
+
+    private fun handleCompactDrawerAction(itemId: Int) {
+        when (itemId) {
+            R.id.nav_system_status -> showSystemStatus()
+            R.id.nav_settings -> {
+                val enabled = NetworkModule.toggleManualOffline()
+                updateDebugOfflineMenuItem()
+                updateTopBarConnectionTint(enabled)
+                val msg = if (enabled) {
+                    "Modo debug offline activado"
+                } else {
+                    "Modo debug offline desactivado"
+                }
+                UiNotifier.show(this, msg)
+            }
+            R.id.nav_logout -> confirmLogout()
+        }
+        binding.drawerLayout.closeDrawer(binding.navViewMain)
+    }
+
+    private fun collapseBottomCenterMenuOverlay() {
+        findViewById<View>(R.id.liquid_center_dismiss_overlay)?.visibility = View.GONE
+        findViewById<View>(R.id.centerExpandPanel)?.let { panel ->
+            panel.animate().cancel()
+            panel.visibility = View.GONE
+            panel.alpha = 0f
+            panel.scaleX = 0.8f
+            panel.translationY = dp(16f)
+        }
+        findViewById<View>(R.id.btnLiquidScan)?.let { center ->
+            center.visibility = View.VISIBLE
+            center.alpha = 1f
+        }
+    }
+
     private fun toggleTopCenterMenu(forceClose: Boolean = false) {
         val centerBtn = findViewById<ImageButton>(R.id.btnTopCenterMain) ?: return
         val panel = findViewById<View>(R.id.topCenterExpandPanel) ?: return
@@ -308,17 +369,21 @@ class HomeActivity : AppCompatActivity() {
         val shouldOpen = !topMenuExpanded && !forceClose
         if (topMenuExpanded == shouldOpen) return
         topMenuExpanded = shouldOpen
-        val centerBtnCenterY = centerBtn.y + centerBtn.height / 2f
-        val panelCenterY = panel.y + panel.height / 2f
-        topCenterDropDy = (panelCenterY - centerBtnCenterY + dp(12f)).coerceAtLeast(dp(34f))
+        topCenterDropDy = resources.getDimension(R.dimen.top_center_drop_dy)
         topCenterAnimator?.cancel()
+        dismissOverlay?.bringToFront()
         findViewById<View>(R.id.topMenuHost)?.bringToFront()
         panel.bringToFront()
         centerBtn.bringToFront()
         dismissOverlay?.setOnClickListener {
             toggleTopCenterMenu(forceClose = true)
         }
+        dismissOverlay?.setOnTouchListener { _, _ ->
+            toggleTopCenterMenu(forceClose = true)
+            true
+        }
         dismissOverlay?.visibility = if (shouldOpen) View.VISIBLE else View.GONE
+        dismissOverlay?.isClickable = shouldOpen
 
         panel.visibility = View.VISIBLE
         centerBtn.visibility = View.VISIBLE
@@ -357,10 +422,13 @@ class HomeActivity : AppCompatActivity() {
                         panel.scaleX = 0f
                         panel.scaleY = 0.95f
                         panel.translationY = -topCenterDropDy
+                        centerBtn.translationY = 0f
                         centerBtn.rotation = 0f
                         GradientIconUtil.applyGradient(centerBtn, R.drawable.plus)
                         dismissOverlay?.visibility = View.GONE
+                        dismissOverlay?.isClickable = false
                     } else {
+                        centerBtn.translationY = topCenterDropDy
                         centerBtn.rotation = 0f
                         centerBtn.setImageResource(R.drawable.ic_close_red)
                     }
@@ -713,7 +781,6 @@ private fun confirmLogout() {
     }
 
     private fun goToLogin() {
-        if (!session.isTokenExpired()) return
         val i = Intent(this, LoginActivity::class.java)
         i.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(i)
