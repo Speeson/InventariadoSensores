@@ -1,4 +1,4 @@
-package com.example.inventoryapp.ui.auth
+﻿package com.example.inventoryapp.ui.auth
 
 import android.content.Intent
 import android.os.Bundle
@@ -47,7 +47,7 @@ class LoginActivity : AppCompatActivity() {
         if (alreadyNotified) {
             UiNotifier.showBlockingTimed(
                 this@LoginActivity,
-                "Sesión caducada. Inicia sesión.",
+                "SesiÃ³n caducada. Inicia sesiÃ³n.",
                 R.drawable.expired,
                 timeoutMs = 20_000L
             )
@@ -58,7 +58,7 @@ class LoginActivity : AppCompatActivity() {
             if (!alreadyNotified) {
                 UiNotifier.showBlockingTimed(
                     this@LoginActivity,
-                    "Sesión caducada. Inicia sesión.",
+                    "SesiÃ³n caducada. Inicia sesiÃ³n.",
                     R.drawable.expired,
                     timeoutMs = 20_000L
                 )
@@ -79,14 +79,14 @@ class LoginActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
             if (pass.isEmpty()) {
-                binding.etPass.error = "Contraseña requerida"
+                binding.etPass.error = "ContraseÃ±a requerida"
                 return@setOnClickListener
             }
 
             loginWithApi(user, pass)
         }
 
-        // ✅ Ocultar teclado antes de llamar a la API
+        // âœ… Ocultar teclado antes de llamar a la API
         currentFocus?.let { view ->
             val imm = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
             imm.hideSoftInputFromWindow(view.windowToken, 0)
@@ -158,13 +158,13 @@ class LoginActivity : AppCompatActivity() {
                     FcmTokenManager.sync(this@LoginActivity)
                     FcmTokenManager.sync(this@LoginActivity)
 
-                    UiNotifier.show(this@LoginActivity, "¡Bienvenido!")
+                    UiNotifier.show(this@LoginActivity, "Â¡Bienvenido!")
 
                     persistEmailIfNeeded(user)
                     navigateToHome(Intent(this@LoginActivity, HomeActivity::class.java))
                 } else {
                     val errorMsg = when (response.code()) {
-                        401 -> "Usuario o contraseña incorrectos"
+                        401 -> "Usuario o contraseÃ±a incorrectos"
                         else -> "Error en el servidor: ${response.code()}"
                     }
                     UiNotifier.show(this@LoginActivity, errorMsg)
@@ -190,10 +190,10 @@ class LoginActivity : AppCompatActivity() {
                 } else {
                     session.clearToken()
                     clearCachedUiRole()
-                    UiNotifier.showBlockingTimed(this@LoginActivity, "Sesión caducada. Inicia sesión.", R.drawable.expired)
+                    UiNotifier.showBlockingTimed(this@LoginActivity, "SesiÃ³n caducada. Inicia sesiÃ³n.", R.drawable.expired)
                 }
             } catch (e: Exception) {
-                UiNotifier.showBlockingTimed(this@LoginActivity, "Sin conexión. No se puede validar la sesión.", R.drawable.offline)
+                UiNotifier.showBlockingTimed(this@LoginActivity, "Sin conexiÃ³n. No se puede validar la sesiÃ³n.", R.drawable.offline)
             } finally {
                 setUiEnabled(true)
                 setLoading(false)
@@ -318,7 +318,7 @@ class LoginActivity : AppCompatActivity() {
 
     private fun setUiEnabled(enabled: Boolean) {
         binding.btnLogin.isEnabled = enabled
-        // Si el botón existe en tu layout, esto compila; si no, comenta esta línea.
+        // Si el botÃ³n existe en tu layout, esto compila; si no, comenta esta lÃ­nea.
         binding.tvCreateAccount.isEnabled = enabled
         binding.etUser.isEnabled = enabled
         binding.etPass.isEnabled = enabled
@@ -354,36 +354,42 @@ class LoginActivity : AppCompatActivity() {
     }
 
     private fun showHostDialog() {
-        val input = EditText(this).apply {
-            hint = "IP del servidor (ej. 192.168.1.50)"
-            setText(NetworkModule.getCustomHost() ?: "")
+        val view = layoutInflater.inflate(R.layout.dialog_liquid_host_config, null)
+        val input = view.findViewById<EditText>(R.id.etHostValue)
+        input.setText(NetworkModule.getCustomHost() ?: "")
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(view)
+            .setCancelable(true)
+            .create()
+
+        view.findViewById<android.widget.ImageButton>(R.id.btnHostClose)?.setOnClickListener {
+            dialog.dismiss()
+        }
+        view.findViewById<android.widget.Button>(R.id.btnHostReset)?.setOnClickListener {
+            NetworkModule.setCustomHost(null)
+            NetworkModule.setManualOffline(false)
+            dialog.dismiss()
+            CreateUiFeedback.showCreatedPopup(
+                activity = this,
+                title = "Host reiniciado",
+                details = "Se restauro la configuracion del host."
+            )
+        }
+        view.findViewById<android.widget.Button>(R.id.btnHostSave)?.setOnClickListener {
+            NetworkModule.setCustomHost(input.text.toString())
+            NetworkModule.setManualOffline(false)
+            dialog.dismiss()
+            CreateUiFeedback.showCreatedPopup(
+                activity = this,
+                title = "Host actualizado",
+                details = "Nueva configuracion de host guardada."
+            )
         }
 
-        AlertDialog.Builder(this)
-            .setTitle("Configurar servidor")
-            .setMessage("Se guardará solo en este dispositivo.")
-            .setView(input)
-            .setNegativeButton("Cancelar", null)
-            .setNeutralButton("Limpiar") { _, _ ->
-                NetworkModule.setCustomHost(null)
-                NetworkModule.setManualOffline(false)
-                CreateUiFeedback.showCreatedPopup(
-                    activity = this,
-                    title = "Servidor restablecido",
-                    details = "Se ha restaurado la configuracion del servidor."
-                )
-            }
-            .setPositiveButton("Guardar") { _, _ ->
-                NetworkModule.setCustomHost(input.text.toString())
-                NetworkModule.setManualOffline(false)
-                CreateUiFeedback.showCreatedPopup(
-                    activity = this,
-                    title = "Servidor actualizado",
-                    details = "Nueva configuracion de servidor guardada."
-                )
-            }
-            .show()
+        dialog.show()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
     }
-
 }
+
 

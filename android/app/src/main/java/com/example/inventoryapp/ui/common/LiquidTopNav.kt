@@ -89,6 +89,45 @@ object LiquidTopNav {
         }
     }
 
+    fun showLocationSelector(
+        activity: AppCompatActivity,
+        button: ImageButton?,
+        onDismiss: (() -> Unit)? = null
+    ) {
+        showLocationSelectorDialog(activity, button, onDismiss)
+    }
+
+    fun showLocationInfo(activity: AppCompatActivity) {
+        showLocationInfoDialogToast(activity)
+    }
+
+    fun showProfileDialog(activity: AppCompatActivity) {
+        showProfile(activity)
+    }
+
+    fun showLogoutDialog(activity: AppCompatActivity, onConfirm: (() -> Unit)? = null) {
+        if (onConfirm == null) {
+            confirmLogout(activity)
+            return
+        }
+        val view = LayoutInflater.from(activity).inflate(R.layout.dialog_logout_confirm, null)
+        val dialog = AlertDialog.Builder(activity)
+            .setView(view)
+            .setCancelable(true)
+            .create()
+
+        view.findViewById<android.widget.Button>(R.id.btnLogoutCancel)?.setOnClickListener {
+            dialog.dismiss()
+        }
+        view.findViewById<android.widget.Button>(R.id.btnLogoutConfirm)?.setOnClickListener {
+            dialog.dismiss()
+            onConfirm.invoke()
+        }
+
+        dialog.show()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+    }
+
     private fun ensureGlobalDrawer(activity: AppCompatActivity, content: ViewGroup): DrawerState? {
         val root = content.getChildAt(0) ?: return null
 
@@ -268,15 +307,19 @@ object LiquidTopNav {
         val btnCenterClose = host.findViewById<ImageButton>(R.id.btnTopCenterClose)
         val btnLogout = host.findViewById<ImageButton>(R.id.btnTopCenterActionTwo)
 
-        btnBack.contentDescription = "Volver"
-        btnBack.setOnClickListener {
-            collapseCenterMenu(host, dismissOverlay, animate = true)
-            if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
-                drawerLayout.closeDrawer(GravityCompat.START)
-            } else {
-                activity.onBackPressedDispatcher.onBackPressed()
-            }
-        }
+        TopNavShared.configureLeftButton(
+            button = btnBack,
+            mode = TopNavShared.Mode.CHILD,
+            onChildClick = {
+                collapseCenterMenu(host, dismissOverlay, animate = true)
+                if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                    drawerLayout.closeDrawer(GravityCompat.START)
+                } else {
+                    activity.onBackPressedDispatcher.onBackPressed()
+                }
+            },
+            setIcon = { button, resId -> setLiquidIcon(button, resId) }
+        )
 
         btnLocation.setOnClickListener {
             setTopActionSelection(host, R.id.btnTopMidLeft)
@@ -284,7 +327,7 @@ object LiquidTopNav {
             showLocationSelectorDialog(activity, btnLocation)
         }
         btnLocation.setOnLongClickListener {
-            showLocationInfo(activity)
+            showLocationInfoDialogToast(activity)
             true
         }
 
@@ -696,7 +739,7 @@ object LiquidTopNav {
         }
     }
 
-    private fun showLocationInfo(activity: AppCompatActivity) {
+    private fun showLocationInfoDialogToast(activity: AppCompatActivity) {
         val prefs = activity.getSharedPreferences(PREFS_UI, Context.MODE_PRIVATE)
         val currentCode = prefs.getString("selected_location_code", null)
         if (currentCode.isNullOrBlank()) {
@@ -706,7 +749,11 @@ object LiquidTopNav {
         }
     }
 
-    private fun showLocationSelectorDialog(activity: AppCompatActivity, button: ImageButton?) {
+    private fun showLocationSelectorDialog(
+        activity: AppCompatActivity,
+        button: ImageButton?,
+        onDismiss: (() -> Unit)? = null
+    ) {
         val prefs = activity.getSharedPreferences(PREFS_UI, Context.MODE_PRIVATE)
         activity.lifecycleScope.launch {
             try {
@@ -795,13 +842,21 @@ object LiquidTopNav {
                 dialog.show()
                 dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
                 dialog.setOnDismissListener {
-                    activity.findViewById<View>(R.id.topMenuHost)?.let { hostView ->
-                        setTopActionSelection(hostView, currentTopActionFor(activity))
+                    if (onDismiss != null) {
+                        onDismiss.invoke()
+                    } else {
+                        activity.findViewById<View>(R.id.topMenuHost)?.let { hostView ->
+                            setTopActionSelection(hostView, currentTopActionFor(activity))
+                        }
                     }
                 }
             } catch (e: Exception) {
-                activity.findViewById<View>(R.id.topMenuHost)?.let { hostView ->
-                    setTopActionSelection(hostView, currentTopActionFor(activity))
+                if (onDismiss != null) {
+                    onDismiss.invoke()
+                } else {
+                    activity.findViewById<View>(R.id.topMenuHost)?.let { hostView ->
+                        setTopActionSelection(hostView, currentTopActionFor(activity))
+                    }
                 }
                 UiNotifier.show(
                     activity,
@@ -881,48 +936,36 @@ object LiquidTopNav {
     }
 
     private fun setTopActionSelection(host: View, selectedId: Int?) {
-        host.findViewById<ImageButton>(R.id.btnMenu)
-            ?.let { updateTopActionButtonState(it, selectedId == R.id.btnMenu) }
-        host.findViewById<ImageButton>(R.id.btnTopMidLeft)
-            ?.let { updateTopActionButtonState(it, selectedId == R.id.btnTopMidLeft) }
-        host.findViewById<ImageButton>(R.id.btnTopMidRight)
-            ?.let { updateTopActionButtonState(it, selectedId == R.id.btnTopMidRight) }
-        host.findViewById<ImageButton>(R.id.btnAlertsQuick)
-            ?.let { updateTopActionButtonState(it, selectedId == R.id.btnAlertsQuick) }
+        TopNavShared.applyTopSelection(host, selectedId) { button, active ->
+            updateTopActionButtonState(button, active)
+        }
     }
 
     private fun updateTopActionButtonState(button: ImageButton, active: Boolean) {
         val leftEdgeButton = button.id == R.id.btnMenu || button.id == R.id.btnTopMidLeft
-        val selectedScale = if (leftEdgeButton) 1.04f else 1.08f
-        if (active) {
-            button.setBackgroundResource(R.drawable.bg_liquid_icon_selected)
-            button.imageAlpha = 255
-            button.scaleX = selectedScale
-            button.scaleY = -selectedScale
-            button.setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE_ACTIVE), PorterDuff.Mode.SRC_IN)
+        val prefs = button.context.getSharedPreferences(PREFS_UI, Context.MODE_PRIVATE)
+        val isDark = prefs.getBoolean("dark_mode", false)
+        val baseColor = if (isDark) {
+            Color.parseColor(LIQUID_CRYSTAL_BLUE)
         } else {
-            button.setBackgroundColor(Color.TRANSPARENT)
-            button.imageAlpha = 245
-            button.scaleX = 1.0f
-            button.scaleY = -1.0f
-            button.setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE), PorterDuff.Mode.SRC_IN)
+            Color.parseColor(TopNavShared.LIQUID_CRYSTAL_BLUE_LIGHT_BOOST_HEX)
         }
+        TopNavShared.updateTopButtonState(
+            button = button,
+            active = active,
+            leftEdgeButton = leftEdgeButton,
+            baseColor = baseColor,
+            activeColor = Color.parseColor(LIQUID_CRYSTAL_BLUE_ACTIVE),
+            invertY = true
+        )
     }
 
     private fun setLiquidIcon(button: ImageView, resId: Int) {
-        button.setImageResource(resId)
-        button.imageTintList = null
-        val prefs = button.context.getSharedPreferences(PREFS_UI, Context.MODE_PRIVATE)
-        val tint = if (resId == R.drawable.glass_add) {
-            if (prefs.getBoolean("dark_mode", false)) {
-                Color.parseColor("#00B8FF")
-            } else {
-                Color.parseColor("#F2FAFF")
-            }
-        } else {
-            Color.parseColor(LIQUID_CRYSTAL_BLUE)
-        }
-        button.setColorFilter(tint, PorterDuff.Mode.SRC_IN)
-        button.imageAlpha = 245
+        TopNavShared.setLiquidIcon(
+            view = button,
+            resId = resId,
+            prefs = TopNavShared.prefs(button),
+            baseColor = Color.parseColor(LIQUID_CRYSTAL_BLUE)
+        )
     }
 }

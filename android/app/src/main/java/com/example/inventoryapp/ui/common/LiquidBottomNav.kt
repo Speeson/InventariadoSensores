@@ -91,6 +91,7 @@ object LiquidBottomNav {
     private const val MENU_CONTENT_GAP_DP = 6
     private const val LIQUID_CRYSTAL_BLUE = "#7FD8FF"
     private const val LIQUID_CRYSTAL_BLUE_ACTIVE = "#2CB8FF"
+    private const val LIQUID_CRYSTAL_BLUE_LIGHT_BOOST = "#58C9FF"
     private var cameraPermissionDeniedCount = 0
 
     private val excluded = setOf(
@@ -432,6 +433,12 @@ object LiquidBottomNav {
     }
 
     private fun setSelected(button: ImageButton, selected: Boolean) {
+        val prefs = button.context.getSharedPreferences(PREFS_UI, Context.MODE_PRIVATE)
+        val baseColor = if (prefs.getBoolean("dark_mode", false)) {
+            Color.parseColor(LIQUID_CRYSTAL_BLUE)
+        } else {
+            Color.parseColor(LIQUID_CRYSTAL_BLUE_LIGHT_BOOST)
+        }
         if (selected) {
             button.setBackgroundResource(R.drawable.bg_liquid_icon_selected)
             button.imageAlpha = 255
@@ -443,7 +450,7 @@ object LiquidBottomNav {
             button.imageAlpha = 245
             button.scaleX = 1.0f
             button.scaleY = 1.0f
-            button.setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE), PorterDuff.Mode.SRC_IN)
+            button.setColorFilter(baseColor, PorterDuff.Mode.SRC_IN)
         }
     }
 
@@ -791,14 +798,20 @@ object LiquidBottomNav {
         button.setImageResource(resId)
         button.imageTintList = null
         val prefs = button.context.getSharedPreferences(PREFS_UI, Context.MODE_PRIVATE)
+        val isDark = prefs.getBoolean("dark_mode", false)
+        val baseColor = if (isDark) {
+            Color.parseColor(LIQUID_CRYSTAL_BLUE)
+        } else {
+            Color.parseColor(LIQUID_CRYSTAL_BLUE_LIGHT_BOOST)
+        }
         val tint = if (resId == R.drawable.glass_add) {
-            if (prefs.getBoolean("dark_mode", false)) {
+            if (isDark) {
                 Color.parseColor("#00B8FF")
             } else {
                 Color.parseColor("#F2FAFF")
             }
         } else {
-            Color.parseColor(LIQUID_CRYSTAL_BLUE)
+            baseColor
         }
         button.setColorFilter(tint, PorterDuff.Mode.SRC_IN)
         button.imageAlpha = 245

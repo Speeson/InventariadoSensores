@@ -1,12 +1,10 @@
-package com.example.inventoryapp.ui.home
+﻿package com.example.inventoryapp.ui.home
 
 import android.content.Intent
 import android.os.Bundle
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
-import android.widget.ArrayAdapter
-import android.widget.ListView
 import android.graphics.Color
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -30,6 +28,7 @@ import androidx.drawerlayout.widget.DrawerLayout
 import android.content.res.ColorStateList
 import androidx.lifecycle.lifecycleScope
 import androidx.core.content.ContextCompat
+import com.example.inventoryapp.BuildConfig
 import com.example.inventoryapp.R
 import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.remote.NetworkModule
@@ -48,9 +47,10 @@ import com.example.inventoryapp.ui.thresholds.ThresholdsActivity
 import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.CreateUiFeedback
+import com.example.inventoryapp.ui.common.LiquidTopNav
+import com.example.inventoryapp.ui.common.TopNavShared
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.data.remote.model.AlertStatusDto
-import com.example.inventoryapp.data.remote.model.LocationResponseDto
 import com.example.inventoryapp.ui.imports.ImportsActivity
 import com.google.android.material.bottomappbar.BottomAppBar
 import com.google.android.material.color.MaterialColors
@@ -95,7 +95,7 @@ class HomeActivity : AppCompatActivity() {
             if (isDark) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
         )
 
-        // ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ Si no hay token, fuera
+        // ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ Si no hay token, fuera
         if (session.getToken().isNullOrBlank()) {
             goToLogin()
             return
@@ -103,7 +103,7 @@ class HomeActivity : AppCompatActivity() {
         if (session.isTokenExpired() && !NetworkModule.isManualOffline()) {
             session.clearToken()
             clearCachedRole()
-            UiNotifier.showBlockingTimed(this@HomeActivity, "SesiÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n caducada. Inicia sesiÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n.", R.drawable.expired)
+            UiNotifier.showBlockingTimed(this@HomeActivity, "SesiÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n caducada. Inicia sesiÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n.", R.drawable.expired)
             goToLogin()
             return
         }
@@ -115,11 +115,11 @@ class HomeActivity : AppCompatActivity() {
         binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
         binding.navViewMain.bringToFront()
 
-        // Pop-up bienvenida si venÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­as de registro
+        // Pop-up bienvenida si venÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­as de registro
         intent.getStringExtra("welcome_email")?.takeIf { it.isNotBlank() }?.let { email ->
             AlertDialog.Builder(this)
                 .setTitle("Bienvenido")
-                .setMessage("ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡Bienvenido, $email!")
+                .setMessage("ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡Bienvenido, $email!")
                 .setPositiveButton("OK", null)
                 .show()
         }
@@ -250,7 +250,30 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun setupTopLiquidMenu() {
-        btnTopMenu?.let { setLiquidImage(it, R.drawable.glass_menu) }
+        TopNavShared.configureLeftButton(
+            button = btnTopMenu,
+            mode = TopNavShared.Mode.HOME,
+            onHomeClick = {
+                if (binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                    binding.drawerLayout.closeDrawer(GravityCompat.START)
+                    return@configureLeftButton
+                }
+                setTopButtonSelection(R.id.btnMenu)
+                if (topMenuExpanded) toggleTopCenterMenu(forceClose = true)
+                findViewById<View>(R.id.topCenterDismissOverlay)?.apply {
+                    visibility = View.GONE
+                    isClickable = false
+                }
+                collapseBottomCenterMenuOverlay()
+                binding.drawerLayout.openDrawer(GravityCompat.START)
+            },
+            onLongClick = if (BuildConfig.DEBUG) {
+                { showHostDialog() }
+            } else {
+                null
+            },
+            setIcon = { button, resId -> setLiquidImage(button, resId) }
+        )
         btnTopAlerts?.let { setLiquidImage(it, R.drawable.glass_noti) }
         findViewById<ImageButton>(R.id.btnTopMidLeft)?.let {
             setLiquidImage(it, R.drawable.glass_location)
@@ -268,7 +291,7 @@ class HomeActivity : AppCompatActivity() {
             profileButton.setColorFilter(liquidCrystalBlueActive, PorterDuff.Mode.SRC_IN)
             profileButton.setOnClickListener {
                 toggleTopCenterMenu(forceClose = true)
-                showProfile()
+                LiquidTopNav.showProfileDialog(this)
             }
         }
         findViewById<ImageButton>(R.id.btnTopCenterActionTwo)?.let { logoutButton ->
@@ -277,7 +300,7 @@ class HomeActivity : AppCompatActivity() {
             logoutButton.setColorFilter(liquidCrystalBlueActive, PorterDuff.Mode.SRC_IN)
             logoutButton.setOnClickListener {
                 toggleTopCenterMenu(forceClose = true)
-                confirmLogout()
+                LiquidTopNav.showLogoutDialog(this) { logout() }
             }
         }
         findViewById<ImageButton>(R.id.btnTopCenterClose)?.let { closeButton ->
@@ -290,15 +313,14 @@ class HomeActivity : AppCompatActivity() {
         }
         findViewById<ImageButton>(R.id.btnTopMidLeft)?.setOnClickListener {
             setTopButtonSelection(R.id.btnTopMidLeft)
-            showLocationSelectorDialog()
+            LiquidTopNav.showLocationSelector(
+                activity = this,
+                button = findViewById(R.id.btnTopMidLeft),
+                onDismiss = { setTopButtonSelection(null) }
+            )
         }
         findViewById<ImageButton>(R.id.btnTopMidLeft)?.setOnLongClickListener {
-            val current = prefs.getString("selected_location_code", null)
-            if (current.isNullOrBlank()) {
-                UiNotifier.show(this, "Ubicacion activa: no seleccionada")
-            } else {
-                UiNotifier.show(this, "Ubicacion activa: $current")
-            }
+            LiquidTopNav.showLocationInfo(this)
             true
         }
         findViewById<ImageButton>(R.id.btnTopMidRight)?.setOnClickListener {
@@ -311,24 +333,6 @@ class HomeActivity : AppCompatActivity() {
             }, 300L)
         }
 
-        btnTopMenu?.setOnClickListener {
-            if (binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
-                binding.drawerLayout.closeDrawer(GravityCompat.START)
-                return@setOnClickListener
-            }
-            setTopButtonSelection(R.id.btnMenu)
-            if (topMenuExpanded) toggleTopCenterMenu(forceClose = true)
-            findViewById<View>(R.id.topCenterDismissOverlay)?.apply {
-                visibility = View.GONE
-                isClickable = false
-            }
-            collapseBottomCenterMenuOverlay()
-            binding.drawerLayout.openDrawer(GravityCompat.START)
-        }
-        btnTopMenu?.setOnLongClickListener {
-            showHostDialog()
-            true
-        }
         btnTopAlerts?.setOnClickListener {
             setTopButtonSelection(R.id.btnAlertsQuick)
             startActivity(Intent(this, AlertsActivity::class.java))
@@ -365,30 +369,26 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun applyTopButtonsSelection() {
-        btnTopMenu?.let { updateTopButtonState(it, selectedTopButtonId == R.id.btnMenu) }
-        btnTopAlerts?.let { updateTopButtonState(it, selectedTopButtonId == R.id.btnAlertsQuick) }
-        findViewById<ImageButton>(R.id.btnTopMidLeft)
-            ?.let { updateTopButtonState(it, selectedTopButtonId == R.id.btnTopMidLeft) }
-        findViewById<ImageButton>(R.id.btnTopMidRight)
-            ?.let { updateTopButtonState(it, selectedTopButtonId == R.id.btnTopMidRight) }
+        TopNavShared.applyTopSelection(binding.root, selectedTopButtonId) { button, active ->
+            updateTopButtonState(button, active)
+        }
     }
 
     private fun updateTopButtonState(button: ImageButton, active: Boolean) {
         val leftEdgeButton = button.id == R.id.btnMenu || button.id == R.id.btnTopMidLeft
-        val selectedScale = if (leftEdgeButton) 1.04f else 1.08f
-        if (active) {
-            button.setBackgroundResource(R.drawable.bg_liquid_icon_selected)
-            button.imageAlpha = 255
-            button.scaleX = selectedScale
-            button.scaleY = -selectedScale
-            button.setColorFilter(liquidCrystalBlueActive, PorterDuff.Mode.SRC_IN)
+        val baseColor = if (prefs.getBoolean("dark_mode", false)) {
+            liquidCrystalBlue
         } else {
-            button.setBackgroundColor(Color.TRANSPARENT)
-            button.imageAlpha = 245
-            button.scaleX = 1.0f
-            button.scaleY = -1.0f
-            button.setColorFilter(liquidCrystalBlue, PorterDuff.Mode.SRC_IN)
+            Color.parseColor(TopNavShared.LIQUID_CRYSTAL_BLUE_LIGHT_BOOST_HEX)
         }
+        TopNavShared.updateTopButtonState(
+            button = button,
+            active = active,
+            leftEdgeButton = leftEdgeButton,
+            baseColor = baseColor,
+            activeColor = liquidCrystalBlueActive,
+            invertY = true
+        )
     }
 
     private fun updateLocationSelectorHint() {
@@ -397,108 +397,6 @@ class HomeActivity : AppCompatActivity() {
             "Seleccionar ubicacion"
         } else {
             "Ubicacion activa: $currentCode"
-        }
-    }
-
-    private fun showLocationSelectorDialog() {
-        lifecycleScope.launch {
-            try {
-                val res = NetworkModule.api.listLocations(limit = 200, offset = 0)
-                if (!res.isSuccessful || res.body() == null) {
-                    val msg = if (res.code() > 0) {
-                        ApiErrorFormatter.format(res.code())
-                    } else {
-                        "No se pudo cargar ubicaciones"
-                    }
-                    UiNotifier.show(this@HomeActivity, msg)
-                    return@launch
-                }
-                val locations = res.body()!!.items
-                    .sortedWith(compareBy<LocationResponseDto> { it.code.lowercase() }.thenBy { it.id })
-                if (locations.isEmpty()) {
-                    UiNotifier.show(this@HomeActivity, "No hay ubicaciones disponibles")
-                    return@launch
-                }
-
-                val labels = locations.map { location ->
-                    val desc = location.description?.takeIf { it.isNotBlank() }?.let { " - $it" } ?: ""
-                    "(${location.id}) ${location.code}$desc"
-                }
-                val selectedId = prefs.getInt("selected_location_id", -1)
-                var selectedIndex = locations.indexOfFirst { it.id == selectedId }
-                val dialogView = layoutInflater.inflate(R.layout.dialog_liquid_location_selector, null)
-                val listView = dialogView.findViewById<ListView>(R.id.lvLocations)
-                val adapter = object : ArrayAdapter<String>(
-                    this@HomeActivity,
-                    android.R.layout.simple_list_item_single_choice,
-                    labels.toMutableList()
-                ) {
-                    override fun getView(position: Int, convertView: View?, parent: android.view.ViewGroup): View {
-                        val view = super.getView(position, convertView, parent)
-                        (view.findViewById<TextView>(android.R.id.text1))?.setTextColor(
-                            ContextCompat.getColor(this@HomeActivity, R.color.liquid_popup_list_text)
-                        )
-                        return view
-                    }
-                }
-                listView.adapter = adapter
-                listView.choiceMode = ListView.CHOICE_MODE_SINGLE
-                if (selectedIndex in locations.indices) {
-                    listView.setItemChecked(selectedIndex, true)
-                }
-                listView.setOnItemClickListener { _, _, position, _ ->
-                    selectedIndex = position
-                }
-
-                val dialog = AlertDialog.Builder(this@HomeActivity)
-                    .setView(dialogView)
-                    .create()
-
-                dialogView.findViewById<ImageButton>(R.id.btnLocationClose)?.setOnClickListener {
-                    dialog.dismiss()
-                }
-                dialogView.findViewById<android.widget.Button>(R.id.btnLocationClear)?.setOnClickListener {
-                    prefs.edit()
-                        .remove("selected_location_id")
-                        .remove("selected_location_code")
-                        .remove("selected_location_description")
-                        .apply()
-                    updateLocationSelectorHint()
-                    UiNotifier.show(this@HomeActivity, "Ubicacion activa limpiada")
-                    dialog.dismiss()
-                }
-                dialogView.findViewById<android.widget.Button>(R.id.btnLocationApply)?.setOnClickListener {
-                    if (selectedIndex !in locations.indices) {
-                        dialog.dismiss()
-                        return@setOnClickListener
-                    }
-                    val location = locations[selectedIndex]
-                    prefs.edit()
-                        .putInt("selected_location_id", location.id)
-                        .putString("selected_location_code", location.code)
-                        .putString("selected_location_description", location.description ?: "")
-                        .apply()
-                    updateLocationSelectorHint()
-                    UiNotifier.show(this@HomeActivity, "Ubicacion activa: ${location.code}")
-                    dialog.dismiss()
-                }
-
-                dialog.show()
-                dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-                dialog.setOnDismissListener {
-                    if (selectedTopButtonId == R.id.btnTopMidLeft) {
-                        setTopButtonSelection(null)
-                    }
-                }
-            } catch (e: Exception) {
-                if (selectedTopButtonId == R.id.btnTopMidLeft) {
-                    setTopButtonSelection(null)
-                }
-                UiNotifier.show(
-                    this@HomeActivity,
-                    UiNotifier.buildConnectionMessage(this@HomeActivity, e.message)
-                )
-            }
         }
     }
 
@@ -771,45 +669,39 @@ class HomeActivity : AppCompatActivity() {
         }
     }
     private fun showHostDialog() {
-        val input = EditText(this).apply {
-            hint = "IP del servidor (ej. 192.168.1.50)"
-            setText(NetworkModule.getCustomHost() ?: "")
-        }
+        if (!BuildConfig.DEBUG) return
 
-        AlertDialog.Builder(this)
-            .setTitle("Configurar servidor")
-            .setMessage("Se guardarÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ solo en este dispositivo.")
-            .setView(input)
-            .setNegativeButton("Cancelar", null)
-            .setNeutralButton("Limpiar") { _, _ ->
-                NetworkModule.setCustomHost(null)
-                CreateUiFeedback.showCreatedPopup(
-                    activity = this,
-                    title = "Servidor restablecido",
-                    details = "Se ha restaurado la configuracion del servidor."
-                )
-            }
-            .setPositiveButton("Guardar") { _, _ ->
-                NetworkModule.setCustomHost(input.text.toString())
-                CreateUiFeedback.showCreatedPopup(
-                    activity = this,
-                    title = "Servidor actualizado",
-                    details = "Nueva configuracion de servidor guardada."
-                )
-            }
-            .show()
-    }
+        val view = layoutInflater.inflate(R.layout.dialog_liquid_host_config, null)
+        val input = view.findViewById<EditText>(R.id.etHostValue)
+        input.setText(NetworkModule.getCustomHost() ?: "")
 
+        val dialog = AlertDialog.Builder(this)
+            .setView(view)
+            .setCancelable(true)
+            .create()
 
-    private fun showProfile() {
-        val view = layoutInflater.inflate(R.layout.dialog_liquid_profile, null)
-        val dialog = AlertDialog.Builder(this).setView(view).create()
-        view.findViewById<ImageView>(R.id.ivProfileIconPopup)?.let {
-            setLiquidImage(it, R.drawable.glass_user)
-        }
-        view.findViewById<ImageButton>(R.id.btnProfilePopupClose)?.setOnClickListener {
+        view.findViewById<ImageButton>(R.id.btnHostClose)?.setOnClickListener {
             dialog.dismiss()
         }
+        view.findViewById<android.widget.Button>(R.id.btnHostReset)?.setOnClickListener {
+            NetworkModule.setCustomHost(null)
+            dialog.dismiss()
+            CreateUiFeedback.showCreatedPopup(
+                activity = this,
+                title = "Host reiniciado",
+                details = "Se restauro la configuracion del host."
+            )
+        }
+        view.findViewById<android.widget.Button>(R.id.btnHostSave)?.setOnClickListener {
+            NetworkModule.setCustomHost(input.text.toString())
+            dialog.dismiss()
+            CreateUiFeedback.showCreatedPopup(
+                activity = this,
+                title = "Host actualizado",
+                details = "Nueva configuracion de host guardada."
+            )
+        }
+
         dialog.show()
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
     }
@@ -978,7 +870,7 @@ class HomeActivity : AppCompatActivity() {
         UiNotifier.showBlocking(
             this,
             "Permisos insuficientes",
-            "Esta funcionalidad estÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ disponible solo para admin/manager.",
+            "Esta funcionalidad estÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ disponible solo para admin/manager.",
             R.drawable.ic_lock
         )
     }
@@ -1002,25 +894,6 @@ class HomeActivity : AppCompatActivity() {
         } catch (_: Exception) {
             tvTopAlertsBadge?.visibility = android.view.View.GONE
         }
-    }
-
-private fun confirmLogout() {
-        val view = layoutInflater.inflate(R.layout.dialog_logout_confirm, null)
-        val dialog = AlertDialog.Builder(this)
-            .setView(view)
-            .setCancelable(true)
-            .create()
-
-        view.findViewById<android.widget.Button>(R.id.btnLogoutCancel)?.setOnClickListener {
-            dialog.dismiss()
-        }
-        view.findViewById<android.widget.Button>(R.id.btnLogoutConfirm)?.setOnClickListener {
-            dialog.dismiss()
-            logout()
-        }
-
-        dialog.show()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
     }
 
     private fun logout() {
@@ -1173,19 +1046,12 @@ private fun confirmLogout() {
     }
 
     private fun setLiquidImage(view: ImageView, resId: Int) {
-        view.setImageResource(resId)
-        view.imageTintList = null
-        val tint = if (resId == R.drawable.glass_add) {
-            if (prefs.getBoolean("dark_mode", false)) {
-                Color.parseColor("#00B8FF")
-            } else {
-                Color.parseColor("#F2FAFF")
-            }
-        } else {
-            liquidCrystalBlue
-        }
-        view.setColorFilter(tint, PorterDuff.Mode.SRC_IN)
-        view.imageAlpha = 245
+        TopNavShared.setLiquidIcon(
+            view = view,
+            resId = resId,
+            prefs = prefs,
+            baseColor = liquidCrystalBlue
+        )
     }
 
     private fun setNeonImage(view: ImageView, resId: Int) {
@@ -1288,3 +1154,4 @@ private fun confirmLogout() {
         return out
     }
 }
+
