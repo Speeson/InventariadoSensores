@@ -700,7 +700,7 @@ object LiquidBottomNav {
         val scanBtn = nav.findViewById<ImageButton>(R.id.btnCenterScanAction)
         val manualBtn = nav.findViewById<ImageButton>(R.id.btnCenterManualAction)
 
-        setLiquidIcon(scanBtn, R.drawable.glass_scanner)
+        setLiquidIcon(scanBtn, R.drawable.scaner)
         setLiquidIcon(manualBtn, R.drawable.glass_scanmanual)
         setLiquidIcon(closeBtn, R.drawable.glass_x)
         scanBtn.imageAlpha = 255

@@ -5,6 +5,8 @@ import android.os.Bundle
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.ArrayAdapter
+import android.widget.ListView
 import android.graphics.Color
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -421,48 +423,73 @@ class HomeActivity : AppCompatActivity() {
                 val labels = locations.map { location ->
                     val desc = location.description?.takeIf { it.isNotBlank() }?.let { " - $it" } ?: ""
                     "(${location.id}) ${location.code}$desc"
-                }.toTypedArray()
+                }
                 val selectedId = prefs.getInt("selected_location_id", -1)
                 var selectedIndex = locations.indexOfFirst { it.id == selectedId }
+                val dialogView = layoutInflater.inflate(R.layout.dialog_liquid_location_selector, null)
+                val listView = dialogView.findViewById<ListView>(R.id.lvLocations)
+                val adapter = object : ArrayAdapter<String>(
+                    this@HomeActivity,
+                    android.R.layout.simple_list_item_single_choice,
+                    labels.toMutableList()
+                ) {
+                    override fun getView(position: Int, convertView: View?, parent: android.view.ViewGroup): View {
+                        val view = super.getView(position, convertView, parent)
+                        (view.findViewById<TextView>(android.R.id.text1))?.setTextColor(
+                            ContextCompat.getColor(this@HomeActivity, R.color.liquid_popup_list_text)
+                        )
+                        return view
+                    }
+                }
+                listView.adapter = adapter
+                listView.choiceMode = ListView.CHOICE_MODE_SINGLE
+                if (selectedIndex in locations.indices) {
+                    listView.setItemChecked(selectedIndex, true)
+                }
+                listView.setOnItemClickListener { _, _, position, _ ->
+                    selectedIndex = position
+                }
 
-                AlertDialog.Builder(this@HomeActivity)
-                    .setTitle("Seleccionar ubicacion activa")
-                    .setSingleChoiceItems(labels, selectedIndex) { _, which ->
-                        selectedIndex = which
-                    }
-                    .setNegativeButton("Cancelar", null)
-                    .setNeutralButton("Limpiar") { dialog, _ ->
-                        prefs.edit()
-                            .remove("selected_location_id")
-                            .remove("selected_location_code")
-                            .remove("selected_location_description")
-                            .apply()
-                        updateLocationSelectorHint()
-                        UiNotifier.show(this@HomeActivity, "Ubicacion activa limpiada")
+                val dialog = AlertDialog.Builder(this@HomeActivity)
+                    .setView(dialogView)
+                    .create()
+
+                dialogView.findViewById<ImageButton>(R.id.btnLocationClose)?.setOnClickListener {
+                    dialog.dismiss()
+                }
+                dialogView.findViewById<android.widget.Button>(R.id.btnLocationClear)?.setOnClickListener {
+                    prefs.edit()
+                        .remove("selected_location_id")
+                        .remove("selected_location_code")
+                        .remove("selected_location_description")
+                        .apply()
+                    updateLocationSelectorHint()
+                    UiNotifier.show(this@HomeActivity, "Ubicacion activa limpiada")
+                    dialog.dismiss()
+                }
+                dialogView.findViewById<android.widget.Button>(R.id.btnLocationApply)?.setOnClickListener {
+                    if (selectedIndex !in locations.indices) {
                         dialog.dismiss()
+                        return@setOnClickListener
                     }
-                    .setPositiveButton("Aplicar") { dialog, _ ->
-                        if (selectedIndex !in locations.indices) {
-                            dialog.dismiss()
-                            return@setPositiveButton
-                        }
-                        val location = locations[selectedIndex]
-                        prefs.edit()
-                            .putInt("selected_location_id", location.id)
-                            .putString("selected_location_code", location.code)
-                            .putString("selected_location_description", location.description ?: "")
-                            .apply()
-                        updateLocationSelectorHint()
-                        UiNotifier.show(this@HomeActivity, "Ubicacion activa: ${location.code}")
-                        dialog.dismiss()
+                    val location = locations[selectedIndex]
+                    prefs.edit()
+                        .putInt("selected_location_id", location.id)
+                        .putString("selected_location_code", location.code)
+                        .putString("selected_location_description", location.description ?: "")
+                        .apply()
+                    updateLocationSelectorHint()
+                    UiNotifier.show(this@HomeActivity, "Ubicacion activa: ${location.code}")
+                    dialog.dismiss()
+                }
+
+                dialog.show()
+                dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+                dialog.setOnDismissListener {
+                    if (selectedTopButtonId == R.id.btnTopMidLeft) {
+                        setTopButtonSelection(null)
                     }
-                    .show().also { dlg ->
-                        dlg.setOnDismissListener {
-                            if (selectedTopButtonId == R.id.btnTopMidLeft) {
-                                setTopButtonSelection(null)
-                            }
-                        }
-                    }
+                }
             } catch (e: Exception) {
                 if (selectedTopButtonId == R.id.btnTopMidLeft) {
                     setTopButtonSelection(null)

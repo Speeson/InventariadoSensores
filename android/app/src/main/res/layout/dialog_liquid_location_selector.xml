@@ -13,40 +13,37 @@
         android:layout_marginBottom="6dp">
 
         <TextView
-            android:id="@+id/tvLogoutTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_horizontal"
-            android:text="Cerrar sesion"
+            android:text="Ubicacion activa"
             android:textColor="@color/liquid_popup_title"
             android:textSize="20sp"
             android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/btnLocationClose"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_gravity="end|center_vertical"
+            android:background="@drawable/bg_liquid_button"
+            android:backgroundTint="@null"
+            android:padding="7dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_close_red"
+            android:tint="@null"
+            app:backgroundTint="@null" />
     </FrameLayout>
 
-    <LinearLayout
+    <ListView
+        android:id="@+id/lvLocations"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <com.airbnb.lottie.LottieAnimationView
-            android:id="@+id/lottieLogout"
-            android:layout_width="84dp"
-            android:layout_height="84dp"
-            android:layout_marginEnd="10dp"
-            app:lottie_autoPlay="true"
-            app:lottie_loop="true"
-            app:lottie_rawRes="@raw/logout" />
-
-        <TextView
-            android:id="@+id/tvLogoutMessage"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Seguro que quieres cerrar sesion?"
-            android:textColor="@color/liquid_popup_text"
-            android:textSize="15sp" />
-    </LinearLayout>
+        android:layout_height="360dp"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/bg_liquid_input"
+        android:choiceMode="singleChoice"
+        android:divider="@color/liquid_popup_divider"
+        android:dividerHeight="1dp" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -56,24 +53,24 @@
         android:orientation="horizontal">
 
         <Button
-            android:id="@+id/btnLogoutCancel"
+            android:id="@+id/btnLocationClear"
             android:layout_width="120dp"
             android:layout_height="44dp"
             android:layout_marginEnd="10dp"
             android:background="@drawable/bg_liquid_button"
             android:backgroundTint="@null"
-            android:text="Cancelar"
+            android:text="Limpiar"
             android:textAllCaps="false"
             android:textColor="@color/liquid_popup_button_text"
             app:backgroundTint="@null" />
 
         <Button
-            android:id="@+id/btnLogoutConfirm"
+            android:id="@+id/btnLocationApply"
             android:layout_width="120dp"
             android:layout_height="44dp"
             android:background="@drawable/bg_liquid_button"
             android:backgroundTint="@null"
-            android:text="Cerrar"
+            android:text="Aplicar"
             android:textAllCaps="false"
             android:textColor="@color/liquid_popup_button_text"
             app:backgroundTint="@null" />

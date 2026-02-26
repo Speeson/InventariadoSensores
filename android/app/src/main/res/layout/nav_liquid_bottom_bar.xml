@@ -63,7 +63,7 @@
             android:contentDescription="Escaner rapido"
             android:padding="8dp"
             android:scaleType="centerInside"
-            android:src="@drawable/glass_scanner" />
+            android:src="@drawable/scaner" />
     </LinearLayout>
 
     <com.google.android.material.bottomappbar.BottomAppBar
