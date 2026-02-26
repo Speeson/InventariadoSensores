@@ -10,16 +10,15 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.LinearGradient
+import android.graphics.Outline
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
 import android.graphics.Shader
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
-import android.animation.ValueAnimator
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewOutlineProvider
 import android.widget.ImageButton
 import androidx.core.view.GravityCompat
 import androidx.appcompat.app.AlertDialog
@@ -47,14 +46,15 @@ import com.example.inventoryapp.ui.thresholds.ThresholdsActivity
 import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.CreateUiFeedback
-import com.example.inventoryapp.ui.common.NotchedLiquidTopBarView
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.data.remote.model.AlertStatusDto
 import com.example.inventoryapp.data.remote.model.LocationResponseDto
 import com.example.inventoryapp.ui.imports.ImportsActivity
+import com.google.android.material.bottomappbar.BottomAppBar
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.navigation.NavigationView
+import com.google.android.material.shape.MaterialShapeDrawable
 
 
 class HomeActivity : AppCompatActivity() {
@@ -70,8 +70,7 @@ class HomeActivity : AppCompatActivity() {
     private var neonIconCache: MutableMap<String, Bitmap> = mutableMapOf()
     private var offlineNoticeShown = false
     private var topMenuExpanded = false
-    private var topCenterDropDy = 0f
-    private var topCenterAnimator: ValueAnimator? = null
+    private var topBarStrokeColor = Color.parseColor("#36C96A")
     private val liquidCrystalBlue = Color.parseColor("#7FD8FF")
     private val liquidCrystalBlueActive = Color.parseColor("#2CB8FF")
     private var selectedTopButtonId: Int? = null
@@ -211,6 +210,7 @@ class HomeActivity : AppCompatActivity() {
         updateThemeMenuItem()
         updateDebugOfflineMenuItem()
         updateLocationSelectorHint()
+        updateTopBarConnectionTint(NetworkModule.isManualOffline())
         if (topMenuExpanded) toggleTopCenterMenu(forceClose = true)
         findViewById<View>(R.id.topCenterDismissOverlay)?.visibility = View.GONE
         collapseBottomCenterMenuOverlay()
@@ -256,7 +256,7 @@ class HomeActivity : AppCompatActivity() {
         findViewById<ImageButton>(R.id.btnTopMidRight)?.let {
             setLiquidImage(it, R.drawable.glass_setting)
         }
-        findViewById<ImageButton>(R.id.btnTopCenterMain)?.let {
+        findViewById<ImageView>(R.id.btnTopCenterMain)?.let {
             setLiquidImage(it, R.drawable.glass_add)
             it.setOnClickListener { toggleTopCenterMenu() }
         }
@@ -276,6 +276,14 @@ class HomeActivity : AppCompatActivity() {
             logoutButton.setOnClickListener {
                 toggleTopCenterMenu(forceClose = true)
                 confirmLogout()
+            }
+        }
+        findViewById<ImageButton>(R.id.btnTopCenterClose)?.let { closeButton ->
+            setLiquidImage(closeButton, R.drawable.glass_x)
+            closeButton.imageAlpha = 255
+            closeButton.setColorFilter(liquidCrystalBlueActive, PorterDuff.Mode.SRC_IN)
+            closeButton.setOnClickListener {
+                toggleTopCenterMenu(forceClose = true)
             }
         }
         findViewById<ImageButton>(R.id.btnTopMidLeft)?.setOnClickListener {
@@ -345,6 +353,8 @@ class HomeActivity : AppCompatActivity() {
                 }
             }
         })
+        ensureTopBarAppearancePersistence()
+        applyTopBarAppearance()
     }
 
     private fun setTopButtonSelection(buttonId: Int?) {
@@ -477,12 +487,79 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun updateTopBarConnectionTint(offline: Boolean) {
-        val tintColor = if (offline) {
+        topBarStrokeColor = if (offline) {
             Color.parseColor("#FF2A3D")
         } else {
             Color.parseColor("#36C96A")
         }
-        findViewById<NotchedLiquidTopBarView>(R.id.topLiquidBar)?.setStatusTintColor(tintColor)
+        applyTopBarAppearance()
+    }
+
+    private fun applyTopBarAppearance() {
+        val bar = findViewById<BottomAppBar>(R.id.topLiquidBar) ?: return
+        val overlay = findViewById<View>(R.id.topLiquidBarStrokeOverlay)
+        val radius = dp(16f)
+        val isExpanded = (bar.getTag(R.id.tag_liquid_bottom_bar_expanded) as? Boolean) == true
+
+        bar.outlineProvider = object : ViewOutlineProvider() {
+            override fun getOutline(view: View, outline: Outline) {
+                outline.setRoundRect(0, 0, view.width, view.height, radius)
+            }
+        }
+        bar.clipToOutline = true
+        overlay?.outlineProvider = object : ViewOutlineProvider() {
+            override fun getOutline(view: View, outline: Outline) {
+                outline.setRoundRect(0, 0, view.width, view.height, radius)
+            }
+        }
+        overlay?.clipToOutline = true
+        overlay?.backgroundTintList = ColorStateList.valueOf(topBarStrokeColor)
+
+        val material = bar.background as? MaterialShapeDrawable ?: return
+        material.shapeAppearanceModel = material.shapeAppearanceModel
+            .toBuilder()
+            .setTopLeftCornerSize(radius)
+            .setTopRightCornerSize(radius)
+            .setBottomLeftCornerSize(radius)
+            .setBottomRightCornerSize(radius)
+            .build()
+        material.fillColor = ColorStateList.valueOf(Color.parseColor("#329AC7EA"))
+        if (isExpanded) {
+            material.setPaintStyle(Paint.Style.FILL)
+            material.setStroke(0f, Color.TRANSPARENT)
+            overlay?.visibility = View.VISIBLE
+        } else {
+            material.setPaintStyle(Paint.Style.FILL_AND_STROKE)
+            material.setStroke(dp(1f) * 1.2f, topBarStrokeColor)
+            overlay?.visibility = View.GONE
+        }
+        material.alpha = 255
+        bar.elevation = dp(18f)
+        bar.invalidate()
+    }
+
+    private fun ensureTopBarAppearancePersistence() {
+        val bar = findViewById<BottomAppBar>(R.id.topLiquidBar) ?: return
+        val alreadyAttached =
+            (bar.getTag(R.id.tag_liquid_bottom_bar_style_listener_attached) as? Boolean) == true
+        if (alreadyAttached) return
+        bar.setTag(R.id.tag_liquid_bottom_bar_style_listener_attached, true)
+
+        val layoutListener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            applyTopBarAppearance()
+        }
+        bar.addOnLayoutChangeListener(layoutListener)
+        bar.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) = Unit
+
+            override fun onViewDetachedFromWindow(v: View) {
+                bar.removeOnLayoutChangeListener(layoutListener)
+                bar.setTag(R.id.tag_liquid_bottom_bar_style_listener_attached, false)
+                bar.removeOnAttachStateChangeListener(this)
+            }
+        })
+
+        bar.post { applyTopBarAppearance() }
     }
 
     private fun handleCompactDrawerAction(itemId: Int) {
@@ -524,17 +601,18 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun toggleTopCenterMenu(forceClose: Boolean = false) {
-        val centerBtn = findViewById<ImageButton>(R.id.btnTopCenterMain) ?: return
+        val centerBtn = findViewById<ImageView>(R.id.btnTopCenterMain) ?: return
         val panel = findViewById<View>(R.id.topCenterExpandPanel) ?: return
         val dismissOverlay = findViewById<View>(R.id.topCenterDismissOverlay)
         val actionOne = findViewById<ImageButton>(R.id.btnTopCenterActionOne)
+        val closeAction = findViewById<ImageButton>(R.id.btnTopCenterClose)
         val actionTwo = findViewById<ImageButton>(R.id.btnTopCenterActionTwo)
-        val topBar = findViewById<NotchedLiquidTopBarView>(R.id.topLiquidBar)
+        val topBar = findViewById<BottomAppBar>(R.id.topLiquidBar)
         val shouldOpen = !topMenuExpanded && !forceClose
         if (topMenuExpanded == shouldOpen) return
         topMenuExpanded = shouldOpen
-        topCenterDropDy = resources.getDimension(R.dimen.top_center_drop_dy)
-        topCenterAnimator?.cancel()
+        topBar?.setTag(R.id.tag_liquid_bottom_bar_expanded, shouldOpen)
+        applyTopBarAppearance()
         dismissOverlay?.bringToFront()
         findViewById<View>(R.id.topMenuHost)?.bringToFront()
         panel.bringToFront()
@@ -552,66 +630,44 @@ class HomeActivity : AppCompatActivity() {
         panel.visibility = View.VISIBLE
         centerBtn.visibility = View.VISIBLE
         actionOne?.alpha = 1f
+        closeAction?.alpha = 1f
         actionTwo?.alpha = 1f
         actionOne?.scaleX = 1f
         actionOne?.scaleY = 1f
+        closeAction?.scaleX = 1f
+        closeAction?.scaleY = 1f
         actionTwo?.scaleX = 1f
         actionTwo?.scaleY = 1f
 
-        if (!shouldOpen) {
-            centerBtn.setBackgroundResource(R.drawable.bg_liquid_center_top_blue)
-            setLiquidImage(centerBtn, R.drawable.glass_add)
-            centerBtn.rotation = 0f
-            centerBtn.setColorFilter(liquidCrystalBlue, PorterDuff.Mode.SRC_IN)
-        } else {
-            centerBtn.setBackgroundResource(R.drawable.bg_liquid_menu_button)
-            setLiquidImage(centerBtn, R.drawable.glass_x)
-            centerBtn.rotation = 0f
-            centerBtn.setColorFilter(liquidCrystalBlueActive, PorterDuff.Mode.SRC_IN)
+        if (shouldOpen) {
+            collapseBottomCenterMenuOverlay()
+            panel.visibility = View.VISIBLE
+            panel.alpha = 0f
+            panel.scaleX = 0.8f
+            panel.translationY = -dp(14f)
+            centerBtn.animate().alpha(0f).setDuration(120L).withEndAction {
+                centerBtn.visibility = View.INVISIBLE
+                centerBtn.isClickable = false
+                applyTopBarAppearance()
+                panel.post { applyTopBarAppearance() }
+            }.start()
+            panel.animate().alpha(1f).scaleX(1f).translationY(0f).setDuration(200L).start()
+            return
         }
-
-        val from = if (shouldOpen) 0f else 1f
-        val to = if (shouldOpen) 1f else 0f
-        val expandedCenterY = topCenterDropDy - resources.displayMetrics.density * 3f
-        topCenterAnimator = ValueAnimator.ofFloat(from, to).apply {
-            duration = if (shouldOpen) 260L else 220L
-            addUpdateListener { anim ->
-                val t = easeInOut(anim.animatedValue as Float)
-                centerBtn.translationY = expandedCenterY * t
-                panel.translationY = -topCenterDropDy * (1f - t)
-                panel.scaleX = t
-                panel.scaleY = 0.95f + (1f - 0.95f) * t
-                topBar?.notchProgress = 1f - t
+        panel.animate().alpha(0f).scaleX(0.85f).translationY(-dp(10f)).setDuration(150L)
+            .withEndAction {
+                panel.visibility = View.GONE
+                panel.alpha = 0f
+                dismissOverlay?.visibility = View.GONE
+                dismissOverlay?.isClickable = false
+                centerBtn.visibility = View.VISIBLE
+                centerBtn.alpha = 0f
+                centerBtn.isClickable = true
+                centerBtn.animate().alpha(1f).setDuration(140L).start()
+                applyTopBarAppearance()
+                panel.post { applyTopBarAppearance() }
             }
-            addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: Animator) {
-                    if (!topMenuExpanded) {
-                        panel.visibility = View.GONE
-                        panel.scaleX = 0f
-                        panel.scaleY = 0.95f
-                        panel.translationY = -topCenterDropDy
-                        centerBtn.translationY = 0f
-                        centerBtn.rotation = 0f
-                        centerBtn.setBackgroundResource(R.drawable.bg_liquid_center_top_blue)
-                        setLiquidImage(centerBtn, R.drawable.glass_add)
-                        centerBtn.setColorFilter(liquidCrystalBlue, PorterDuff.Mode.SRC_IN)
-                        dismissOverlay?.visibility = View.GONE
-                        dismissOverlay?.isClickable = false
-                    } else {
-                        centerBtn.translationY = expandedCenterY
-                        centerBtn.rotation = 0f
-                        centerBtn.setBackgroundResource(R.drawable.bg_liquid_menu_button)
-                        setLiquidImage(centerBtn, R.drawable.glass_x)
-                        centerBtn.setColorFilter(liquidCrystalBlueActive, PorterDuff.Mode.SRC_IN)
-                    }
-                }
-            })
-            start()
-        }
-    }
-
-    private fun easeInOut(t: Float): Float {
-        return (t * t * (3f - 2f * t)).coerceIn(0f, 1f)
+            .start()
     }
 
     private fun dp(value: Float): Float = value * resources.displayMetrics.density

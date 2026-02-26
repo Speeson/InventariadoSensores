@@ -4,12 +4,15 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.Outline
+import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.util.Log
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewOutlineProvider
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -26,8 +29,10 @@ import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.model.LocationResponseDto
 import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.auth.LoginActivity
+import com.google.android.material.bottomappbar.BottomAppBar
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.navigation.NavigationView
+import com.google.android.material.shape.MaterialShapeDrawable
 import kotlinx.coroutines.launch
 
 object LiquidTopNav {
@@ -39,6 +44,8 @@ object LiquidTopNav {
     private const val TOP_CONTENT_CLEARANCE_DP = 56
     private const val LIQUID_CRYSTAL_BLUE = "#7FD8FF"
     private const val LIQUID_CRYSTAL_BLUE_ACTIVE = "#2CB8FF"
+    private const val LIQUID_STATUS_OFFLINE = "#FF2A3D"
+    private const val LIQUID_STATUS_ONLINE = "#36C96A"
 
     private data class DrawerState(
         val drawerLayout: DrawerLayout,
@@ -64,6 +71,7 @@ object LiquidTopNav {
 
             val dismissOverlay = ensureDismissOverlay(activity, drawerState.drawerLayout)
             val host = ensureTopHost(activity, drawerState.drawerLayout)
+            ensureTopBarAppearancePersistence(host)
 
             bindActions(activity, host, dismissOverlay, drawerState.drawerLayout)
             applyIconStyle(host)
@@ -253,8 +261,9 @@ object LiquidTopNav {
         val btnLocation = host.findViewById<ImageButton>(R.id.btnTopMidLeft)
         val btnTopRight = host.findViewById<ImageButton>(R.id.btnTopMidRight)
         val btnAlerts = host.findViewById<ImageButton>(R.id.btnAlertsQuick)
-        val btnCenter = host.findViewById<ImageButton>(R.id.btnTopCenterMain)
+        val btnCenter = host.findViewById<ImageView>(R.id.btnTopCenterMain)
         val btnProfile = host.findViewById<ImageButton>(R.id.btnTopCenterActionOne)
+        val btnCenterClose = host.findViewById<ImageButton>(R.id.btnTopCenterClose)
         val btnLogout = host.findViewById<ImageButton>(R.id.btnTopCenterActionTwo)
 
         btnBack.contentDescription = "Volver"
@@ -304,6 +313,9 @@ object LiquidTopNav {
         btnProfile.setOnClickListener {
             collapseCenterMenu(host, dismissOverlay, animate = true)
             showProfile(activity)
+        }
+        btnCenterClose.setOnClickListener {
+            collapseCenterMenu(host, dismissOverlay, animate = true)
         }
         btnLogout.setOnClickListener {
             collapseCenterMenu(host, dismissOverlay, animate = true)
@@ -500,10 +512,15 @@ object LiquidTopNav {
         setLiquidIcon(host.findViewById(R.id.btnTopMidLeft), R.drawable.glass_location)
         setLiquidIcon(host.findViewById(R.id.btnTopMidRight), R.drawable.glass_setting)
         setLiquidIcon(host.findViewById(R.id.btnAlertsQuick), R.drawable.glass_noti)
-        setLiquidIcon(host.findViewById(R.id.btnTopCenterMain), R.drawable.glass_add)
+        setLiquidIcon(host.findViewById<ImageView>(R.id.btnTopCenterMain), R.drawable.glass_add)
         setLiquidIcon(host.findViewById(R.id.btnTopCenterActionOne), R.drawable.glass_user)
+        setLiquidIcon(host.findViewById(R.id.btnTopCenterClose), R.drawable.glass_x)
         setLiquidIcon(host.findViewById(R.id.btnTopCenterActionTwo), R.drawable.glass_logout)
         host.findViewById<ImageButton>(R.id.btnTopCenterActionOne)?.apply {
+            imageAlpha = 255
+            setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE_ACTIVE), PorterDuff.Mode.SRC_IN)
+        }
+        host.findViewById<ImageButton>(R.id.btnTopCenterClose)?.apply {
             imageAlpha = 255
             setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE_ACTIVE), PorterDuff.Mode.SRC_IN)
         }
@@ -514,87 +531,146 @@ object LiquidTopNav {
     }
 
     private fun updateStatusTint(host: View) {
-        val tintColor = if (NetworkModule.isManualOffline()) {
-            Color.parseColor("#FF2A3D")
+        applyTopBarAppearance(host)
+    }
+
+    private fun currentStatusColor(): Int {
+        return if (NetworkModule.isManualOffline()) {
+            Color.parseColor(LIQUID_STATUS_OFFLINE)
         } else {
-            Color.parseColor("#36C96A")
+            Color.parseColor(LIQUID_STATUS_ONLINE)
         }
-        host.findViewById<NotchedLiquidTopBarView>(R.id.topLiquidBar)?.setStatusTintColor(tintColor)
+    }
+
+    private fun applyTopBarAppearance(host: View) {
+        val bar = host.findViewById<BottomAppBar>(R.id.topLiquidBar) ?: return
+        val overlay = host.findViewById<View>(R.id.topLiquidBarStrokeOverlay)
+        val radius = dp(bar, 16).toFloat()
+        val isExpanded = (bar.getTag(R.id.tag_liquid_bottom_bar_expanded) as? Boolean) == true
+        val statusColor = currentStatusColor()
+
+        bar.outlineProvider = object : ViewOutlineProvider() {
+            override fun getOutline(view: View, outline: Outline) {
+                outline.setRoundRect(0, 0, view.width, view.height, radius)
+            }
+        }
+        bar.clipToOutline = true
+        overlay?.outlineProvider = object : ViewOutlineProvider() {
+            override fun getOutline(view: View, outline: Outline) {
+                outline.setRoundRect(0, 0, view.width, view.height, radius)
+            }
+        }
+        overlay?.clipToOutline = true
+        overlay?.backgroundTintList = ColorStateList.valueOf(statusColor)
+
+        val material = bar.background as? MaterialShapeDrawable ?: return
+        material.shapeAppearanceModel = material.shapeAppearanceModel
+            .toBuilder()
+            .setTopLeftCornerSize(radius)
+            .setTopRightCornerSize(radius)
+            .setBottomLeftCornerSize(radius)
+            .setBottomRightCornerSize(radius)
+            .build()
+        material.fillColor = ColorStateList.valueOf(Color.parseColor("#329AC7EA"))
+        if (isExpanded) {
+            material.setPaintStyle(Paint.Style.FILL)
+            material.setStroke(0f, Color.TRANSPARENT)
+            overlay?.visibility = View.VISIBLE
+        } else {
+            material.setPaintStyle(Paint.Style.FILL_AND_STROKE)
+            material.setStroke(dp(bar, 1).toFloat() * 1.2f, statusColor)
+            overlay?.visibility = View.GONE
+        }
+        material.alpha = 255
+        bar.elevation = dp(bar, 18).toFloat()
+        bar.invalidate()
+    }
+
+    private fun ensureTopBarAppearancePersistence(host: View) {
+        val bar = host.findViewById<BottomAppBar>(R.id.topLiquidBar) ?: return
+        val alreadyAttached =
+            (bar.getTag(R.id.tag_liquid_bottom_bar_style_listener_attached) as? Boolean) == true
+        if (alreadyAttached) return
+        bar.setTag(R.id.tag_liquid_bottom_bar_style_listener_attached, true)
+
+        val layoutListener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            applyTopBarAppearance(host)
+        }
+        bar.addOnLayoutChangeListener(layoutListener)
+        bar.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) = Unit
+
+            override fun onViewDetachedFromWindow(v: View) {
+                bar.removeOnLayoutChangeListener(layoutListener)
+                bar.setTag(R.id.tag_liquid_bottom_bar_style_listener_attached, false)
+                bar.removeOnAttachStateChangeListener(this)
+            }
+        })
+
+        bar.post { applyTopBarAppearance(host) }
     }
 
     private fun expandCenterMenu(activity: AppCompatActivity, host: View, dismissOverlay: View) {
         collapseBottomCenterMenuOverlay(activity)
-        val centerBtn = host.findViewById<ImageButton>(R.id.btnTopCenterMain)
+        val centerBtn = host.findViewById<ImageView>(R.id.btnTopCenterMain)
         val panel = host.findViewById<View>(R.id.topCenterExpandPanel)
-        val topBar = host.findViewById<NotchedLiquidTopBarView>(R.id.topLiquidBar)
-        val dropDy = activity.resources.getDimension(R.dimen.top_center_drop_dy)
-        val expandedCenterY = dropDy - dp(host, 3).toFloat()
+        val topBar = host.findViewById<BottomAppBar>(R.id.topLiquidBar)
 
+        topBar?.setTag(R.id.tag_liquid_bottom_bar_expanded, true)
+        applyTopBarAppearance(host)
         dismissOverlay.visibility = View.VISIBLE
         dismissOverlay.isClickable = true
         panel.visibility = View.VISIBLE
         panel.alpha = 0f
-        panel.scaleX = 0.84f
-        panel.scaleY = 0.92f
-        panel.translationY = -dropDy
+        panel.scaleX = 0.8f
+        panel.translationY = -dp(host, 14).toFloat()
+        centerBtn.animate().alpha(0f).setDuration(120L).withEndAction {
+            centerBtn.visibility = View.INVISIBLE
+            centerBtn.isClickable = false
+            applyTopBarAppearance(host)
+            host.post { applyTopBarAppearance(host) }
+        }.start()
         panel.animate()
             .alpha(1f)
             .scaleX(1f)
-            .scaleY(1f)
             .translationY(0f)
-            .setDuration(190L)
+            .setDuration(200L)
             .start()
-
-        centerBtn.setBackgroundResource(R.drawable.bg_liquid_menu_button)
-        setLiquidIcon(centerBtn, R.drawable.glass_x)
-        centerBtn.setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE_ACTIVE), PorterDuff.Mode.SRC_IN)
-        centerBtn.rotation = 0f
-        centerBtn.animate()
-            .translationY(expandedCenterY)
-            .setDuration(190L)
-            .start()
-        topBar?.notchProgress = 0f
     }
 
     private fun collapseCenterMenu(host: View, dismissOverlay: View, animate: Boolean) {
-        val centerBtn = host.findViewById<ImageButton>(R.id.btnTopCenterMain)
+        val centerBtn = host.findViewById<ImageView>(R.id.btnTopCenterMain)
         val panel = host.findViewById<View>(R.id.topCenterExpandPanel)
-        val topBar = host.findViewById<NotchedLiquidTopBarView>(R.id.topLiquidBar)
+        val topBar = host.findViewById<BottomAppBar>(R.id.topLiquidBar)
 
         if (panel.visibility != View.VISIBLE && dismissOverlay.visibility != View.VISIBLE) return
 
+        topBar?.setTag(R.id.tag_liquid_bottom_bar_expanded, false)
+        applyTopBarAppearance(host)
         val endAction = {
             panel.visibility = View.GONE
             panel.alpha = 0f
-            panel.scaleX = 0.84f
-            panel.scaleY = 0.92f
-            panel.translationY = -dp(host, 12).toFloat()
+            panel.scaleX = 0.85f
+            panel.translationY = -dp(host, 10).toFloat()
             dismissOverlay.visibility = View.GONE
             dismissOverlay.isClickable = false
-            centerBtn.translationY = 0f
-            centerBtn.rotation = 0f
-            centerBtn.setBackgroundResource(R.drawable.bg_liquid_center_top_blue)
-            setLiquidIcon(centerBtn, R.drawable.glass_add)
-            topBar?.notchProgress = 1f
+            centerBtn.visibility = View.VISIBLE
+            centerBtn.alpha = 0f
+            centerBtn.isClickable = true
+            centerBtn.animate().alpha(1f).setDuration(140L).start()
+            applyTopBarAppearance(host)
+            host.post { applyTopBarAppearance(host) }
         }
         if (!animate) {
             endAction.invoke()
             return
         }
-        centerBtn.setBackgroundResource(R.drawable.bg_liquid_menu_button)
-        setLiquidIcon(centerBtn, R.drawable.glass_x)
-        centerBtn.rotation = 0f
         panel.animate()
             .alpha(0f)
-            .scaleX(0.84f)
-            .scaleY(0.92f)
-            .translationY(-dp(host, 12).toFloat())
-            .setDuration(170L)
+            .scaleX(0.85f)
+            .translationY(-dp(host, 10).toFloat())
+            .setDuration(150L)
             .withEndAction { endAction.invoke() }
-            .start()
-        centerBtn.animate()
-            .translationY(0f)
-            .setDuration(170L)
             .start()
     }
 
@@ -796,7 +872,7 @@ object LiquidTopNav {
         }
     }
 
-    private fun setLiquidIcon(button: ImageButton, resId: Int) {
+    private fun setLiquidIcon(button: ImageView, resId: Int) {
         button.setImageResource(resId)
         button.imageTintList = null
         button.setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE), PorterDuff.Mode.SRC_IN)

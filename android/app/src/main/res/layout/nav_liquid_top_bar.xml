@@ -1,155 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
-<merge xmlns:android="http://schemas.android.com/apk/res/android">
-
-    <com.example.inventoryapp.ui.common.NotchedLiquidTopBarView
-        android:id="@+id/topLiquidBar"
-        android:layout_width="match_parent"
-        android:layout_height="80dp"
-        android:layout_gravity="top"
-        android:elevation="24dp"
-        android:translationZ="24dp" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:layout_gravity="top"
-        android:elevation="50dp"
-        android:gravity="center"
-        android:orientation="horizontal"
-        android:paddingLeft="8dp"
-        android:paddingRight="8dp"
-        android:translationZ="50dp">
-
-        <FrameLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:foregroundGravity="center">
-
-            <ImageButton
-                android:id="@+id/btnMenu"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_gravity="center"
-                android:background="@android:color/transparent"
-                android:contentDescription="Menu"
-                android:padding="8dp"
-                android:scaleType="centerInside"
-                android:src="@drawable/glass_menu" />
-        </FrameLayout>
-
-        <FrameLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:foregroundGravity="center">
-
-            <ImageButton
-                android:id="@+id/btnTopMidLeft"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_gravity="center"
-                android:background="@android:color/transparent"
-                android:contentDescription="Seleccionar ubicacion"
-                android:padding="7dp"
-                android:scaleType="centerInside"
-                android:src="@drawable/glass_location" />
-        </FrameLayout>
-
-        <Space
-            android:layout_width="56dp"
-            android:layout_height="match_parent" />
-
-        <FrameLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:foregroundGravity="center">
-
-            <ImageButton
-                android:id="@+id/btnTopMidRight"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_gravity="center"
-                android:background="@android:color/transparent"
-                android:contentDescription="Accion superior derecha"
-                android:padding="7dp"
-                android:scaleType="centerInside"
-                android:src="@drawable/glass_setting" />
-        </FrameLayout>
-
-        <FrameLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:foregroundGravity="center">
-
-            <FrameLayout
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_gravity="center"
-                android:clipChildren="false"
-                android:clipToPadding="false">
-
-                <ImageButton
-                    android:id="@+id/btnAlertsQuick"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_gravity="center"
-                    android:background="@android:color/transparent"
-                    android:contentDescription="Alertas"
-                    android:padding="8dp"
-                    android:scaleType="centerInside"
-                    android:src="@drawable/glass_noti" />
-
-                <TextView
-                    android:id="@+id/tvAlertsBadge"
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
-                    android:layout_gravity="end|top"
-                    android:layout_marginEnd="2dp"
-                    android:layout_marginTop="1dp"
-                    android:background="@drawable/bg_badge_red"
-                    android:gravity="center"
-                    android:text="0"
-                    android:textColor="@android:color/white"
-                    android:textSize="10sp"
-                    android:textStyle="bold"
-                    android:visibility="gone" />
-            </FrameLayout>
-        </FrameLayout>
-    </LinearLayout>
-
-    <ImageButton
-        android:id="@+id/btnTopCenterMain"
-        android:layout_width="@dimen/top_center_button_size"
-        android:layout_height="@dimen/top_center_button_size"
-        android:layout_gravity="top|center_horizontal"
-        android:layout_marginTop="34dp"
-        android:background="@drawable/bg_liquid_center_top_blue"
-        android:contentDescription="Menu central superior"
-        android:elevation="60dp"
-        android:padding="8dp"
-        android:scaleType="centerInside"
-        android:translationZ="60dp"
-        android:src="@drawable/glass_add" />
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/topLiquidNavRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_gravity="top"
+    android:clipChildren="false"
+    android:clipToPadding="false"
+    android:paddingTop="12dp"
+    android:paddingLeft="12dp"
+    android:paddingRight="12dp"
+    android:paddingBottom="22dp">
 
     <LinearLayout
         android:id="@+id/topCenterExpandPanel"
         android:layout_width="214dp"
         android:layout_height="62dp"
         android:layout_gravity="top|center_horizontal"
-        android:layout_marginTop="68dp"
-        android:alpha="1"
+        android:layout_marginTop="76dp"
+        android:alpha="0"
         android:background="@drawable/bg_liquid_menu_panel"
-        android:elevation="58dp"
+        android:elevation="20dp"
         android:gravity="center"
         android:orientation="horizontal"
         android:paddingLeft="8dp"
         android:paddingRight="8dp"
-        android:scaleX="0"
-        android:translationY="-8dp"
-        android:translationZ="58dp"
+        android:scaleX="0.8"
+        android:translationY="-16dp"
         android:visibility="gone">
 
         <ImageButton
@@ -164,9 +41,17 @@
             android:scaleType="centerInside"
             android:src="@drawable/glass_user" />
 
-        <Space
-            android:layout_width="56dp"
-            android:layout_height="46dp" />
+        <ImageButton
+            android:id="@+id/btnTopCenterClose"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_marginLeft="5dp"
+            android:layout_marginRight="5dp"
+            android:background="@drawable/bg_liquid_menu_button"
+            android:contentDescription="Cerrar opciones"
+            android:padding="8dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/glass_x" />
 
         <ImageButton
             android:id="@+id/btnTopCenterActionTwo"
@@ -181,4 +66,186 @@
             android:src="@drawable/glass_logout" />
     </LinearLayout>
 
-</merge>
+    <com.example.inventoryapp.ui.common.SafeBottomAppBar
+        android:id="@+id/topLiquidBar"
+        style="@style/Widget.Inventoryapp.BottomAppBar"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_gravity="top"
+        android:scaleY="-1"
+        android:visibility="visible"
+        app:backgroundTint="#8CB3D9"
+        app:shapeAppearance="@style/ShapeAppearanceInventoryBottomBar"
+        app:fabAlignmentMode="center"
+        app:fabAnimationMode="slide"
+        app:fabCradleMargin="28dp"
+        app:fabCradleRoundedCornerRadius="36dp"
+        app:fabCradleVerticalOffset="10dp"
+        app:hideOnScroll="false">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp">
+
+            <FrameLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:foregroundGravity="center">
+
+                <ImageButton
+                    android:id="@+id/btnMenu"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:layout_gravity="center"
+                    android:background="@android:color/transparent"
+                    android:contentDescription="Menu"
+                    android:padding="7dp"
+                    android:scaleY="-1"
+                    android:scaleType="centerInside"
+                    android:translationX="-2dp"
+                    android:src="@drawable/glass_menu" />
+            </FrameLayout>
+
+            <FrameLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:foregroundGravity="center">
+
+                <ImageButton
+                    android:id="@+id/btnTopMidLeft"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:layout_gravity="center"
+                    android:background="@android:color/transparent"
+                    android:contentDescription="Seleccionar ubicacion"
+                    android:padding="7dp"
+                    android:scaleY="-1"
+                    android:scaleType="centerInside"
+                    android:translationX="-6dp"
+                    android:src="@drawable/glass_location" />
+            </FrameLayout>
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <FrameLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:foregroundGravity="center">
+
+                <ImageButton
+                    android:id="@+id/btnTopMidRight"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:layout_gravity="center"
+                    android:background="@android:color/transparent"
+                    android:contentDescription="Accion superior derecha"
+                    android:padding="7dp"
+                    android:scaleY="-1"
+                    android:scaleType="centerInside"
+                    android:translationX="6dp"
+                    android:src="@drawable/glass_setting" />
+            </FrameLayout>
+
+            <FrameLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:foregroundGravity="center">
+
+                <FrameLayout
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="center"
+                    android:clipChildren="false"
+                    android:clipToPadding="false">
+
+                    <ImageButton
+                        android:id="@+id/btnAlertsQuick"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:layout_gravity="center"
+                        android:background="@android:color/transparent"
+                        android:contentDescription="Alertas"
+                        android:padding="7dp"
+                        android:scaleY="-1"
+                        android:scaleType="centerInside"
+                        android:translationX="2dp"
+                        android:src="@drawable/glass_noti" />
+
+                    <TextView
+                        android:id="@+id/tvAlertsBadge"
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:layout_gravity="end|top"
+                        android:layout_marginEnd="0dp"
+                        android:layout_marginTop="0dp"
+                        android:background="@drawable/bg_badge_red"
+                        android:gravity="center"
+                        android:scaleY="-1"
+                        android:text="0"
+                        android:textColor="@android:color/white"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        android:visibility="gone" />
+                </FrameLayout>
+            </FrameLayout>
+
+        </LinearLayout>
+
+    </com.example.inventoryapp.ui.common.SafeBottomAppBar>
+
+    <View
+        android:id="@+id/topLiquidBarStrokeOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_gravity="top"
+        android:background="@drawable/bg_liquid_bottom_bar_inner_stroke"
+        android:clickable="false"
+        android:elevation="19dp"
+        android:focusable="false"
+        android:importantForAccessibility="no"
+        android:scaleY="-1"
+        android:translationZ="19dp" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/btnTopCenterMain"
+        style="@style/Widget.Inventoryapp.CenterFab"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:visibility="visible"
+        android:contentDescription="Menu central superior"
+        android:padding="0dp"
+        android:scaleType="centerInside"
+        android:translationY="6dp"
+        android:src="@drawable/glass_add"
+        app:backgroundTint="#8CB3D9"
+        app:borderWidth="0dp"
+        android:elevation="6dp"
+        app:fabCustomSize="48dp"
+        app:maxImageSize="21dp"
+        app:tint="#8CCBFF"
+        app:useCompatPadding="true"
+        app:layout_anchor="@id/topLiquidBar"
+        app:layout_anchorGravity="center|bottom" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
