@@ -3,6 +3,7 @@ package com.example.inventoryapp.ui.common
 import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Outline
@@ -86,6 +87,7 @@ object LiquidBottomNav {
     private const val ACTION_MANUAL = "manual"
     private const val ACTION_SCAN = "scan"
     private const val CAMERA_PERMISSION_FRAGMENT_TAG = "liquid_camera_permission_fragment"
+    private const val PREFS_UI = "ui_prefs"
     private const val MENU_CONTENT_GAP_DP = 6
     private const val LIQUID_CRYSTAL_BLUE = "#7FD8FF"
     private const val LIQUID_CRYSTAL_BLUE_ACTIVE = "#2CB8FF"
@@ -788,7 +790,17 @@ object LiquidBottomNav {
     private fun setLiquidIcon(button: ImageView, resId: Int) {
         button.setImageResource(resId)
         button.imageTintList = null
-        button.setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE), PorterDuff.Mode.SRC_IN)
+        val prefs = button.context.getSharedPreferences(PREFS_UI, Context.MODE_PRIVATE)
+        val tint = if (resId == R.drawable.glass_add) {
+            if (prefs.getBoolean("dark_mode", false)) {
+                Color.parseColor("#00B8FF")
+            } else {
+                Color.parseColor("#F2FAFF")
+            }
+        } else {
+            Color.parseColor(LIQUID_CRYSTAL_BLUE)
+        }
+        button.setColorFilter(tint, PorterDuff.Mode.SRC_IN)
         button.imageAlpha = 245
     }
 }

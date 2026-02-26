@@ -372,17 +372,19 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun updateTopButtonState(button: ImageButton, active: Boolean) {
+        val leftEdgeButton = button.id == R.id.btnMenu || button.id == R.id.btnTopMidLeft
+        val selectedScale = if (leftEdgeButton) 1.04f else 1.08f
         if (active) {
             button.setBackgroundResource(R.drawable.bg_liquid_icon_selected)
             button.imageAlpha = 255
-            button.scaleX = 1.08f
-            button.scaleY = 1.08f
+            button.scaleX = selectedScale
+            button.scaleY = -selectedScale
             button.setColorFilter(liquidCrystalBlueActive, PorterDuff.Mode.SRC_IN)
         } else {
             button.setBackgroundColor(Color.TRANSPARENT)
             button.imageAlpha = 245
             button.scaleX = 1.0f
-            button.scaleY = 1.0f
+            button.scaleY = -1.0f
             button.setColorFilter(liquidCrystalBlue, PorterDuff.Mode.SRC_IN)
         }
     }
@@ -498,8 +500,10 @@ class HomeActivity : AppCompatActivity() {
     private fun applyTopBarAppearance() {
         val bar = findViewById<BottomAppBar>(R.id.topLiquidBar) ?: return
         val overlay = findViewById<View>(R.id.topLiquidBarStrokeOverlay)
+        val centerBtn = findViewById<ImageView>(R.id.btnTopCenterMain)
         val radius = dp(16f)
         val isExpanded = (bar.getTag(R.id.tag_liquid_bottom_bar_expanded) as? Boolean) == true
+        bar.post { centerBtn?.translationY = dp(11f) }
 
         bar.outlineProvider = object : ViewOutlineProvider() {
             override fun getOutline(view: View, outline: Outline) {
@@ -513,7 +517,11 @@ class HomeActivity : AppCompatActivity() {
             }
         }
         overlay?.clipToOutline = true
-        overlay?.backgroundTintList = ColorStateList.valueOf(topBarStrokeColor)
+        (overlay?.background?.mutate() as? android.graphics.drawable.GradientDrawable)?.let { stroke ->
+            stroke.setColor(Color.TRANSPARENT)
+            stroke.cornerRadius = radius
+            stroke.setStroke((dp(1f) * 1.2f).toInt(), topBarStrokeColor)
+        }
 
         val material = bar.background as? MaterialShapeDrawable ?: return
         material.shapeAppearanceModel = material.shapeAppearanceModel
@@ -525,6 +533,7 @@ class HomeActivity : AppCompatActivity() {
             .build()
         material.fillColor = ColorStateList.valueOf(Color.parseColor("#329AC7EA"))
         if (isExpanded) {
+            // While expanded, use overlay stroke to avoid corner clipping artifacts.
             material.setPaintStyle(Paint.Style.FILL)
             material.setStroke(0f, Color.TRANSPARENT)
             overlay?.visibility = View.VISIBLE
@@ -664,6 +673,8 @@ class HomeActivity : AppCompatActivity() {
                 centerBtn.alpha = 0f
                 centerBtn.isClickable = true
                 centerBtn.animate().alpha(1f).setDuration(140L).start()
+                findViewById<View>(R.id.topLiquidBarStrokeOverlay)?.visibility = View.GONE
+                topBar?.setTag(R.id.tag_liquid_bottom_bar_expanded, false)
                 applyTopBarAppearance()
                 panel.post { applyTopBarAppearance() }
             }
@@ -1137,7 +1148,16 @@ private fun confirmLogout() {
     private fun setLiquidImage(view: ImageView, resId: Int) {
         view.setImageResource(resId)
         view.imageTintList = null
-        view.setColorFilter(liquidCrystalBlue, PorterDuff.Mode.SRC_IN)
+        val tint = if (resId == R.drawable.glass_add) {
+            if (prefs.getBoolean("dark_mode", false)) {
+                Color.parseColor("#00B8FF")
+            } else {
+                Color.parseColor("#F2FAFF")
+            }
+        } else {
+            liquidCrystalBlue
+        }
+        view.setColorFilter(tint, PorterDuff.Mode.SRC_IN)
         view.imageAlpha = 245
     }
 

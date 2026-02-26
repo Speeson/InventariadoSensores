@@ -545,9 +545,11 @@ object LiquidTopNav {
     private fun applyTopBarAppearance(host: View) {
         val bar = host.findViewById<BottomAppBar>(R.id.topLiquidBar) ?: return
         val overlay = host.findViewById<View>(R.id.topLiquidBarStrokeOverlay)
+        val centerBtn = host.findViewById<ImageView>(R.id.btnTopCenterMain)
         val radius = dp(bar, 16).toFloat()
         val isExpanded = (bar.getTag(R.id.tag_liquid_bottom_bar_expanded) as? Boolean) == true
         val statusColor = currentStatusColor()
+        bar.post { centerBtn?.translationY = dp(host, 11).toFloat() }
 
         bar.outlineProvider = object : ViewOutlineProvider() {
             override fun getOutline(view: View, outline: Outline) {
@@ -561,7 +563,11 @@ object LiquidTopNav {
             }
         }
         overlay?.clipToOutline = true
-        overlay?.backgroundTintList = ColorStateList.valueOf(statusColor)
+        (overlay?.background?.mutate() as? android.graphics.drawable.GradientDrawable)?.let { stroke ->
+            stroke.setColor(Color.TRANSPARENT)
+            stroke.cornerRadius = radius
+            stroke.setStroke((dp(bar, 1).toFloat() * 1.2f).toInt(), statusColor)
+        }
 
         val material = bar.background as? MaterialShapeDrawable ?: return
         material.shapeAppearanceModel = material.shapeAppearanceModel
@@ -573,6 +579,7 @@ object LiquidTopNav {
             .build()
         material.fillColor = ColorStateList.valueOf(Color.parseColor("#329AC7EA"))
         if (isExpanded) {
+            // While expanded, use overlay stroke to avoid corner clipping artifacts.
             material.setPaintStyle(Paint.Style.FILL)
             material.setStroke(0f, Color.TRANSPARENT)
             overlay?.visibility = View.VISIBLE
@@ -644,9 +651,6 @@ object LiquidTopNav {
         val topBar = host.findViewById<BottomAppBar>(R.id.topLiquidBar)
 
         if (panel.visibility != View.VISIBLE && dismissOverlay.visibility != View.VISIBLE) return
-
-        topBar?.setTag(R.id.tag_liquid_bottom_bar_expanded, false)
-        applyTopBarAppearance(host)
         val endAction = {
             panel.visibility = View.GONE
             panel.alpha = 0f
@@ -658,6 +662,8 @@ object LiquidTopNav {
             centerBtn.alpha = 0f
             centerBtn.isClickable = true
             centerBtn.animate().alpha(1f).setDuration(140L).start()
+            host.findViewById<View>(R.id.topLiquidBarStrokeOverlay)?.visibility = View.GONE
+            topBar?.setTag(R.id.tag_liquid_bottom_bar_expanded, false)
             applyTopBarAppearance(host)
             host.post { applyTopBarAppearance(host) }
         }
@@ -857,17 +863,19 @@ object LiquidTopNav {
     }
 
     private fun updateTopActionButtonState(button: ImageButton, active: Boolean) {
+        val leftEdgeButton = button.id == R.id.btnMenu || button.id == R.id.btnTopMidLeft
+        val selectedScale = if (leftEdgeButton) 1.04f else 1.08f
         if (active) {
             button.setBackgroundResource(R.drawable.bg_liquid_icon_selected)
             button.imageAlpha = 255
-            button.scaleX = 1.08f
-            button.scaleY = 1.08f
+            button.scaleX = selectedScale
+            button.scaleY = -selectedScale
             button.setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE_ACTIVE), PorterDuff.Mode.SRC_IN)
         } else {
             button.setBackgroundColor(Color.TRANSPARENT)
             button.imageAlpha = 245
             button.scaleX = 1.0f
-            button.scaleY = 1.0f
+            button.scaleY = -1.0f
             button.setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE), PorterDuff.Mode.SRC_IN)
         }
     }
@@ -875,7 +883,17 @@ object LiquidTopNav {
     private fun setLiquidIcon(button: ImageView, resId: Int) {
         button.setImageResource(resId)
         button.imageTintList = null
-        button.setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE), PorterDuff.Mode.SRC_IN)
+        val prefs = button.context.getSharedPreferences(PREFS_UI, Context.MODE_PRIVATE)
+        val tint = if (resId == R.drawable.glass_add) {
+            if (prefs.getBoolean("dark_mode", false)) {
+                Color.parseColor("#00B8FF")
+            } else {
+                Color.parseColor("#F2FAFF")
+            }
+        } else {
+            Color.parseColor(LIQUID_CRYSTAL_BLUE)
+        }
+        button.setColorFilter(tint, PorterDuff.Mode.SRC_IN)
         button.imageAlpha = 245
     }
 }

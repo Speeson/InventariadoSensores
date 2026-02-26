@@ -78,7 +78,7 @@
         app:shapeAppearance="@style/ShapeAppearanceInventoryBottomBar"
         app:fabAlignmentMode="center"
         app:fabAnimationMode="slide"
-        app:fabCradleMargin="28dp"
+        app:fabCradleMargin="15dp"
         app:fabCradleRoundedCornerRadius="36dp"
         app:fabCradleVerticalOffset="10dp"
         app:hideOnScroll="false">
@@ -111,7 +111,7 @@
                     android:padding="7dp"
                     android:scaleY="-1"
                     android:scaleType="centerInside"
-                    android:translationX="-2dp"
+                    android:translationX="-10dp"
                     android:src="@drawable/glass_menu" />
             </FrameLayout>
 
@@ -133,7 +133,7 @@
                     android:padding="7dp"
                     android:scaleY="-1"
                     android:scaleType="centerInside"
-                    android:translationX="-6dp"
+                    android:translationX="-14dp"
                     android:src="@drawable/glass_location" />
             </FrameLayout>
 
@@ -196,9 +196,9 @@
                         android:id="@+id/tvAlertsBadge"
                         android:layout_width="18dp"
                         android:layout_height="18dp"
-                        android:layout_gravity="end|top"
-                        android:layout_marginEnd="0dp"
-                        android:layout_marginTop="0dp"
+                        android:layout_gravity="end|bottom"
+                        android:layout_marginEnd="-2dp"
+                        android:layout_marginBottom="-2dp"
                         android:background="@drawable/bg_badge_red"
                         android:gravity="center"
                         android:scaleY="-1"
@@ -219,13 +219,13 @@
         android:layout_width="match_parent"
         android:layout_height="64dp"
         android:layout_gravity="top"
-        android:background="@drawable/bg_liquid_bottom_bar_inner_stroke"
+        android:background="@drawable/bg_liquid_top_bar_stroke_overlay"
         android:clickable="false"
-        android:elevation="19dp"
+        android:elevation="0dp"
         android:focusable="false"
         android:importantForAccessibility="no"
         android:scaleY="-1"
-        android:translationZ="19dp" />
+        android:translationZ="0dp" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/btnTopCenterMain"
@@ -236,7 +236,7 @@
         android:contentDescription="Menu central superior"
         android:padding="0dp"
         android:scaleType="centerInside"
-        android:translationY="6dp"
+        android:translationY="16dp"
         android:src="@drawable/glass_add"
         app:backgroundTint="#8CB3D9"
         app:borderWidth="0dp"
