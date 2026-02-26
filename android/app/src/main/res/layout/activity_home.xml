@@ -6,6 +6,7 @@
     android:layout_height="match_parent">
 
     <LinearLayout
+        android:id="@+id/homeMainContentRoot"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
@@ -456,9 +457,9 @@
         android:clipToPadding="false"
         android:elevation="40dp"
         android:translationZ="40dp"
-        android:paddingLeft="12dp"
+        android:paddingLeft="4dp"
         android:paddingTop="0dp"
-        android:paddingRight="12dp"
+        android:paddingRight="4dp"
         android:paddingBottom="0dp">
 
         <include layout="@layout/nav_liquid_top_bar" />
@@ -502,9 +503,6 @@
     </FrameLayout>
 
 </androidx.drawerlayout.widget.DrawerLayout>
-
-
-
 
 
 

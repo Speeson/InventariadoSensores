@@ -228,7 +228,7 @@ object LiquidTopNav {
             clipToPadding = false
             elevation = dp(this, 40).toFloat()
             translationZ = dp(this, 40).toFloat()
-            setPadding(dp(this, 12), 0, dp(this, 12), 0)
+            setPadding(dp(this, 4), 0, dp(this, 4), 0)
             LayoutInflater.from(activity).inflate(R.layout.nav_liquid_top_bar, this, true)
         }
         val params = DrawerLayout.LayoutParams(
