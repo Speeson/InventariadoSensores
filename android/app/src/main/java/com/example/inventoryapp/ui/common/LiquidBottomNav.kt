@@ -4,6 +4,8 @@ import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
+import android.content.res.ColorStateList
+import android.graphics.Outline
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.PorterDuff
@@ -16,6 +18,7 @@ import android.text.TextWatcher
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewOutlineProvider
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.view.WindowManager
@@ -24,6 +27,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.ListView
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
@@ -55,6 +59,8 @@ import com.example.inventoryapp.ui.rotation.RotationActivity
 import com.example.inventoryapp.ui.scan.ConfirmScanActivity
 import com.example.inventoryapp.ui.stock.StockActivity
 import com.example.inventoryapp.ui.thresholds.ThresholdsActivity
+import com.google.android.material.bottomappbar.BottomAppBar
+import com.google.android.material.shape.MaterialShapeDrawable
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 
@@ -107,6 +113,7 @@ object LiquidBottomNav {
         val existingNav = content.findViewById<View>(R.id.liquidBottomNavRoot)
         if (existingNav != null) {
             ensureDismissOverlay(activity, content, existingNav)
+            applyBottomBarAppearance(existingNav)
             applyIconStyle(existingNav)
             highlightCurrentTab(activity, existingNav)
             collapseCenterMenu(existingNav, animate = false)
@@ -126,6 +133,7 @@ object LiquidBottomNav {
         ensureDismissOverlay(activity, content, nav)
         content.addView(nav, params)
 
+        applyBottomBarAppearance(nav)
         bindActions(activity, nav)
         applyIconStyle(nav)
         highlightCurrentTab(activity, nav)
@@ -137,6 +145,59 @@ object LiquidBottomNav {
             }
         }
         setupKeyboardAwareBehavior(activity, content, originalChild, nav)
+    }
+
+    private fun applyBottomBarAppearance(nav: View) {
+        val bar = nav.findViewById<BottomAppBar>(R.id.liquidBar) ?: return
+        applyBottomBarAppearance(bar)
+        ensureBottomBarAppearancePersistence(bar)
+    }
+
+    private fun applyBottomBarAppearance(bar: BottomAppBar) {
+        val radius = dp(bar, 16).toFloat()
+        bar.clipToOutline = true
+        bar.outlineProvider = object : ViewOutlineProvider() {
+            override fun getOutline(view: View, outline: Outline) {
+                outline.setRoundRect(0, 0, view.width, view.height, radius)
+            }
+        }
+        val material = bar.background as? MaterialShapeDrawable ?: return
+        material.shapeAppearanceModel = material.shapeAppearanceModel
+            .toBuilder()
+            .setTopLeftCornerSize(radius)
+            .setTopRightCornerSize(radius)
+            .setBottomLeftCornerSize(radius)
+            .setBottomRightCornerSize(radius)
+            .build()
+        // Match the top bar glass palette as close as BottomAppBar allows.
+        material.fillColor = ColorStateList.valueOf(Color.parseColor("#89B8E4"))
+        material.setStroke(dp(bar, 1).toFloat(), Color.parseColor("#E6F8FFFF"))
+        material.alpha = 220
+        bar.elevation = dp(bar, 16).toFloat()
+        bar.invalidate()
+    }
+
+    private fun ensureBottomBarAppearancePersistence(bar: BottomAppBar) {
+        val alreadyAttached =
+            (bar.getTag(R.id.tag_liquid_bottom_bar_style_listener_attached) as? Boolean) == true
+        if (alreadyAttached) return
+        bar.setTag(R.id.tag_liquid_bottom_bar_style_listener_attached, true)
+
+        val layoutListener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            applyBottomBarAppearance(bar)
+        }
+        bar.addOnLayoutChangeListener(layoutListener)
+        bar.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) = Unit
+
+            override fun onViewDetachedFromWindow(v: View) {
+                bar.removeOnLayoutChangeListener(layoutListener)
+                bar.setTag(R.id.tag_liquid_bottom_bar_style_listener_attached, false)
+                bar.removeOnAttachStateChangeListener(this)
+            }
+        })
+
+        bar.post { applyBottomBarAppearance(bar) }
     }
 
     private fun ensureDismissOverlay(activity: AppCompatActivity, content: ViewGroup, nav: View) {
@@ -179,7 +240,7 @@ object LiquidBottomNav {
             setActiveTab(nav, NavTab.SEARCH)
             showQuickSearch(activity, nav)
         }
-        nav.findViewById<ImageButton>(R.id.btnLiquidScan).setOnClickListener {
+        nav.findViewById<View>(R.id.btnLiquidScan).setOnClickListener {
             if (isCenterMenuExpanded(nav)) {
                 collapseCenterMenu(nav, true)
                 return@setOnClickListener
@@ -298,11 +359,36 @@ object LiquidBottomNav {
     }
 
     private fun applyIconStyle(nav: View) {
-        setLiquidIcon(nav.findViewById(R.id.btnLiquidHome), R.drawable.glass_home)
-        setLiquidIcon(nav.findViewById(R.id.btnLiquidTheme), R.drawable.glass_search)
-        setLiquidIcon(nav.findViewById(R.id.btnLiquidScan), R.drawable.glass_add)
-        setLiquidIcon(nav.findViewById(R.id.btnLiquidSearch), R.drawable.glass_cloud)
-        setLiquidIcon(nav.findViewById(R.id.btnLiquidProfile), R.drawable.glass_audit)
+        val home = nav.findViewById<ImageButton>(R.id.btnLiquidHome)
+        val theme = nav.findViewById<ImageButton>(R.id.btnLiquidTheme)
+        val search = nav.findViewById<ImageButton>(R.id.btnLiquidSearch)
+        val profile = nav.findViewById<ImageButton>(R.id.btnLiquidProfile)
+        val center = nav.findViewById<ImageView>(R.id.btnLiquidScan)
+
+        setLiquidIcon(home, R.drawable.glass_home)
+        setLiquidIcon(theme, R.drawable.glass_search)
+        setLiquidIcon(center, R.drawable.glass_add)
+        setLiquidIcon(search, R.drawable.glass_cloud)
+        setLiquidIcon(profile, R.drawable.glass_audit)
+
+        applyBottomIconOffsets(nav, home, theme, search, profile)
+    }
+
+    private fun applyBottomIconOffsets(
+        nav: View,
+        home: ImageButton,
+        theme: ImageButton,
+        search: ImageButton,
+        profile: ImageButton
+    ) {
+        // Enforce placement after layout; small XML translations are often visually negligible here.
+        nav.post {
+            home.translationX = -dp(nav, 14).toFloat()
+            theme.translationX = -dp(nav, 20).toFloat()
+            search.translationX = dp(nav, 10).toFloat()
+            // glass_audit asset is visually shifted to the right; compensate on the container.
+            profile.translationX = 0f
+        }
     }
 
     private fun highlightCurrentTab(activity: AppCompatActivity, nav: View) {
@@ -634,6 +720,7 @@ object LiquidBottomNav {
         val panel = nav.findViewById<View>(R.id.centerExpandPanel)
         val center = nav.findViewById<View>(R.id.btnLiquidScan)
         val overlay = nav.rootView.findViewById<View>(R.id.liquid_center_dismiss_overlay)
+        applyBottomBarAppearance(nav)
         overlay?.visibility = View.VISIBLE
         panel.visibility = View.VISIBLE
         panel.alpha = 0f
@@ -641,6 +728,9 @@ object LiquidBottomNav {
         panel.translationY = dp(nav, 14).toFloat()
         center.animate().alpha(0f).setDuration(120L).withEndAction {
             center.visibility = View.INVISIBLE
+            center.isClickable = false
+            applyBottomBarAppearance(nav)
+            nav.post { applyBottomBarAppearance(nav) }
         }.start()
         panel.animate().alpha(1f).scaleX(1f).translationY(0f).setDuration(200L).start()
     }
@@ -655,7 +745,11 @@ object LiquidBottomNav {
             panel.alpha = 0f
             overlay?.visibility = View.GONE
             center.visibility = View.VISIBLE
+            center.alpha = 0f
+            center.isClickable = true
             center.animate().alpha(1f).setDuration(140L).start()
+            applyBottomBarAppearance(nav)
+            nav.post { applyBottomBarAppearance(nav) }
         }
         if (!animate) {
             endAction.invoke()
@@ -677,7 +771,7 @@ object LiquidBottomNav {
         return (value * view.resources.displayMetrics.density).toInt()
     }
 
-    private fun setLiquidIcon(button: ImageButton, resId: Int) {
+    private fun setLiquidIcon(button: ImageView, resId: Int) {
         button.setImageResource(resId)
         button.imageTintList = null
         button.setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE), PorterDuff.Mode.SRC_IN)

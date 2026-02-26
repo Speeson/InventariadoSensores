@@ -1,4 +1,27 @@
 <resources>
+    <style name="ShapeAppearanceOverlayInventoryappCircle">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
+    <style name="ShapeAppearanceInventoryBottomBar" parent="ShapeAppearance.Material3.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopLeft">18dp</item>
+        <item name="cornerSizeTopRight">18dp</item>
+        <item name="cornerSizeBottomLeft">18dp</item>
+        <item name="cornerSizeBottomRight">18dp</item>
+    </style>
+
+    <style name="Widget.Inventoryapp.BottomAppBar" parent="Widget.MaterialComponents.BottomAppBar">
+        <item name="shapeAppearance">@style/ShapeAppearanceInventoryBottomBar</item>
+        <item name="backgroundTint">#8CB3D9</item>
+        <item name="elevation">14dp</item>
+    </style>
+
+    <style name="Widget.Inventoryapp.CenterFab" parent="Widget.MaterialComponents.FloatingActionButton">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlayInventoryappCircle</item>
+    </style>
+
     <style name="TextAppearance.ImportTabs" parent="TextAppearance.Material3.LabelLarge">
         <item name="android:textSize">13sp</item>
     </style>
@@ -7,4 +30,5 @@
         <item name="android:windowEnterAnimation">@anim/alert_popup_in</item>
         <item name="android:windowExitAnimation">@anim/alert_popup_out</item>
     </style>
+
 </resources>
