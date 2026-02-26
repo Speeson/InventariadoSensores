@@ -451,7 +451,7 @@
         android:id="@+id/topMenuHost"
         android:layout_width="match_parent"
         android:layout_height="96dp"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="0dp"
         android:clipChildren="false"
         android:clipToPadding="false"
         android:elevation="40dp"
@@ -502,9 +502,6 @@
     </FrameLayout>
 
 </androidx.drawerlayout.widget.DrawerLayout>
-
-
-
 
 
 

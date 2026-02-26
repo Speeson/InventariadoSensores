@@ -43,7 +43,7 @@ object LiquidTopNav {
     private const val PREF_REOPEN_DRAWER = "reopen_global_drawer"
     private const val TAG = "LiquidTopNav"
     private const val MENU_CONTENT_GAP_DP = 6
-    private const val TOP_CONTENT_CLEARANCE_DP = 56
+    private const val TOP_CONTENT_CLEARANCE_DP = 60
     private const val LIQUID_CRYSTAL_BLUE = "#7FD8FF"
     private const val LIQUID_CRYSTAL_BLUE_ACTIVE = "#2CB8FF"
     private const val LIQUID_STATUS_OFFLINE = "#FF2A3D"
@@ -199,7 +199,7 @@ object LiquidTopNav {
             // DrawerLayout only accepts LEFT/RIGHT for drawer children.
             // This host is regular content, so keep NO_GRAVITY to avoid runtime crash.
             gravity = Gravity.NO_GRAVITY
-            topMargin = dp(host, 12)
+            topMargin = dp(host, 0)
         }
         drawerLayout.addView(host, params)
         return host
