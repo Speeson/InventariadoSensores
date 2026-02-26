@@ -9,4 +9,5 @@
     <item name="liquidTopDrawerContentContainer" type="id" />
     <item name="tag_liquid_top_drawer_listener_attached" type="id" />
     <item name="tag_liquid_bottom_bar_style_listener_attached" type="id" />
+    <item name="tag_liquid_bottom_bar_expanded" type="id" />
 </resources>

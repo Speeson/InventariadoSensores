@@ -80,6 +80,8 @@
         app:fabCradleMargin="28dp"
         app:fabCradleRoundedCornerRadius="36dp"
         app:fabCradleVerticalOffset="10dp"
+        app:strokeColor="#FFFFFFFF"
+        app:strokeWidth="1.2dp"
         app:hideOnScroll="false">
 
         <LinearLayout
@@ -195,7 +197,7 @@
         android:padding="0dp"
         android:scaleType="centerInside"
         android:src="@drawable/glass_add"
-        app:backgroundTint="#DDEFFF"
+        app:backgroundTint="#8CB3D9"
         app:borderWidth="0dp"
         android:elevation="6dp"
         app:fabCustomSize="48dp"

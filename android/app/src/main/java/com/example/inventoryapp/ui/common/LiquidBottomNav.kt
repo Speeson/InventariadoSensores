@@ -6,6 +6,7 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Outline
+import android.graphics.Paint
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.PorterDuff
@@ -155,6 +156,8 @@ object LiquidBottomNav {
 
     private fun applyBottomBarAppearance(bar: BottomAppBar) {
         val radius = dp(bar, 16).toFloat()
+        val isExpanded = (bar.getTag(R.id.tag_liquid_bottom_bar_expanded) as? Boolean) == true
+        val strokeDp = if (isExpanded) 1.0f else 1.2f
         bar.clipToOutline = true
         bar.outlineProvider = object : ViewOutlineProvider() {
             override fun getOutline(view: View, outline: Outline) {
@@ -169,11 +172,13 @@ object LiquidBottomNav {
             .setBottomLeftCornerSize(radius)
             .setBottomRightCornerSize(radius)
             .build()
-        // Match the top bar glass palette as close as BottomAppBar allows.
-        material.fillColor = ColorStateList.valueOf(Color.parseColor("#89B8E4"))
-        material.setStroke(dp(bar, 1).toFloat(), Color.parseColor("#E6F8FFFF"))
-        material.alpha = 220
-        bar.elevation = dp(bar, 16).toFloat()
+        // Safe glass tuning for BottomAppBar: keep cradle geometry untouched.
+        // Keep low-opacity body but preserve a bright, readable border.
+        material.fillColor = ColorStateList.valueOf(Color.parseColor("#329AC7EA"))
+        material.setPaintStyle(Paint.Style.FILL_AND_STROKE)
+        material.setStroke(dp(bar, 1).toFloat() * strokeDp, Color.parseColor("#FFFFFFFF"))
+        material.alpha = 255
+        bar.elevation = dp(bar, 18).toFloat()
         bar.invalidate()
     }
 
@@ -720,6 +725,7 @@ object LiquidBottomNav {
         val panel = nav.findViewById<View>(R.id.centerExpandPanel)
         val center = nav.findViewById<View>(R.id.btnLiquidScan)
         val overlay = nav.rootView.findViewById<View>(R.id.liquid_center_dismiss_overlay)
+        nav.findViewById<BottomAppBar>(R.id.liquidBar)?.setTag(R.id.tag_liquid_bottom_bar_expanded, true)
         applyBottomBarAppearance(nav)
         overlay?.visibility = View.VISIBLE
         panel.visibility = View.VISIBLE
@@ -740,6 +746,7 @@ object LiquidBottomNav {
         val center = nav.findViewById<View>(R.id.btnLiquidScan)
         val overlay = nav.rootView.findViewById<View>(R.id.liquid_center_dismiss_overlay)
         if (panel.visibility != View.VISIBLE) return
+        nav.findViewById<BottomAppBar>(R.id.liquidBar)?.setTag(R.id.tag_liquid_bottom_bar_expanded, false)
         val endAction = {
             panel.visibility = View.GONE
             panel.alpha = 0f
