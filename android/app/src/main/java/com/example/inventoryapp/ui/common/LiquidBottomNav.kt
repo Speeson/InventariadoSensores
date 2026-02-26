@@ -157,13 +157,12 @@ object LiquidBottomNav {
     private fun applyBottomBarAppearance(bar: BottomAppBar) {
         val radius = dp(bar, 16).toFloat()
         val isExpanded = (bar.getTag(R.id.tag_liquid_bottom_bar_expanded) as? Boolean) == true
-        val strokeDp = if (isExpanded) 1.0f else 1.2f
-        bar.clipToOutline = true
         bar.outlineProvider = object : ViewOutlineProvider() {
             override fun getOutline(view: View, outline: Outline) {
                 outline.setRoundRect(0, 0, view.width, view.height, radius)
             }
         }
+        bar.clipToOutline = true
         val material = bar.background as? MaterialShapeDrawable ?: return
         material.shapeAppearanceModel = material.shapeAppearanceModel
             .toBuilder()
@@ -175,8 +174,16 @@ object LiquidBottomNav {
         // Safe glass tuning for BottomAppBar: keep cradle geometry untouched.
         // Keep low-opacity body but preserve a bright, readable border.
         material.fillColor = ColorStateList.valueOf(Color.parseColor("#329AC7EA"))
-        material.setPaintStyle(Paint.Style.FILL_AND_STROKE)
-        material.setStroke(dp(bar, 1).toFloat() * strokeDp, Color.parseColor("#FFFFFFFF"))
+        val expandedOverlay = (bar.parent as? View)?.findViewById<View>(R.id.liquidBarStrokeOverlay)
+        if (isExpanded) {
+            material.setPaintStyle(Paint.Style.FILL)
+            material.setStroke(0f, Color.TRANSPARENT)
+            expandedOverlay?.visibility = View.VISIBLE
+        } else {
+            material.setPaintStyle(Paint.Style.FILL_AND_STROKE)
+            material.setStroke(dp(bar, 1).toFloat() * 1.2f, Color.parseColor("#FFFFFFFF"))
+            expandedOverlay?.visibility = View.GONE
+        }
         material.alpha = 255
         bar.elevation = dp(bar, 18).toFloat()
         bar.invalidate()

@@ -80,8 +80,6 @@
         app:fabCradleMargin="28dp"
         app:fabCradleRoundedCornerRadius="36dp"
         app:fabCradleVerticalOffset="10dp"
-        app:strokeColor="#FFFFFFFF"
-        app:strokeWidth="1.2dp"
         app:hideOnScroll="false">
 
         <LinearLayout
@@ -186,6 +184,19 @@
         </LinearLayout>
 
     </com.google.android.material.bottomappbar.BottomAppBar>
+
+    <View
+        android:id="@+id/liquidBarStrokeOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_gravity="bottom"
+        android:background="@drawable/bg_liquid_bottom_bar_inner_stroke"
+        android:clickable="false"
+        android:elevation="19dp"
+        android:focusable="false"
+        android:importantForAccessibility="no"
+        android:translationZ="19dp"
+        android:visibility="gone" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/btnLiquidScan"
