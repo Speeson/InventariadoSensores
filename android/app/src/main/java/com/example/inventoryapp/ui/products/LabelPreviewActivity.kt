@@ -592,8 +592,19 @@ class LabelPreviewActivity : AppCompatActivity() {
     @SuppressLint("MissingPermission")
     private fun stopBluetoothDiscovery() {
         val adapter = bluetoothAdapter
-        if (adapter != null && adapter.isDiscovering) {
-            adapter.cancelDiscovery()
+        if (adapter != null) {
+            try {
+                val canQueryDiscovery =
+                    Build.VERSION.SDK_INT < Build.VERSION_CODES.S || hasBluetoothPermissions()
+                if (canQueryDiscovery && adapter.isDiscovering) {
+                    adapter.cancelDiscovery()
+                }
+            } catch (_: SecurityException) {
+                // On some real devices the permission state can change while finishing.
+                // Avoid crashing activity teardown if BLUETOOTH_SCAN is denied.
+            } catch (_: Exception) {
+                // Best-effort cleanup only.
+            }
         }
         if (btReceiverRegistered) {
             try {
