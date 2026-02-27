@@ -484,11 +484,21 @@ object LiquidBottomNav {
             button.setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE_ACTIVE), PorterDuff.Mode.SRC_IN)
         } else {
             button.setBackgroundColor(Color.TRANSPARENT)
-            button.imageAlpha = 245
+            val isProfile = button.id == R.id.btnLiquidProfile
+            button.imageAlpha = if (isProfile) 210 else 245
             button.scaleX = 1.0f
             button.scaleY = 1.0f
-            button.setColorFilter(baseColor, PorterDuff.Mode.SRC_IN)
+            val normalTint = if (isProfile) darkenColor(baseColor, 0.82f) else baseColor
+            button.setColorFilter(normalTint, PorterDuff.Mode.SRC_IN)
         }
+    }
+
+    private fun darkenColor(color: Int, factor: Float): Int {
+        val safe = factor.coerceIn(0f, 1f)
+        val r = (Color.red(color) * safe).toInt().coerceIn(0, 255)
+        val g = (Color.green(color) * safe).toInt().coerceIn(0, 255)
+        val b = (Color.blue(color) * safe).toInt().coerceIn(0, 255)
+        return Color.argb(Color.alpha(color), r, g, b)
     }
 
     private fun showQuickSearch(activity: AppCompatActivity, nav: View) {
@@ -889,6 +899,7 @@ object LiquidBottomNav {
             panel.visibility = View.GONE
             panel.alpha = 0f
             setLiquidIcon(profileBtn, R.drawable.glass_user)
+            setSelected(profileBtn, false)
             restoreCenterFabBaseline(nav)
             if (!isCenterMenuExpanded(nav)) {
                 overlay?.visibility = View.GONE
