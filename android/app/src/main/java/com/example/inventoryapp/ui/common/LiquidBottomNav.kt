@@ -756,13 +756,11 @@ object LiquidBottomNav {
 
         setLiquidIcon(scanBtn, R.drawable.scaner)
         setLiquidIcon(manualBtn, R.drawable.glass_scanmanual)
-        setLiquidIcon(closeBtn, R.drawable.glass_x)
+        setDialogCloseButtonStyle(closeBtn)
         scanBtn.imageAlpha = 255
         manualBtn.imageAlpha = 255
-        closeBtn.imageAlpha = 255
         scanBtn.setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE_ACTIVE), PorterDuff.Mode.SRC_IN)
         manualBtn.setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE_ACTIVE), PorterDuff.Mode.SRC_IN)
-        closeBtn.setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE_ACTIVE), PorterDuff.Mode.SRC_IN)
 
         closeBtn.setOnClickListener {
             collapseCenterMenu(nav, true)
@@ -937,6 +935,18 @@ object LiquidBottomNav {
 
     private fun dp(view: View, value: Int): Int {
         return (value * view.resources.displayMetrics.density).toInt()
+    }
+
+    private fun setDialogCloseButtonStyle(button: ImageButton) {
+        button.setImageResource(R.drawable.ic_close_red)
+        button.imageTintList = null
+        button.clearColorFilter()
+        button.imageAlpha = 255
+        button.setBackgroundResource(R.drawable.bg_liquid_button)
+        button.backgroundTintList = ColorStateList.valueOf(Color.TRANSPARENT)
+        val pad = dp(button, 7)
+        button.setPadding(pad, pad, pad, pad)
+        button.scaleType = ImageView.ScaleType.CENTER_INSIDE
     }
 
     private fun setLiquidIcon(button: ImageView, resId: Int) {

@@ -305,9 +305,7 @@ class HomeActivity : AppCompatActivity() {
             }
         }
         findViewById<ImageButton>(R.id.btnTopCenterClose)?.let { closeButton ->
-            setLiquidImage(closeButton, R.drawable.glass_x)
-            closeButton.imageAlpha = 255
-            closeButton.setColorFilter(liquidCrystalBlueActive, PorterDuff.Mode.SRC_IN)
+            setDialogCloseButtonStyle(closeButton)
             closeButton.setOnClickListener {
                 toggleTopCenterMenu(forceClose = true)
             }
@@ -1048,6 +1046,18 @@ class HomeActivity : AppCompatActivity() {
             prefs = prefs,
             baseColor = liquidCrystalBlue
         )
+    }
+
+    private fun setDialogCloseButtonStyle(button: ImageButton) {
+        button.setImageResource(R.drawable.ic_close_red)
+        button.imageTintList = null
+        button.clearColorFilter()
+        button.imageAlpha = 255
+        button.setBackgroundResource(R.drawable.bg_liquid_button)
+        button.backgroundTintList = ColorStateList.valueOf(Color.TRANSPARENT)
+        val pad = dp(7f).toInt()
+        button.setPadding(pad, pad, pad, pad)
+        button.scaleType = ImageView.ScaleType.CENTER_INSIDE
     }
 
     private fun setNeonImage(view: ImageView, resId: Int) {

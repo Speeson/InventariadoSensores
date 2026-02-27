@@ -563,13 +563,9 @@ object LiquidTopNav {
         setLiquidIcon(host.findViewById(R.id.btnAlertsQuick), R.drawable.glass_noti)
         setLiquidIcon(host.findViewById<ImageView>(R.id.btnTopCenterMain), R.drawable.glass_add)
         setLiquidIcon(host.findViewById(R.id.btnTopCenterActionOne), R.drawable.glass_user)
-        setLiquidIcon(host.findViewById(R.id.btnTopCenterClose), R.drawable.glass_x)
+        host.findViewById<ImageButton>(R.id.btnTopCenterClose)?.let { setDialogCloseButtonStyle(it) }
         setLiquidIcon(host.findViewById(R.id.btnTopCenterActionTwo), R.drawable.glass_logout)
         host.findViewById<ImageButton>(R.id.btnTopCenterActionOne)?.apply {
-            imageAlpha = 255
-            setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE_ACTIVE), PorterDuff.Mode.SRC_IN)
-        }
-        host.findViewById<ImageButton>(R.id.btnTopCenterClose)?.apply {
             imageAlpha = 255
             setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE_ACTIVE), PorterDuff.Mode.SRC_IN)
         }
@@ -971,5 +967,17 @@ object LiquidTopNav {
             prefs = TopNavShared.prefs(button),
             baseColor = Color.parseColor(LIQUID_CRYSTAL_BLUE)
         )
+    }
+
+    private fun setDialogCloseButtonStyle(button: ImageButton) {
+        button.setImageResource(R.drawable.ic_close_red)
+        button.imageTintList = null
+        button.clearColorFilter()
+        button.imageAlpha = 255
+        button.setBackgroundResource(R.drawable.bg_liquid_button)
+        button.backgroundTintList = ColorStateList.valueOf(Color.TRANSPARENT)
+        val pad = dp(button, 7)
+        button.setPadding(pad, pad, pad, pad)
+        button.scaleType = ImageView.ScaleType.CENTER_INSIDE
     }
 }

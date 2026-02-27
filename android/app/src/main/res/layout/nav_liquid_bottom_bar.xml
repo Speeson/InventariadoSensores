@@ -47,11 +47,14 @@
             android:layout_height="50dp"
             android:layout_marginLeft="5dp"
             android:layout_marginRight="5dp"
-            android:background="@drawable/bg_liquid_menu_button"
+            android:background="@drawable/bg_liquid_button"
+            android:backgroundTint="@null"
             android:contentDescription="Cerrar opciones"
             android:padding="8dp"
             android:scaleType="centerInside"
-            android:src="@drawable/glass_x" />
+            android:src="@drawable/ic_close_red"
+            android:tint="@null"
+            app:backgroundTint="@null" />
 
         <ImageButton
             android:id="@+id/btnCenterScanAction"
