@@ -1,4 +1,4 @@
-﻿package com.example.inventoryapp.ui.categories
+package com.example.inventoryapp.ui.categories
 import android.content.Intent
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
@@ -189,7 +189,7 @@ class CategoriesActivity : AppCompatActivity() {
             CreateUiFeedback.showListLoading(
                 this,
                 message = "Cargando categorias",
-                animationRes = R.raw.loading_list,
+                animationRes = R.raw.glass_loading_list,
                 minCycles = 2
             )
         } else {

@@ -160,6 +160,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="10dp"
                         app:boxBackgroundMode="outline"
+                        app:boxStrokeColor="@color/icon_grad_mid2"
                         app:endIconDrawable="@drawable/triangle_down_lg"
                         app:endIconMode="dropdown_menu"
                         app:endIconTint="@null">
@@ -168,7 +169,7 @@
                             android:id="@+id/etEventType"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:background="@drawable/bg_liquid_input"
+
                             android:hint="Tipo"
                             android:inputType="none"
                             android:paddingStart="8dp"
@@ -221,6 +222,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="10dp"
                         app:boxBackgroundMode="outline"
+                        app:boxStrokeColor="@color/icon_grad_mid2"
                         app:endIconDrawable="@drawable/triangle_down_lg"
                         app:endIconMode="dropdown_menu"
                         app:endIconTint="@null">
@@ -229,7 +231,7 @@
                             android:id="@+id/etLocation"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:background="@drawable/bg_liquid_input"
+
                             android:hint="Ubicacion"
                             android:minHeight="56dp"
                             android:paddingStart="8dp"
@@ -244,6 +246,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="10dp"
                         app:boxBackgroundMode="outline"
+                        app:boxStrokeColor="@color/icon_grad_mid2"
                         app:endIconDrawable="@drawable/triangle_down_lg"
                         app:endIconMode="dropdown_menu"
                         app:endIconTint="@null">
@@ -252,7 +255,7 @@
                             android:id="@+id/etSource"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:background="@drawable/bg_liquid_input"
+
                             android:hint="Fuente"
                             android:inputType="none"
                             android:paddingStart="8dp"
@@ -290,6 +293,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="10dp"
                         app:boxBackgroundMode="outline"
+                        app:boxStrokeColor="@color/icon_grad_mid2"
                         app:endIconDrawable="@drawable/triangle_down_lg"
                         app:endIconMode="dropdown_menu"
                         app:endIconTint="@null">
@@ -298,7 +302,7 @@
                             android:id="@+id/etSearchType"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:background="@drawable/bg_liquid_input"
+
                             android:hint="Tipo"
                             android:inputType="none"
                             android:paddingStart="8dp"
@@ -332,6 +336,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="10dp"
                         app:boxBackgroundMode="outline"
+                        app:boxStrokeColor="@color/icon_grad_mid2"
                         app:endIconDrawable="@drawable/triangle_down_lg"
                         app:endIconMode="dropdown_menu"
                         app:endIconTint="@null">
@@ -340,7 +345,7 @@
                             android:id="@+id/etSearchSource"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:background="@drawable/bg_liquid_input"
+
                             android:hint="Fuente"
                             android:inputType="none"
                             android:paddingStart="8dp"

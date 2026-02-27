@@ -125,7 +125,7 @@ class RotationActivity : AppCompatActivity() {
             CreateUiFeedback.showListLoading(
                 this,
                 message = "Cargando traslados",
-                animationRes = R.raw.loading_list,
+                animationRes = R.raw.glass_loading_list,
                 minCycles = 2
             )
         } else {
@@ -214,7 +214,7 @@ class RotationActivity : AppCompatActivity() {
                     } else {
                         UiNotifier.showBlockingTimed(
                             this@RotationActivity,
-                            "Sin conexión. No hay traslados en cache.",
+                            "Sin conexiÃ³n. No hay traslados en cache.",
                             R.drawable.offline,
                             timeoutMs = 3_200L
                         )

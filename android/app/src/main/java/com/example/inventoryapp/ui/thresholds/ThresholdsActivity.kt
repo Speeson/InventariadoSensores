@@ -1,4 +1,4 @@
-﻿package com.example.inventoryapp.ui.thresholds
+package com.example.inventoryapp.ui.thresholds
 import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 
 import android.content.Intent
@@ -216,7 +216,7 @@ class ThresholdsActivity : AppCompatActivity() {
             CreateUiFeedback.showListLoading(
                 this,
                 message = "Cargando thresholds",
-                animationRes = R.raw.loading_list,
+                animationRes = R.raw.glass_loading_list,
                 minCycles = 2
             )
         } else {

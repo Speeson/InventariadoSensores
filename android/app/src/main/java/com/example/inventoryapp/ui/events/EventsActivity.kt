@@ -60,7 +60,7 @@ class EventsActivity : AppCompatActivity() {
     private var allItems: List<EventRowUi> = emptyList()
     private lateinit var adapter: EventAdapter
     private var currentOffset = 0
-    private val pageSize = 4
+    private val pageSize = 5
     private var totalCount = 0
     private var isLoading = false
     private var filteredItems: List<EventRowUi> = emptyList()
@@ -84,6 +84,7 @@ class EventsActivity : AppCompatActivity() {
         applyHeaderIconTint()
         applyRefreshIconTint()
         applyEventsTitleGradient()
+        applyDropdownPopupBackground()
         binding.tilSearchType.post { applySearchDropdownIcon() }
         binding.tilCreateType.post { applyCreateDropdownIcon() }
         
@@ -257,7 +258,7 @@ snack = SendSnack(binding.root)
                             CreateUiFeedback.showCreatedPopup(
                                 this@EventsActivity,
                                 "Evento creado (offline)",
-                                "Tipo: ${dto.eventType}\nProducto: ${dto.productId}\nCantidad: ${dto.delta}\nUbicación: ${dto.location} (offline)",
+                                "Tipo: ${dto.eventType}\nProducto: ${dto.productId}\nCantidad: ${dto.delta}\nUbicaciÃ³n: ${dto.location} (offline)",
                                 accentColorRes = R.color.offline_text
                             )
                         }
@@ -291,7 +292,7 @@ snack = SendSnack(binding.root)
                     CreateUiFeedback.showCreatedPopup(
                         this@EventsActivity,
                         "Evento creado (offline)",
-                        "Tipo: ${dto.eventType}\nProducto: ${dto.productId}\nCantidad: ${dto.delta}\nUbicación: ${dto.location} (offline)",
+                        "Tipo: ${dto.eventType}\nProducto: ${dto.productId}\nCantidad: ${dto.delta}\nUbicaciÃ³n: ${dto.location} (offline)",
                         accentColorRes = R.color.offline_text
                     )
                 }
@@ -449,7 +450,7 @@ snack = SendSnack(binding.root)
                         .map { "(${it.id}) ${it.code}" }
                         .distinct()
                     val allValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
-                    val adapter = ArrayAdapter(this@EventsActivity, android.R.layout.simple_list_item_1, allValues)
+                    val adapter = ArrayAdapter(this@EventsActivity, R.layout.item_liquid_dropdown, allValues)
                     binding.etLocation.setAdapter(adapter)
                     binding.etLocation.setOnClickListener { binding.etLocation.showDropDown() }
                     binding.etLocation.setOnFocusChangeListener { _, hasFocus ->
@@ -468,7 +469,7 @@ snack = SendSnack(binding.root)
                     .map { "(${it.id}) ${it.code}" }
                     .distinct()
                 val allValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
-                val adapter = ArrayAdapter(this@EventsActivity, android.R.layout.simple_list_item_1, allValues)
+                val adapter = ArrayAdapter(this@EventsActivity, R.layout.item_liquid_dropdown, allValues)
                 binding.etLocation.setAdapter(adapter)
                 binding.etLocation.setOnClickListener { binding.etLocation.showDropDown() }
                 binding.etLocation.setOnFocusChangeListener { _, hasFocus ->
@@ -588,7 +589,7 @@ snack = SendSnack(binding.root)
             CreateUiFeedback.showListLoading(
                 this,
                 message = "Cargando eventos",
-                animationRes = R.raw.loading_list,
+                animationRes = R.raw.glass_loading_list,
                 minCycles = 2
             )
         } else {
@@ -772,7 +773,7 @@ snack = SendSnack(binding.root)
 
     private fun setupSearchDropdowns() {
         val typeOptions = listOf("", "SENSOR_IN", "SENSOR_OUT")
-        val typeAdapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, typeOptions)
+        val typeAdapter = ArrayAdapter(this, R.layout.item_liquid_dropdown, typeOptions)
         binding.etSearchType.setAdapter(typeAdapter)
         binding.etSearchType.setOnClickListener { binding.etSearchType.showDropDown() }
         binding.etSearchType.setOnFocusChangeListener { _, hasFocus ->
@@ -780,7 +781,7 @@ snack = SendSnack(binding.root)
         }
 
         val sourceOptions = listOf("", "SCAN", "MANUAL")
-        val sourceAdapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, sourceOptions)
+        val sourceAdapter = ArrayAdapter(this, R.layout.item_liquid_dropdown, sourceOptions)
         binding.etSearchSource.setAdapter(sourceAdapter)
         binding.etSearchSource.setOnClickListener { binding.etSearchSource.showDropDown() }
         binding.etSearchSource.setOnFocusChangeListener { _, hasFocus ->
@@ -790,7 +791,7 @@ snack = SendSnack(binding.root)
 
     private fun setupCreateDropdowns() {
         val typeOptions = listOf("", "SENSOR_IN", "SENSOR_OUT")
-        val typeAdapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, typeOptions)
+        val typeAdapter = ArrayAdapter(this, R.layout.item_liquid_dropdown, typeOptions)
         binding.etEventType.setAdapter(typeAdapter)
         binding.etEventType.setOnItemClickListener { _, _, position, _ ->
             if (typeOptions[position].isBlank()) binding.etEventType.setText("", false)
@@ -801,7 +802,7 @@ snack = SendSnack(binding.root)
         }
 
         val sourceOptions = listOf("", "SCAN", "MANUAL")
-        val sourceAdapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, sourceOptions)
+        val sourceAdapter = ArrayAdapter(this, R.layout.item_liquid_dropdown, sourceOptions)
         binding.etSource.setAdapter(sourceAdapter)
         binding.etSource.setOnItemClickListener { _, _, position, _ ->
             if (sourceOptions[position].isBlank()) binding.etSource.setText("", false)
@@ -1213,6 +1214,20 @@ snack = SendSnack(binding.root)
             )
             paint.shader = shader
             title.invalidate()
+        }
+    }
+
+    private fun applyDropdownPopupBackground() {
+        listOf(
+            binding.etEventType,
+            binding.etLocation,
+            binding.etSource,
+            binding.etSearchType,
+            binding.etSearchSource
+        ).forEach { auto ->
+            ContextCompat.getDrawable(this, R.drawable.bg_liquid_dropdown_popup)?.let { drawable ->
+                auto.setDropDownBackgroundDrawable(drawable)
+            }
         }
     }
 

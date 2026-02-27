@@ -1,4 +1,4 @@
-﻿package com.example.inventoryapp.ui.movements
+package com.example.inventoryapp.ui.movements
 
 import android.content.Intent
 import android.graphics.drawable.GradientDrawable
@@ -484,7 +484,7 @@ class MovementsMenuActivity : AppCompatActivity() {
             CreateUiFeedback.showListLoading(
                 this,
                 message = "Cargando movimientos",
-                animationRes = R.raw.loading_list,
+                animationRes = R.raw.glass_loading_list,
                 minCycles = 2
             )
         } else {

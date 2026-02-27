@@ -249,7 +249,7 @@ class LabelPreviewActivity : AppCompatActivity() {
         saveLabelLoadingHandle = CreateUiFeedback.showListLoading(
             activity = this,
             message = "Guardando etiqueta...",
-            animationRes = R.raw.loading_list,
+            animationRes = R.raw.glass_loading_list,
             minCycles = 1
         )
         tryCaptureAndSaveLabel(attemptsLeft = 6)
@@ -371,7 +371,7 @@ class LabelPreviewActivity : AppCompatActivity() {
                 )
             }
             if (explicit.resolveActivity(packageManager) != null) {
-                UiNotifier.show(this, "Abriendo Niimbot…")
+                UiNotifier.show(this, "Abriendo Niimbotâ€¦")
                 startActivity(explicit)
                 return
             }
@@ -384,14 +384,14 @@ class LabelPreviewActivity : AppCompatActivity() {
                 )
             }
             if (explicitAlt.resolveActivity(packageManager) != null) {
-                UiNotifier.show(this, "Abriendo Niimbot…")
+                UiNotifier.show(this, "Abriendo Niimbotâ€¦")
                 startActivity(explicitAlt)
                 return
             }
 
             val intent = packageManager.getLaunchIntentForPackage(niimbotPackage)
             if (intent != null) {
-                UiNotifier.show(this, "Abriendo Niimbot…")
+                UiNotifier.show(this, "Abriendo Niimbotâ€¦")
                 startActivity(intent)
                 return
             }
@@ -413,7 +413,7 @@ class LabelPreviewActivity : AppCompatActivity() {
             val settingsIntent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
                 .setData(Uri.parse("package:$niimbotPackage"))
             startActivity(settingsIntent)
-            UiNotifier.show(this, "No se encontró el launcher de Niimbot")
+            UiNotifier.show(this, "No se encontrÃ³ el launcher de Niimbot")
         } catch (e: Exception) {
             CreateUiFeedback.showErrorPopup(
                 activity = this,
@@ -832,12 +832,12 @@ class LabelPreviewActivity : AppCompatActivity() {
                 val resolver = contentResolver
                 val uri = resolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
                 if (uri == null) {
-                    UiNotifier.show(this, "No se pudo crear el archivo en la galería")
+                    UiNotifier.show(this, "No se pudo crear el archivo en la galerÃ­a")
                     return false
                 }
                 val outStream = resolver.openOutputStream(uri)
                 if (outStream == null) {
-                    UiNotifier.show(this, "No se pudo abrir el archivo en la galería")
+                    UiNotifier.show(this, "No se pudo abrir el archivo en la galerÃ­a")
                     return false
                 }
                 outStream.use { out ->

@@ -1,4 +1,4 @@
-﻿package com.example.inventoryapp.ui.products
+package com.example.inventoryapp.ui.products
 
 import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 import com.example.inventoryapp.R
@@ -191,7 +191,7 @@ class ProductListActivity : AppCompatActivity() {
             CreateUiFeedback.showListLoading(
                 this,
                 message = "Cargando productos",
-                animationRes = R.raw.loading_list,
+                animationRes = R.raw.glass_loading_list,
                 minCycles = 2
             )
         } else {

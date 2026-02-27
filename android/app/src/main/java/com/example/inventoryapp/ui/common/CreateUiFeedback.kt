@@ -138,7 +138,7 @@ object CreateUiFeedback {
     fun showListLoading(
         activity: Activity,
         message: String,
-        animationRes: Int = R.raw.loading_list,
+        animationRes: Int = R.raw.glass_loading_list,
         minCycles: Int = 3
     ): LoadingHandle {
         val view = LayoutInflater.from(activity).inflate(R.layout.dialog_list_loading, null)

@@ -18,7 +18,7 @@
                 android:id="@+id/lottieListLoading"
                 android:layout_width="120dp"
                 android:layout_height="50dp"
-                app:lottie_rawRes="@raw/loading_list"
+                app:lottie_rawRes="@raw/glass_loading_list"
                 app:lottie_autoPlay="true"
                 app:lottie_loop="true" />
 

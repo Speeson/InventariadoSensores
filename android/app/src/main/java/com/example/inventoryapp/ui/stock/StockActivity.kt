@@ -1,4 +1,4 @@
-﻿package com.example.inventoryapp.ui.stock
+package com.example.inventoryapp.ui.stock
 import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 import com.example.inventoryapp.R
 
@@ -172,7 +172,7 @@ class StockActivity : AppCompatActivity() {
             CreateUiFeedback.showListLoading(
                 this,
                 message = "Cargando stock",
-                animationRes = R.raw.loading_list,
+                animationRes = R.raw.glass_loading_list,
                 minCycles = 2
             )
         } else {
