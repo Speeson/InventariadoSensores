@@ -6,22 +6,14 @@
     android:background="@android:color/transparent"
     android:padding="24dp">
 
-    <com.google.android.material.card.MaterialCardView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        app:cardCornerRadius="18dp"
-        app:cardElevation="6dp"
-        app:cardBackgroundColor="?attr/colorSurface"
-        app:strokeWidth="1dp"
-        app:strokeColor="#1A000000">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:padding="20dp">
+        android:background="@drawable/bg_liquid_popup_card"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="20dp">
 
             <com.airbnb.lottie.LottieAnimationView
                 android:id="@+id/lottieLoading"
@@ -37,9 +29,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:text="Creando..."
-                android:textColor="?attr/colorOnSurface"
+                android:textColor="@color/liquid_popup_title"
                 android:textSize="16sp"
                 android:textStyle="bold" />
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
 </FrameLayout>

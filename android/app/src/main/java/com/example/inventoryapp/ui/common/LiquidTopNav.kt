@@ -43,7 +43,7 @@ object LiquidTopNav {
     private const val PREF_REOPEN_DRAWER = "reopen_global_drawer"
     private const val TAG = "LiquidTopNav"
     private const val MENU_CONTENT_GAP_DP = 6
-    private const val TOP_CONTENT_CLEARANCE_DP = 60
+    private const val TOP_HOST_HEIGHT_DP = 96
     private const val LIQUID_CRYSTAL_BLUE = "#7FD8FF"
     private const val LIQUID_CRYSTAL_BLUE_ACTIVE = "#2CB8FF"
     private const val LIQUID_STATUS_OFFLINE = "#FF2A3D"
@@ -69,10 +69,9 @@ object LiquidTopNav {
 
             hideLegacyNetworkBar(drawerState.contentRoot)
             hideLegacyHeader(drawerState.contentRoot)
-            ensureTopSpace(drawerState.contentRoot)
-
             val dismissOverlay = ensureDismissOverlay(activity, drawerState.drawerLayout)
             val host = ensureTopHost(activity, drawerState.drawerLayout)
+            ensureTopSpace(drawerState.contentRoot, host)
             ensureTopBarAppearancePersistence(host)
 
             bindActions(activity, host, dismissOverlay, drawerState.drawerLayout)
@@ -267,14 +266,19 @@ object LiquidTopNav {
         target.setTag(R.id.tag_liquid_top_header_hidden, true)
     }
 
-    private fun ensureTopSpace(contentRoot: View) {
+    private fun ensureTopSpace(contentRoot: View, host: View) {
         val target = resolveTopPaddingTarget(contentRoot)
         val initial = (target.getTag(R.id.tag_liquid_top_original_padding_top) as? Int)
             ?: target.paddingTop.also {
                 target.setTag(R.id.tag_liquid_top_original_padding_top, it)
             }
-        // Keep the same visual gap policy as bottom nav while reducing extra empty top space.
-        val targetTop = initial + dp(contentRoot, TOP_CONTENT_CLEARANCE_DP + MENU_CONTENT_GAP_DP)
+        val hostHeight = when {
+            host.height > 0 -> host.height
+            host.layoutParams?.height != null && host.layoutParams.height > 0 -> host.layoutParams.height
+            else -> dp(contentRoot, TOP_HOST_HEIGHT_DP)
+        }
+        // Keep a stable content clearance below the full top menu host.
+        val targetTop = initial + hostHeight + dp(contentRoot, MENU_CONTENT_GAP_DP)
         if (target.paddingTop != targetTop) {
             target.updatePadding(top = targetTop)
         }

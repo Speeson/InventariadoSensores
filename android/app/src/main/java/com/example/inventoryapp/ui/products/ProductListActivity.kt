@@ -289,11 +289,12 @@ class ProductListActivity : AppCompatActivity() {
                     }
                     if (withSnack) {
                         postLoadingNotice = {
-                            UiNotifier.showBlockingTimed(
-                                this@ProductListActivity,
-                                "Productos cargados",
-                                R.drawable.loaded,
-                                timeoutMs = 2_500L
+                            CreateUiFeedback.showStatusPopup(
+                                activity = this@ProductListActivity,
+                                title = "Productos cargados",
+                                details = "Se han cargado correctamente.",
+                                animationRes = R.raw.correct_create,
+                                autoDismissMs = 2500L
                             )
                         }
                     }
@@ -1334,4 +1335,3 @@ class ProductListActivity : AppCompatActivity() {
     }
 
 }
-

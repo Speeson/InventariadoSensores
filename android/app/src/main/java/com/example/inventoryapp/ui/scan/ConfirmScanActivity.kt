@@ -2,14 +2,18 @@ package com.example.inventoryapp.ui.scan
 import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 
 import android.content.Intent
+import android.content.Context
+import android.content.res.Configuration
 import android.os.Bundle
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.TextView
+import android.view.inputmethod.InputMethodManager
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import com.airbnb.lottie.LottieAnimationView
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.OfflineSyncer
 import com.example.inventoryapp.data.local.PendingType
@@ -20,10 +24,10 @@ import com.example.inventoryapp.domain.model.MovementType
 import com.example.inventoryapp.data.repository.remote.RemoteScanRepository
 import com.example.inventoryapp.data.repository.remote.ScanSendResult
 import com.example.inventoryapp.ui.alerts.AlertsActivity
-import com.example.inventoryapp.ui.movements.ResultActivity
 import com.example.inventoryapp.ui.common.SendSnack
 import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.google.gson.Gson
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.example.inventoryapp.ui.common.GradientIconUtil
 import com.example.inventoryapp.R
@@ -62,7 +66,7 @@ binding.btnBack.setOnClickListener { finish() }
         val snack = SendSnack(binding.root)
         val barcode = intent.getStringExtra("barcode").orEmpty()
         isOfflineMode = intent.getBooleanExtra("offline", false)
-        binding.tvBarcode.text = "Código de barras: $barcode"
+        binding.tvBarcode.text = "Codigo de barras: $barcode"
 
         applyTypeSelection(MovementType.OUT)
         binding.btnTypeIn.setOnClickListener { applyTypeSelection(MovementType.IN) }
@@ -134,48 +138,56 @@ binding.btnBack.setOnClickListener { finish() }
                 try {
                     if (isOfflineMode) {
                         enqueueOffline(movement)
-                        val i = Intent(this@ConfirmScanActivity, ResultActivity::class.java)
-                        i.putExtra("success", true)
-                        i.putExtra("msg", "Guardado offline. Se enviara al reconectar")
-                        startActivity(i)
+                        showSendResultDialog(
+                            success = true,
+                            msg = "Guardado offline. Se enviara al reconectar"
+                        ) { goBackToScan() }
                     } else {
                         val result = repo.sendFromBarcode(movement)
-                        val i = Intent(this@ConfirmScanActivity, ResultActivity::class.java)
                         if (result.isSuccess) {
-                            i.putExtra("success", true)
                             val payload = result.getOrNull()
-                            i.putExtra("msg", buildSendMessage(payload))
-                            if (payload != null) {
-                                i.putExtra("event_status", payload.status)
-                                if (payload.eventId != null) {
-                                    i.putExtra("event_id", payload.eventId)
-                                }
+                            val status = awaitFinalEventStatus(payload).uppercase(Locale.ROOT)
+                            if (status == "FAILED" || status == "ERROR") {
+                                showSendResultDialog(
+                                    success = false,
+                                    msg = "El evento se envio pero quedo en estado fallido. Puedes revisarlo en Alertas o Actividades.",
+                                    eventStatus = payload?.status
+                                )
+                            } else {
+                                showSendResultDialog(
+                                    success = true,
+                                    msg = buildSendMessage(payload),
+                                    eventStatus = payload?.status
+                                ) { goBackToScan() }
                             }
                         } else {
                             val error = result.exceptionOrNull()
                             if (error is java.io.IOException) {
                                 enqueueOffline(movement)
-                                i.putExtra("success", true)
-                                i.putExtra("msg", "Guardado offline. Se enviara al reconectar")
+                                showSendResultDialog(
+                                    success = true,
+                                    msg = "Guardado offline. Se enviara al reconectar"
+                                ) { goBackToScan() }
                             } else {
-                                i.putExtra("success", false)
-                                i.putExtra("msg", error?.message ?: "Error")
+                                showSendResultDialog(
+                                    success = false,
+                                    msg = error?.message ?: "Error"
+                                )
                             }
                         }
-                        startActivity(i)
                     }
                 } catch (e: Exception) {
                     if (e is java.io.IOException) {
                         enqueueOffline(movement)
-                        val i = Intent(this@ConfirmScanActivity, ResultActivity::class.java)
-                        i.putExtra("success", true)
-                        i.putExtra("msg", "Guardado offline. Se enviara al reconectar")
-                        startActivity(i)
+                        showSendResultDialog(
+                            success = true,
+                            msg = "Guardado offline. Se enviara al reconectar"
+                        ) { goBackToScan() }
                     } else {
-                        val i = Intent(this@ConfirmScanActivity, ResultActivity::class.java)
-                        i.putExtra("success", false)
-                        i.putExtra("msg", e.message ?: "Error")
-                        startActivity(i)
+                        showSendResultDialog(
+                            success = false,
+                            msg = e.message ?: "Error"
+                        )
                     }
                 } finally {
                     binding.btnConfirm.isEnabled = true
@@ -196,6 +208,24 @@ binding.btnBack.setOnClickListener { finish() }
     }
 
     private fun setupLocationDropdown() {
+        binding.etLocation.apply {
+            showSoftInputOnFocus = false
+            isCursorVisible = false
+            setDropDownBackgroundDrawable(
+                ContextCompat.getDrawable(this@ConfirmScanActivity, R.drawable.bg_liquid_dropdown_popup)
+            )
+            setOnClickListener {
+                hideKeyboard()
+                showDropDown()
+            }
+            setOnFocusChangeListener { _, hasFocus ->
+                if (hasFocus) {
+                    hideKeyboard()
+                    showDropDown()
+                }
+            }
+        }
+
         lifecycleScope.launch {
             try {
                 val res = NetworkModule.api.listLocations(limit = 200, offset = 0)
@@ -205,12 +235,28 @@ binding.btnBack.setOnClickListener { finish() }
                         .map { "(${it.id}) ${it.code}" }
                         .distinct()
                     val allValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
-                    val adapter = ArrayAdapter(this@ConfirmScanActivity, android.R.layout.simple_list_item_1, allValues)
-                    binding.etLocation.setAdapter(adapter)
-                    binding.etLocation.setOnClickListener { binding.etLocation.showDropDown() }
-                    binding.etLocation.setOnFocusChangeListener { _, hasFocus ->
-                        if (hasFocus) binding.etLocation.showDropDown()
+                    val adapter = object : ArrayAdapter<String>(
+                        this@ConfirmScanActivity,
+                        android.R.layout.simple_list_item_1,
+                        allValues
+                    ) {
+                        override fun getView(position: Int, convertView: android.view.View?, parent: android.view.ViewGroup): android.view.View {
+                            val view = super.getView(position, convertView, parent)
+                            val text = view.findViewById<TextView>(android.R.id.text1)
+                            text?.setTextColor(ContextCompat.getColor(this@ConfirmScanActivity, R.color.liquid_popup_list_text))
+                            view.setBackgroundResource(R.drawable.bg_liquid_dropdown_item)
+                            return view
+                        }
+
+                        override fun getDropDownView(position: Int, convertView: android.view.View?, parent: android.view.ViewGroup): android.view.View {
+                            val view = super.getDropDownView(position, convertView, parent)
+                            val text = view.findViewById<TextView>(android.R.id.text1)
+                            text?.setTextColor(ContextCompat.getColor(this@ConfirmScanActivity, R.color.liquid_popup_list_text))
+                            view.setBackgroundResource(R.drawable.bg_liquid_dropdown_item)
+                            return view
+                        }
                     }
+                    binding.etLocation.setAdapter(adapter)
                 }
             } catch (_: Exception) {
                 // Silent fallback to manual input.
@@ -228,15 +274,26 @@ binding.btnBack.setOnClickListener { finish() }
 
     private fun applyTypeSelection(type: MovementType) {
         selectedType = type
-        val selectedBg = ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_end)
-        val selectedText = ContextCompat.getColor(this, android.R.color.white)
-        val normalBg = ContextCompat.getColor(this, com.example.inventoryapp.R.color.toggle_idle)
-        val normalText = ContextCompat.getColor(this, android.R.color.black)
-
         val isIn = type == MovementType.IN
-        binding.btnTypeIn.setBackgroundColor(if (isIn) selectedBg else normalBg)
+        val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        val normalText = if (isDark) {
+            ContextCompat.getColor(this, R.color.liquid_popup_body)
+        } else {
+            ContextCompat.getColor(this, R.color.liquid_popup_button_text)
+        }
+        val selectedText = if (isDark) {
+            ContextCompat.getColor(this, android.R.color.white)
+        } else {
+            ContextCompat.getColor(this, R.color.liquid_popup_button_text)
+        }
+
+        binding.btnTypeIn.setBackgroundResource(
+            if (isIn) R.drawable.bg_liquid_button_pressed else R.drawable.bg_liquid_button_pressable
+        )
+        binding.btnTypeOut.setBackgroundResource(
+            if (!isIn) R.drawable.bg_liquid_button_pressed else R.drawable.bg_liquid_button_pressable
+        )
         binding.btnTypeIn.setTextColor(if (isIn) selectedText else normalText)
-        binding.btnTypeOut.setBackgroundColor(if (!isIn) selectedBg else normalBg)
         binding.btnTypeOut.setTextColor(if (!isIn) selectedText else normalText)
     }
 
@@ -246,7 +303,7 @@ binding.btnBack.setOnClickListener { finish() }
         val idPart = productId?.let { " (ID $it)" } ?: ""
         val locationDisplay = formatLocationDisplay(lastLocationRaw)
         val quantityDisplay = formatQuantity(lastQuantity)
-        return "Producto: $name$idPart\nUbicación: $locationDisplay\nCantidad: $quantityDisplay"
+        return "Producto: $name$idPart\nUbicacion: $locationDisplay\nCantidad: $quantityDisplay"
     }
 
     private fun formatLocationDisplay(raw: String): String {
@@ -307,5 +364,81 @@ binding.btnBack.setOnClickListener { finish() }
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
         val width = (resources.displayMetrics.widthPixels * 0.9f).toInt()
         dialog.window?.setLayout(width, android.view.WindowManager.LayoutParams.WRAP_CONTENT)
+    }
+
+    private fun showSendResultDialog(
+        success: Boolean,
+        msg: String,
+        eventStatus: String? = null,
+        onConfirm: (() -> Unit)? = null
+    ) {
+        val view = layoutInflater.inflate(R.layout.dialog_liquid_scan_result, null)
+        val dialog = AlertDialog.Builder(this)
+            .setView(view)
+            .setCancelable(false)
+            .create()
+
+        val title = view.findViewById<TextView>(R.id.tvScanResultTitle)
+        val message = view.findViewById<TextView>(R.id.tvScanResultMessage)
+        val lottie = view.findViewById<LottieAnimationView>(R.id.lottieScanResult)
+        val btn = view.findViewById<Button>(R.id.btnScanResultConfirm)
+
+        if (success) {
+            title.text = "Evento guardado"
+            lottie.setAnimation(R.raw.correct_create)
+        } else {
+            title.text = "Error al enviar"
+            lottie.setAnimation(R.raw.wrong)
+        }
+        lottie.playAnimation()
+
+        val normalizedStatus = eventStatus?.uppercase(Locale.ROOT)
+        val statusMsg = when (normalizedStatus) {
+            "PROCESSED" -> "Estado: procesado."
+            "FAILED" -> "Estado: fallido."
+            "ERROR" -> "Estado: fallido."
+            null -> ""
+            else -> "Estado: pendiente."
+        }
+        message.text = if (statusMsg.isBlank()) msg else "$msg\n\n$statusMsg"
+
+        btn.text = if (success) "Confirmar" else "Cerrar"
+        btn.setOnClickListener {
+            dialog.dismiss()
+            onConfirm?.invoke()
+        }
+
+        dialog.show()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        val width = (resources.displayMetrics.widthPixels * 0.9f).toInt()
+        dialog.window?.setLayout(width, android.view.WindowManager.LayoutParams.WRAP_CONTENT)
+    }
+
+    private suspend fun awaitFinalEventStatus(payload: ScanSendResult?): String {
+        val initial = payload?.status?.uppercase(Locale.ROOT) ?: "PENDING"
+        val eventId = payload?.eventId ?: return initial
+        if (initial == "PROCESSED" || initial == "ERROR" || initial == "FAILED") return initial
+
+        repeat(4) {
+            delay(700)
+            val res = runCatching { NetworkModule.api.listEvents(limit = 30, offset = 0) }.getOrNull()
+            val status = res?.body()?.items?.firstOrNull { it.id == eventId }?.eventStatus?.uppercase(Locale.ROOT)
+            if (status == "PROCESSED" || status == "ERROR" || status == "FAILED") {
+                return status
+            }
+        }
+        return initial
+    }
+
+    private fun goBackToScan() {
+        val intent = Intent(this, ScanActivity::class.java)
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        startActivity(intent)
+        finish()
+    }
+
+    private fun hideKeyboard() {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager ?: return
+        imm.hideSoftInputFromWindow(binding.etLocation.windowToken, 0)
     }
 }

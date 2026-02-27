@@ -12,6 +12,7 @@ import com.example.inventoryapp.databinding.ActivityTopConsumedBinding
 import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.common.SendSnack
 import com.example.inventoryapp.ui.common.NetworkStatusBar
+import com.example.inventoryapp.ui.common.CreateUiFeedback
 import kotlinx.coroutines.launch
 import com.example.inventoryapp.ui.common.GradientIconUtil
 import com.example.inventoryapp.R
@@ -96,7 +97,15 @@ class TopConsumedActivity : AppCompatActivity() {
                     adapter.submit(res.body()!!.items)
                     totalCount = res.body()!!.total
                     updatePageInfo(res.body()!!.items.size)
-                    if (withSnack) snack.showSuccess("OK: Top consumidos cargado")
+                    if (withSnack) {
+                        CreateUiFeedback.showStatusPopup(
+                            activity = this@TopConsumedActivity,
+                            title = "Top consumidos cargados",
+                            details = "Se han cargado correctamente.",
+                            animationRes = R.raw.correct_create,
+                            autoDismissMs = 2500L
+                        )
+                    }
                 } else {
                     snack.showError("Error reporte: HTTP ${res.code()}")
                 }

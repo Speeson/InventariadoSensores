@@ -569,11 +569,12 @@ class MovementsMenuActivity : AppCompatActivity() {
                     updatePageInfo(ordered.size, pending.size)
                     if (withSnack) {
                         postLoadingNotice = {
-                            UiNotifier.showBlockingTimed(
-                                this@MovementsMenuActivity,
-                                "Movimientos cargados",
-                                R.drawable.loaded,
-                                timeoutMs = 2_500L
+                            CreateUiFeedback.showStatusPopup(
+                                activity = this@MovementsMenuActivity,
+                                title = "Movimientos cargados",
+                                details = "Se han cargado correctamente.",
+                                animationRes = R.raw.correct_create,
+                                autoDismissMs = 2500L
                             )
                         }
                     }

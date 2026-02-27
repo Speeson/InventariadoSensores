@@ -188,11 +188,12 @@ class RotationActivity : AppCompatActivity() {
                 applySearchFilters(resetPage = true)
                 if (withSnack) {
                     postLoadingNotice = {
-                        UiNotifier.showBlockingTimed(
-                            this@RotationActivity,
-                            "Traslados cargados",
-                            R.drawable.loaded,
-                            timeoutMs = 2_500L
+                        CreateUiFeedback.showStatusPopup(
+                            activity = this@RotationActivity,
+                            title = "Traslados cargados",
+                            details = "Se han cargado correctamente.",
+                            animationRes = R.raw.correct_create,
+                            autoDismissMs = 2500L
                         )
                     }
                 }
@@ -497,4 +498,3 @@ class RotationActivity : AppCompatActivity() {
 data class RotationCachePayload(
     val items: List<RotationRow>
 )
-

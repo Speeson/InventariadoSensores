@@ -26,22 +26,28 @@ class EventAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
-        holder.tvTitle.text = "Evento"
+        val status = item.status.uppercase()
+        holder.tvTitle.text = when (status) {
+            "PROCESSED" -> "${item.eventType} - PROCESSED"
+            "PENDING" -> "${item.eventType} - PENDING"
+            "ERROR", "FAILED" -> "${item.eventType} - ERROR"
+            else -> "${item.eventType} - $status"
+        }
         holder.tvIdValue.text = "${item.id}"
         val productLabel = item.productName ?: "Producto ${item.productId}"
         holder.tvMeta.text = "${item.eventType} | $productLabel | delta=${item.delta} | src=${item.source}"
-        val status = item.status
         holder.tvStatus.text = status
 
-        val colorRes = when (status.uppercase()) {
+        val colorRes = when (status) {
             "PROCESSED" -> android.R.color.holo_green_dark
             "PENDING" -> android.R.color.holo_orange_dark
             "ERROR", "FAILED" -> android.R.color.holo_red_dark
             else -> android.R.color.darker_gray
         }
         val color = ContextCompat.getColor(holder.itemView.context, colorRes)
-        holder.tvStatus.setTextColor(color)
+        holder.tvStatus.visibility = View.GONE
         holder.ivIcon.setColorFilter(color)
+        holder.tvTitle.setTextColor(color)
 
         holder.tvDate.text = item.createdAt
         holder.ivPending.visibility = if (item.isPending) View.VISIBLE else View.GONE
@@ -51,13 +57,11 @@ class EventAdapter(
         holder.ivPending.contentDescription = if (item.isPending) pendingTooltip else "Pendiente"
         val offlineColor = ContextCompat.getColor(holder.itemView.context, R.color.offline_text)
         if (item.isPending) {
-            holder.tvTitle.setTextColor(offlineColor)
             holder.tvIdLabel.setTextColor(offlineColor)
             holder.tvIdValue.setTextColor(offlineColor)
             holder.tvMeta.setTextColor(offlineColor)
             holder.tvDate.setTextColor(offlineColor)
         } else {
-            holder.tvTitle.setTextColor(holder.titleColor)
             holder.tvIdLabel.setTextColor(holder.idLabelColor)
             holder.tvIdValue.setTextColor(holder.idValueColor)
             holder.tvMeta.setTextColor(holder.metaColor)

@@ -27,11 +27,12 @@ class ResultActivity : AppCompatActivity() {
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
         
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
-val success = intent.getBooleanExtra("success", false)
+
+        val success = intent.getBooleanExtra("success", false)
         val msg = intent.getStringExtra("msg").orEmpty()
         val eventStatus = intent.getStringExtra("event_status")
 
-        binding.tvTitle.text = if (success && eventStatus != null) "Evento enviado" else if (success) "Exito" else "Error"
+        binding.tvTitle.text = if (success && eventStatus != null) "Evento enviado" else if (success) "Exito" else "Error de envio"
         binding.tvMsg.text = msg
 
         binding.btnAlertsQuick.setOnClickListener {

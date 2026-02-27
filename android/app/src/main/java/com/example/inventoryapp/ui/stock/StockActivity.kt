@@ -222,11 +222,12 @@ class StockActivity : AppCompatActivity() {
                     updatePageInfo(ordered.size, pending.size)
                     if (withSnack) {
                         postLoadingNotice = {
-                            UiNotifier.showBlockingTimed(
-                                this@StockActivity,
-                                "Stock cargado",
-                                R.drawable.loaded,
-                                timeoutMs = 2_500L
+                            CreateUiFeedback.showStatusPopup(
+                                activity = this@StockActivity,
+                                title = "Stock cargado",
+                                details = "Se ha cargado correctamente.",
+                                animationRes = R.raw.correct_create,
+                                autoDismissMs = 2500L
                             )
                         }
                     }
@@ -1151,5 +1152,4 @@ class StockActivity : AppCompatActivity() {
         imm.hideSoftInputFromWindow(view.windowToken, 0)
     }
 }
-
 

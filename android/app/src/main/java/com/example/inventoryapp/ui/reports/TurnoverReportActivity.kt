@@ -12,6 +12,7 @@ import com.example.inventoryapp.databinding.ActivityTurnoverReportBinding
 import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.common.SendSnack
 import com.example.inventoryapp.ui.common.NetworkStatusBar
+import com.example.inventoryapp.ui.common.CreateUiFeedback
 import kotlinx.coroutines.launch
 import com.example.inventoryapp.ui.common.GradientIconUtil
 import com.example.inventoryapp.R
@@ -108,7 +109,15 @@ class TurnoverReportActivity : AppCompatActivity() {
                     adapter.submit(rows)
                     totalCount = res.body()!!.total
                     updatePageInfo(rows.size)
-                    if (withSnack) snack.showSuccess("OK: Indice de rotacion cargado")
+                    if (withSnack) {
+                        CreateUiFeedback.showStatusPopup(
+                            activity = this@TurnoverReportActivity,
+                            title = "Indice de rotacion cargado",
+                            details = "Se ha cargado correctamente.",
+                            animationRes = R.raw.correct_create,
+                            autoDismissMs = 2500L
+                        )
+                    }
                 } else {
                     snack.showError("Error reporte rotacion: HTTP ${res.code()}")
                 }

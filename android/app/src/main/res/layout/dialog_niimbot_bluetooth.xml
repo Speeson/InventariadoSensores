@@ -6,14 +6,11 @@
     android:paddingHorizontal="18dp"
     android:paddingVertical="8dp">
 
-    <com.google.android.material.card.MaterialCardView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:cardBackgroundColor="?attr/colorSurface"
-        app:cardCornerRadius="18dp"
-        app:cardElevation="6dp"
-        app:strokeColor="#1A000000"
-        app:strokeWidth="1dp">
+        android:background="@drawable/bg_liquid_popup_card"
+        android:orientation="vertical">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -42,7 +39,7 @@
                     android:layout_marginStart="10dp"
                     android:layout_weight="1"
                     android:text="Buscando impresoras Niimbot"
-                    android:textColor="?attr/colorOnSurface"
+                    android:textColor="@color/liquid_popup_title"
                     android:textSize="17sp"
                     android:textStyle="bold" />
             </LinearLayout>
@@ -53,7 +50,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:text="Selecciona tu B1 para conectar e imprimir."
-                android:textColor="?attr/colorOnSurface"
+                android:textColor="@color/liquid_popup_text"
                 android:textSize="13sp" />
 
             <ListView
@@ -61,6 +58,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="300dp"
                 android:layout_marginTop="10dp"
+                android:background="@drawable/bg_liquid_input"
+                android:divider="@color/liquid_popup_divider"
                 android:dividerHeight="8dp" />
 
             <LinearLayout
@@ -74,23 +73,23 @@
                     android:id="@+id/btnBluetoothRescan"
                     android:layout_width="132dp"
                     android:layout_height="40dp"
-                    android:background="@drawable/bg_button_soft_purple"
+                    android:background="@drawable/bg_liquid_button_pressable"
                     android:backgroundTint="@null"
                     android:text="Reescanear"
                     android:textAllCaps="false"
-                    android:textColor="@android:color/white" />
+                    android:textColor="@color/liquid_popup_button_text" />
 
                 <Button
                     android:id="@+id/btnBluetoothCancel"
                     android:layout_width="132dp"
                     android:layout_height="40dp"
                     android:layout_marginStart="8dp"
-                    android:background="@drawable/bg_button_danger"
+                    android:background="@drawable/bg_liquid_button_pressable"
                     android:backgroundTint="@null"
                     android:text="Cancelar"
                     android:textAllCaps="false"
-                    android:textColor="@android:color/white" />
+                    android:textColor="@color/liquid_popup_button_text" />
             </LinearLayout>
         </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
 </FrameLayout>

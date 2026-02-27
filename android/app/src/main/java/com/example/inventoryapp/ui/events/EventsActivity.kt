@@ -3,6 +3,7 @@ import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 import com.example.inventoryapp.R
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
 import android.widget.ArrayAdapter
 import android.widget.Button
@@ -31,6 +32,7 @@ import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.IOException
 import java.util.UUID
@@ -58,7 +60,7 @@ class EventsActivity : AppCompatActivity() {
     private var allItems: List<EventRowUi> = emptyList()
     private lateinit var adapter: EventAdapter
     private var currentOffset = 0
-    private val pageSize = 5
+    private val pageSize = 4
     private var totalCount = 0
     private var isLoading = false
     private var filteredItems: List<EventRowUi> = emptyList()
@@ -77,8 +79,10 @@ class EventsActivity : AppCompatActivity() {
 
         
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
-        GradientIconUtil.applyGradient(binding.ivCreateEventAdd, R.drawable.add)
-        GradientIconUtil.applyGradient(binding.ivCreateEventSearch, R.drawable.search)
+        binding.ivCreateEventAdd.setImageResource(R.drawable.glass_add)
+        binding.ivCreateEventSearch.setImageResource(R.drawable.glass_search)
+        applyHeaderIconTint()
+        applyRefreshIconTint()
         applyEventsTitleGradient()
         binding.tilSearchType.post { applySearchDropdownIcon() }
         binding.tilCreateType.post { applyCreateDropdownIcon() }
@@ -219,12 +223,27 @@ snack = SendSnack(binding.root)
                 val res = repo.createEvent(dto)
                 if (res.isSuccess) {
                     val created = res.getOrNull()!!
-                    val productName = getCachedProductNames()[created.productId]
-                    val productLabel = productName?.let { "$it (${created.productId})" } ?: created.productId.toString()
-                    val details = "ID: ${created.id}\nTipo: ${created.eventType}\nProducto: $productLabel\nCantidad: ${created.delta}\nUbicación: $location"
+                    val status = awaitFinalEventStatus(
+                        eventId = created.id,
+                        initialStatus = created.eventStatus ?: if (created.processed) "PROCESSED" else "PENDING"
+                    )
                     loadingHandled = true
-                    loading.dismissThen {
-                        CreateUiFeedback.showCreatedPopup(this@EventsActivity, "Evento creado", details)
+                    if (status.equals("FAILED", ignoreCase = true) || status.equals("ERROR", ignoreCase = true)) {
+                        loading.dismissThen {
+                            CreateUiFeedback.showErrorPopup(
+                                activity = this@EventsActivity,
+                                title = "Evento no procesado",
+                                details = "El evento se envio pero quedo en estado fallido. Puedes revisarlo en Alertas o Actividades.",
+                                animationRes = R.raw.error
+                            )
+                        }
+                    } else {
+                        val productName = getCachedProductNames()[created.productId]
+                        val productLabel = productName?.let { "$it (${created.productId})" } ?: created.productId.toString()
+                        val details = "ID: ${created.id}\nTipo: ${created.eventType}\nProducto: $productLabel\nCantidad: ${created.delta}\nUbicacion: $location"
+                        loading.dismissThen {
+                            CreateUiFeedback.showCreatedPopup(this@EventsActivity, "Evento creado", details)
+                        }
                     }
                     binding.etDelta.setText("")
                     cacheStore.invalidatePrefix("events")
@@ -632,11 +651,12 @@ snack = SendSnack(binding.root)
                     updatePageInfo(ordered.size, pendingItems.size)
                     if (withSnack) {
                         postLoadingNotice = {
-                            UiNotifier.showBlockingTimed(
-                                this@EventsActivity,
-                                "Eventos cargados",
-                                R.drawable.loaded,
-                                timeoutMs = 2_500L
+                            CreateUiFeedback.showStatusPopup(
+                                activity = this@EventsActivity,
+                                title = "Eventos cargados",
+                                details = "Se han cargado correctamente.",
+                                animationRes = R.raw.correct_create,
+                                autoDismissMs = 2500L
                             )
                         }
                     }
@@ -799,7 +819,8 @@ snack = SendSnack(binding.root)
         val endIconId = com.google.android.material.R.id.text_input_end_icon
         listOf(binding.tilCreateType, binding.tilCreateSource, binding.tilCreateLocation).forEach { til ->
             til.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
-                GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
+                iv.setImageResource(R.drawable.triangle_down_lg)
+                iv.setColorFilter(ContextCompat.getColor(this, R.color.icon_grad_mid2))
                 iv.layoutParams = iv.layoutParams.apply {
                     width = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
                     height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
@@ -814,7 +835,8 @@ snack = SendSnack(binding.root)
         binding.tilSearchSource.setEndIconTintList(null)
         val endIconId = com.google.android.material.R.id.text_input_end_icon
         binding.tilSearchType.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
-            GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
+            iv.setImageResource(R.drawable.triangle_down_lg)
+            iv.setColorFilter(ContextCompat.getColor(this, R.color.icon_grad_mid2))
             iv.layoutParams = iv.layoutParams.apply {
                 width = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
                 height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
@@ -822,12 +844,29 @@ snack = SendSnack(binding.root)
             iv.scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
         }
         binding.tilSearchSource.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
-            GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
+            iv.setImageResource(R.drawable.triangle_down_lg)
+            iv.setColorFilter(ContextCompat.getColor(this, R.color.icon_grad_mid2))
             iv.layoutParams = iv.layoutParams.apply {
                 width = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
                 height = android.view.ViewGroup.LayoutParams.WRAP_CONTENT
             }
             iv.scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
+        }
+    }
+
+    private fun applyHeaderIconTint() {
+        val blue = ContextCompat.getColor(this, R.color.icon_grad_mid2)
+        binding.ivCreateEventAdd.setColorFilter(blue)
+        binding.ivCreateEventSearch.setColorFilter(blue)
+    }
+
+    private fun applyRefreshIconTint() {
+        val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        if (!isDark) {
+            val blue = ContextCompat.getColor(this, R.color.icon_grad_mid2)
+            binding.btnRefresh.setColorFilter(blue)
+        } else {
+            binding.btnRefresh.clearColorFilter()
         }
     }
 
@@ -1042,31 +1081,30 @@ snack = SendSnack(binding.root)
 
     private fun applyPagerButtonStyle(button: Button, enabled: Boolean) {
         button.backgroundTintList = null
+        val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         if (!enabled) {
             val colors = intArrayOf(
-                ContextCompat.getColor(this, android.R.color.darker_gray),
-                ContextCompat.getColor(this, android.R.color.darker_gray)
+                if (isDark) 0x334F6480 else 0x33A7BED8,
+                if (isDark) 0x33445A74 else 0x338FA9C6
             )
             val drawable = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
-                cornerRadius = resources.displayMetrics.density * 18f
-                setStroke((resources.displayMetrics.density * 1f).toInt(), 0xFFB0B0B0.toInt())
+                cornerRadius = resources.displayMetrics.density * 16f
+                setStroke((resources.displayMetrics.density * 1f).toInt(), if (isDark) 0x44AFCBEB else 0x5597BCD9)
             }
             button.background = drawable
-            button.setTextColor(ContextCompat.getColor(this, android.R.color.white))
+            button.setTextColor(ContextCompat.getColor(this, R.color.liquid_popup_hint))
             return
         }
         val colors = intArrayOf(
-            ContextCompat.getColor(this, R.color.icon_grad_start),
-            ContextCompat.getColor(this, R.color.icon_grad_mid2),
-            ContextCompat.getColor(this, R.color.icon_grad_mid1),
-            ContextCompat.getColor(this, R.color.icon_grad_end)
+            if (isDark) 0x66789BC4 else 0x99D6EBFA.toInt(),
+            if (isDark) 0x666D8DB4 else 0x99C5E0F4.toInt()
         )
         val drawable = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
-            cornerRadius = resources.displayMetrics.density * 18f
-            setStroke((resources.displayMetrics.density * 1f).toInt(), 0x33000000)
+            cornerRadius = resources.displayMetrics.density * 16f
+            setStroke((resources.displayMetrics.density * 1f).toInt(), if (isDark) 0x88B5D5F4.toInt() else 0x88A7CBE6.toInt())
         }
         button.background = drawable
-        button.setTextColor(ContextCompat.getColor(this, android.R.color.white))
+        button.setTextColor(ContextCompat.getColor(this, R.color.liquid_popup_button_text))
     }
 
     private fun hasActiveFilters(): Boolean {
@@ -1105,6 +1143,25 @@ snack = SendSnack(binding.root)
         } else {
             "No se encontraron eventos ${parts.joinToString(separator = " ")}."
         }
+    }
+
+    private suspend fun awaitFinalEventStatus(
+        eventId: Int?,
+        initialStatus: String?
+    ): String {
+        val initial = (initialStatus ?: "PENDING").uppercase()
+        if (eventId == null) return initial
+        if (initial == "PROCESSED" || initial == "ERROR" || initial == "FAILED") return initial
+
+        repeat(4) {
+            delay(700)
+            val res = runCatching { NetworkModule.api.listEvents(limit = 30, offset = 0) }.getOrNull()
+            val status = res?.body()?.items?.firstOrNull { it.id == eventId }?.eventStatus?.uppercase()
+            if (status == "PROCESSED" || status == "ERROR" || status == "FAILED") {
+                return status
+            }
+        }
+        return initial
     }
 
     private fun applyFilteredPage() {

@@ -278,11 +278,12 @@ class ThresholdsActivity : AppCompatActivity() {
                     }
                     if (withSnack) {
                         postLoadingNotice = {
-                            UiNotifier.showBlockingTimed(
-                                this@ThresholdsActivity,
-                                "Thresholds cargados",
-                                R.drawable.loaded,
-                                timeoutMs = 2_500L
+                            CreateUiFeedback.showStatusPopup(
+                                activity = this@ThresholdsActivity,
+                                title = "Thresholds cargados",
+                                details = "Se han cargado correctamente.",
+                                animationRes = R.raw.correct_create,
+                                autoDismissMs = 2500L
                             )
                         }
                     }
@@ -1026,5 +1027,4 @@ class ThresholdsActivity : AppCompatActivity() {
     }
 
 }
-
 

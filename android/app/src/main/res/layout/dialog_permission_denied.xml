@@ -1,15 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:layout_margin="8dp"
-    app:cardUseCompatPadding="true"
-    app:cardElevation="6dp"
-    app:cardCornerRadius="16dp"
-    app:strokeWidth="1dp"
-    app:strokeColor="#E1D5F0"
-    app:cardBackgroundColor="#F7F2FA">
+    android:background="@drawable/bg_liquid_popup_card"
+    android:orientation="vertical">
 
     <LinearLayout
         android:layout_width="wrap_content"
@@ -50,7 +46,7 @@
                     android:maxWidth="210dp"
                     android:textStyle="bold"
                     android:textSize="16sp"
-                    android:textColor="@android:color/black"
+                    android:textColor="@color/liquid_popup_title"
                     android:text="Permisos insuficientes" />
 
                 <TextView
@@ -60,7 +56,7 @@
                     android:layout_marginTop="4dp"
                     android:maxWidth="210dp"
                     android:textSize="14sp"
-                    android:textColor="@android:color/black"
+                    android:textColor="@color/liquid_popup_text"
                     android:text="No tienes permisos para acceder a esta seccion." />
             </LinearLayout>
         </LinearLayout>
@@ -73,7 +69,7 @@
             android:layout_gravity="center_horizontal"
             android:minWidth="136dp"
             android:minHeight="0dp"
-            android:background="@drawable/bg_button_soft_purple"
+            android:background="@drawable/bg_liquid_button_pressable"
             android:backgroundTint="@null"
             android:elevation="0dp"
             android:foreground="@null"
@@ -85,7 +81,7 @@
             android:translationZ="0dp"
             android:text="Aceptar"
             android:textAllCaps="false"
-            android:textColor="@android:color/white" />
+            android:textColor="@color/liquid_popup_button_text" />
     </LinearLayout>
 
-</com.google.android.material.card.MaterialCardView>
+</LinearLayout>

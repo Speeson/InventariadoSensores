@@ -19,24 +19,28 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
             android:orientation="vertical"
-            android:padding="20dp">
+            android:paddingLeft="16dp"
+            android:paddingTop="14dp"
+            android:paddingRight="16dp"
+            android:paddingBottom="14dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
                 <ImageButton
                     android:id="@+id/btnBack"
                     android:layout_width="36dp"
                     android:layout_height="36dp"
-                    android:background="@drawable/bg_back_shadow"
+                    android:background="@drawable/bg_liquid_button_pressable"
                     android:contentDescription="@null"
-                    android:src="@drawable/back"
-                    android:padding="6dp" />
+                    android:padding="6dp"
+                    android:src="@drawable/back" />
 
                 <TextView
                     android:id="@+id/tvScanTitle"
@@ -45,9 +49,9 @@
                     android:layout_weight="1"
                     android:gravity="center"
                     android:text="Escanear"
-                    android:textStyle="bold"
+                    android:textColor="@color/liquid_popup_title"
                     android:textSize="22sp"
-                    android:textColor="?attr/colorOnSurface" />
+                    android:textStyle="bold" />
 
                 <FrameLayout
                     android:layout_width="64dp"
@@ -59,8 +63,8 @@
                         android:layout_height="64dp"
                         android:background="@android:color/transparent"
                         android:contentDescription="Alertas"
-                        android:scaleType="centerInside"
                         android:padding="0dp"
+                        android:scaleType="centerInside"
                         android:src="@drawable/ic_bell" />
 
                     <TextView
@@ -68,15 +72,15 @@
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:layout_gravity="end|top"
-                        android:layout_marginEnd="6dp"
                         android:layout_marginTop="2dp"
+                        android:layout_marginEnd="6dp"
                         android:background="@drawable/bg_badge_red"
+                        android:gravity="center"
+                        android:text="0"
                         android:textColor="@android:color/white"
                         android:textSize="10sp"
                         android:textStyle="bold"
-                        android:gravity="center"
-                        android:visibility="gone"
-                        android:text="0" />
+                        android:visibility="gone" />
                 </FrameLayout>
             </LinearLayout>
 
@@ -85,55 +89,55 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:layout_marginBottom="12dp"
-                app:cardCornerRadius="14dp"
-                app:cardElevation="3dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="#1A000000"
-                app:cardBackgroundColor="?attr/colorSurface">
+                app:cardBackgroundColor="@android:color/transparent"
+                app:cardCornerRadius="26dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:background="@drawable/bg_liquid_popup_card"
                     android:orientation="vertical"
                     android:padding="16dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Escaneo (cAmara)"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorOnSurface"
-                        android:layout_marginBottom="8dp" />
+                        android:layout_marginBottom="8dp"
+                        android:text="Escaneo (camara)"
+                        android:textColor="@color/liquid_popup_text"
+                        android:textStyle="bold" />
 
                     <Button
                         android:id="@+id/btnActivateScanner"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:background="@drawable/bg_button_soft_purple"
+                        android:background="@drawable/bg_liquid_button_pressable"
                         android:backgroundTint="@null"
-                        app:backgroundTint="@null"
-                        android:text="Activar escAner"
+                        android:paddingVertical="12dp"
+                        android:text="Activar escaner"
                         android:textAllCaps="false"
-                        android:textColor="@android:color/white"
-                        android:textStyle="bold"
+                        android:textColor="@color/liquid_popup_button_text"
                         android:textSize="15sp"
-                        android:paddingVertical="12dp" />
+                        android:textStyle="bold"
+                        app:backgroundTint="@null" />
 
                     <Button
                         android:id="@+id/btnCloseScanner"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:background="@drawable/bg_button_soft_purple"
+                        android:background="@drawable/bg_liquid_button_pressable"
                         android:backgroundTint="@null"
-                        app:backgroundTint="@null"
-                        android:text="Cerrar escAner"
-                        android:textAllCaps="false"
-                        android:textColor="@android:color/white"
-                        android:textStyle="bold"
-                        android:textSize="15sp"
                         android:paddingVertical="12dp"
-                        android:visibility="gone" />
+                        android:text="Cerrar escaner"
+                        android:textAllCaps="false"
+                        android:textColor="@color/liquid_popup_button_text"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:visibility="gone"
+                        app:backgroundTint="@null" />
 
                     <androidx.camera.view.PreviewView
                         android:id="@+id/previewView"
@@ -148,56 +152,59 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                app:cardCornerRadius="14dp"
-                app:cardElevation="3dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="#1A000000"
-                app:cardBackgroundColor="?attr/colorSurface">
+                app:cardBackgroundColor="@android:color/transparent"
+                app:cardCornerRadius="26dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:background="@drawable/bg_liquid_popup_card"
                     android:orientation="vertical"
                     android:padding="16dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
                         android:text="Escaneo manual"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorOnSurface"
-                        android:layout_marginBottom="8dp" />
+                        android:textColor="@color/liquid_popup_text"
+                        android:textStyle="bold" />
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="12dp"
-                        app:boxBackgroundMode="outline">
+                        app:boxBackgroundMode="none">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etBarcode"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:hint="Introduce el cA³digo manual"
+                            android:background="@drawable/bg_liquid_input"
+                            android:hint="Introduce el codigo manual"
                             android:inputType="number"
                             android:maxLength="13"
                             android:paddingStart="8dp"
-                            android:paddingEnd="8dp" />
+                            android:paddingEnd="8dp"
+                            android:textColor="@color/liquid_popup_text"
+                            android:textColorHint="@color/liquid_popup_hint" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <Button
                         android:id="@+id/btnContinue"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:background="@drawable/bg_button_soft_purple"
+                        android:background="@drawable/bg_liquid_button_pressable"
                         android:backgroundTint="@null"
-                        app:backgroundTint="@null"
+                        android:paddingVertical="12dp"
                         android:text="Continuar"
                         android:textAllCaps="false"
-                        android:textColor="@android:color/white"
-                        android:textStyle="bold"
+                        android:textColor="@color/liquid_popup_button_text"
                         android:textSize="15sp"
-                        android:paddingVertical="12dp" />
+                        android:textStyle="bold"
+                        app:backgroundTint="@null" />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -206,4 +213,3 @@
     </ScrollView>
 
 </FrameLayout>
-

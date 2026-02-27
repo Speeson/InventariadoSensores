@@ -5,15 +5,13 @@
     android:layout_height="match_parent"
     android:background="@android:color/transparent">
 
-    <com.google.android.material.card.MaterialCardView
+    <LinearLayout
         android:layout_width="220dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        app:cardBackgroundColor="?attr/colorSurface"
-        app:cardCornerRadius="18dp"
-        app:cardElevation="6dp"
-        app:strokeColor="#1A000000"
-        app:strokeWidth="1dp">
+        android:background="@drawable/bg_liquid_popup_card"
+        android:gravity="center"
+        android:orientation="vertical">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -37,10 +35,9 @@
                 android:layout_marginTop="2dp"
                 android:gravity="center"
                 android:text="Imprimiendo etiqueta"
-                android:textColor="?attr/colorOnSurface"
+                android:textColor="@color/liquid_popup_title"
                 android:textSize="16sp"
                 android:textStyle="bold" />
         </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
 </FrameLayout>
-

@@ -239,11 +239,12 @@ class CategoriesActivity : AppCompatActivity() {
                     }
                     if (withSnack) {
                         postLoadingNotice = {
-                            UiNotifier.showBlockingTimed(
-                                this@CategoriesActivity,
-                                "Categorias cargadas",
-                                R.drawable.loaded,
-                                timeoutMs = 2_500L
+                            CreateUiFeedback.showStatusPopup(
+                                activity = this@CategoriesActivity,
+                                title = "Categorias cargadas",
+                                details = "Se han cargado correctamente.",
+                                animationRes = R.raw.correct_create,
+                                autoDismissMs = 2500L
                             )
                         }
                     }

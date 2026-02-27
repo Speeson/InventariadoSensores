@@ -115,7 +115,7 @@ binding.btnBack.setOnClickListener { finish() }
             } else {
                 CreateUiFeedback.showErrorPopup(
                     activity = this,
-                    title = "Permiso de cámara denegado",
+                    title = "Permiso de camara denegado",
                     details = "",
                     animationRes = R.raw.camera
                 )
@@ -148,7 +148,7 @@ binding.btnBack.setOnClickListener { finish() }
                 provider.unbindAll()
                 provider.bindToLifecycle(this, cameraSelector, preview, analysis)
             } catch (e: Exception) {
-                UiNotifier.show(this, "Error al iniciar cámara: ${e.message}")
+                UiNotifier.show(this, "Error al iniciar camara: ${e.message}")
             }
 
         }, ContextCompat.getMainExecutor(this))
@@ -234,7 +234,7 @@ binding.btnBack.setOnClickListener { finish() }
                 }
             } catch (_: Exception) {
                 lastScannedCode = null
-                UiNotifier.show(this@ScanActivity, "Sin conexión. Se enviará al reconectar")
+                UiNotifier.show(this@ScanActivity, "Sin conexion. Se enviara al reconectar")
                 openConfirm(barcode, true)
             } finally {
                 isValidating = false
