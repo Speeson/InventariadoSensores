@@ -45,6 +45,7 @@ import kotlinx.coroutines.launch
 import com.example.inventoryapp.ui.categories.CategoriesActivity
 import com.example.inventoryapp.ui.thresholds.ThresholdsActivity
 import com.example.inventoryapp.ui.alerts.AlertsActivity
+import com.example.inventoryapp.ui.audit.AuditActivity
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.example.inventoryapp.ui.common.LiquidTopNav
@@ -279,7 +280,7 @@ class HomeActivity : AppCompatActivity() {
             setLiquidImage(it, R.drawable.glass_location)
         }
         findViewById<ImageButton>(R.id.btnTopMidRight)?.let {
-            setLiquidImage(it, R.drawable.glass_setting)
+            setLiquidImage(it, R.drawable.glass_audit)
         }
         findViewById<ImageView>(R.id.btnTopCenterMain)?.let {
             setLiquidImage(it, R.drawable.glass_add)
@@ -325,12 +326,7 @@ class HomeActivity : AppCompatActivity() {
         }
         findViewById<ImageButton>(R.id.btnTopMidRight)?.setOnClickListener {
             setTopButtonSelection(R.id.btnTopMidRight)
-            UiNotifier.show(this, "Atajo superior derecho pendiente")
-            findViewById<ImageButton>(R.id.btnTopMidRight)?.postDelayed({
-                if (selectedTopButtonId == R.id.btnTopMidRight) {
-                    setTopButtonSelection(null)
-                }
-            }, 300L)
+            startActivity(Intent(this, AuditActivity::class.java))
         }
 
         btnTopAlerts?.setOnClickListener {

@@ -30,6 +30,7 @@ import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.model.LocationResponseDto
 import com.example.inventoryapp.ui.alerts.AlertsActivity
+import com.example.inventoryapp.ui.audit.AuditActivity
 import com.example.inventoryapp.ui.auth.LoginActivity
 import com.google.android.material.bottomappbar.BottomAppBar
 import com.google.android.material.color.MaterialColors
@@ -115,7 +116,7 @@ object LiquidTopNav {
             .setCancelable(true)
             .create()
 
-        view.findViewById<android.widget.Button>(R.id.btnLogoutCancel)?.setOnClickListener {
+        view.findViewById<ImageButton>(R.id.btnLogoutCancel)?.setOnClickListener {
             dialog.dismiss()
         }
         view.findViewById<android.widget.Button>(R.id.btnLogoutConfirm)?.setOnClickListener {
@@ -338,10 +339,9 @@ object LiquidTopNav {
         btnTopRight.setOnClickListener {
             setTopActionSelection(host, R.id.btnTopMidRight)
             collapseCenterMenu(host, dismissOverlay, animate = true)
-            UiNotifier.show(activity, "Atajo superior derecho pendiente")
-            btnTopRight.postDelayed({
-                setTopActionSelection(host, currentTopActionFor(activity))
-            }, 300L)
+            if (activity !is AuditActivity) {
+                activity.startActivity(Intent(activity, AuditActivity::class.java))
+            }
         }
 
         btnAlerts.setOnClickListener {
@@ -559,7 +559,7 @@ object LiquidTopNav {
     private fun applyIconStyle(host: View) {
         setLiquidIcon(host.findViewById(R.id.btnMenu), R.drawable.glass_back)
         setLiquidIcon(host.findViewById(R.id.btnTopMidLeft), R.drawable.glass_location)
-        setLiquidIcon(host.findViewById(R.id.btnTopMidRight), R.drawable.glass_setting)
+        setLiquidIcon(host.findViewById(R.id.btnTopMidRight), R.drawable.glass_audit)
         setLiquidIcon(host.findViewById(R.id.btnAlertsQuick), R.drawable.glass_noti)
         setLiquidIcon(host.findViewById<ImageView>(R.id.btnTopCenterMain), R.drawable.glass_add)
         setLiquidIcon(host.findViewById(R.id.btnTopCenterActionOne), R.drawable.glass_user)
@@ -891,7 +891,7 @@ object LiquidTopNav {
             .setCancelable(true)
             .create()
 
-        view.findViewById<android.widget.Button>(R.id.btnLogoutCancel)?.setOnClickListener {
+        view.findViewById<ImageButton>(R.id.btnLogoutCancel)?.setOnClickListener {
             dialog.dismiss()
         }
         view.findViewById<android.widget.Button>(R.id.btnLogoutConfirm)?.setOnClickListener {

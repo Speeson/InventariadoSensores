@@ -49,7 +49,6 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
 import com.example.inventoryapp.R
-import com.example.inventoryapp.ui.audit.AuditActivity
 import com.example.inventoryapp.ui.categories.CategoriesActivity
 import com.example.inventoryapp.ui.events.EventsActivity
 import com.example.inventoryapp.ui.home.HomeActivity
@@ -73,7 +72,6 @@ object LiquidBottomNav {
         SEARCH,
         SCAN,
         ASSISTANT,
-        AUDIT,
         NONE,
     }
 
@@ -89,6 +87,8 @@ object LiquidBottomNav {
     private const val CAMERA_PERMISSION_FRAGMENT_TAG = "liquid_camera_permission_fragment"
     private const val PREFS_UI = "ui_prefs"
     private const val MENU_CONTENT_GAP_DP = 6
+    private const val PROFILE_PANEL_MARGIN_END_DP = 12
+    private const val PROFILE_PANEL_MARGIN_BOTTOM_DP = 72
     private const val LIQUID_CRYSTAL_BLUE = "#7FD8FF"
     private const val LIQUID_CRYSTAL_BLUE_ACTIVE = "#2CB8FF"
     private const val LIQUID_CRYSTAL_BLUE_LIGHT_BOOST = "#58C9FF"
@@ -117,10 +117,12 @@ object LiquidBottomNav {
         val existingNav = content.findViewById<View>(R.id.liquidBottomNavRoot)
         if (existingNav != null) {
             ensureDismissOverlay(activity, content, existingNav)
+            ensureProfilePanelOverlay(content, existingNav)
             applyBottomBarAppearance(existingNav)
             applyIconStyle(existingNav)
             highlightCurrentTab(activity, existingNav)
             collapseCenterMenu(existingNav, animate = false)
+            existingNav.post { captureCenterFabBaseline(existingNav) }
             val contentRoot = content.getChildAt(0) ?: content
             setupKeyboardAwareBehavior(activity, content, contentRoot, existingNav)
             return
@@ -136,12 +138,15 @@ object LiquidBottomNav {
         )
         ensureDismissOverlay(activity, content, nav)
         content.addView(nav, params)
+        ensureProfilePanelOverlay(content, nav)
 
         applyBottomBarAppearance(nav)
         bindActions(activity, nav)
         applyIconStyle(nav)
         highlightCurrentTab(activity, nav)
         setupCenterMenu(activity, nav)
+        setupProfileMenu(activity, nav)
+        nav.post { captureCenterFabBaseline(nav) }
 
         nav.post {
             if (activity !is HomeActivity) {
@@ -220,6 +225,7 @@ object LiquidBottomNav {
         if (existing != null) {
             existing.setOnClickListener {
                 collapseCenterMenu(nav, true)
+                collapseProfileMenu(nav, true)
                 restoreCurrentSelection(activity, nav)
             }
             return
@@ -232,6 +238,7 @@ object LiquidBottomNav {
             setBackgroundColor(Color.TRANSPARENT)
             setOnClickListener {
                 collapseCenterMenu(nav, true)
+                collapseProfileMenu(nav, true)
                 restoreCurrentSelection(activity, nav)
             }
         }
@@ -264,14 +271,44 @@ object LiquidBottomNav {
         }
         nav.findViewById<ImageButton>(R.id.btnLiquidSearch).setOnClickListener {
             collapseCenterMenu(nav, true)
+            collapseProfileMenu(nav, true)
             setActiveTab(nav, NavTab.ASSISTANT)
             showAssistantPlaceholder(activity, nav)
         }
         nav.findViewById<ImageButton>(R.id.btnLiquidProfile).setOnClickListener {
             collapseCenterMenu(nav, true)
-            setActiveTab(nav, NavTab.AUDIT)
-            open(activity, AuditActivity::class.java)
+            if (isProfileMenuExpanded(nav)) {
+                collapseProfileMenu(nav, true)
+            } else {
+                expandProfileMenu(nav)
+            }
         }
+    }
+
+    private fun ensureProfilePanelOverlay(content: ViewGroup, nav: View) {
+        val existingInContent = content.findViewById<View>(R.id.profileExpandPanel)
+        if (existingInContent != null && existingInContent.parent === content) return
+
+        val panel = nav.findViewById<View>(R.id.profileExpandPanel) ?: return
+        val parent = panel.parent as? ViewGroup ?: return
+        parent.removeView(panel)
+
+        panel.visibility = View.GONE
+        panel.alpha = 0f
+        panel.scaleY = 0.8f
+        panel.translationY = dp(nav, 16).toFloat()
+
+        val width = panel.layoutParams?.width
+            ?.takeIf { it > 0 } ?: dp(nav, 62)
+        val height = panel.layoutParams?.height
+            ?.takeIf { it > 0 } ?: dp(nav, 136)
+
+        val lp = FrameLayout.LayoutParams(width, height, Gravity.BOTTOM or Gravity.END).apply {
+            marginEnd = nav.paddingRight + dp(nav, PROFILE_PANEL_MARGIN_END_DP)
+            bottomMargin = nav.paddingBottom + dp(nav, PROFILE_PANEL_MARGIN_BOTTOM_DP)
+        }
+        content.addView(panel, lp)
+        panel.bringToFront()
     }
 
     private fun open(activity: AppCompatActivity, target: Class<out Activity>) {
@@ -327,6 +364,7 @@ object LiquidBottomNav {
             val shouldShowNav = !imeVisible
             if (!shouldShowNav) {
                 collapseCenterMenu(nav, animate = false)
+                collapseProfileMenu(nav, animate = false)
                 content.findViewById<View>(R.id.liquid_center_dismiss_overlay)?.visibility = View.GONE
             }
             nav.visibility = if (shouldShowNav) View.VISIBLE else View.GONE
@@ -384,7 +422,7 @@ object LiquidBottomNav {
         setLiquidIcon(theme, R.drawable.glass_search)
         setLiquidIcon(center, R.drawable.glass_add)
         setLiquidIcon(search, R.drawable.glass_cloud)
-        setLiquidIcon(profile, R.drawable.glass_audit)
+        setLiquidIcon(profile, R.drawable.glass_user)
 
         applyBottomIconOffsets(nav, home, theme, search, profile)
     }
@@ -415,7 +453,7 @@ object LiquidBottomNav {
         setSelected(nav.findViewById(R.id.btnLiquidHome), tab == NavTab.HOME)
         setSelected(nav.findViewById(R.id.btnLiquidTheme), tab == NavTab.SEARCH)
         setSelected(nav.findViewById(R.id.btnLiquidSearch), tab == NavTab.ASSISTANT)
-        setSelected(nav.findViewById(R.id.btnLiquidProfile), tab == NavTab.AUDIT)
+        setSelected(nav.findViewById(R.id.btnLiquidProfile), false)
     }
 
     private fun clearSelection(nav: View) = setActiveTab(nav, NavTab.NONE)
@@ -427,7 +465,6 @@ object LiquidBottomNav {
         return when (activity) {
             is HomeActivity -> NavTab.HOME
             is ConfirmScanActivity -> NavTab.SCAN
-            is AuditActivity -> NavTab.AUDIT
             else -> NavTab.NONE
         }
     }
@@ -719,17 +756,42 @@ object LiquidBottomNav {
 
         closeBtn.setOnClickListener {
             collapseCenterMenu(nav, true)
+            collapseProfileMenu(nav, true)
             restoreCurrentSelection(activity, nav)
         }
         scanBtn.setOnClickListener {
             collapseCenterMenu(nav, true)
+            collapseProfileMenu(nav, true)
             setActiveTab(nav, NavTab.SCAN)
             showScanPopup(activity) { restoreCurrentSelection(activity, nav) }
         }
         manualBtn.setOnClickListener {
             collapseCenterMenu(nav, true)
+            collapseProfileMenu(nav, true)
             setActiveTab(nav, NavTab.SCAN)
             showManualPopup(activity) { restoreCurrentSelection(activity, nav) }
+        }
+    }
+
+    private fun setupProfileMenu(activity: AppCompatActivity, nav: View) {
+        val panel = getProfilePanel(nav) ?: return
+        val profileAction = panel.findViewById<ImageButton>(R.id.btnProfileMenuActionProfile)
+        val logoutAction = panel.findViewById<ImageButton>(R.id.btnProfileMenuActionLogout)
+
+        setLiquidIcon(profileAction, R.drawable.glass_user)
+        setLiquidIcon(logoutAction, R.drawable.glass_logout)
+        profileAction.imageAlpha = 255
+        logoutAction.imageAlpha = 255
+        profileAction.setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE_ACTIVE), PorterDuff.Mode.SRC_IN)
+        logoutAction.setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE_ACTIVE), PorterDuff.Mode.SRC_IN)
+
+        profileAction.setOnClickListener {
+            collapseProfileMenu(nav, true)
+            LiquidTopNav.showProfileDialog(activity)
+        }
+        logoutAction.setOnClickListener {
+            collapseProfileMenu(nav, true)
+            LiquidTopNav.showLogoutDialog(activity)
         }
     }
 
@@ -737,7 +799,14 @@ object LiquidBottomNav {
         return nav.findViewById<View>(R.id.centerExpandPanel).visibility == View.VISIBLE
     }
 
+    private fun getProfilePanel(nav: View): View? {
+        val panelInNav = nav.findViewById<View>(R.id.profileExpandPanel)
+        if (panelInNav != null) return panelInNav
+        return nav.rootView.findViewById(R.id.profileExpandPanel)
+    }
+
     private fun expandCenterMenu(nav: View) {
+        collapseProfileMenu(nav, animate = false)
         val panel = nav.findViewById<View>(R.id.centerExpandPanel)
         val center = nav.findViewById<View>(R.id.btnLiquidScan)
         val overlay = nav.rootView.findViewById<View>(R.id.liquid_center_dismiss_overlay)
@@ -783,11 +852,76 @@ object LiquidBottomNav {
             .start()
     }
 
+    private fun isProfileMenuExpanded(nav: View): Boolean {
+        return getProfilePanel(nav)?.visibility == View.VISIBLE
+    }
+
+    private fun expandProfileMenu(nav: View) {
+        val panel = getProfilePanel(nav) ?: return
+        val profileBtn = nav.findViewById<ImageButton>(R.id.btnLiquidProfile)
+        val overlay = nav.rootView.findViewById<View>(R.id.liquid_center_dismiss_overlay)
+        restoreCenterFabBaseline(nav)
+        overlay?.visibility = View.VISIBLE
+        panel.visibility = View.VISIBLE
+        panel.alpha = 0f
+        panel.scaleY = 0.8f
+        panel.translationY = dp(nav, 16).toFloat()
+        profileBtn.animate().alpha(0f).setDuration(120L).withEndAction {
+            profileBtn.visibility = View.VISIBLE
+            profileBtn.alpha = 1f
+            profileBtn.isClickable = true
+            setLiquidIcon(profileBtn, R.drawable.glass_x)
+            profileBtn.imageAlpha = 255
+            profileBtn.setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE_ACTIVE), PorterDuff.Mode.SRC_IN)
+        }.start()
+        panel.animate().alpha(1f).scaleY(1f).translationY(0f).setDuration(200L)
+            .withEndAction { restoreCenterFabBaseline(nav) }
+            .start()
+    }
+
+    private fun collapseProfileMenu(nav: View, animate: Boolean) {
+        val panel = getProfilePanel(nav) ?: return
+        val profileBtn = nav.findViewById<ImageButton>(R.id.btnLiquidProfile)
+        val overlay = nav.rootView.findViewById<View>(R.id.liquid_center_dismiss_overlay)
+        if (panel.visibility != View.VISIBLE) return
+
+        val endAction = {
+            panel.visibility = View.GONE
+            panel.alpha = 0f
+            setLiquidIcon(profileBtn, R.drawable.glass_user)
+            restoreCenterFabBaseline(nav)
+            if (!isCenterMenuExpanded(nav)) {
+                overlay?.visibility = View.GONE
+            }
+        }
+
+        if (!animate) {
+            endAction.invoke()
+            return
+        }
+        panel.animate().alpha(0f).scaleY(0.85f).translationY(dp(nav, 10).toFloat()).setDuration(150L)
+            .withEndAction { endAction.invoke() }
+            .start()
+    }
+
     private fun styleDialog(dialog: AlertDialog, widthPercent: Float = 0.9f) {
         dialog.show()
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
         val width = (dialog.context.resources.displayMetrics.widthPixels * widthPercent).toInt()
         dialog.window?.setLayout(width, WindowManager.LayoutParams.WRAP_CONTENT)
+    }
+
+    private fun captureCenterFabBaseline(nav: View) {
+        val center = nav.findViewById<View>(R.id.btnLiquidScan) ?: return
+        if (center.getTag(R.id.tag_liquid_center_fab_baseline_y) == null) {
+            center.setTag(R.id.tag_liquid_center_fab_baseline_y, center.translationY)
+        }
+    }
+
+    private fun restoreCenterFabBaseline(nav: View) {
+        val center = nav.findViewById<View>(R.id.btnLiquidScan) ?: return
+        val baseline = center.getTag(R.id.tag_liquid_center_fab_baseline_y) as? Float ?: return
+        center.translationY = baseline
     }
 
     private fun dp(view: View, value: Int): Int {

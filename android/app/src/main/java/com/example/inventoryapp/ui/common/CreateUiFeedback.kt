@@ -11,6 +11,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import android.widget.ImageButton
 import androidx.appcompat.widget.AppCompatButton
 import androidx.appcompat.app.AlertDialog
 import com.airbnb.lottie.LottieAnimationView
@@ -293,7 +294,7 @@ object CreateUiFeedback {
         val lottie = view.findViewById<LottieAnimationView>(R.id.lottieLogout)
         val titleView = view.findViewById<TextView>(R.id.tvLogoutTitle)
         val messageView = view.findViewById<TextView>(R.id.tvLogoutMessage)
-        val btnCancel = view.findViewById<AppCompatButton>(R.id.btnLogoutCancel)
+        val btnCancel = view.findViewById<ImageButton>(R.id.btnLogoutCancel)
         val btnConfirm = view.findViewById<AppCompatButton>(R.id.btnLogoutConfirm)
 
         lottie.setAnimation(R.raw.question)
@@ -301,8 +302,8 @@ object CreateUiFeedback {
         lottie.playAnimation()
         titleView.text = title
         messageView.text = message
-        btnCancel.text = cancelText
         btnConfirm.text = confirmText
+        btnCancel.contentDescription = cancelText
 
         val dialog = AlertDialog.Builder(activity)
             .setView(view)

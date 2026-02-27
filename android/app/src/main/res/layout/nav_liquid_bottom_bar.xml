@@ -63,7 +63,50 @@
             android:contentDescription="Escaner rapido"
             android:padding="8dp"
             android:scaleType="centerInside"
-            android:src="@drawable/scaner" />
+        android:src="@drawable/scaner" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/profileExpandPanel"
+        android:layout_width="62dp"
+        android:layout_height="136dp"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="72dp"
+        android:alpha="0"
+        android:background="@drawable/bg_liquid_menu_panel"
+        android:elevation="20dp"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:scaleY="0.8"
+        android:translationY="16dp"
+        android:visibility="gone">
+
+        <ImageButton
+            android:id="@+id/btnProfileMenuActionProfile"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"
+            android:background="@drawable/bg_liquid_menu_button"
+            android:contentDescription="Perfil de usuario"
+            android:padding="8dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/glass_user" />
+
+        <ImageButton
+            android:id="@+id/btnProfileMenuActionLogout"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"
+            android:background="@drawable/bg_liquid_menu_button"
+            android:contentDescription="Cerrar sesion"
+            android:padding="8dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/glass_logout" />
     </LinearLayout>
 
     <com.google.android.material.bottomappbar.BottomAppBar
@@ -174,11 +217,11 @@
                 android:layout_height="44dp"
                 android:layout_gravity="center"
                 android:background="@android:color/transparent"
-                android:contentDescription="Auditoria"
+                android:contentDescription="Perfil"
                 android:padding="7dp"
                 android:scaleType="centerInside"
                 android:translationX="2dp"
-                android:src="@drawable/glass_audit" />
+                android:src="@drawable/glass_user" />
         </FrameLayout>
 
         </LinearLayout>
