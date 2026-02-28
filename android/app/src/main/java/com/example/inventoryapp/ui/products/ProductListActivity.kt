@@ -114,11 +114,12 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
                 showEditDialog(p)
             },
             onLabelClick = { p ->
-                val i = Intent(this, LabelPreviewActivity::class.java)
-                i.putExtra("product_id", p.id)
-                i.putExtra("product_sku", p.sku)
-                i.putExtra("product_barcode", p.barcode ?: "")
-                startActivity(i)
+                val popup = LabelPreviewDialogFragment.newInstance(
+                    productId = p.id,
+                    sku = p.sku,
+                    barcode = p.barcode ?: ""
+                )
+                popup.show(supportFragmentManager, "label_preview_popup")
             }
         )
         binding.rvProducts.layoutManager = LinearLayoutManager(this)

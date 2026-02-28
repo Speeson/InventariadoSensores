@@ -27,15 +27,12 @@ import android.webkit.WebViewClient
 import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
-import androidx.appcompat.app.AppCompatActivity
-import androidx.activity.OnBackPressedCallback
-import androidx.core.app.ActivityCompat
+import androidx.fragment.app.DialogFragment
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.databinding.ActivityLabelPreviewBinding
 import com.example.inventoryapp.ui.common.UiNotifier
-import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.example.inventoryapp.R
 import kotlinx.coroutines.launch
@@ -46,9 +43,10 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.Locale
 
-class LabelPreviewActivity : AppCompatActivity() {
+class LabelPreviewDialogFragment : DialogFragment() {
 
-    private lateinit var binding: ActivityLabelPreviewBinding
+    private var _binding: ActivityLabelPreviewBinding? = null
+    private val binding get() = _binding!!
     private var productId: Int = 0
     private var sku: String = ""
     private var barcode: String = ""
@@ -62,30 +60,55 @@ class LabelPreviewActivity : AppCompatActivity() {
     private val discoveredRows = mutableListOf<String>()
     private var discoveredAdapter: android.widget.ArrayAdapter<String>? = null
     private var bluetoothAdapter: BluetoothAdapter? = null
-    private val niimbotPrefs by lazy { getSharedPreferences("niimbot_prefs", MODE_PRIVATE) }
+    private val niimbotPrefs by lazy { requireContext().getSharedPreferences("niimbot_prefs", Context.MODE_PRIVATE) }
 
-    private companion object {
+    companion object {
+        private const val ARG_PRODUCT_ID = "product_id"
+        private const val ARG_PRODUCT_SKU = "product_sku"
+        private const val ARG_PRODUCT_BARCODE = "product_barcode"
         private const val REQ_BT_PERMS = 1107
         private const val KEY_LAST_NIIMBOT_MAC = "last_niimbot_mac"
         private const val KEY_LAST_NIIMBOT_NAME = "last_niimbot_name"
+
+        fun newInstance(productId: Int, sku: String, barcode: String): LabelPreviewDialogFragment {
+            return LabelPreviewDialogFragment().apply {
+                arguments = Bundle().apply {
+                    putInt(ARG_PRODUCT_ID, productId)
+                    putString(ARG_PRODUCT_SKU, sku)
+                    putString(ARG_PRODUCT_BARCODE, barcode)
+                }
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityLabelPreviewBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-        NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
+        setStyle(STYLE_NORMAL, R.style.Theme_Inventoryapp_LabelPreviewPopup)
+    }
 
-        productId = intent.getIntExtra("product_id", 0)
-        sku = intent.getStringExtra("product_sku") ?: ""
-        barcode = intent.getStringExtra("product_barcode") ?: ""
+    override fun onCreateView(
+        inflater: android.view.LayoutInflater,
+        container: android.view.ViewGroup?,
+        savedInstanceState: Bundle?
+    ): android.view.View {
+        _binding = ActivityLabelPreviewBinding.inflate(inflater, container, false)
+        return binding.root
+    }
+
+    override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        val args = requireArguments()
+        productId = args.getInt(ARG_PRODUCT_ID, 0)
+        sku = args.getString(ARG_PRODUCT_SKU).orEmpty()
+        barcode = args.getString(ARG_PRODUCT_BARCODE).orEmpty()
 
         if (productId <= 0) {
-            navigateToProductsAndFinish()
+            dismissAllowingStateLoss()
             return
         }
 
-        binding.btnBack.setOnClickListener { navigateToProductsAndFinish() }
+        binding.btnBack.setOnClickListener { dismissAllowingStateLoss() }
         binding.tvTitle.text = "Etiqueta"
         binding.tvMeta.text = "SKU $sku  -  Barcode $barcode"
         applyTitleGradient()
@@ -99,16 +122,16 @@ class LabelPreviewActivity : AppCompatActivity() {
         binding.btnPrint.setOnClickListener { printLabel() }
         binding.btnSaveNiimbot.setOnClickListener { showNiimbotActionsDialog() }
 
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                navigateToProductsAndFinish()
-            }
-        })
-
         checkRoleForRegenerate()
         loadLabel()
     }
 
+    override fun onStart() {
+        super.onStart()
+        val width = (resources.displayMetrics.widthPixels * 0.94f).toInt()
+        val height = (resources.displayMetrics.heightPixels * 0.92f).toInt()
+        dialog?.window?.setLayout(width, height)
+    }
     override fun onResume() {
         super.onResume()
         val currentUrl = binding.webLabel.url?.trim().orEmpty()
@@ -146,10 +169,10 @@ class LabelPreviewActivity : AppCompatActivity() {
                 width,
                 0f,
                 intArrayOf(
-                    getColor(R.color.icon_grad_start),
-                    getColor(R.color.icon_grad_mid2),
-                    getColor(R.color.icon_grad_mid1),
-                    getColor(R.color.icon_grad_end)
+                    ContextCompat.getColor(requireContext(), R.color.icon_grad_start),
+                    ContextCompat.getColor(requireContext(), R.color.icon_grad_mid2),
+                    ContextCompat.getColor(requireContext(), R.color.icon_grad_mid1),
+                    ContextCompat.getColor(requireContext(), R.color.icon_grad_end)
                 ),
                 floatArrayOf(0f, 0.35f, 0.7f, 1f),
                 Shader.TileMode.CLAMP
@@ -168,10 +191,10 @@ class LabelPreviewActivity : AppCompatActivity() {
                     lastSvg = svg
                     renderSvgToWebView(svg)
                 } else {
-                    UiNotifier.show(this@LabelPreviewActivity, "No se pudo cargar la etiqueta")
+                    UiNotifier.show(requireActivity(), "No se pudo cargar la etiqueta")
                 }
             } catch (e: Exception) {
-                UiNotifier.show(this@LabelPreviewActivity, "Error cargando etiqueta: ${e.message}")
+                UiNotifier.show(requireActivity(), "Error cargando etiqueta: ${e.message}")
             }
         }
     }
@@ -206,52 +229,44 @@ class LabelPreviewActivity : AppCompatActivity() {
         )
     }
 
-    private fun navigateToProductsAndFinish() {
-        val intent = Intent(this, ProductListActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        }
-        startActivity(intent)
-        finish()
-    }
-
     private fun downloadSvg() {
         val svg = lastSvg
         if (svg.isNullOrBlank()) {
-            UiNotifier.show(this, "Etiqueta no disponible")
+            UiNotifier.show(requireActivity(), "Etiqueta no disponible")
             return
         }
         val bytes = svg.toByteArray(Charsets.UTF_8)
         val filename = "label_${sku.ifBlank { productId.toString() }}.svg"
         if (saveToDownloads(filename, "image/svg+xml", bytes)) {
-            UiNotifier.show(this, "SVG guardado en descargas")
+            UiNotifier.show(requireActivity(), "SVG guardado en descargas")
         } else {
-            UiNotifier.show(this, "No se pudo guardar el SVG")
+            UiNotifier.show(requireActivity(), "No se pudo guardar el SVG")
         }
     }
 
     private fun downloadPdf() {
         val svg = lastSvg
         if (svg.isNullOrBlank()) {
-            UiNotifier.show(this, "Etiqueta no disponible")
+            UiNotifier.show(requireActivity(), "Etiqueta no disponible")
             return
         }
         binding.webLabel.post {
             val pdfBytes = WebViewPdfExporter.export(binding.webLabel)
             if (pdfBytes == null) {
-                UiNotifier.show(this, "No se pudo generar el PDF")
+                UiNotifier.show(requireActivity(), "No se pudo generar el PDF")
                 return@post
             }
             val filename = "label_${sku.ifBlank { productId.toString() }}.pdf"
             if (saveToDownloads(filename, "application/pdf", pdfBytes)) {
-                UiNotifier.show(this, "PDF guardado en descargas")
+                UiNotifier.show(requireActivity(), "PDF guardado en descargas")
             } else {
-                UiNotifier.show(this, "No se pudo guardar el PDF")
+                UiNotifier.show(requireActivity(), "No se pudo guardar el PDF")
             }
         }
     }
 
     private fun printLabel() {
-        val printManager = getSystemService(PRINT_SERVICE) as PrintManager
+        val printManager = requireContext().getSystemService(Context.PRINT_SERVICE) as PrintManager
         val adapter = binding.webLabel.createPrintDocumentAdapter("label_$productId")
         val attrs = PrintAttributes.Builder()
             .setMediaSize(PrintAttributes.MediaSize.ISO_A6)
@@ -265,13 +280,13 @@ class LabelPreviewActivity : AppCompatActivity() {
             try {
                 val res = NetworkModule.api.regenerateProductLabel(productId)
                 if (res.isSuccessful) {
-                    UiNotifier.show(this@LabelPreviewActivity, "Etiqueta regenerada")
+                    UiNotifier.show(requireActivity(), "Etiqueta regenerada")
                     loadLabel()
                 } else {
-                    UiNotifier.show(this@LabelPreviewActivity, "No se pudo regenerar la etiqueta")
+                    UiNotifier.show(requireActivity(), "No se pudo regenerar la etiqueta")
                 }
             } catch (e: Exception) {
-                UiNotifier.show(this@LabelPreviewActivity, "Error regenerando etiqueta: ${e.message}")
+                UiNotifier.show(requireActivity(), "Error regenerando etiqueta: ${e.message}")
             }
         }
     }
@@ -279,12 +294,12 @@ class LabelPreviewActivity : AppCompatActivity() {
     private fun saveNiimbotLabel() {
         val svg = lastSvg
         if (svg.isNullOrBlank()) {
-            UiNotifier.show(this, "Etiqueta no disponible")
+            UiNotifier.show(requireActivity(), "Etiqueta no disponible")
             return
         }
         saveLabelLoadingHandle?.dismiss()
         saveLabelLoadingHandle = CreateUiFeedback.showListLoading(
-            activity = this,
+            activity = requireActivity(),
             message = "Guardando etiqueta...",
             animationRes = R.raw.glass_loading_list,
             minCycles = 1
@@ -294,9 +309,12 @@ class LabelPreviewActivity : AppCompatActivity() {
 
     private fun showNiimbotActionsDialog() {
         val view = layoutInflater.inflate(R.layout.dialog_niimbot_actions, null)
-        val dialog = AlertDialog.Builder(this)
+        val dialog = AlertDialog.Builder(requireContext())
             .setView(view)
             .create()
+        view.findViewById<android.view.View>(R.id.btnNiimbotActionsClose)?.setOnClickListener {
+            dialog.dismiss()
+        }
         view.findViewById<android.view.View>(R.id.btnOpenNiimbotAppCard)?.setOnClickListener {
             dialog.dismiss()
             saveNiimbotLabel()
@@ -318,7 +336,7 @@ class LabelPreviewActivity : AppCompatActivity() {
                 } else {
                     saveLabelLoadingHandle?.dismiss()
                     saveLabelLoadingHandle = null
-                    UiNotifier.show(this, "La etiqueta aun no esta lista")
+                    UiNotifier.show(requireActivity(), "La etiqueta aun no esta lista")
                 }
                 return@postDelayed
             }
@@ -327,12 +345,12 @@ class LabelPreviewActivity : AppCompatActivity() {
             if (saveToPictures(filename, trimmed)) {
                 saveLabelLoadingHandle?.dismiss()
                 saveLabelLoadingHandle = null
-                UiNotifier.show(this, "Etiqueta guardada en galeria")
+                UiNotifier.show(requireActivity(), "Etiqueta guardada en galeria")
                 openNiimbotApp()
             } else {
                 saveLabelLoadingHandle?.dismiss()
                 saveLabelLoadingHandle = null
-                UiNotifier.show(this, "No se pudo guardar la etiqueta")
+                UiNotifier.show(requireActivity(), "No se pudo guardar la etiqueta")
             }
         }, 150)
     }
@@ -407,8 +425,8 @@ class LabelPreviewActivity : AppCompatActivity() {
                     "com.gengcon.android.jccloudprinter.LaunchActivity"
                 )
             }
-            if (explicit.resolveActivity(packageManager) != null) {
-                UiNotifier.show(this, "Abriendo Niimbotâ€¦")
+            if (explicit.resolveActivity(requireContext().packageManager) != null) {
+                UiNotifier.show(requireActivity(), "Abriendo Niimbot…")
                 startActivity(explicit)
                 return
             }
@@ -420,21 +438,21 @@ class LabelPreviewActivity : AppCompatActivity() {
                     "com.gengcon.android.jccloudprinter.LaunchFromWebActivity"
                 )
             }
-            if (explicitAlt.resolveActivity(packageManager) != null) {
-                UiNotifier.show(this, "Abriendo Niimbotâ€¦")
+            if (explicitAlt.resolveActivity(requireContext().packageManager) != null) {
+                UiNotifier.show(requireActivity(), "Abriendo Niimbot…")
                 startActivity(explicitAlt)
                 return
             }
 
-            val intent = packageManager.getLaunchIntentForPackage(niimbotPackage)
+            val intent = requireContext().packageManager.getLaunchIntentForPackage(niimbotPackage)
             if (intent != null) {
-                UiNotifier.show(this, "Abriendo Niimbotâ€¦")
+                UiNotifier.show(requireActivity(), "Abriendo Niimbot…")
                 startActivity(intent)
                 return
             }
 
             val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-            val candidates = packageManager.queryIntentActivities(
+            val candidates = requireContext().packageManager.queryIntentActivities(
                 launcherIntent.setPackage(niimbotPackage),
                 0
             )
@@ -450,10 +468,10 @@ class LabelPreviewActivity : AppCompatActivity() {
             val settingsIntent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
                 .setData(Uri.parse("package:$niimbotPackage"))
             startActivity(settingsIntent)
-            UiNotifier.show(this, "No se encontrÃ³ el launcher de Niimbot")
+            UiNotifier.show(requireActivity(), "No se encontró el launcher de Niimbot")
         } catch (e: Exception) {
             CreateUiFeedback.showErrorPopup(
-                activity = this,
+                activity = requireActivity(),
                 title = "No se pudo abrir Niimbot",
                 details = e.message ?: "No se pudo abrir la app de Niimbot",
                 animationRes = R.raw.wrong
@@ -485,7 +503,7 @@ class LabelPreviewActivity : AppCompatActivity() {
 
     private fun startDirectNiimbotPrintFlow() {
         if (lastSvg.isNullOrBlank()) {
-            UiNotifier.show(this, "Etiqueta no disponible")
+            UiNotifier.show(requireActivity(), "Etiqueta no disponible")
             return
         }
         if (!ensureBluetoothReady()) return
@@ -511,7 +529,7 @@ class LabelPreviewActivity : AppCompatActivity() {
     private fun ensureBluetoothReady(): Boolean {
         val adapter = bluetoothAdapter
         if (adapter == null) {
-            UiNotifier.show(this, "Bluetooth no disponible")
+            UiNotifier.show(requireActivity(), "Bluetooth no disponible")
             return false
         }
         if (!hasBluetoothPermissions()) {
@@ -520,7 +538,7 @@ class LabelPreviewActivity : AppCompatActivity() {
         }
         if (!adapter.isEnabled) {
             CreateUiFeedback.showStatusPopup(
-                activity = this,
+                activity = requireActivity(),
                 title = "Bluetooth desactivado",
                 details = "Activa Bluetooth para conectar con Niimbot",
                 animationRes = R.raw.bluetooth,
@@ -534,18 +552,18 @@ class LabelPreviewActivity : AppCompatActivity() {
     private fun hasBluetoothPermissions(): Boolean {
         val connectGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             ContextCompat.checkSelfPermission(
-                this,
+                requireContext(),
                 Manifest.permission.BLUETOOTH_CONNECT
             ) == PackageManager.PERMISSION_GRANTED
         } else true
         val scanGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             ContextCompat.checkSelfPermission(
-                this,
+                requireContext(),
                 Manifest.permission.BLUETOOTH_SCAN
             ) == PackageManager.PERMISSION_GRANTED
         } else true
         val locationGranted = ContextCompat.checkSelfPermission(
-            this,
+            requireContext(),
             Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
         return connectGranted && scanGranted && locationGranted
@@ -562,7 +580,7 @@ class LabelPreviewActivity : AppCompatActivity() {
             perms += Manifest.permission.BLUETOOTH
             perms += Manifest.permission.BLUETOOTH_ADMIN
         }
-        ActivityCompat.requestPermissions(this, perms.toTypedArray(), REQ_BT_PERMS)
+        requestPermissions(perms.toTypedArray(), REQ_BT_PERMS)
     }
 
     @SuppressLint("MissingPermission")
@@ -574,7 +592,7 @@ class LabelPreviewActivity : AppCompatActivity() {
 
         discoveredRows.clear()
         discoveredAdapter = android.widget.ArrayAdapter(
-            this,
+            requireContext(),
             android.R.layout.simple_list_item_1,
             discoveredRows
         )
@@ -592,7 +610,7 @@ class LabelPreviewActivity : AppCompatActivity() {
         btnCancel.setOnClickListener { niimbotScanDialog?.dismiss() }
 
         niimbotScanDialog?.dismiss()
-        niimbotScanDialog = AlertDialog.Builder(this)
+        niimbotScanDialog = AlertDialog.Builder(requireContext())
             .setView(view)
             .setCancelable(false)
             .create()
@@ -611,7 +629,7 @@ class LabelPreviewActivity : AppCompatActivity() {
                 addAction(BluetoothDevice.ACTION_FOUND)
                 addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
             }
-            registerReceiver(btScanReceiver, filter)
+            requireContext().registerReceiver(btScanReceiver, filter)
             btReceiverRegistered = true
         }
 
@@ -645,7 +663,7 @@ class LabelPreviewActivity : AppCompatActivity() {
         }
         if (btReceiverRegistered) {
             try {
-                unregisterReceiver(btScanReceiver)
+                requireContext().unregisterReceiver(btScanReceiver)
             } catch (_: Exception) {}
             btReceiverRegistered = false
         }
@@ -703,18 +721,18 @@ class LabelPreviewActivity : AppCompatActivity() {
             var connectResult = -1
             var connected = false
             for (idx in 0 until 3) {
-                connectResult = NiimbotSdkManager.connectBluetooth(this@LabelPreviewActivity, device.address)
-                if (connectResult == 0 || NiimbotSdkManager.isConnected(this@LabelPreviewActivity)) {
+                connectResult = NiimbotSdkManager.connectBluetooth(requireContext(), device.address)
+                if (connectResult == 0 || NiimbotSdkManager.isConnected(requireContext())) {
                     connected = true
                     break
                 }
                 if (idx < 2) delay(700)
             }
-            if (!connected && connectResult != 0 && !NiimbotSdkManager.isConnected(this@LabelPreviewActivity)) {
+            if (!connected && connectResult != 0 && !NiimbotSdkManager.isConnected(requireContext())) {
                 withContext(Dispatchers.Main) {
                     dismissNiimbotPrintingDialog()
                     CreateUiFeedback.showErrorPopup(
-                        activity = this@LabelPreviewActivity,
+                        activity = requireActivity(),
                         title = "No se pudo conectar",
                         details = "No se pudo conectar con la impresora",
                         animationRes = R.raw.print_error
@@ -732,7 +750,7 @@ class LabelPreviewActivity : AppCompatActivity() {
             if (raw == null) {
                 withContext(Dispatchers.Main) {
                     dismissNiimbotPrintingDialog()
-                    UiNotifier.show(this@LabelPreviewActivity, "No se pudo preparar la etiqueta")
+                    UiNotifier.show(requireActivity(), "No se pudo preparar la etiqueta")
                 }
                 return@launch
             }
@@ -744,7 +762,7 @@ class LabelPreviewActivity : AppCompatActivity() {
                 setNiimbotPrintingLabel("Imprimiendo etiqueta")
             }
             NiimbotSdkManager.printBitmap(
-                context = this@LabelPreviewActivity,
+                context = requireContext(),
                 bitmap = prepared,
                 onProgress = { msg ->
                     setNiimbotPrintingLabel(msg)
@@ -752,7 +770,7 @@ class LabelPreviewActivity : AppCompatActivity() {
                 onSuccess = {
                     dismissNiimbotPrintingDialog()
                     CreateUiFeedback.showStatusPopup(
-                        activity = this@LabelPreviewActivity,
+                        activity = requireActivity(),
                         title = "Etiqueta impresa",
                         details = "Etiqueta impresa correctamente",
                         animationRes = R.raw.correct_create
@@ -760,7 +778,7 @@ class LabelPreviewActivity : AppCompatActivity() {
                 },
                 onError = { msg ->
                     dismissNiimbotPrintingDialog()
-                    UiNotifier.show(this@LabelPreviewActivity, msg)
+                    UiNotifier.show(requireActivity(), msg)
                 }
             )
         }
@@ -791,7 +809,7 @@ class LabelPreviewActivity : AppCompatActivity() {
             animationRes
         )
         niimbotPrintDialog?.dismiss()
-        niimbotPrintDialog = AlertDialog.Builder(this)
+        niimbotPrintDialog = AlertDialog.Builder(requireContext())
             .setView(view)
             .setCancelable(false)
             .create()
@@ -866,15 +884,15 @@ class LabelPreviewActivity : AppCompatActivity() {
                     put(android.provider.MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/IoTrack/labels")
                     put(android.provider.MediaStore.Images.Media.IS_PENDING, 1)
                 }
-                val resolver = contentResolver
+                val resolver = requireContext().contentResolver
                 val uri = resolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
                 if (uri == null) {
-                    UiNotifier.show(this, "No se pudo crear el archivo en la galerÃ­a")
+                    UiNotifier.show(requireActivity(), "No se pudo crear el archivo en la galería")
                     return false
                 }
                 val outStream = resolver.openOutputStream(uri)
                 if (outStream == null) {
-                    UiNotifier.show(this, "No se pudo abrir el archivo en la galerÃ­a")
+                    UiNotifier.show(requireActivity(), "No se pudo abrir el archivo en la galería")
                     return false
                 }
                 outStream.use { out ->
@@ -894,7 +912,7 @@ class LabelPreviewActivity : AppCompatActivity() {
                 true
             }
         } catch (e: Exception) {
-            UiNotifier.show(this, "Error guardando etiqueta: ${e.message}")
+            UiNotifier.show(requireActivity(), "Error guardando etiqueta: ${e.message}")
             false
         }
     }
@@ -929,7 +947,7 @@ class LabelPreviewActivity : AppCompatActivity() {
             return
         }
 
-        val prefs = getSharedPreferences("ui_prefs", MODE_PRIVATE)
+        val prefs = requireContext().getSharedPreferences("ui_prefs", Context.MODE_PRIVATE)
         val showRestricted = prefs.getBoolean("show_restricted_cards", false)
         if (!showRestricted) {
             binding.btnRegenerate.visibility = android.view.View.GONE
@@ -962,7 +980,7 @@ class LabelPreviewActivity : AppCompatActivity() {
             return
         }
 
-        val prefs = getSharedPreferences("ui_prefs", MODE_PRIVATE)
+        val prefs = requireContext().getSharedPreferences("ui_prefs", Context.MODE_PRIVATE)
         val showRestricted = prefs.getBoolean("show_restricted_cards", false)
         if (!showRestricted) {
             binding.btnPrint.visibility = android.view.View.GONE
@@ -994,7 +1012,7 @@ class LabelPreviewActivity : AppCompatActivity() {
                 startDirectNiimbotPrintFlow()
             } else {
                 CreateUiFeedback.showErrorPopup(
-                    activity = this,
+                    activity = requireActivity(),
                     title = "Permisos Bluetooth requeridos",
                     details = "Permisos Bluetooth requeridos para imprimir",
                     animationRes = R.raw.error
@@ -1003,8 +1021,8 @@ class LabelPreviewActivity : AppCompatActivity() {
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
+    override fun onDestroyView() {
+        super.onDestroyView()
         stopBluetoothDiscovery()
         saveLabelLoadingHandle?.dismiss()
         saveLabelLoadingHandle = null
@@ -1018,6 +1036,7 @@ class LabelPreviewActivity : AppCompatActivity() {
             binding.webLabel.removeAllViews()
             binding.webLabel.destroy()
         }
+        _binding = null
     }
 
 
@@ -1029,7 +1048,7 @@ class LabelPreviewActivity : AppCompatActivity() {
                     put(android.provider.MediaStore.Downloads.MIME_TYPE, mime)
                     put(android.provider.MediaStore.Downloads.IS_PENDING, 1)
                 }
-                val resolver = contentResolver
+                val resolver = requireContext().contentResolver
                 val uri = resolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
                     ?: return false
                 resolver.openOutputStream(uri)?.use { it.write(bytes) }
@@ -1038,8 +1057,8 @@ class LabelPreviewActivity : AppCompatActivity() {
                 resolver.update(uri, values, null, null)
                 true
             } else {
-                val dir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
-                    ?: File(cacheDir, "downloads")
+                val dir = requireContext().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+                    ?: File(requireContext().cacheDir, "downloads")
                 if (!dir.exists()) dir.mkdirs()
                 val file = File(dir, filename)
                 FileOutputStream(file).use { it.write(bytes) }
@@ -1071,3 +1090,10 @@ private object WebViewPdfExporter {
         }
     }
 }
+
+
+
+
+
+
+

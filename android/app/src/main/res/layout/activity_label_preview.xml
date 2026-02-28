@@ -3,25 +3,13 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_home_gradient">
-
-    <View
-        android:id="@+id/viewNetworkBar"
-        android:layout_width="match_parent"
-        android:layout_height="4dp"
-        android:layout_gravity="top"
-        android:background="@color/online_bar" />
+    android:background="@android:color/transparent">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="20dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:visibility="gone" />
+        android:padding="0dp">
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
@@ -41,36 +29,37 @@
                 android:orientation="vertical"
                 android:padding="16dp">
 
-                <LinearLayout
+                <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <ImageButton
-                        android:id="@+id/btnBack"
-                        android:layout_width="36dp"
-                        android:layout_height="36dp"
-                        android:background="@drawable/bg_liquid_button_pressable"
-                        android:contentDescription="@null"
-                        android:padding="6dp"
-                        android:src="@drawable/back" />
+                    android:layout_marginBottom="4dp">
 
                     <TextView
                         android:id="@+id/tvTitle"
-                        android:layout_width="0dp"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
                         android:gravity="center"
+                        android:paddingStart="40dp"
+                        android:paddingEnd="40dp"
                         android:text="Etiqueta"
                         android:textColor="@color/liquid_popup_title"
                         android:textSize="20sp"
                         android:textStyle="bold" />
 
-                    <View
-                        android:layout_width="36dp"
-                        android:layout_height="36dp" />
-                </LinearLayout>
+                    <ImageButton
+                        android:id="@+id/btnBack"
+                        android:layout_width="34dp"
+                        android:layout_height="34dp"
+                        android:layout_gravity="end|center_vertical"
+                        android:background="@drawable/bg_liquid_button"
+                        android:backgroundTint="@null"
+                        android:contentDescription="Cerrar"
+                        android:padding="7dp"
+                        android:scaleType="centerInside"
+                        android:src="@drawable/ic_close_red"
+                        android:tint="@null"
+                        app:backgroundTint="@null" />
+                </FrameLayout>
 
                 <TextView
                     android:id="@+id/tvMeta"
