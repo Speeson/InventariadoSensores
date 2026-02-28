@@ -38,6 +38,7 @@ import com.example.inventoryapp.ui.common.SendSnack
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.common.CreateUiFeedback
+import com.example.inventoryapp.ui.common.TopCenterActionHost
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -45,7 +46,7 @@ import java.io.IOException
 import java.text.NumberFormat
 import java.util.Locale
 
-class MovementsMenuActivity : AppCompatActivity() {
+class MovementsMenuActivity : AppCompatActivity(), TopCenterActionHost {
     companion object {
         @Volatile
         private var cacheNoticeShownInOfflineSession = false
@@ -165,6 +166,18 @@ class MovementsMenuActivity : AppCompatActivity() {
         super.onResume()
         currentOffset = 0
         loadMovements(withSnack = false)
+    }
+
+    override fun onTopCreateAction() {
+        if (binding.layoutCreateMovementContent.visibility != View.VISIBLE) {
+            toggleCreateForm()
+        }
+    }
+
+    override fun onTopFilterAction() {
+        if (binding.layoutSearchMovementContent.visibility != View.VISIBLE) {
+            toggleSearchForm()
+        }
     }
 
     private fun createMovement() {

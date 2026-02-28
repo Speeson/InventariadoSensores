@@ -68,6 +68,15 @@ class EventAdapter(
             holder.tvDate.setTextColor(holder.dateColor)
         }
         holder.ivPending.setOnClickListener(null)
+
+        val params = holder.itemView.layoutParams as? RecyclerView.LayoutParams
+        if (params != null) {
+            val bottom = if (position == items.lastIndex) 0 else holder.defaultBottomMargin
+            if (params.bottomMargin != bottom) {
+                params.bottomMargin = bottom
+                holder.itemView.layoutParams = params
+            }
+        }
     }
 
     override fun getItemCount(): Int = items.size
@@ -86,5 +95,6 @@ class EventAdapter(
         val idValueColor: Int = tvIdValue.currentTextColor
         val metaColor: Int = tvMeta.currentTextColor
         val dateColor: Int = tvDate.currentTextColor
+        val defaultBottomMargin: Int = (10f * itemView.resources.displayMetrics.density).toInt()
     }
 }

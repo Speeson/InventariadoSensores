@@ -31,11 +31,12 @@ import com.example.inventoryapp.ui.common.GradientIconUtil
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.common.CreateUiFeedback
+import com.example.inventoryapp.ui.common.TopCenterActionHost
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.io.IOException
-class CategoriesActivity : AppCompatActivity() {
+class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
     companion object {
         private const val OFFLINE_DELETE_MARKER = "offline_delete"
         @Volatile
@@ -114,6 +115,18 @@ class CategoriesActivity : AppCompatActivity() {
         super.onResume()
         currentOffset = 0
         loadCategories()
+    }
+
+    override fun onTopCreateAction() {
+        if (binding.layoutCreateCategoryContent.visibility != View.VISIBLE) {
+            toggleCreateForm()
+        }
+    }
+
+    override fun onTopFilterAction() {
+        if (binding.layoutSearchCategoryContent.visibility != View.VISIBLE) {
+            toggleSearchForm()
+        }
     }
     private fun applySearch() {
         val raw = binding.etSearchQuery.text.toString().trim()

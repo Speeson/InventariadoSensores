@@ -18,6 +18,7 @@ import com.example.inventoryapp.ui.common.SendSnack
 import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.common.CreateUiFeedback
+import com.example.inventoryapp.ui.common.TopCenterActionHost
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import com.example.inventoryapp.ui.common.GradientIconUtil
@@ -29,7 +30,7 @@ import androidx.transition.TransitionManager
 import android.view.inputmethod.InputMethodManager
 import java.io.IOException
 
-class RotationActivity : AppCompatActivity() {
+class RotationActivity : AppCompatActivity(), TopCenterActionHost {
     companion object {
         @Volatile
         private var cacheNoticeShownInOfflineSession = false
@@ -113,6 +114,14 @@ class RotationActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         ensureRotationAccessThenLoad()
+    }
+
+    override fun onTopCreateAction() = Unit
+
+    override fun onTopFilterAction() {
+        if (binding.layoutSearchRotationContent.visibility != View.VISIBLE) {
+            toggleSearchForm()
+        }
     }
 
     private fun ensureRotationAccessThenLoad() {

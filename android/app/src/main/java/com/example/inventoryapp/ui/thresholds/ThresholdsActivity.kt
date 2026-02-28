@@ -22,6 +22,7 @@ import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.common.CreateUiFeedback
+import com.example.inventoryapp.ui.common.TopCenterActionHost
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -37,7 +38,7 @@ import androidx.transition.TransitionManager
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 
-class ThresholdsActivity : AppCompatActivity() {
+class ThresholdsActivity : AppCompatActivity(), TopCenterActionHost {
     companion object {
         @Volatile
         private var cacheNoticeShownInOfflineSession = false
@@ -149,6 +150,18 @@ class ThresholdsActivity : AppCompatActivity() {
         super.onResume()
         currentOffset = 0
         loadThresholds()
+    }
+
+    override fun onTopCreateAction() {
+        if (binding.layoutCreateThresholdContent.visibility != View.VISIBLE) {
+            toggleCreateForm()
+        }
+    }
+
+    override fun onTopFilterAction() {
+        if (binding.layoutSearchThresholdContent.visibility != View.VISIBLE) {
+            toggleSearchForm()
+        }
     }
 
     private fun applySearchFilters() {
@@ -1027,4 +1040,3 @@ class ThresholdsActivity : AppCompatActivity() {
     }
 
 }
-

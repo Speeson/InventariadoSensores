@@ -32,6 +32,16 @@ import com.example.inventoryapp.data.remote.model.LocationResponseDto
 import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.audit.AuditActivity
 import com.example.inventoryapp.ui.auth.LoginActivity
+import com.example.inventoryapp.ui.categories.CategoriesActivity
+import com.example.inventoryapp.ui.events.EventsActivity
+import com.example.inventoryapp.ui.imports.ImportsActivity
+import com.example.inventoryapp.ui.movements.MovementsMenuActivity
+import com.example.inventoryapp.ui.products.ProductListActivity
+import com.example.inventoryapp.ui.reports.ReportsActivity
+import com.example.inventoryapp.ui.rotation.RotationActivity
+import com.example.inventoryapp.ui.scan.ScanActivity
+import com.example.inventoryapp.ui.stock.StockActivity
+import com.example.inventoryapp.ui.thresholds.ThresholdsActivity
 import com.google.android.material.bottomappbar.BottomAppBar
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.navigation.NavigationView
@@ -43,12 +53,20 @@ object LiquidTopNav {
     private const val PREFS_UI = "ui_prefs"
     private const val PREF_REOPEN_DRAWER = "reopen_global_drawer"
     private const val TAG = "LiquidTopNav"
-    private const val MENU_CONTENT_GAP_DP = 6
+    private const val MENU_CONTENT_GAP_DP = 2
     private const val TOP_HOST_HEIGHT_DP = 96
     private const val LIQUID_CRYSTAL_BLUE = "#7FD8FF"
     private const val LIQUID_CRYSTAL_BLUE_ACTIVE = "#2CB8FF"
     private const val LIQUID_STATUS_OFFLINE = "#FF2A3D"
     private const val LIQUID_STATUS_ONLINE = "#36C96A"
+    private const val CREATE_LABEL = "crear"
+    private const val FILTER_LABEL = "filtrar o buscar"
+
+    private data class TopActionsCapability(
+        val createEnabled: Boolean,
+        val filterEnabled: Boolean,
+        val screenLabel: String,
+    )
 
     private data class DrawerState(
         val drawerLayout: DrawerLayout,
@@ -76,7 +94,7 @@ object LiquidTopNav {
             ensureTopBarAppearancePersistence(host)
 
             bindActions(activity, host, dismissOverlay, drawerState.drawerLayout)
-            applyIconStyle(host)
+            applyIconStyle(host, activity)
             setTopActionSelection(host, currentTopActionFor(activity))
             updateStatusTint(host)
             updateLocationSelectorHint(activity, host.findViewById(R.id.btnTopMidLeft))
@@ -308,9 +326,10 @@ object LiquidTopNav {
         val btnTopRight = host.findViewById<ImageButton>(R.id.btnTopMidRight)
         val btnAlerts = host.findViewById<ImageButton>(R.id.btnAlertsQuick)
         val btnCenter = host.findViewById<ImageView>(R.id.btnTopCenterMain)
-        val btnProfile = host.findViewById<ImageButton>(R.id.btnTopCenterActionOne)
+        val btnCreate = host.findViewById<ImageButton>(R.id.btnTopCenterActionOne)
         val btnCenterClose = host.findViewById<ImageButton>(R.id.btnTopCenterClose)
-        val btnLogout = host.findViewById<ImageButton>(R.id.btnTopCenterActionTwo)
+        val btnFilter = host.findViewById<ImageButton>(R.id.btnTopCenterActionTwo)
+        val capability = topActionsCapability(activity)
 
         TopNavShared.configureLeftButton(
             button = btnBack,
@@ -359,16 +378,24 @@ object LiquidTopNav {
                 expandCenterMenu(activity, host, dismissOverlay)
             }
         }
-        btnProfile.setOnClickListener {
+        btnCreate.setOnClickListener {
             collapseCenterMenu(host, dismissOverlay, animate = true)
-            showProfile(activity)
+            if (!capability.createEnabled) {
+                showTopActionDisabledDialog(activity, CREATE_LABEL, capability.screenLabel)
+            } else {
+                dispatchTopCreateAction(activity)
+            }
         }
         btnCenterClose.setOnClickListener {
             collapseCenterMenu(host, dismissOverlay, animate = true)
         }
-        btnLogout.setOnClickListener {
+        btnFilter.setOnClickListener {
             collapseCenterMenu(host, dismissOverlay, animate = true)
-            confirmLogout(activity)
+            if (!capability.filterEnabled) {
+                showTopActionDisabledDialog(activity, FILTER_LABEL, capability.screenLabel)
+            } else {
+                dispatchTopFilterAction(activity)
+            }
         }
 
         dismissOverlay.setOnClickListener {
@@ -556,23 +583,79 @@ object LiquidTopNav {
         }
     }
 
-    private fun applyIconStyle(host: View) {
+    private fun applyIconStyle(host: View, activity: AppCompatActivity) {
+        val capability = topActionsCapability(activity)
         setLiquidIcon(host.findViewById(R.id.btnMenu), R.drawable.glass_back)
         setLiquidIcon(host.findViewById(R.id.btnTopMidLeft), R.drawable.glass_location)
         setLiquidIcon(host.findViewById(R.id.btnTopMidRight), R.drawable.glass_audit)
         setLiquidIcon(host.findViewById(R.id.btnAlertsQuick), R.drawable.glass_noti)
         setLiquidIcon(host.findViewById<ImageView>(R.id.btnTopCenterMain), R.drawable.glass_add)
-        setLiquidIcon(host.findViewById(R.id.btnTopCenterActionOne), R.drawable.glass_user)
+        setLiquidIcon(host.findViewById(R.id.btnTopCenterActionOne), R.drawable.glass_add)
         host.findViewById<ImageButton>(R.id.btnTopCenterClose)?.let { setDialogCloseButtonStyle(it) }
-        setLiquidIcon(host.findViewById(R.id.btnTopCenterActionTwo), R.drawable.glass_logout)
+        setLiquidIcon(host.findViewById(R.id.btnTopCenterActionTwo), R.drawable.glass_filter)
         host.findViewById<ImageButton>(R.id.btnTopCenterActionOne)?.apply {
-            imageAlpha = 255
-            setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE_ACTIVE), PorterDuff.Mode.SRC_IN)
+            applyTopActionAvailabilityStyle(this, capability.createEnabled)
         }
         host.findViewById<ImageButton>(R.id.btnTopCenterActionTwo)?.apply {
-            imageAlpha = 255
-            setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE_ACTIVE), PorterDuff.Mode.SRC_IN)
+            applyTopActionAvailabilityStyle(this, capability.filterEnabled)
         }
+    }
+
+    private fun topActionsCapability(activity: AppCompatActivity): TopActionsCapability {
+        return when (activity) {
+            is ScanActivity -> TopActionsCapability(createEnabled = false, filterEnabled = false, screenLabel = "Escanear")
+            is EventsActivity -> TopActionsCapability(createEnabled = true, filterEnabled = true, screenLabel = "Eventos")
+            is ProductListActivity -> TopActionsCapability(createEnabled = true, filterEnabled = true, screenLabel = "Productos")
+            is StockActivity -> TopActionsCapability(createEnabled = true, filterEnabled = true, screenLabel = "Stock")
+            is MovementsMenuActivity -> TopActionsCapability(createEnabled = true, filterEnabled = true, screenLabel = "Movimientos")
+            is CategoriesActivity -> TopActionsCapability(createEnabled = true, filterEnabled = true, screenLabel = "Categorias")
+            is RotationActivity -> TopActionsCapability(createEnabled = false, filterEnabled = true, screenLabel = "Traslados")
+            is ReportsActivity -> TopActionsCapability(createEnabled = false, filterEnabled = false, screenLabel = "Reportes")
+            is ThresholdsActivity -> TopActionsCapability(createEnabled = true, filterEnabled = true, screenLabel = "Umbrales")
+            is ImportsActivity -> TopActionsCapability(createEnabled = false, filterEnabled = false, screenLabel = "Importar CSV")
+            else -> TopActionsCapability(createEnabled = false, filterEnabled = false, screenLabel = activity.javaClass.simpleName)
+        }
+    }
+
+    private fun applyTopActionAvailabilityStyle(button: ImageButton, enabled: Boolean) {
+        button.isEnabled = true
+        button.isClickable = true
+        if (enabled) {
+            button.imageAlpha = 255
+            button.setColorFilter(Color.parseColor(LIQUID_CRYSTAL_BLUE_ACTIVE), PorterDuff.Mode.SRC_IN)
+        } else {
+            button.imageAlpha = 120
+            button.setColorFilter(Color.parseColor("#8AA0B6"), PorterDuff.Mode.SRC_IN)
+        }
+    }
+
+    private fun dispatchTopCreateAction(activity: AppCompatActivity) {
+        if (activity is TopCenterActionHost) {
+            activity.onTopCreateAction()
+        } else {
+            showTopActionDisabledDialog(activity, CREATE_LABEL, activity.javaClass.simpleName)
+        }
+    }
+
+    private fun dispatchTopFilterAction(activity: AppCompatActivity) {
+        if (activity is TopCenterActionHost) {
+            activity.onTopFilterAction()
+        } else {
+            showTopActionDisabledDialog(activity, FILTER_LABEL, activity.javaClass.simpleName)
+        }
+    }
+
+    fun showTopActionDisabledDialog(
+        activity: AppCompatActivity,
+        actionLabel: String,
+        screenLabel: String
+    ) {
+        CreateUiFeedback.showErrorPopup(
+            activity = activity,
+            title = "Funcion no disponible",
+            details = "No se puede $actionLabel en $screenLabel.",
+            animationRes = R.raw.error
+        )
     }
 
     private fun updateStatusTint(host: View) {

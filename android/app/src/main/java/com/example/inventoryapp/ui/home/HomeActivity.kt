@@ -287,21 +287,21 @@ class HomeActivity : AppCompatActivity() {
             it.setOnClickListener { toggleTopCenterMenu() }
         }
         findViewById<ImageButton>(R.id.btnTopCenterActionOne)?.let { profileButton ->
-            setLiquidImage(profileButton, R.drawable.glass_user)
-            profileButton.imageAlpha = 255
-            profileButton.setColorFilter(liquidCrystalBlueActive, PorterDuff.Mode.SRC_IN)
+            setLiquidImage(profileButton, R.drawable.glass_add)
+            profileButton.imageAlpha = 120
+            profileButton.setColorFilter(Color.parseColor("#8AA0B6"), PorterDuff.Mode.SRC_IN)
             profileButton.setOnClickListener {
                 toggleTopCenterMenu(forceClose = true)
-                LiquidTopNav.showProfileDialog(this)
+                LiquidTopNav.showTopActionDisabledDialog(this, "crear", "Home")
             }
         }
         findViewById<ImageButton>(R.id.btnTopCenterActionTwo)?.let { logoutButton ->
-            setLiquidImage(logoutButton, R.drawable.glass_logout)
-            logoutButton.imageAlpha = 255
-            logoutButton.setColorFilter(liquidCrystalBlueActive, PorterDuff.Mode.SRC_IN)
+            setLiquidImage(logoutButton, R.drawable.glass_filter)
+            logoutButton.imageAlpha = 120
+            logoutButton.setColorFilter(Color.parseColor("#8AA0B6"), PorterDuff.Mode.SRC_IN)
             logoutButton.setOnClickListener {
                 toggleTopCenterMenu(forceClose = true)
-                LiquidTopNav.showLogoutDialog(this) { logout() }
+                LiquidTopNav.showTopActionDisabledDialog(this, "filtrar o buscar", "Home")
             }
         }
         findViewById<ImageButton>(R.id.btnTopCenterClose)?.let { closeButton ->

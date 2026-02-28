@@ -7,9 +7,13 @@ import android.content.res.Configuration
 import android.os.Bundle
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.ImageButton
 import android.graphics.drawable.GradientDrawable
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import androidx.core.content.ContextCompat
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.inventoryapp.data.local.OfflineQueue
@@ -30,6 +34,7 @@ import com.example.inventoryapp.ui.common.SendSnack
 import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.common.CreateUiFeedback
+import com.example.inventoryapp.ui.common.TopCenterActionHost
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.delay
@@ -38,12 +43,18 @@ import java.io.IOException
 import java.util.UUID
 import com.example.inventoryapp.ui.common.GradientIconUtil
 import android.view.View
+import android.view.LayoutInflater
+import android.view.ViewGroup
 import androidx.transition.AutoTransition
 import androidx.transition.TransitionManager
 import android.view.inputmethod.InputMethodManager
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
+import android.widget.LinearLayout
 
 
-class EventsActivity : AppCompatActivity() {
+class EventsActivity : AppCompatActivity(), TopCenterActionHost {
     companion object {
         @Volatile
         private var cacheNoticeShownInOfflineSession = false
@@ -70,6 +81,8 @@ class EventsActivity : AppCompatActivity() {
     private var bulkProductNamesCache: Map<Int, String>? = null
     private var bulkProductNamesCacheAtMs: Long = 0L
     private val bulkProductNamesCacheTtlMs = 30_000L
+    private var createDialog: AlertDialog? = null
+    private var searchDialog: AlertDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -103,8 +116,8 @@ snack = SendSnack(binding.root)
             invalidateBulkProductNamesCache()
             loadEvents(withSnack = true)
         }
-        binding.layoutCreateEventHeader.setOnClickListener { toggleCreateEventForm() }
-        binding.layoutSearchEventHeader.setOnClickListener { toggleSearchForm() }
+        binding.layoutCreateEventHeader.setOnClickListener { openCreateEventDialog() }
+        binding.layoutSearchEventHeader.setOnClickListener { openSearchEventDialog() }
         binding.btnSearchEvents.setOnClickListener {
             hideKeyboard()
             applySearchFilters()
@@ -173,6 +186,14 @@ snack = SendSnack(binding.root)
         return true
     }
 
+    override fun onTopCreateAction() {
+        openCreateEventDialog()
+    }
+
+    override fun onTopFilterAction() {
+        openSearchEventDialog()
+    }
+
     private fun createEvent() {
         if (isUserRole()) {
             UiNotifier.showBlocking(
@@ -203,7 +224,7 @@ snack = SendSnack(binding.root)
         }
 
         if (productId == null) { binding.etProductId.error = "Product ID requerido"; return }
-        if (delta == null || delta <= 0) { binding.etDelta.error = "Delta debe ser > 0"; return }
+        if (delta == null || delta <= 0) { binding.etDelta.error = "Cantidad debe ser > 0"; return }
         if (source.isBlank()) { binding.etSource.error = "Fuente requerida"; return }
 
         val dto = EventCreateDto(
@@ -433,6 +454,7 @@ snack = SendSnack(binding.root)
         filteredOffset = 0
         items = allItems
         adapter.submit(allItems)
+        updateEventsListAdaptiveHeight()
         updatePageInfo(items.size, items.size)
     }
 
@@ -855,6 +877,184 @@ snack = SendSnack(binding.root)
         }
     }
 
+    private fun openCreateEventFormFromTop() {
+        openCreateEventDialog()
+    }
+
+    private fun openSearchEventFormFromTop() {
+        openSearchEventDialog()
+    }
+
+    private fun openCreateEventDialog() {
+        if (isUserRole()) {
+            UiNotifier.showBlocking(
+                this,
+                "Permisos insuficientes",
+                "No tienes permisos para crear eventos.",
+                com.example.inventoryapp.R.drawable.ic_lock
+            )
+            return
+        }
+        if (createDialog?.isShowing == true) return
+
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_events_create_master, null)
+        val btnClose = view.findViewById<ImageButton>(R.id.btnCreateDialogClose)
+        val btnCreate = view.findViewById<Button>(R.id.btnDialogCreateSubmit)
+        val etType = view.findViewById<MaterialAutoCompleteTextView>(R.id.etDialogCreateType)
+        val etProductId = view.findViewById<TextInputEditText>(R.id.etDialogCreateProductId)
+        val etDelta = view.findViewById<TextInputEditText>(R.id.etDialogCreateDelta)
+        val etLocation = view.findViewById<MaterialAutoCompleteTextView>(R.id.etDialogCreateLocation)
+        val etSource = view.findViewById<MaterialAutoCompleteTextView>(R.id.etDialogCreateSource)
+
+        val createTypeOptions = listOf("", "SENSOR_IN", "SENSOR_OUT")
+        val createSourceOptions = listOf("", "SCAN", "MANUAL")
+        val createTypeAdapter = ArrayAdapter(this, R.layout.item_liquid_dropdown, createTypeOptions)
+        val createSourceAdapter = ArrayAdapter(this, R.layout.item_liquid_dropdown, createSourceOptions)
+        etType.setAdapter(createTypeAdapter)
+        etSource.setAdapter(createSourceAdapter)
+        etType.setOnClickListener { etType.showDropDown() }
+        etType.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) etType.showDropDown() }
+        etSource.setOnClickListener { etSource.showDropDown() }
+        etSource.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) etSource.showDropDown() }
+
+        val locationAdapter = binding.etLocation.adapter as? ArrayAdapter<String>
+        if (locationAdapter != null) {
+            etLocation.setAdapter(locationAdapter)
+            etLocation.setOnClickListener { etLocation.showDropDown() }
+            etLocation.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) etLocation.showDropDown() }
+        }
+
+        applyDialogDropdownStyle(
+            listOf(
+                view.findViewById<TextInputLayout>(R.id.tilDialogCreateType),
+                view.findViewById<TextInputLayout>(R.id.tilDialogCreateLocation),
+                view.findViewById<TextInputLayout>(R.id.tilDialogCreateSource)
+            ),
+            listOf(etType, etLocation, etSource)
+        )
+
+        etType.setText(binding.etEventType.text?.toString().orEmpty(), false)
+        etProductId.setText(binding.etProductId.text?.toString().orEmpty())
+        etDelta.setText(binding.etDelta.text?.toString().orEmpty())
+        etLocation.setText(binding.etLocation.text?.toString().orEmpty(), false)
+        etSource.setText(binding.etSource.text?.toString().orEmpty(), false)
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(view)
+            .setCancelable(true)
+            .create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        btnClose.setOnClickListener { dialog.dismiss() }
+        btnCreate.setOnClickListener {
+            binding.etEventType.setText(etType.text?.toString().orEmpty(), false)
+            binding.etProductId.setText(etProductId.text?.toString().orEmpty())
+            binding.etDelta.setText(etDelta.text?.toString().orEmpty())
+            binding.etLocation.setText(etLocation.text?.toString().orEmpty(), false)
+            binding.etSource.setText(etSource.text?.toString().orEmpty(), false)
+            dialog.dismiss()
+            createEvent()
+        }
+
+        dialog.setOnDismissListener {
+            createDialog = null
+            hideKeyboard()
+        }
+
+        createDialog = dialog
+        dialog.show()
+    }
+
+    private fun openSearchEventDialog() {
+        if (searchDialog?.isShowing == true) return
+
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_events_search_master, null)
+        val btnClose = view.findViewById<ImageButton>(R.id.btnSearchDialogClose)
+        val btnSearch = view.findViewById<Button>(R.id.btnDialogSearchApply)
+        val btnClear = view.findViewById<Button>(R.id.btnDialogSearchClear)
+        val etType = view.findViewById<MaterialAutoCompleteTextView>(R.id.etDialogSearchType)
+        val etProduct = view.findViewById<TextInputEditText>(R.id.etDialogSearchProduct)
+        val etSource = view.findViewById<MaterialAutoCompleteTextView>(R.id.etDialogSearchSource)
+
+        val searchTypeOptions = listOf("", "SENSOR_IN", "SENSOR_OUT")
+        val searchSourceOptions = listOf("", "SCAN", "MANUAL")
+        val searchTypeAdapter = ArrayAdapter(this, R.layout.item_liquid_dropdown, searchTypeOptions)
+        val searchSourceAdapter = ArrayAdapter(this, R.layout.item_liquid_dropdown, searchSourceOptions)
+        etType.setAdapter(searchTypeAdapter)
+        etSource.setAdapter(searchSourceAdapter)
+        etType.setOnClickListener { etType.showDropDown() }
+        etType.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) etType.showDropDown() }
+        etSource.setOnClickListener { etSource.showDropDown() }
+        etSource.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) etSource.showDropDown() }
+
+        applyDialogDropdownStyle(
+            listOf(
+                view.findViewById<TextInputLayout>(R.id.tilDialogSearchType),
+                view.findViewById<TextInputLayout>(R.id.tilDialogSearchSource)
+            ),
+            listOf(etType, etSource)
+        )
+
+        etType.setText(binding.etSearchType.text?.toString().orEmpty(), false)
+        etProduct.setText(binding.etSearchProduct.text?.toString().orEmpty())
+        etSource.setText(binding.etSearchSource.text?.toString().orEmpty(), false)
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(view)
+            .setCancelable(true)
+            .create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        btnClose.setOnClickListener { dialog.dismiss() }
+        btnSearch.setOnClickListener {
+            binding.etSearchType.setText(etType.text?.toString().orEmpty(), false)
+            binding.etSearchProduct.setText(etProduct.text?.toString().orEmpty())
+            binding.etSearchSource.setText(etSource.text?.toString().orEmpty(), false)
+            hideKeyboard()
+            dialog.dismiss()
+            applySearchFilters()
+        }
+        btnClear.setOnClickListener {
+            etType.setText("", false)
+            etProduct.setText("")
+            etSource.setText("", false)
+            binding.etSearchType.setText("", false)
+            binding.etSearchProduct.setText("")
+            binding.etSearchSource.setText("", false)
+            hideKeyboard()
+            clearSearchFilters()
+        }
+
+        dialog.setOnDismissListener {
+            searchDialog = null
+            hideKeyboard()
+        }
+
+        searchDialog = dialog
+        dialog.show()
+    }
+
+    private fun applyDialogDropdownStyle(
+        textInputLayouts: List<TextInputLayout>,
+        dropdowns: List<MaterialAutoCompleteTextView>
+    ) {
+        val blue = ContextCompat.getColor(this, R.color.icon_grad_mid2)
+        val popupDrawable = ContextCompat.getDrawable(this, R.drawable.bg_liquid_dropdown_popup)
+        val endIconId = com.google.android.material.R.id.text_input_end_icon
+        textInputLayouts.forEach { til ->
+            til.setEndIconTintList(null)
+            til.findViewById<android.widget.ImageView>(endIconId)?.let { icon ->
+                icon.setImageResource(R.drawable.triangle_down_lg)
+                icon.setColorFilter(blue)
+            }
+        }
+        dropdowns.forEach { auto ->
+            if (popupDrawable != null) {
+                auto.setDropDownBackgroundDrawable(popupDrawable)
+            }
+        }
+    }
+
     private fun applyHeaderIconTint() {
         val blue = ContextCompat.getColor(this, R.color.icon_grad_mid2)
         binding.ivCreateEventAdd.setColorFilter(blue)
@@ -1050,6 +1250,7 @@ snack = SendSnack(binding.root)
         } else {
             items = ordered
             adapter.submit(ordered)
+            updateEventsListAdaptiveHeight()
         }
     }
 
@@ -1057,6 +1258,8 @@ snack = SendSnack(binding.root)
         if (hasActiveFilters()) {
             val shown = (filteredOffset + items.size).coerceAtMost(filteredItems.size)
             binding.tvEventsPageInfo.text = "Mostrando $shown / ${filteredItems.size}"
+            val currentPage = if (filteredItems.isEmpty()) 0 else (filteredOffset / pageSize) + 1
+            binding.tvEventsPageNumber.text = "Pagina $currentPage"
             val prevEnabled = filteredOffset > 0
             val nextEnabled = shown < filteredItems.size
             binding.btnPrevPage.isEnabled = prevEnabled
@@ -1072,6 +1275,8 @@ snack = SendSnack(binding.root)
             "Mostrando $pendingCount / $pendingCount"
         }
         binding.tvEventsPageInfo.text = label
+        val currentPage = if (totalCount <= 0) 0 else (currentOffset / pageSize) + 1
+        binding.tvEventsPageNumber.text = "Pagina $currentPage"
         val prevEnabled = currentOffset > 0
         val nextEnabled = shownOnline < totalCount
         binding.btnPrevPage.isEnabled = prevEnabled
@@ -1171,7 +1376,32 @@ snack = SendSnack(binding.root)
         val page = if (from < to) filteredItems.subList(from, to) else emptyList()
         items = page
         adapter.submit(page)
+        updateEventsListAdaptiveHeight()
         updatePageInfo(page.size, page.size)
+    }
+
+    private fun updateEventsListAdaptiveHeight() {
+        binding.scrollEvents.post {
+            val cardLp = binding.cardEventsList.layoutParams as? LinearLayout.LayoutParams ?: return@post
+            val rvLp = binding.rvEvents.layoutParams as? LinearLayout.LayoutParams ?: return@post
+            val visibleCount = items.size
+
+            if (visibleCount in 1 until pageSize) {
+                cardLp.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                cardLp.weight = 0f
+                rvLp.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                rvLp.weight = 0f
+                binding.rvEvents.isNestedScrollingEnabled = false
+            } else {
+                cardLp.height = 0
+                cardLp.weight = 1f
+                rvLp.height = 0
+                rvLp.weight = 1f
+                binding.rvEvents.isNestedScrollingEnabled = true
+            }
+            binding.cardEventsList.layoutParams = cardLp
+            binding.rvEvents.layoutParams = rvLp
+        }
     }
 
     private fun hideSearchForm() {

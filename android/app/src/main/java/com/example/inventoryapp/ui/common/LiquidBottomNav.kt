@@ -86,7 +86,7 @@ object LiquidBottomNav {
     private const val ACTION_SCAN = "scan"
     private const val CAMERA_PERMISSION_FRAGMENT_TAG = "liquid_camera_permission_fragment"
     private const val PREFS_UI = "ui_prefs"
-    private const val MENU_CONTENT_GAP_DP = 6
+    private const val MENU_CONTENT_GAP_DP = 2
     private const val PROFILE_PANEL_MARGIN_END_DP = 12
     private const val PROFILE_PANEL_MARGIN_BOTTOM_DP = 72
     private const val LIQUID_CRYSTAL_BLUE = "#7FD8FF"

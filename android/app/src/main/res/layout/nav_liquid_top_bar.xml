@@ -36,10 +36,10 @@
             android:layout_marginLeft="5dp"
             android:layout_marginRight="5dp"
             android:background="@drawable/bg_liquid_menu_button"
-            android:contentDescription="Perfil de usuario"
+            android:contentDescription="Crear"
             android:padding="8dp"
             android:scaleType="centerInside"
-            android:src="@drawable/glass_user" />
+            android:src="@drawable/glass_add" />
 
         <ImageButton
             android:id="@+id/btnTopCenterClose"
@@ -63,10 +63,10 @@
             android:layout_marginLeft="5dp"
             android:layout_marginRight="5dp"
             android:background="@drawable/bg_liquid_menu_button"
-            android:contentDescription="Cerrar sesion"
+            android:contentDescription="Filtrar o buscar"
             android:padding="8dp"
             android:scaleType="centerInside"
-            android:src="@drawable/glass_logout" />
+            android:src="@drawable/glass_filter" />
     </LinearLayout>
 
     <com.example.inventoryapp.ui.common.SafeBottomAppBar

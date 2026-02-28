@@ -29,6 +29,7 @@ import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
+import com.example.inventoryapp.ui.common.TopCenterActionHost
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -43,7 +44,7 @@ import android.view.inputmethod.InputMethodManager
 import org.json.JSONArray
 import org.json.JSONObject
 
-class StockActivity : AppCompatActivity() {
+class StockActivity : AppCompatActivity(), TopCenterActionHost {
     companion object {
         private const val OFFLINE_DELETE_MARKER = "offline_delete"
         @Volatile
@@ -162,6 +163,18 @@ class StockActivity : AppCompatActivity() {
         super.onResume()
         currentOffset = 0
         loadStocks(withSnack = false)
+    }
+
+    override fun onTopCreateAction() {
+        if (binding.layoutCreateStockContent.visibility != View.VISIBLE) {
+            toggleCreateStockForm()
+        }
+    }
+
+    override fun onTopFilterAction() {
+        if (binding.layoutSearchStockContent.visibility != View.VISIBLE) {
+            toggleSearchForm()
+        }
     }
 
     private fun loadStocks(withSnack: Boolean = false) {
@@ -1152,4 +1165,3 @@ class StockActivity : AppCompatActivity() {
         imm.hideSoftInputFromWindow(view.windowToken, 0)
     }
 }
-

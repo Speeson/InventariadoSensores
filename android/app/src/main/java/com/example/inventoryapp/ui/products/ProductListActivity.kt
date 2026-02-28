@@ -37,13 +37,14 @@ import com.example.inventoryapp.ui.common.UiNotifier
 import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.common.GradientIconUtil
 import com.example.inventoryapp.ui.common.CreateUiFeedback
+import com.example.inventoryapp.ui.common.TopCenterActionHost
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.io.IOException
 import android.graphics.drawable.GradientDrawable
 
-class ProductListActivity : AppCompatActivity() {
+class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
     companion object {
         private const val OFFLINE_DELETE_MARKER = "offline_delete"
         @Volatile
@@ -170,6 +171,18 @@ class ProductListActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
+    }
+
+    override fun onTopCreateAction() {
+        if (binding.layoutCreateProductContent.visibility != View.VISIBLE) {
+            toggleCreateProductForm()
+        }
+    }
+
+    override fun onTopFilterAction() {
+        if (binding.layoutSearchProductContent.visibility != View.VISIBLE) {
+            toggleSearchForm()
+        }
     }
 
     private fun resetAndLoad() {
