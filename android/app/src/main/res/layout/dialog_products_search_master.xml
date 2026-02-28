@@ -13,21 +13,17 @@
         android:layout_marginBottom="8dp">
 
         <TextView
-            android:id="@+id/tvEditProductTitle"
+            android:id="@+id/tvSearchProductDialogTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:paddingStart="40dp"
-            android:paddingEnd="40dp"
-            android:maxLines="1"
-            android:ellipsize="end"
-            android:text="Editar producto"
+            android:text="Busqueda de Productos"
             android:textColor="@color/liquid_popup_title"
             android:textSize="20sp"
             android:textStyle="bold" />
 
         <ImageButton
-            android:id="@+id/btnEditProductClose"
+            android:id="@+id/btnSearchProductDialogClose"
             android:layout_width="34dp"
             android:layout_height="34dp"
             android:layout_gravity="end|center_vertical"
@@ -37,7 +33,6 @@
             android:padding="7dp"
             android:scaleType="centerInside"
             android:src="@drawable/ic_close_red"
-            android:tint="@null"
             app:backgroundTint="@null" />
     </FrameLayout>
 
@@ -48,28 +43,11 @@
         app:boxBackgroundMode="none">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etEditProductSku"
+            android:id="@+id/etDialogSearchProduct"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@drawable/bg_liquid_input"
-            android:enabled="false"
-            android:hint="SKU"
-            android:textColor="@color/liquid_popup_text"
-            android:textColorHint="@color/liquid_popup_hint" />
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <com.google.android.material.textfield.TextInputLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="10dp"
-        app:boxBackgroundMode="none">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etEditProductName"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/bg_liquid_input"
-            android:hint="Nombre"
+            android:hint="Producto (ID o nombre)"
             android:inputType="text"
             android:textColor="@color/liquid_popup_text"
             android:textColorHint="@color/liquid_popup_hint" />
@@ -82,11 +60,28 @@
         app:boxBackgroundMode="none">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etEditProductBarcode"
+            android:id="@+id/etDialogSearchSku"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@drawable/bg_liquid_input"
-            android:hint="Codigo de barras (13 digitos)"
+            android:hint="SKU"
+            android:inputType="text"
+            android:textColor="@color/liquid_popup_text"
+            android:textColorHint="@color/liquid_popup_hint" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        app:boxBackgroundMode="none">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etDialogSearchBarcode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_liquid_input"
+            android:hint="Codigo de barras"
             android:inputType="number"
             android:maxLength="13"
             android:textColor="@color/liquid_popup_text"
@@ -94,7 +89,7 @@
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/tilEditProductCategory"
+        android:id="@+id/tilDialogSearchProductCategory"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="14dp"
@@ -105,7 +100,7 @@
         app:endIconTint="@null">
 
         <com.google.android.material.textfield.MaterialAutoCompleteTextView
-            android:id="@+id/etEditProductCategory"
+            android:id="@+id/etDialogSearchCategory"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Categoria"
@@ -123,32 +118,32 @@
         android:orientation="horizontal">
 
         <Button
-            android:id="@+id/btnEditProductSave"
+            android:id="@+id/btnDialogSearchProduct"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:background="@drawable/bg_liquid_button_pressable"
             android:backgroundTint="@null"
-            android:paddingVertical="12dp"
-            android:text="Guardar"
+            android:paddingVertical="10dp"
+            android:text="Buscar"
             android:textAllCaps="false"
             android:textColor="@color/liquid_popup_button_text"
             android:textStyle="bold"
             app:backgroundTint="@null" />
 
         <Space
-            android:layout_width="10dp"
+            android:layout_width="12dp"
             android:layout_height="0dp" />
 
         <Button
-            android:id="@+id/btnEditProductDelete"
+            android:id="@+id/btnDialogClearSearchProduct"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:background="@drawable/bg_liquid_button_pressable"
             android:backgroundTint="@null"
-            android:paddingVertical="12dp"
-            android:text="Eliminar"
+            android:paddingVertical="10dp"
+            android:text="Limpiar"
             android:textAllCaps="false"
             android:textColor="@color/liquid_popup_button_text"
             android:textStyle="bold"

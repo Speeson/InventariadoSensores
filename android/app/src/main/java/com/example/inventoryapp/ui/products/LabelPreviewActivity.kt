@@ -28,6 +28,7 @@ import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
@@ -79,7 +80,12 @@ class LabelPreviewActivity : AppCompatActivity() {
         sku = intent.getStringExtra("product_sku") ?: ""
         barcode = intent.getStringExtra("product_barcode") ?: ""
 
-        binding.btnBack.setOnClickListener { finish() }
+        if (productId <= 0) {
+            navigateToProductsAndFinish()
+            return
+        }
+
+        binding.btnBack.setOnClickListener { navigateToProductsAndFinish() }
         binding.tvTitle.text = "Etiqueta"
         binding.tvMeta.text = "SKU $sku  -  Barcode $barcode"
         applyTitleGradient()
@@ -93,8 +99,27 @@ class LabelPreviewActivity : AppCompatActivity() {
         binding.btnPrint.setOnClickListener { printLabel() }
         binding.btnSaveNiimbot.setOnClickListener { showNiimbotActionsDialog() }
 
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                navigateToProductsAndFinish()
+            }
+        })
+
         checkRoleForRegenerate()
         loadLabel()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val currentUrl = binding.webLabel.url?.trim().orEmpty()
+        if (currentUrl == "about:blank") {
+            val cached = lastSvg
+            if (!cached.isNullOrBlank()) {
+                renderSvgToWebView(cached)
+            } else {
+                loadLabel()
+            }
+        }
     }
 
     private fun setupWebView() {
@@ -141,33 +166,7 @@ class LabelPreviewActivity : AppCompatActivity() {
                 if (res.isSuccessful && res.body() != null) {
                     val svg = res.body()!!.string()
                     lastSvg = svg
-                    val svgB64 = Base64.encodeToString(svg.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
-                    val html = """
-                        <!doctype html>
-                        <html>
-                        <head>
-                          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-                          <style>
-                            html, body { margin:0; padding:0; width:100%; height:100%; }
-                            body { display:flex; align-items:center; justify-content:center; background:#fff; }
-                            .label { width:100%; max-width:900px; }
-                            .label img { width:100%; height:auto; display:block; }
-                          </style>
-                        </head>
-                        <body>
-                          <div class="label">
-                            <img src="data:image/svg+xml;base64,$svgB64" alt="label" />
-                          </div>
-                        </body>
-                        </html>
-                    """.trimIndent()
-                    binding.webLabel.loadDataWithBaseURL(
-                        null,
-                        html,
-                        "text/html",
-                        "UTF-8",
-                        null
-                    )
+                    renderSvgToWebView(svg)
                 } else {
                     UiNotifier.show(this@LabelPreviewActivity, "No se pudo cargar la etiqueta")
                 }
@@ -175,6 +174,44 @@ class LabelPreviewActivity : AppCompatActivity() {
                 UiNotifier.show(this@LabelPreviewActivity, "Error cargando etiqueta: ${e.message}")
             }
         }
+    }
+
+    private fun renderSvgToWebView(svg: String) {
+        val svgB64 = Base64.encodeToString(svg.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
+        val html = """
+            <!doctype html>
+            <html>
+            <head>
+              <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+              <style>
+                html, body { margin:0; padding:0; width:100%; height:100%; }
+                body { display:flex; align-items:center; justify-content:center; background:#fff; }
+                .label { width:100%; max-width:900px; }
+                .label img { width:100%; height:auto; display:block; }
+              </style>
+            </head>
+            <body>
+              <div class="label">
+                <img src="data:image/svg+xml;base64,$svgB64" alt="label" />
+              </div>
+            </body>
+            </html>
+        """.trimIndent()
+        binding.webLabel.loadDataWithBaseURL(
+            null,
+            html,
+            "text/html",
+            "UTF-8",
+            null
+        )
+    }
+
+    private fun navigateToProductsAndFinish() {
+        val intent = Intent(this, ProductListActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        }
+        startActivity(intent)
+        finish()
     }
 
     private fun downloadSvg() {

@@ -385,7 +385,7 @@ snack = SendSnack(binding.root)
         val productRaw = binding.etSearchProduct.text.toString().trim()
         val sourceRawInput = binding.etSearchSource.text.toString().trim().uppercase()
 
-        if (allowReload && !isLoading && (currentOffset > 0 || totalCount > allItems.size)) {
+        if (allowReload && !isLoading) {
             pendingFilterApply = true
             pendingSearchNotFoundDialog = showNotFoundDialog
             currentOffset = 0
@@ -1257,9 +1257,10 @@ snack = SendSnack(binding.root)
     private fun updatePageInfo(pageSizeLoaded: Int, pendingCount: Int) {
         if (hasActiveFilters()) {
             val shown = (filteredOffset + items.size).coerceAtMost(filteredItems.size)
-            binding.tvEventsPageInfo.text = "Mostrando $shown / ${filteredItems.size}"
             val currentPage = if (filteredItems.isEmpty()) 0 else (filteredOffset / pageSize) + 1
-            binding.tvEventsPageNumber.text = "Pagina $currentPage"
+            val totalPages = if (filteredItems.isEmpty()) 0 else ((filteredItems.size + pageSize - 1) / pageSize)
+            binding.tvEventsPageNumber.text = "Pagina $currentPage/$totalPages"
+            binding.tvEventsPageInfo.text = "Mostrando $shown/${filteredItems.size}"
             val prevEnabled = filteredOffset > 0
             val nextEnabled = shown < filteredItems.size
             binding.btnPrevPage.isEnabled = prevEnabled
@@ -1269,14 +1270,11 @@ snack = SendSnack(binding.root)
             return
         }
         val shownOnline = (currentOffset + pageSizeLoaded).coerceAtMost(totalCount)
-        val label = if (totalCount > 0) {
-            "Mostrando $shownOnline / $totalCount"
-        } else {
-            "Mostrando $pendingCount / $pendingCount"
-        }
-        binding.tvEventsPageInfo.text = label
-        val currentPage = if (totalCount <= 0) 0 else (currentOffset / pageSize) + 1
-        binding.tvEventsPageNumber.text = "Pagina $currentPage"
+        val totalItems = if (totalCount > 0) totalCount else pendingCount
+        val currentPage = if (totalItems <= 0) 0 else (currentOffset / pageSize) + 1
+        val totalPages = if (totalItems <= 0) 0 else ((totalItems + pageSize - 1) / pageSize)
+        binding.tvEventsPageNumber.text = "Pagina $currentPage/$totalPages"
+        binding.tvEventsPageInfo.text = "Mostrando $shownOnline/$totalItems"
         val prevEnabled = currentOffset > 0
         val nextEnabled = shownOnline < totalCount
         binding.btnPrevPage.isEnabled = prevEnabled
@@ -1382,23 +1380,35 @@ snack = SendSnack(binding.root)
 
     private fun updateEventsListAdaptiveHeight() {
         binding.scrollEvents.post {
+            val topSpacerLp = binding.viewEventsTopSpacer.layoutParams as? LinearLayout.LayoutParams ?: return@post
+            val bottomSpacerLp = binding.viewEventsBottomSpacer.layoutParams as? LinearLayout.LayoutParams ?: return@post
             val cardLp = binding.cardEventsList.layoutParams as? LinearLayout.LayoutParams ?: return@post
             val rvLp = binding.rvEvents.layoutParams as? LinearLayout.LayoutParams ?: return@post
             val visibleCount = items.size
 
-            if (visibleCount in 1 until pageSize) {
+            if (visibleCount in 1..pageSize) {
+                topSpacerLp.height = 0
+                topSpacerLp.weight = 1f
+                bottomSpacerLp.height = 0
+                bottomSpacerLp.weight = 1f
                 cardLp.height = ViewGroup.LayoutParams.WRAP_CONTENT
                 cardLp.weight = 0f
                 rvLp.height = ViewGroup.LayoutParams.WRAP_CONTENT
                 rvLp.weight = 0f
                 binding.rvEvents.isNestedScrollingEnabled = false
             } else {
+                topSpacerLp.height = 0
+                topSpacerLp.weight = 0f
+                bottomSpacerLp.height = 0
+                bottomSpacerLp.weight = 0f
                 cardLp.height = 0
                 cardLp.weight = 1f
                 rvLp.height = 0
                 rvLp.weight = 1f
                 binding.rvEvents.isNestedScrollingEnabled = true
             }
+            binding.viewEventsTopSpacer.layoutParams = topSpacerLp
+            binding.viewEventsBottomSpacer.layoutParams = bottomSpacerLp
             binding.cardEventsList.layoutParams = cardLp
             binding.rvEvents.layoutParams = rvLp
         }
@@ -1469,5 +1479,3 @@ snack = SendSnack(binding.root)
         finish()
     }
 }
-
-

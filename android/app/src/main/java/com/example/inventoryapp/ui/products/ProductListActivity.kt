@@ -4,19 +4,21 @@ import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 import com.example.inventoryapp.R
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup
+import android.view.LayoutInflater
 import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.ImageButton
+import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.transition.AutoTransition
-import androidx.transition.TransitionManager
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.PendingType
 import com.example.inventoryapp.data.local.OfflineSyncer
@@ -43,6 +45,10 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.io.IOException
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.ColorDrawable
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 
 class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
     companion object {
@@ -72,6 +78,12 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
 
     private var categoryCache: Map<Int, String> = emptyMap()
     private var categoryIdByName: Map<String, Int> = emptyMap()
+    private var searchProductFilter: String = ""
+    private var searchSkuFilter: String = ""
+    private var searchBarcodeFilter: String = ""
+    private var searchCategoryFilter: String = ""
+    private var createDialog: AlertDialog? = null
+    private var searchDialog: AlertDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -80,9 +92,13 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
         NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
 
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
-        GradientIconUtil.applyGradient(binding.ivCreateProductAdd, R.drawable.add)
-        GradientIconUtil.applyGradient(binding.ivCreateProductSearch, R.drawable.search)
+        GradientIconUtil.applyGradient(binding.ivCreateProductAdd, R.drawable.glass_add)
+        GradientIconUtil.applyGradient(binding.ivCreateProductSearch, R.drawable.glass_search)
+        binding.btnRefresh.setImageResource(R.drawable.glass_refresh)
+        GradientIconUtil.applyGradient(binding.btnSortUp, R.drawable.up)
+        GradientIconUtil.applyGradient(binding.btnSortDown, R.drawable.down)
         applyProductsTitleGradient()
+        applyRefreshIconTint()
 
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
         offlineQueue = OfflineQueue(this)
@@ -115,12 +131,8 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
             }
         }
 
-        binding.layoutCreateProductHeader.setOnClickListener { toggleCreateProductForm() }
-        binding.layoutSearchProductHeader.setOnClickListener { toggleSearchForm() }
-
-        binding.btnCreateProduct.setOnClickListener { createProduct() }
-        binding.btnSearchProducts.setOnClickListener { hideKeyboard(); applySearchFilters() }
-        binding.btnClearSearchProducts.setOnClickListener { hideKeyboard(); clearSearchFilters() }
+        binding.layoutCreateProductHeader.setOnClickListener { openCreateProductDialog() }
+        binding.layoutSearchProductHeader.setOnClickListener { openSearchProductDialog() }
         binding.btnRefresh.setOnClickListener { loadProducts(withSnack = true) }
 
         binding.btnPrevPage.setOnClickListener {
@@ -162,27 +174,22 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
 
         applyPagerButtonStyle(binding.btnPrevPage, enabled = false)
         applyPagerButtonStyle(binding.btnNextPage, enabled = false)
-
         setupCategoryDropdowns()
-        binding.tilCreateCategory.post { applyCategoryDropdownIcon() }
         resetAndLoad()
     }
 
     override fun onResume() {
         super.onResume()
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
+        updateProductsListAdaptiveHeight()
     }
 
     override fun onTopCreateAction() {
-        if (binding.layoutCreateProductContent.visibility != View.VISIBLE) {
-            toggleCreateProductForm()
-        }
+        openCreateProductDialog()
     }
 
     override fun onTopFilterAction() {
-        if (binding.layoutSearchProductContent.visibility != View.VISIBLE) {
-            toggleSearchForm()
-        }
+        openSearchProductDialog()
     }
 
     private fun resetAndLoad() {
@@ -193,6 +200,7 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
         filteredItems = emptyList()
         filteredOffset = 0
         adapter.submit(emptyList())
+        updateProductsListAdaptiveHeight()
         loadProducts(withSnack = false)
     }
 
@@ -217,11 +225,10 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
             val effectiveOffset = if (filtersActive) 0 else currentOffset
             if (filtersActive) currentOffset = 0
 
-            val searchNameOrId = binding.etSearchProduct.text.toString().trim()
-            val nameParam = if (searchNameOrId.isNotBlank() && searchNameOrId.toIntOrNull() == null) searchNameOrId else null
-            val skuParam = binding.etSearchSku.text.toString().trim().ifBlank { null }
-            val barcodeParam = binding.etSearchBarcode.text.toString().trim().ifBlank { null }
-            val categoryParam = resolveCategoryId(binding.etSearchCategory.text.toString().trim())
+            val nameParam: String? = null
+            val skuParam: String? = null
+            val barcodeParam: String? = null
+            val categoryParam: Int? = null
             val pendingAll = if (!filtersActive) buildOfflineProducts() else emptyList()
             val pendingTotalCount = pendingAll.size
             val cachedRemoteTotal = resolveCachedRemoteProductsTotal(
@@ -394,7 +401,13 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
         }
     }
 
-    private fun createProduct() {
+    private fun createProduct(
+        sku: String,
+        name: String,
+        rawBarcode: String,
+        categoryId: Int,
+        onFinished: () -> Unit = {}
+    ) {
         if (isUserRole()) {
             UiNotifier.showBlocking(
                 this,
@@ -402,24 +415,10 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
                 "No tienes permisos para crear productos.",
                 com.example.inventoryapp.R.drawable.ic_lock
             )
+            onFinished()
             return
         }
 
-        val sku = binding.etSku.text.toString().trim()
-        val name = binding.etName.text.toString().trim()
-        val rawBarcode = binding.etBarcode.text.toString().trim()
-        val categoryId = resolveCategoryId(binding.etCategory.text.toString().trim())
-
-        if (sku.isBlank()) { binding.etSku.error = "SKU requerido"; return }
-        if (name.isBlank()) { binding.etName.error = "Nombre requerido"; return }
-        if (rawBarcode.isBlank()) { binding.etBarcode.error = "Barcode requerido"; return }
-        if (!rawBarcode.matches(Regex("^\\d{13}$"))) {
-            binding.etBarcode.error = "Barcode debe tener 13 dÃ­gitos"
-            return
-        }
-        if (categoryId == null) { binding.etCategory.error = "CategorÃ­a requerida"; return }
-
-        binding.btnCreateProduct.isEnabled = false
         val loading = CreateUiFeedback.showLoading(this, "producto")
 
         lifecycleScope.launch {
@@ -427,7 +426,10 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
             try {
                 val dto = ProductCreateDto(sku = sku, name = name, barcode = rawBarcode, categoryId = categoryId, active = true)
                 val res = NetworkModule.api.createProduct(dto)
-                if (res.code() == 401) return@launch
+                if (res.code() == 401) {
+                    onFinished()
+                    return@launch
+                }
 
                 if (res.isSuccessful && res.body() != null) {
                     val created = res.body()!!
@@ -438,13 +440,9 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
                         CreateUiFeedback.showCreatedPopup(
                             this@ProductListActivity,
                             "Producto creado",
-                            "ID: ${created.id}\nSKU: ${created.sku}\nNombre: ${created.name}\nBarcode: ${created.barcode ?: "-"}\nCategorÃ­a: $categoryLabel"
+                            "ID: ${created.id}\nSKU: ${created.sku}\nNombre: ${created.name}\nBarcode: ${created.barcode ?: "-"}\nCategoria: $categoryLabel"
                         )
                     }
-                    binding.etSku.setText("")
-                    binding.etName.setText("")
-                    binding.etBarcode.setText("")
-                    binding.etCategory.setText("")
                     cacheStore.invalidatePrefix("products")
                     resetAndLoad()
                 } else if (res.code() == 403) {
@@ -467,14 +465,14 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
                     }
                 }
             } catch (e: IOException) {
-                val dto = ProductCreateDto(sku = sku, name = name, barcode = rawBarcode, categoryId = categoryId!!, active = true)
+                val dto = ProductCreateDto(sku = sku, name = name, barcode = rawBarcode, categoryId = categoryId, active = true)
                 OfflineQueue(this@ProductListActivity).enqueue(PendingType.PRODUCT_CREATE, gson.toJson(dto))
                 loadingHandled = true
                 loading.dismissThen {
                     CreateUiFeedback.showCreatedPopup(
                         this@ProductListActivity,
                         "Producto creado (offline)",
-                        "SKU: ${dto.sku}\nNombre: ${dto.name}\nBarcode: ${dto.barcode}\nCategorÃ­a: ${dto.categoryId} (offline)",
+                        "SKU: ${dto.sku}\nNombre: ${dto.name}\nBarcode: ${dto.barcode}\nCategoria: ${dto.categoryId} (offline)",
                         accentColorRes = R.color.offline_text
                     )
                 }
@@ -497,7 +495,7 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
                 if (!loadingHandled) {
                     loading.dismiss()
                 }
-                binding.btnCreateProduct.isEnabled = true
+                onFinished()
             }
         }
     }
@@ -509,6 +507,7 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
         val nameInput = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etEditProductName)
         val barcodeInput = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.etEditProductBarcode)
         val categoryInput = view.findViewById<com.google.android.material.textfield.MaterialAutoCompleteTextView>(R.id.etEditProductCategory)
+        val tilCategory = view.findViewById<TextInputLayout>(R.id.tilEditProductCategory)
         val btnSave = view.findViewById<android.widget.Button>(R.id.btnEditProductSave)
         val btnDelete = view.findViewById<android.widget.Button>(R.id.btnEditProductDelete)
         val btnClose = view.findViewById<ImageButton>(R.id.btnEditProductClose)
@@ -533,12 +532,13 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
         dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
 
         val values = buildCategoryDropdownValues()
-        val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, values)
+        val adapter = ArrayAdapter(this, R.layout.item_liquid_dropdown, values)
         categoryInput.setAdapter(adapter)
         categoryInput.setOnClickListener { categoryInput.showDropDown() }
         categoryInput.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) categoryInput.showDropDown()
         }
+        applyDialogDropdownStyle(listOf(tilCategory), listOf(categoryInput))
 
         if (isOffline) {
             nameInput.isEnabled = false
@@ -712,12 +712,12 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
         allowReload: Boolean,
         showNotFoundDialog: Boolean = false
     ) {
-        val productRaw = binding.etSearchProduct.text.toString().trim()
-        val skuRaw = binding.etSearchSku.text.toString().trim()
-        val barcodeRaw = binding.etSearchBarcode.text.toString().trim()
-        val categoryRaw = binding.etSearchCategory.text.toString().trim()
+        val productRaw = searchProductFilter.trim()
+        val skuRaw = searchSkuFilter.trim()
+        val barcodeRaw = searchBarcodeFilter.trim()
+        val categoryRaw = searchCategoryFilter.trim()
 
-        if (allowReload && !isLoading && (currentOffset > 0 || totalCount > allItems.size)) {
+        if (allowReload && !isLoading) {
             pendingFilterApply = true
             pendingSearchNotFoundDialog = showNotFoundDialog
             currentOffset = 0
@@ -764,13 +764,14 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
     }
 
     private fun clearSearchFilters() {
-        binding.etSearchProduct.setText("")
-        binding.etSearchSku.setText("")
-        binding.etSearchBarcode.setText("")
-        binding.etSearchCategory.setText("")
+        searchProductFilter = ""
+        searchSkuFilter = ""
+        searchBarcodeFilter = ""
+        searchCategoryFilter = ""
         filteredItems = emptyList()
         filteredOffset = 0
         adapter.submit(products.map { ProductRowUi(it, categoryCache[it.categoryId]) })
+        updateProductsListAdaptiveHeight()
         updatePageInfo(products.size)
     }
 
@@ -781,6 +782,7 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
         } else {
             val rows = ordered.map { ProductRowUi(it, categoryCache[it.categoryId]) }
             adapter.submit(rows)
+            updateProductsListAdaptiveHeight()
         }
     }
 
@@ -790,14 +792,15 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
         val page = if (from < to) filteredItems.subList(from, to) else emptyList()
         val rows = page.map { ProductRowUi(it, categoryCache[it.categoryId]) }
         adapter.submit(rows)
+        updateProductsListAdaptiveHeight()
         updatePageInfo(page.size, total = filteredItems.size, filtered = true)
     }
 
     private fun hasActiveFilters(): Boolean {
-        return binding.etSearchProduct.text?.isNotBlank() == true ||
-            binding.etSearchSku.text?.isNotBlank() == true ||
-            binding.etSearchBarcode.text?.isNotBlank() == true ||
-            binding.etSearchCategory.text?.isNotBlank() == true
+        return searchProductFilter.isNotBlank() ||
+            searchSkuFilter.isNotBlank() ||
+            searchBarcodeFilter.isNotBlank() ||
+            searchCategoryFilter.isNotBlank()
     }
 
     private fun buildProductSearchNotFoundDetails(
@@ -831,12 +834,10 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
         } else {
             (currentOffset + pageSizeLoaded).coerceAtMost(total)
         }
-        val label = if (total > 0) {
-            "Mostrando $shown / $total"
-        } else {
-            "Mostrando 0 / 0"
-        }
-        binding.tvProductPageInfo.text = label
+        val currentPage = if (total <= 0) 0 else ((if (filtered) filteredOffset else currentOffset) / pageSize) + 1
+        val totalPages = if (total <= 0) 0 else ((total + pageSize - 1) / pageSize)
+        binding.tvProductPageNumber.text = "Pagina $currentPage/$totalPages"
+        binding.tvProductPageInfo.text = "Mostrando $shown/$total"
         val prevEnabled = if (filtered) filteredOffset > 0 else currentOffset > 0
         val nextEnabled = if (filtered) shown < total else (currentOffset + pageSize) < total
         binding.btnPrevPage.isEnabled = prevEnabled
@@ -847,31 +848,40 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
 
     private fun applyPagerButtonStyle(button: Button, enabled: Boolean) {
         button.backgroundTintList = null
+        val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         if (!enabled) {
             val colors = intArrayOf(
-                ContextCompat.getColor(this, android.R.color.darker_gray),
-                ContextCompat.getColor(this, android.R.color.darker_gray)
+                if (isDark) 0x334F6480 else 0x33A7BED8,
+                if (isDark) 0x33445A74 else 0x338FA9C6
             )
             val drawable = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
-                cornerRadius = resources.displayMetrics.density * 18f
-                setStroke((resources.displayMetrics.density * 1f).toInt(), 0xFFB0B0B0.toInt())
+                cornerRadius = resources.displayMetrics.density * 16f
+                setStroke((resources.displayMetrics.density * 1f).toInt(), if (isDark) 0x44AFCBEB else 0x5597BCD9)
             }
             button.background = drawable
-            button.setTextColor(ContextCompat.getColor(this, android.R.color.white))
+            button.setTextColor(ContextCompat.getColor(this, R.color.liquid_popup_hint))
             return
         }
         val colors = intArrayOf(
-            ContextCompat.getColor(this, R.color.icon_grad_start),
-            ContextCompat.getColor(this, R.color.icon_grad_mid2),
-            ContextCompat.getColor(this, R.color.icon_grad_mid1),
-            ContextCompat.getColor(this, R.color.icon_grad_end)
+            if (isDark) 0x66789BC4 else 0x99D6EBFA.toInt(),
+            if (isDark) 0x666D8DB4 else 0x99C5E0F4.toInt()
         )
         val drawable = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
-            cornerRadius = resources.displayMetrics.density * 18f
-            setStroke((resources.displayMetrics.density * 1f).toInt(), 0x33000000)
+            cornerRadius = resources.displayMetrics.density * 16f
+            setStroke((resources.displayMetrics.density * 1f).toInt(), if (isDark) 0x88B5D5F4.toInt() else 0x88A7CBE6.toInt())
         }
         button.background = drawable
-        button.setTextColor(ContextCompat.getColor(this, android.R.color.white))
+        button.setTextColor(ContextCompat.getColor(this, R.color.liquid_popup_button_text))
+    }
+
+    private fun applyRefreshIconTint() {
+        val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        if (!isDark) {
+            val blue = ContextCompat.getColor(this, R.color.icon_grad_mid2)
+            binding.btnRefresh.setColorFilter(blue)
+        } else {
+            binding.btnRefresh.clearColorFilter()
+        }
     }
 
     private suspend fun fetchCategoryMap(): Map<Int, String> {
@@ -898,20 +908,6 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
                 if (res.isSuccessful && res.body() != null) {
                     val items = res.body()!!.items.sortedBy { it.id }
                     cacheStore.put(CacheKeys.list("categories", mapOf("name" to null, "order_by" to "id", "order_dir" to "asc", "limit" to 100, "offset" to 0)), res.body()!!)
-                    val values = items.map { "(${it.id}) ${it.name}" }
-                    val withBlank = listOf("") + values
-                    val adapter = ArrayAdapter(this@ProductListActivity, android.R.layout.simple_list_item_1, withBlank)
-                    binding.etCategory.setAdapter(adapter)
-                    binding.etCategory.setOnClickListener { binding.etCategory.showDropDown() }
-                    binding.etCategory.setOnFocusChangeListener { _, hasFocus ->
-                        if (hasFocus) binding.etCategory.showDropDown()
-                    }
-                    binding.etSearchCategory.setAdapter(adapter)
-                    binding.etSearchCategory.setOnClickListener { binding.etSearchCategory.showDropDown() }
-                    binding.etSearchCategory.setOnFocusChangeListener { _, hasFocus ->
-                        if (hasFocus) binding.etSearchCategory.showDropDown()
-                    }
-
                     categoryCache = items.associateBy({ it.id }, { it.name })
                     categoryIdByName = items.associateBy({ it.name.lowercase() }, { it.id })
                     return@launch
@@ -924,20 +920,6 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
             )
             if (cached != null) {
                 val items = cached.items.sortedBy { it.id }
-                val values = items.map { "(${it.id}) ${it.name}" }
-                val withBlank = listOf("") + values
-                val adapter = ArrayAdapter(this@ProductListActivity, android.R.layout.simple_list_item_1, withBlank)
-                binding.etCategory.setAdapter(adapter)
-                binding.etCategory.setOnClickListener { binding.etCategory.showDropDown() }
-                binding.etCategory.setOnFocusChangeListener { _, hasFocus ->
-                    if (hasFocus) binding.etCategory.showDropDown()
-                }
-                binding.etSearchCategory.setAdapter(adapter)
-                binding.etSearchCategory.setOnClickListener { binding.etSearchCategory.showDropDown() }
-                binding.etSearchCategory.setOnFocusChangeListener { _, hasFocus ->
-                    if (hasFocus) binding.etSearchCategory.showDropDown()
-                }
-
                 categoryCache = items.associateBy({ it.id }, { it.name })
                 categoryIdByName = items.associateBy({ it.name.lowercase() }, { it.id })
             }
@@ -962,19 +944,43 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
         return categoryIdByName[trimmed.lowercase()]
     }
 
-    private fun applyCategoryDropdownIcon() {
-        binding.tilCreateCategory.setEndIconTintList(null)
-        binding.tilSearchCategory.setEndIconTintList(null)
-        val endIconId = com.google.android.material.R.id.text_input_end_icon
-        binding.tilCreateCategory.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
-            GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
-        }
-        binding.tilSearchCategory.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
-            GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
+    private fun updateProductsListAdaptiveHeight() {
+        binding.scrollProducts.post {
+            val topSpacerLp = binding.viewProductsTopSpacer.layoutParams as? LinearLayout.LayoutParams ?: return@post
+            val bottomSpacerLp = binding.viewProductsBottomSpacer.layoutParams as? LinearLayout.LayoutParams ?: return@post
+            val cardLp = binding.cardProductsList.layoutParams as? LinearLayout.LayoutParams ?: return@post
+            val rvLp = binding.rvProducts.layoutParams as? LinearLayout.LayoutParams ?: return@post
+
+            val visibleCount = if (::adapter.isInitialized) adapter.itemCount else 0
+            if (visibleCount in 1..pageSize) {
+                topSpacerLp.height = 0
+                topSpacerLp.weight = 1f
+                bottomSpacerLp.height = 0
+                bottomSpacerLp.weight = 1f
+                cardLp.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                cardLp.weight = 0f
+                rvLp.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                rvLp.weight = 0f
+                binding.rvProducts.isNestedScrollingEnabled = false
+            } else {
+                topSpacerLp.height = 0
+                topSpacerLp.weight = 0f
+                bottomSpacerLp.height = 0
+                bottomSpacerLp.weight = 0f
+                cardLp.height = 0
+                cardLp.weight = 1f
+                rvLp.height = 0
+                rvLp.weight = 1f
+                binding.rvProducts.isNestedScrollingEnabled = true
+            }
+            binding.viewProductsTopSpacer.layoutParams = topSpacerLp
+            binding.viewProductsBottomSpacer.layoutParams = bottomSpacerLp
+            binding.cardProductsList.layoutParams = cardLp
+            binding.rvProducts.layoutParams = rvLp
         }
     }
 
-    private fun toggleCreateProductForm() {
+    private fun openCreateProductDialog() {
         if (isUserRole()) {
             UiNotifier.showBlocking(
                 this,
@@ -984,47 +990,147 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
             )
             return
         }
-        TransitionManager.beginDelayedTransition(binding.scrollProducts, AutoTransition().setDuration(180))
-        val isVisible = binding.layoutCreateProductContent.visibility == View.VISIBLE
-        if (isVisible) {
-            binding.layoutCreateProductContent.visibility = View.GONE
-            binding.layoutSearchProductContent.visibility = View.GONE
-            setToggleActive(null)
-        } else {
-            binding.layoutCreateProductContent.visibility = View.VISIBLE
-            binding.layoutSearchProductContent.visibility = View.GONE
-            setToggleActive(binding.layoutCreateProductHeader)
+        if (createDialog?.isShowing == true) return
+
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_products_create_master, null)
+        val btnClose = view.findViewById<ImageButton>(R.id.btnCreateProductDialogClose)
+        val btnCreate = view.findViewById<Button>(R.id.btnDialogCreateProduct)
+        val etSku = view.findViewById<TextInputEditText>(R.id.etDialogProductSku)
+        val etName = view.findViewById<TextInputEditText>(R.id.etDialogProductName)
+        val etBarcode = view.findViewById<TextInputEditText>(R.id.etDialogProductBarcode)
+        val etCategory = view.findViewById<MaterialAutoCompleteTextView>(R.id.etDialogProductCategory)
+        val tilCategory = view.findViewById<TextInputLayout>(R.id.tilDialogCreateProductCategory)
+
+        val values = buildCategoryDropdownValues()
+        val categoryAdapter = ArrayAdapter(this, R.layout.item_liquid_dropdown, values)
+        etCategory.setAdapter(categoryAdapter)
+        etCategory.setOnClickListener { etCategory.showDropDown() }
+        etCategory.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) etCategory.showDropDown() }
+        applyDialogDropdownStyle(listOf(tilCategory), listOf(etCategory))
+
+        val dialog = AlertDialog.Builder(this).setView(view).setCancelable(true).create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        btnClose.setOnClickListener { dialog.dismiss() }
+        btnCreate.setOnClickListener {
+            val sku = etSku.text?.toString()?.trim().orEmpty()
+            val name = etName.text?.toString()?.trim().orEmpty()
+            val barcode = etBarcode.text?.toString()?.trim().orEmpty()
+            val categoryText = etCategory.text?.toString()?.trim().orEmpty()
+            val categoryId = resolveCategoryId(categoryText)
+
+            etSku.error = null
+            etName.error = null
+            etBarcode.error = null
+            etCategory.error = null
+
+            if (sku.isBlank()) {
+                etSku.error = "SKU requerido"
+                return@setOnClickListener
+            }
+            if (name.isBlank()) {
+                etName.error = "Nombre requerido"
+                return@setOnClickListener
+            }
+            if (barcode.isBlank()) {
+                etBarcode.error = "Barcode requerido"
+                return@setOnClickListener
+            }
+            if (!barcode.matches(Regex("^\\d{13}$"))) {
+                etBarcode.error = "Barcode debe tener 13 digitos"
+                return@setOnClickListener
+            }
+            if (categoryId == null) {
+                etCategory.error = "Categoria requerida"
+                return@setOnClickListener
+            }
+
+            btnCreate.isEnabled = false
+            createProduct(
+                sku = sku,
+                name = name,
+                rawBarcode = barcode,
+                categoryId = categoryId,
+                onFinished = { btnCreate.isEnabled = true }
+            )
+            dialog.dismiss()
         }
-    }
-
-    private fun toggleSearchForm() {
-        TransitionManager.beginDelayedTransition(binding.scrollProducts, AutoTransition().setDuration(180))
-        val isVisible = binding.layoutSearchProductContent.visibility == View.VISIBLE
-        if (isVisible) {
-            hideSearchForm()
-        } else {
-            binding.layoutSearchProductContent.visibility = View.VISIBLE
-            binding.layoutCreateProductContent.visibility = View.GONE
-            setToggleActive(binding.layoutSearchProductHeader)
+        dialog.setOnDismissListener {
+            createDialog = null
+            hideKeyboard()
         }
+        createDialog = dialog
+        dialog.show()
     }
 
-    private fun hideSearchForm() {
-        binding.layoutSearchProductContent.visibility = View.GONE
-        binding.layoutCreateProductContent.visibility = View.GONE
-        setToggleActive(null)
+    private fun openSearchProductDialog() {
+        if (searchDialog?.isShowing == true) return
+
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_products_search_master, null)
+        val btnClose = view.findViewById<ImageButton>(R.id.btnSearchProductDialogClose)
+        val btnSearch = view.findViewById<Button>(R.id.btnDialogSearchProduct)
+        val btnClear = view.findViewById<Button>(R.id.btnDialogClearSearchProduct)
+        val etProduct = view.findViewById<TextInputEditText>(R.id.etDialogSearchProduct)
+        val etSku = view.findViewById<TextInputEditText>(R.id.etDialogSearchSku)
+        val etBarcode = view.findViewById<TextInputEditText>(R.id.etDialogSearchBarcode)
+        val etCategory = view.findViewById<MaterialAutoCompleteTextView>(R.id.etDialogSearchCategory)
+        val tilCategory = view.findViewById<TextInputLayout>(R.id.tilDialogSearchProductCategory)
+
+        etProduct.setText(searchProductFilter)
+        etSku.setText(searchSkuFilter)
+        etBarcode.setText(searchBarcodeFilter)
+        etCategory.setText(searchCategoryFilter, false)
+
+        val values = buildCategoryDropdownValues()
+        val categoryAdapter = ArrayAdapter(this, R.layout.item_liquid_dropdown, values)
+        etCategory.setAdapter(categoryAdapter)
+        etCategory.setOnClickListener { etCategory.showDropDown() }
+        etCategory.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) etCategory.showDropDown() }
+        applyDialogDropdownStyle(listOf(tilCategory), listOf(etCategory))
+
+        val dialog = AlertDialog.Builder(this).setView(view).setCancelable(true).create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        btnClose.setOnClickListener { dialog.dismiss() }
+        btnSearch.setOnClickListener {
+            searchProductFilter = etProduct.text?.toString().orEmpty()
+            searchSkuFilter = etSku.text?.toString().orEmpty()
+            searchBarcodeFilter = etBarcode.text?.toString().orEmpty()
+            searchCategoryFilter = etCategory.text?.toString().orEmpty()
+            hideKeyboard()
+            dialog.dismiss()
+            applySearchFilters()
+        }
+        btnClear.setOnClickListener {
+            etProduct.setText("")
+            etSku.setText("")
+            etBarcode.setText("")
+            etCategory.setText("", false)
+            clearSearchFilters()
+            hideKeyboard()
+        }
+        dialog.setOnDismissListener {
+            searchDialog = null
+            hideKeyboard()
+        }
+        searchDialog = dialog
+        dialog.show()
     }
 
-    private fun setToggleActive(active: View?) {
-        if (active === binding.layoutCreateProductHeader) {
-            binding.layoutCreateProductHeader.setBackgroundResource(R.drawable.bg_toggle_active)
-            binding.layoutSearchProductHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
-        } else if (active === binding.layoutSearchProductHeader) {
-            binding.layoutCreateProductHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
-            binding.layoutSearchProductHeader.setBackgroundResource(R.drawable.bg_toggle_active)
-        } else {
-            binding.layoutCreateProductHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
-            binding.layoutSearchProductHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
+    private fun applyDialogDropdownStyle(
+        textInputLayouts: List<TextInputLayout>,
+        dropdowns: List<MaterialAutoCompleteTextView>
+    ) {
+        val popupDrawable = ContextCompat.getDrawable(this, R.drawable.bg_liquid_dropdown_popup)
+        val endIconId = com.google.android.material.R.id.text_input_end_icon
+        textInputLayouts.forEach { til ->
+            til.setEndIconTintList(null)
+            til.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
+                GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
+            }
+        }
+        dropdowns.forEach { auto ->
+            if (popupDrawable != null) auto.setDropDownBackgroundDrawable(popupDrawable)
         }
     }
 
@@ -1070,6 +1176,7 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
         lifecycleScope.launch {
             val categoryMap = fetchCategoryMap()
             adapter.submit(items.map { ProductRowUi(it, categoryMap[it.categoryId]) })
+            updateProductsListAdaptiveHeight()
         }
         updatePageInfo(items.size)
         if (items.isNotEmpty()) {
