@@ -1,76 +1,127 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent"
+    android:layout_width="340dp"
     android:layout_height="wrap_content"
+    android:background="@drawable/bg_liquid_popup_card"
     android:orientation="vertical"
     android:padding="16dp">
 
-    <TextView
-        android:id="@+id/tvReviewTitle"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Review"
-        android:textStyle="bold"
-        android:textSize="18sp"
-        android:textColor="?attr/colorOnSurface" />
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:id="@+id/tvReviewTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:paddingStart="40dp"
+            android:paddingEnd="40dp"
+            android:text="Review"
+            android:textColor="@color/liquid_popup_title"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/btnDialogReviewClose"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_gravity="end|center_vertical"
+            android:background="@drawable/bg_liquid_button"
+            android:backgroundTint="@null"
+            android:contentDescription="Cerrar"
+            android:padding="7dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_close_red"
+            app:backgroundTint="@null" />
+    </FrameLayout>
 
     <TextView
         android:id="@+id/tvReviewReason"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
         android:text="Reason"
-        android:textStyle="bold"
-        android:textSize="15sp"
-        android:textColor="@android:color/holo_orange_dark" />
+        android:textColor="@color/liquid_popup_button_text"
+        android:textSize="14sp"
+        android:textStyle="bold" />
 
-    <LinearLayout
-        android:id="@+id/layoutFields"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_marginTop="10dp" />
-
-    <TextView
-        android:id="@+id/tvSuggestionsTitle"
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
-        android:text="Sugerencias"
-        android:textStyle="bold"
-        android:textSize="15sp"
-        android:textColor="?attr/colorOnSurface" />
+        app:cardBackgroundColor="@android:color/transparent"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/liquid_popup_divider"
+        app:strokeWidth="1dp">
 
-    <TextView
-        android:id="@+id/tvSuggestions"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Sin sugerencias"
-        android:textSize="14sp"
-        android:textColor="?attr/colorOnSurface" />
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="220dp"
+            android:background="@drawable/bg_liquid_input"
+            android:fillViewport="true"
+            android:padding="10dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:id="@+id/layoutFields"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+                <TextView
+                    android:id="@+id/tvSuggestionsTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Sugerencias"
+                    android:textColor="@color/liquid_popup_list_text"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvSuggestions"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Sin sugerencias"
+                    android:textColor="@color/liquid_popup_list_text"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </ScrollView>
+    </com.google.android.material.card.MaterialCardView>
 
     <Button
         android:id="@+id/btnToggleJson"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/bg_liquid_button_pressable"
+        android:backgroundTint="@null"
         android:text="Ver JSON"
-        android:textAllCaps="false" />
+        android:textAllCaps="false"
+        android:textColor="@color/liquid_popup_button_text"
+        app:backgroundTint="@null" />
 
     <TextView
         android:id="@+id/tvJson"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        android:textSize="13sp"
-        android:textColor="?attr/colorOnSurface"
+        android:textColor="@color/liquid_popup_list_text"
+        android:textSize="12sp"
         android:visibility="gone" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="10dp"
         android:orientation="horizontal">
 
         <Button
@@ -78,16 +129,16 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:background="@drawable/bg_button_soft_purple"
+            android:background="@drawable/bg_liquid_button_pressable"
             android:backgroundTint="@null"
-            app:backgroundTint="@null"
             android:text="Aprobar"
             android:textAllCaps="false"
-            android:textColor="@android:color/white"
-            android:textStyle="bold" />
+            android:textColor="@color/liquid_popup_button_text"
+            android:textStyle="bold"
+            app:backgroundTint="@null" />
 
         <Space
-            android:layout_width="12dp"
+            android:layout_width="10dp"
             android:layout_height="0dp" />
 
         <Button
@@ -95,8 +146,13 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:background="@drawable/bg_liquid_button_pressable"
+            android:backgroundTint="@null"
             android:text="Rechazar"
-            android:textAllCaps="false" />
+            android:textAllCaps="false"
+            android:textColor="@color/liquid_popup_button_text"
+            android:textStyle="bold"
+            app:backgroundTint="@null" />
     </LinearLayout>
 
 </LinearLayout>

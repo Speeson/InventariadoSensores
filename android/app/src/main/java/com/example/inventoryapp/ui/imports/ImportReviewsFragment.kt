@@ -17,7 +17,6 @@ import com.example.inventoryapp.data.remote.model.ImportReviewItemDto
 import com.example.inventoryapp.databinding.FragmentImportReviewsBinding
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.CreateUiFeedback
-import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.gson.GsonBuilder
 import kotlinx.coroutines.launch
 
@@ -297,10 +296,13 @@ class ImportReviewsFragment : Fragment(R.layout.fragment_import_reviews) {
     }
 
     private fun showReviewBottomSheet(review: ImportReviewItemDto) {
-        val dialog = BottomSheetDialog(requireContext())
         val sheet = LayoutInflater.from(requireContext())
             .inflate(R.layout.dialog_import_review_bottom_sheet, null, false)
-        dialog.setContentView(sheet)
+        val dialog = AlertDialog.Builder(requireContext())
+            .setView(sheet)
+            .setCancelable(true)
+            .create()
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
 
         val tvTitle = sheet.findViewById<TextView>(R.id.tvReviewTitle)
         val tvReason = sheet.findViewById<TextView>(R.id.tvReviewReason)
@@ -308,8 +310,9 @@ class ImportReviewsFragment : Fragment(R.layout.fragment_import_reviews) {
         val tvSuggestions = sheet.findViewById<TextView>(R.id.tvSuggestions)
         val btnToggleJson = sheet.findViewById<View>(R.id.btnToggleJson)
         val tvJson = sheet.findViewById<TextView>(R.id.tvJson)
-        val btnApprove = sheet.findViewById<View>(R.id.btnApprove)
-        val btnReject = sheet.findViewById<View>(R.id.btnReject)
+        val btnApprove = sheet.findViewById<android.widget.Button>(R.id.btnApprove)
+        val btnReject = sheet.findViewById<android.widget.Button>(R.id.btnReject)
+        val btnClose = sheet.findViewById<View>(R.id.btnDialogReviewClose)
 
         tvTitle.text = "Review #${review.id} - Fila ${review.row_number}"
         tvReason.text = review.reason
@@ -334,6 +337,9 @@ class ImportReviewsFragment : Fragment(R.layout.fragment_import_reviews) {
         btnToggleJson.setOnClickListener {
             tvJson.visibility = if (tvJson.visibility == View.VISIBLE) View.GONE else View.VISIBLE
         }
+        btnClose.setOnClickListener { dialog.dismiss() }
+        applyPagerButtonStyle(btnApprove, enabled = true)
+        applyPagerButtonStyle(btnReject, enabled = true)
 
         btnApprove.setOnClickListener {
             lifecycleScope.launch {
@@ -386,6 +392,11 @@ class ImportReviewsFragment : Fragment(R.layout.fragment_import_reviews) {
         }
 
         dialog.show()
+        dialog.window?.setLayout(
+            (resources.displayMetrics.widthPixels * 0.92f).toInt(),
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        dialog.window?.setGravity(android.view.Gravity.CENTER)
     }
 
     private fun showError(details: String) {
