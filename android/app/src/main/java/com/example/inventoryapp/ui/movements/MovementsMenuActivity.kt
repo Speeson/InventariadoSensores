@@ -1,20 +1,24 @@
 package com.example.inventoryapp.ui.movements
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.text.InputType
-import android.view.View
+import android.view.LayoutInflater
+import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.ImageButton
+import android.widget.LinearLayout
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.transition.AutoTransition
-import androidx.transition.TransitionManager
 import com.example.inventoryapp.R
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.PendingType
@@ -45,6 +49,9 @@ import kotlinx.coroutines.launch
 import java.io.IOException
 import java.text.NumberFormat
 import java.util.Locale
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 
 class MovementsMenuActivity : AppCompatActivity(), TopCenterActionHost {
     companion object {
@@ -74,6 +81,21 @@ class MovementsMenuActivity : AppCompatActivity(), TopCenterActionHost {
     private var bulkProductNamesCacheAtMs: Long = 0L
     private val bulkProductNamesCacheTtlMs = 30_000L
 
+    private var createDialog: AlertDialog? = null
+    private var searchDialog: AlertDialog? = null
+    private var locationDropdownValues: List<String> = listOf("")
+    private val createTypeValues = listOf("", "IN", "OUT", "ADJUST", "TRANSFER")
+    private val searchTypeValues = listOf("", "IN", "OUT", "ADJUST")
+    private val sourceValues = listOf("", "SCAN", "MANUAL")
+    private var createTypeInput: String = ""
+    private var createSourceInput: String = ""
+    private var createProductInput: String = ""
+    private var createQuantityInput: String = ""
+    private var createLocationInput: String = ""
+    private var createToLocationInput: String = ""
+    private var searchTypeFilter: String = ""
+    private var searchSourceFilter: String = ""
+    private var searchProductFilter: String = ""
     private var quantityHint: String = "Cantidad"
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -83,10 +105,9 @@ class MovementsMenuActivity : AppCompatActivity(), TopCenterActionHost {
         NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
 
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
-        GradientIconUtil.applyGradient(binding.ivCreateMovementAdd, R.drawable.add)
-        GradientIconUtil.applyGradient(binding.ivCreateMovementSearch, R.drawable.search)
+        binding.btnRefreshMovements.setImageResource(R.drawable.glass_refresh)
         applyMovementsTitleGradient()
-        binding.tilCreateType.post { applyDropdownIcons() }
+        applyRefreshIconTint()
 
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
         snack = SendSnack(binding.root)
@@ -108,22 +129,8 @@ class MovementsMenuActivity : AppCompatActivity(), TopCenterActionHost {
             }
         }
 
-        setupTypeDropdowns()
-        setupSourceDropdowns()
-        setupLocationDropdown()
-        setupQuantityFocusHint()
+        loadLocationOptions()
 
-        binding.layoutCreateMovementHeader.setOnClickListener { toggleCreateForm() }
-        binding.layoutSearchMovementHeader.setOnClickListener { toggleSearchForm() }
-        binding.btnCreateMovement.setOnClickListener { createMovement() }
-        binding.btnSearchMovements.setOnClickListener {
-            hideKeyboard()
-            applySearchFilters()
-        }
-        binding.btnClearMovements.setOnClickListener {
-            hideKeyboard()
-            clearSearchFilters()
-        }
         binding.btnRefreshMovements.setOnClickListener {
             invalidateBulkProductNamesCache()
             loadMovements(withSnack = true)
@@ -166,21 +173,26 @@ class MovementsMenuActivity : AppCompatActivity(), TopCenterActionHost {
         super.onResume()
         currentOffset = 0
         loadMovements(withSnack = false)
+        updateMovementsListAdaptiveHeight()
     }
 
     override fun onTopCreateAction() {
-        if (binding.layoutCreateMovementContent.visibility != View.VISIBLE) {
-            toggleCreateForm()
-        }
+        openCreateMovementDialog()
     }
 
     override fun onTopFilterAction() {
-        if (binding.layoutSearchMovementContent.visibility != View.VISIBLE) {
-            toggleSearchForm()
-        }
+        openSearchMovementDialog()
     }
 
-    private fun createMovement() {
+    private fun createMovement(
+        typeRawInput: String,
+        sourceRawInput: String,
+        productInputRaw: String,
+        quantityInputRaw: String,
+        locationRawInput: String,
+        toLocationRawInput: String,
+        onFinished: () -> Unit = {}
+    ) {
         if (isUserRole()) {
             UiNotifier.showBlocking(
                 this,
@@ -188,40 +200,119 @@ class MovementsMenuActivity : AppCompatActivity(), TopCenterActionHost {
                 "No tienes permisos para crear movimientos.",
                 R.drawable.ic_lock
             )
+            onFinished()
             return
         }
 
-        val type = binding.etCreateType.text.toString().trim().uppercase()
-        val sourceRaw = binding.etCreateSource.text.toString().trim().uppercase()
-        val productInput = binding.etCreateProduct.text.toString().trim()
-        val quantity = binding.etCreateQuantity.text.toString().trim().toIntOrNull()
-        val location = normalizeLocationInput(binding.etCreateLocation.text.toString().trim())
-        val toLocation = normalizeLocationInput(binding.etCreateToLocation.text.toString().trim())
+        val type = typeRawInput.trim().uppercase()
+        val sourceRaw = sourceRawInput.trim().uppercase()
+        val productInput = productInputRaw.trim()
+        val quantity = quantityInputRaw.trim().toIntOrNull()
+        val location = normalizeLocationInput(locationRawInput.trim())
+        val toLocation = normalizeLocationInput(toLocationRawInput.trim())
 
-        if (type.isBlank()) { binding.etCreateType.error = "Tipo requerido"; return }
+        if (type.isBlank()) {
+            CreateUiFeedback.showErrorPopup(
+                activity = this,
+                title = "No se pudo crear movimiento",
+                details = "Tipo requerido"
+            )
+            onFinished()
+            return
+        }
+
         val source = when (sourceRaw) {
             "SCAN" -> MovementSourceDto.SCAN
             "MANUAL" -> MovementSourceDto.MANUAL
-            else -> { binding.etCreateSource.error = "Usa SCAN o MANUAL"; return }
+            else -> {
+                CreateUiFeedback.showErrorPopup(
+                    activity = this,
+                    title = "No se pudo crear movimiento",
+                    details = "Usa SCAN o MANUAL"
+                )
+                onFinished()
+                return
+            }
         }
-        if (productInput.isBlank()) { binding.etCreateProduct.error = "Producto requerido"; return }
-        if (location.isBlank()) { binding.etCreateLocation.error = "Ubicación requerida"; return }
+
+        if (productInput.isBlank()) {
+            CreateUiFeedback.showErrorPopup(
+                activity = this,
+                title = "No se pudo crear movimiento",
+                details = "Producto requerido"
+            )
+            onFinished()
+            return
+        }
+        if (location.isBlank()) {
+            CreateUiFeedback.showErrorPopup(
+                activity = this,
+                title = "No se pudo crear movimiento",
+                details = "Ubicacion requerida"
+            )
+            onFinished()
+            return
+        }
 
         when (type) {
-            "IN", "OUT" -> if (quantity == null || quantity <= 0) { binding.etCreateQuantity.error = "Cantidad > 0"; return }
-            "ADJUST" -> if (quantity == null || quantity == 0) { binding.etCreateQuantity.error = "Delta != 0"; return }
+            "IN", "OUT" -> if (quantity == null || quantity <= 0) {
+                CreateUiFeedback.showErrorPopup(
+                    activity = this,
+                    title = "No se pudo crear movimiento",
+                    details = "Cantidad > 0"
+                )
+                onFinished()
+                return
+            }
+            "ADJUST" -> if (quantity == null || quantity == 0) {
+                CreateUiFeedback.showErrorPopup(
+                    activity = this,
+                    title = "No se pudo crear movimiento",
+                    details = "Delta != 0"
+                )
+                onFinished()
+                return
+            }
             "TRANSFER" -> {
-                if (quantity == null || quantity <= 0) { binding.etCreateQuantity.error = "Cantidad > 0"; return }
-                if (toLocation.isBlank()) { binding.etCreateToLocation.error = "Ubicación destino requerida"; return }
+                if (quantity == null || quantity <= 0) {
+                    CreateUiFeedback.showErrorPopup(
+                        activity = this,
+                        title = "No se pudo crear movimiento",
+                        details = "Cantidad > 0"
+                    )
+                    onFinished()
+                    return
+                }
+                if (toLocation.isBlank()) {
+                    CreateUiFeedback.showErrorPopup(
+                        activity = this,
+                        title = "No se pudo crear movimiento",
+                        details = "Ubicacion destino requerida"
+                    )
+                    onFinished()
+                    return
+                }
                 if (location.equals(toLocation, ignoreCase = true)) {
-                    binding.etCreateToLocation.error = "Origen y destino no pueden ser iguales"
+                    CreateUiFeedback.showErrorPopup(
+                        activity = this,
+                        title = "No se pudo crear movimiento",
+                        details = "Origen y destino no pueden ser iguales"
+                    )
+                    onFinished()
                     return
                 }
             }
-            else -> { binding.etCreateType.error = "Usa IN / OUT / ADJUST / TRANSFER"; return }
+            else -> {
+                CreateUiFeedback.showErrorPopup(
+                    activity = this,
+                    title = "No se pudo crear movimiento",
+                    details = "Usa IN / OUT / ADJUST / TRANSFER"
+                )
+                onFinished()
+                return
+            }
         }
 
-        binding.btnCreateMovement.isEnabled = false
         val loading = CreateUiFeedback.showLoading(this, "movimiento")
 
         lifecycleScope.launch {
@@ -229,7 +320,14 @@ class MovementsMenuActivity : AppCompatActivity(), TopCenterActionHost {
             try {
                 val productId = productInput.toIntOrNull() ?: resolveProductIdByName(productInput)
                 if (productId == null) {
-                    binding.etCreateProduct.error = "Producto inválido"
+                    loadingHandled = true
+                    loading.dismissThen {
+                        CreateUiFeedback.showErrorPopup(
+                            activity = this@MovementsMenuActivity,
+                            title = "No se pudo crear movimiento",
+                            details = "Producto invalido"
+                        )
+                    }
                     return@launch
                 }
 
@@ -240,12 +338,12 @@ class MovementsMenuActivity : AppCompatActivity(), TopCenterActionHost {
                         if (res.isSuccessful && res.body() != null) {
                             val body = res.body()!!
                             val productLabel = productNamesById[productId] ?: productId.toString()
-                            val details = "ID: ${body.movement.id}\nTipo: IN\nProducto: $productLabel\nCantidad: ${body.movement.quantity}\nUbicación: ${body.movement.location ?: location}"
+                            val details = "ID: ${body.movement.id}\nTipo: IN\nProducto: $productLabel\nCantidad: ${body.movement.quantity}\nUbicacion: ${body.movement.location ?: location}"
                             loadingHandled = true
                             loading.dismissThen {
                                 CreateUiFeedback.showCreatedPopup(this@MovementsMenuActivity, "Movimiento creado", details)
                             }
-                            binding.etCreateQuantity.setText("")
+                            createQuantityInput = ""
                             cacheStore.invalidatePrefix("movements")
                             loadMovements(withSnack = false)
                         } else {
@@ -259,12 +357,12 @@ class MovementsMenuActivity : AppCompatActivity(), TopCenterActionHost {
                         if (res.isSuccessful && res.body() != null) {
                             val body = res.body()!!
                             val productLabel = productNamesById[productId] ?: productId.toString()
-                            val details = "ID: ${body.movement.id}\nTipo: OUT\nProducto: $productLabel\nCantidad: ${body.movement.quantity}\nUbicación: ${body.movement.location ?: location}"
+                            val details = "ID: ${body.movement.id}\nTipo: OUT\nProducto: $productLabel\nCantidad: ${body.movement.quantity}\nUbicacion: ${body.movement.location ?: location}"
                             loadingHandled = true
                             loading.dismissThen {
                                 CreateUiFeedback.showCreatedPopup(this@MovementsMenuActivity, "Movimiento creado", details)
                             }
-                            binding.etCreateQuantity.setText("")
+                            createQuantityInput = ""
                             cacheStore.invalidatePrefix("movements")
                             loadMovements(withSnack = false)
                         } else {
@@ -278,12 +376,12 @@ class MovementsMenuActivity : AppCompatActivity(), TopCenterActionHost {
                         if (res.isSuccessful && res.body() != null) {
                             val body = res.body()!!
                             val productLabel = productNamesById[productId] ?: productId.toString()
-                            val details = "ID: ${body.movement.id}\nTipo: ADJUST\nProducto: $productLabel\nDelta: ${body.movement.delta ?: quantity}\nUbicación: ${body.movement.location ?: location}"
+                            val details = "ID: ${body.movement.id}\nTipo: ADJUST\nProducto: $productLabel\nDelta: ${body.movement.delta ?: quantity}\nUbicacion: ${body.movement.location ?: location}"
                             loadingHandled = true
                             loading.dismissThen {
                                 CreateUiFeedback.showCreatedPopup(this@MovementsMenuActivity, "Movimiento creado", details)
                             }
-                            binding.etCreateQuantity.setText("")
+                            createQuantityInput = ""
                             cacheStore.invalidatePrefix("movements")
                             loadMovements(withSnack = false)
                         } else {
@@ -302,7 +400,7 @@ class MovementsMenuActivity : AppCompatActivity(), TopCenterActionHost {
                             loading.dismissThen {
                                 CreateUiFeedback.showCreatedPopup(this@MovementsMenuActivity, "Transferencia creada", details)
                             }
-                            binding.etCreateQuantity.setText("")
+                            createQuantityInput = ""
                             cacheStore.invalidatePrefix("movements")
                             loadMovements(withSnack = false)
                         } else {
@@ -316,8 +414,8 @@ class MovementsMenuActivity : AppCompatActivity(), TopCenterActionHost {
                 val label = if (productInput.isBlank()) "-" else productInput
                 val details = when (type) {
                     "TRANSFER" -> "Producto: $label\nCantidad: ${quantity ?: 0}\nOrigen: $location\nDestino: $toLocation (offline)"
-                    "ADJUST" -> "Producto: $label\nDelta: ${quantity ?: 0}\nUbicación: $location (offline)"
-                    else -> "Producto: $label\nCantidad: ${quantity ?: 0}\nUbicación: $location (offline)"
+                    "ADJUST" -> "Producto: $label\nDelta: ${quantity ?: 0}\nUbicacion: $location (offline)"
+                    else -> "Producto: $label\nCantidad: ${quantity ?: 0}\nUbicacion: $location (offline)"
                 }
                 loadingHandled = true
                 loading.dismissThen {
@@ -347,7 +445,7 @@ class MovementsMenuActivity : AppCompatActivity(), TopCenterActionHost {
                 if (!loadingHandled) {
                     loading.dismiss()
                 }
-                binding.btnCreateMovement.isEnabled = true
+                onFinished()
             }
         }
     }
@@ -509,10 +607,10 @@ class MovementsMenuActivity : AppCompatActivity(), TopCenterActionHost {
         val effectiveOffset = if (filtersActive) 0 else currentOffset
         if (filtersActive) currentOffset = 0
 
-        val productRaw = binding.etSearchProduct.text.toString().trim()
+        val productRaw = searchProductFilter.trim()
         val productIdFilter = productRaw.toIntOrNull()
-        val typeFilter = parseTypeForApi(binding.etSearchType.text.toString())
-        val sourceFilter = parseSourceForApi(binding.etSearchSource.text.toString())
+        val typeFilter = parseTypeForApi(searchTypeFilter)
+        val sourceFilter = parseSourceForApi(searchSourceFilter)
         val pendingAll = buildPendingRows()
         val pendingTotalCount = pendingAll.size
 
@@ -948,6 +1046,7 @@ class MovementsMenuActivity : AppCompatActivity(), TopCenterActionHost {
         } else {
             items = ordered
             adapter.submit(toAdapterRows(ordered))
+            updateMovementsListAdaptiveHeight()
         }
     }
 
@@ -979,7 +1078,10 @@ class MovementsMenuActivity : AppCompatActivity(), TopCenterActionHost {
     private fun updatePageInfo(pageSizeLoaded: Int, pendingCount: Int) {
         if (hasActiveFilters()) {
             val shown = (filteredOffset + items.size).coerceAtMost(filteredItems.size)
-            binding.tvMovementsPageInfo.text = "Mostrando $shown / ${filteredItems.size}"
+            val currentPage = if (filteredItems.isEmpty()) 0 else (filteredOffset / pageSize) + 1
+            val totalPages = if (filteredItems.isEmpty()) 0 else ((filteredItems.size + pageSize - 1) / pageSize)
+            binding.tvMovementsPageNumber.text = "Pagina $currentPage/$totalPages"
+            binding.tvMovementsPageInfo.text = "Mostrando $shown/${filteredItems.size}"
             val prevEnabled = filteredOffset > 0
             val nextEnabled = shown < filteredItems.size
             binding.btnPrevPageMovements.isEnabled = prevEnabled
@@ -989,14 +1091,18 @@ class MovementsMenuActivity : AppCompatActivity(), TopCenterActionHost {
             return
         }
         val shownOnline = (currentOffset + pageSizeLoaded).coerceAtMost(totalCount)
-        val label = if (totalCount > 0) {
-            "Mostrando $shownOnline / $totalCount"
+        val totalItems = if (totalCount > 0) totalCount else pendingCount
+        val currentPage = if (totalItems <= 0) 0 else (currentOffset / pageSize) + 1
+        val totalPages = if (totalItems <= 0) 0 else ((totalItems + pageSize - 1) / pageSize)
+        val label = if (totalItems > 0) {
+            "Mostrando $shownOnline/$totalItems"
         } else {
-            "Mostrando $pendingCount / $pendingCount"
+            "Mostrando 0/0"
         }
+        binding.tvMovementsPageNumber.text = "Pagina $currentPage/$totalPages"
         binding.tvMovementsPageInfo.text = label
         val prevEnabled = currentOffset > 0
-        val nextEnabled = shownOnline < totalCount
+        val nextEnabled = shownOnline < totalItems
         binding.btnPrevPageMovements.isEnabled = prevEnabled
         binding.btnNextPageMovements.isEnabled = nextEnabled
         applyPagerButtonStyle(binding.btnPrevPageMovements, prevEnabled)
@@ -1005,86 +1111,43 @@ class MovementsMenuActivity : AppCompatActivity(), TopCenterActionHost {
 
     private fun applyPagerButtonStyle(button: Button, enabled: Boolean) {
         button.backgroundTintList = null
+        val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         if (!enabled) {
             val colors = intArrayOf(
-                ContextCompat.getColor(this, android.R.color.darker_gray),
-                ContextCompat.getColor(this, android.R.color.darker_gray)
+                if (isDark) 0x334F6480 else 0x33A7BED8,
+                if (isDark) 0x33445A74 else 0x338FA9C6
             )
             val drawable = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
-                cornerRadius = resources.displayMetrics.density * 18f
-                setStroke((resources.displayMetrics.density * 1f).toInt(), 0xFFB0B0B0.toInt())
+                cornerRadius = resources.displayMetrics.density * 16f
+                setStroke((resources.displayMetrics.density * 1f).toInt(), if (isDark) 0x44AFCBEB else 0x5597BCD9)
             }
             button.background = drawable
-            button.setTextColor(ContextCompat.getColor(this, android.R.color.white))
+            button.setTextColor(ContextCompat.getColor(this, R.color.liquid_popup_hint))
             return
         }
         val colors = intArrayOf(
-            ContextCompat.getColor(this, R.color.icon_grad_start),
-            ContextCompat.getColor(this, R.color.icon_grad_mid2),
-            ContextCompat.getColor(this, R.color.icon_grad_mid1),
-            ContextCompat.getColor(this, R.color.icon_grad_end)
+            if (isDark) 0x66789BC4 else 0x99D6EBFA.toInt(),
+            if (isDark) 0x666D8DB4 else 0x99C5E0F4.toInt()
         )
         val drawable = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
-            cornerRadius = resources.displayMetrics.density * 18f
-            setStroke((resources.displayMetrics.density * 1f).toInt(), 0x33000000)
+            cornerRadius = resources.displayMetrics.density * 16f
+            setStroke((resources.displayMetrics.density * 1f).toInt(), if (isDark) 0x88B5D5F4.toInt() else 0x88A7CBE6.toInt())
         }
         button.background = drawable
-        button.setTextColor(ContextCompat.getColor(this, android.R.color.white))
+        button.setTextColor(ContextCompat.getColor(this, R.color.liquid_popup_button_text))
     }
 
-    private fun setupTypeDropdowns() {
-        val createValues = listOf("", "IN", "OUT", "ADJUST", "TRANSFER")
-        val createAdapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, createValues)
-        binding.etCreateType.setAdapter(createAdapter)
-        binding.etCreateType.setOnItemClickListener { _, _, position, _ ->
-            if (createValues[position].isBlank()) binding.etCreateType.setText("", false)
-        }
-        binding.etCreateType.setOnClickListener { binding.etCreateType.showDropDown() }
-        binding.etCreateType.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) binding.etCreateType.showDropDown()
-        }
-        binding.etCreateType.addTextChangedListener { text ->
-            val type = text?.toString()?.trim()?.uppercase() ?: ""
-            updateTransferVisibility(type)
-            updateQuantityForType(type)
-        }
-
-        val searchValues = listOf("", "IN", "OUT", "ADJUST")
-        val searchAdapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, searchValues)
-        binding.etSearchType.setAdapter(searchAdapter)
-        binding.etSearchType.setOnItemClickListener { _, _, position, _ ->
-            if (searchValues[position].isBlank()) binding.etSearchType.setText("", false)
-        }
-        binding.etSearchType.setOnClickListener { binding.etSearchType.showDropDown() }
-        binding.etSearchType.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) binding.etSearchType.showDropDown()
+    private fun applyRefreshIconTint() {
+        val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        if (!isDark) {
+            val blue = ContextCompat.getColor(this, R.color.icon_grad_mid2)
+            binding.btnRefreshMovements.setColorFilter(blue)
+        } else {
+            binding.btnRefreshMovements.clearColorFilter()
         }
     }
 
-    private fun setupSourceDropdowns() {
-        val values = listOf("", "SCAN", "MANUAL")
-        val createAdapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, values)
-        binding.etCreateSource.setAdapter(createAdapter)
-        binding.etCreateSource.setOnItemClickListener { _, _, position, _ ->
-            if (values[position].isBlank()) binding.etCreateSource.setText("", false)
-        }
-        binding.etCreateSource.setOnClickListener { binding.etCreateSource.showDropDown() }
-        binding.etCreateSource.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) binding.etCreateSource.showDropDown()
-        }
-
-        val searchAdapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, values)
-        binding.etSearchSource.setAdapter(searchAdapter)
-        binding.etSearchSource.setOnItemClickListener { _, _, position, _ ->
-            if (values[position].isBlank()) binding.etSearchSource.setText("", false)
-        }
-        binding.etSearchSource.setOnClickListener { binding.etSearchSource.showDropDown() }
-        binding.etSearchSource.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) binding.etSearchSource.showDropDown()
-        }
-    }
-
-    private fun setupLocationDropdown() {
+    private fun loadLocationOptions() {
         lifecycleScope.launch {
             try {
                 val res = NetworkModule.api.listLocations(limit = 200, offset = 0)
@@ -1097,18 +1160,7 @@ class MovementsMenuActivity : AppCompatActivity(), TopCenterActionHost {
                     val values = items.sortedBy { it.id }
                         .map { "(${it.id}) ${it.code}" }
                         .distinct()
-                    val allValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
-                    val adapter = ArrayAdapter(this@MovementsMenuActivity, android.R.layout.simple_list_item_1, allValues)
-                    binding.etCreateLocation.setAdapter(adapter)
-                    binding.etCreateLocation.setOnClickListener { binding.etCreateLocation.showDropDown() }
-                    binding.etCreateLocation.setOnFocusChangeListener { _, hasFocus ->
-                        if (hasFocus) binding.etCreateLocation.showDropDown()
-                    }
-                    binding.etCreateToLocation.setAdapter(adapter)
-                    binding.etCreateToLocation.setOnClickListener { binding.etCreateToLocation.showDropDown() }
-                    binding.etCreateToLocation.setOnFocusChangeListener { _, hasFocus ->
-                        if (hasFocus) binding.etCreateToLocation.showDropDown()
-                    }
+                    locationDropdownValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
                     return@launch
                 }
             } catch (_: Exception) { }
@@ -1121,69 +1173,19 @@ class MovementsMenuActivity : AppCompatActivity(), TopCenterActionHost {
                 val values = cached.items.sortedBy { it.id }
                     .map { "(${it.id}) ${it.code}" }
                     .distinct()
-                val allValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
-                val adapter = ArrayAdapter(this@MovementsMenuActivity, android.R.layout.simple_list_item_1, allValues)
-                binding.etCreateLocation.setAdapter(adapter)
-                binding.etCreateLocation.setOnClickListener { binding.etCreateLocation.showDropDown() }
-                binding.etCreateLocation.setOnFocusChangeListener { _, hasFocus ->
-                    if (hasFocus) binding.etCreateLocation.showDropDown()
-                }
-                binding.etCreateToLocation.setAdapter(adapter)
-                binding.etCreateToLocation.setOnClickListener { binding.etCreateToLocation.showDropDown() }
-                binding.etCreateToLocation.setOnFocusChangeListener { _, hasFocus ->
-                    if (hasFocus) binding.etCreateToLocation.showDropDown()
-                }
+                locationDropdownValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
             }
         }
     }
 
-    private fun applyDropdownIcons() {
-        val endIconId = com.google.android.material.R.id.text_input_end_icon
-        val tilList = listOf(
-            binding.tilCreateType,
-            binding.tilCreateSource,
-            binding.tilCreateLocation,
-            binding.tilCreateToLocation,
-            binding.tilSearchType,
-            binding.tilSearchSource
-        )
-        tilList.forEach { til ->
-            til.setEndIconTintList(null)
-            til.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
-                GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
-                iv.scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
-            }
-        }
+    private fun bindDropdown(auto: MaterialAutoCompleteTextView, values: List<String>) {
+        val adapter = ArrayAdapter(this, R.layout.item_liquid_dropdown, values)
+        auto.setAdapter(adapter)
+        auto.setOnClickListener { auto.showDropDown() }
+        auto.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) auto.showDropDown() }
     }
 
-    private fun updateTransferVisibility(type: String) {
-        binding.tilCreateToLocation.visibility =
-            if (type == "TRANSFER") View.VISIBLE else View.GONE
-    }
-
-    private fun updateQuantityForType(type: String) {
-        if (type == "ADJUST") {
-            quantityHint = "(-)Negativo para retirar | (+)Positivo para introducir"
-            binding.etCreateQuantity.hint = quantityHint
-            binding.etCreateQuantity.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED
-        } else {
-            quantityHint = "Cantidad"
-            binding.etCreateQuantity.hint = quantityHint
-            binding.etCreateQuantity.inputType = InputType.TYPE_CLASS_NUMBER
-        }
-    }
-
-    private fun setupQuantityFocusHint() {
-        binding.etCreateQuantity.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) {
-                binding.etCreateQuantity.hint = ""
-            } else if (binding.etCreateQuantity.text.isNullOrBlank()) {
-                binding.etCreateQuantity.hint = quantityHint
-            }
-        }
-    }
-
-    private fun toggleCreateForm() {
+    private fun openCreateMovementDialog() {
         if (isUserRole()) {
             UiNotifier.showBlocking(
                 this,
@@ -1193,47 +1195,197 @@ class MovementsMenuActivity : AppCompatActivity(), TopCenterActionHost {
             )
             return
         }
-        TransitionManager.beginDelayedTransition(binding.scrollMovements, AutoTransition().setDuration(180))
-        val isVisible = binding.layoutCreateMovementContent.visibility == View.VISIBLE
-        if (isVisible) {
-            binding.layoutCreateMovementContent.visibility = View.GONE
-            binding.layoutSearchMovementContent.visibility = View.GONE
-            setToggleActive(null)
-        } else {
-            binding.layoutCreateMovementContent.visibility = View.VISIBLE
-            binding.layoutSearchMovementContent.visibility = View.GONE
-            setToggleActive(binding.layoutCreateMovementHeader)
+        if (createDialog?.isShowing == true) return
+
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_movements_create_master, null)
+        val btnClose = view.findViewById<ImageButton>(R.id.btnCreateMovementDialogClose)
+        val btnCreate = view.findViewById<Button>(R.id.btnDialogCreateMovement)
+        val etType = view.findViewById<MaterialAutoCompleteTextView>(R.id.etDialogCreateType)
+        val etSource = view.findViewById<MaterialAutoCompleteTextView>(R.id.etDialogCreateSource)
+        val etProduct = view.findViewById<TextInputEditText>(R.id.etDialogCreateProduct)
+        val etQuantity = view.findViewById<TextInputEditText>(R.id.etDialogCreateQuantity)
+        val etLocation = view.findViewById<MaterialAutoCompleteTextView>(R.id.etDialogCreateLocation)
+        val etToLocation = view.findViewById<MaterialAutoCompleteTextView>(R.id.etDialogCreateToLocation)
+        val tilType = view.findViewById<TextInputLayout>(R.id.tilDialogCreateType)
+        val tilSource = view.findViewById<TextInputLayout>(R.id.tilDialogCreateSource)
+        val tilLocation = view.findViewById<TextInputLayout>(R.id.tilDialogCreateLocation)
+        val tilToLocation = view.findViewById<TextInputLayout>(R.id.tilDialogCreateToLocation)
+
+        etType.setText(createTypeInput, false)
+        etSource.setText(createSourceInput, false)
+        etProduct.setText(createProductInput)
+        etQuantity.setText(createQuantityInput)
+        etLocation.setText(createLocationInput, false)
+        etToLocation.setText(createToLocationInput, false)
+
+        bindDropdown(etType, createTypeValues)
+        bindDropdown(etSource, sourceValues)
+        bindDropdown(etLocation, locationDropdownValues)
+        bindDropdown(etToLocation, locationDropdownValues)
+
+        val currentType = createTypeInput.trim().uppercase()
+        updateDialogTransferVisibility(currentType, tilToLocation)
+        updateDialogQuantityForType(currentType, etQuantity)
+
+        etType.addTextChangedListener { text ->
+            val type = text?.toString()?.trim()?.uppercase().orEmpty()
+            updateDialogTransferVisibility(type, tilToLocation)
+            updateDialogQuantityForType(type, etQuantity)
+        }
+
+        applyDialogDropdownStyle(
+            listOf(tilType, tilSource, tilLocation, tilToLocation),
+            listOf(etType, etSource, etLocation, etToLocation)
+        )
+
+        val dialog = AlertDialog.Builder(this).setView(view).setCancelable(true).create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        btnClose.setOnClickListener { dialog.dismiss() }
+        btnCreate.setOnClickListener {
+            createTypeInput = etType.text?.toString().orEmpty().trim()
+            createSourceInput = etSource.text?.toString().orEmpty().trim()
+            createProductInput = etProduct.text?.toString().orEmpty().trim()
+            createQuantityInput = etQuantity.text?.toString().orEmpty().trim()
+            createLocationInput = etLocation.text?.toString().orEmpty().trim()
+            createToLocationInput = etToLocation.text?.toString().orEmpty().trim()
+
+            btnCreate.isEnabled = false
+            createMovement(
+                typeRawInput = createTypeInput,
+                sourceRawInput = createSourceInput,
+                productInputRaw = createProductInput,
+                quantityInputRaw = createQuantityInput,
+                locationRawInput = createLocationInput,
+                toLocationRawInput = createToLocationInput,
+                onFinished = { btnCreate.isEnabled = true }
+            )
+            dialog.dismiss()
+        }
+
+        dialog.setOnDismissListener {
+            createDialog = null
+            hideKeyboard()
+        }
+        createDialog = dialog
+        dialog.show()
+    }
+
+    private fun openSearchMovementDialog() {
+        if (searchDialog?.isShowing == true) return
+
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_movements_search_master, null)
+        val btnClose = view.findViewById<ImageButton>(R.id.btnSearchMovementDialogClose)
+        val btnSearch = view.findViewById<Button>(R.id.btnDialogSearchMovement)
+        val btnClear = view.findViewById<Button>(R.id.btnDialogClearSearchMovement)
+        val etType = view.findViewById<MaterialAutoCompleteTextView>(R.id.etDialogSearchType)
+        val etSource = view.findViewById<MaterialAutoCompleteTextView>(R.id.etDialogSearchSource)
+        val etProduct = view.findViewById<TextInputEditText>(R.id.etDialogSearchProduct)
+        val tilType = view.findViewById<TextInputLayout>(R.id.tilDialogSearchType)
+        val tilSource = view.findViewById<TextInputLayout>(R.id.tilDialogSearchSource)
+
+        etType.setText(searchTypeFilter, false)
+        etSource.setText(searchSourceFilter, false)
+        etProduct.setText(searchProductFilter)
+
+        bindDropdown(etType, searchTypeValues)
+        bindDropdown(etSource, sourceValues)
+        applyDialogDropdownStyle(listOf(tilType, tilSource), listOf(etType, etSource))
+
+        val dialog = AlertDialog.Builder(this).setView(view).setCancelable(true).create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        btnClose.setOnClickListener { dialog.dismiss() }
+        btnSearch.setOnClickListener {
+            searchTypeFilter = etType.text?.toString().orEmpty().trim()
+            searchSourceFilter = etSource.text?.toString().orEmpty().trim()
+            searchProductFilter = etProduct.text?.toString().orEmpty().trim()
+            hideKeyboard()
+            dialog.dismiss()
+            applySearchFilters()
+        }
+        btnClear.setOnClickListener {
+            etType.setText("", false)
+            etSource.setText("", false)
+            etProduct.setText("")
+            clearSearchFilters()
+            hideKeyboard()
+        }
+
+        dialog.setOnDismissListener {
+            searchDialog = null
+            hideKeyboard()
+        }
+        searchDialog = dialog
+        dialog.show()
+    }
+
+    private fun applyDialogDropdownStyle(
+        textInputLayouts: List<TextInputLayout>,
+        dropdowns: List<MaterialAutoCompleteTextView>
+    ) {
+        val popupDrawable = ContextCompat.getDrawable(this, R.drawable.bg_liquid_dropdown_popup)
+        val endIconId = com.google.android.material.R.id.text_input_end_icon
+        textInputLayouts.forEach { til ->
+            til.setEndIconTintList(null)
+            til.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
+                GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
+            }
+        }
+        dropdowns.forEach { auto ->
+            if (popupDrawable != null) auto.setDropDownBackgroundDrawable(popupDrawable)
         }
     }
 
-    private fun toggleSearchForm() {
-        TransitionManager.beginDelayedTransition(binding.scrollMovements, AutoTransition().setDuration(180))
-        val isVisible = binding.layoutSearchMovementContent.visibility == View.VISIBLE
-        if (isVisible) {
-            hideSearchForm()
+    private fun updateDialogTransferVisibility(type: String, tilToLocation: TextInputLayout) {
+        tilToLocation.visibility = if (type == "TRANSFER") android.view.View.VISIBLE else android.view.View.GONE
+    }
+
+    private fun updateDialogQuantityForType(type: String, etQuantity: TextInputEditText) {
+        if (type == "ADJUST") {
+            quantityHint = "(-)Negativo para retirar | (+)Positivo para introducir"
+            etQuantity.hint = quantityHint
+            etQuantity.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED
         } else {
-            binding.layoutSearchMovementContent.visibility = View.VISIBLE
-            binding.layoutCreateMovementContent.visibility = View.GONE
-            setToggleActive(binding.layoutSearchMovementHeader)
+            quantityHint = "Cantidad"
+            etQuantity.hint = quantityHint
+            etQuantity.inputType = InputType.TYPE_CLASS_NUMBER
         }
     }
 
-    private fun hideSearchForm() {
-        binding.layoutSearchMovementContent.visibility = View.GONE
-        binding.layoutCreateMovementContent.visibility = View.GONE
-        setToggleActive(null)
-    }
+    private fun updateMovementsListAdaptiveHeight() {
+        binding.scrollMovements.post {
+            val topSpacerLp = binding.viewMovementsTopSpacer.layoutParams as? LinearLayout.LayoutParams ?: return@post
+            val bottomSpacerLp = binding.viewMovementsBottomSpacer.layoutParams as? LinearLayout.LayoutParams ?: return@post
+            val cardLp = binding.cardMovementsList.layoutParams as? LinearLayout.LayoutParams ?: return@post
+            val rvLp = binding.rvMovements.layoutParams as? LinearLayout.LayoutParams ?: return@post
 
-    private fun setToggleActive(active: View?) {
-        if (active === binding.layoutCreateMovementHeader) {
-            binding.layoutCreateMovementHeader.setBackgroundResource(R.drawable.bg_toggle_active)
-            binding.layoutSearchMovementHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
-        } else if (active === binding.layoutSearchMovementHeader) {
-            binding.layoutCreateMovementHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
-            binding.layoutSearchMovementHeader.setBackgroundResource(R.drawable.bg_toggle_active)
-        } else {
-            binding.layoutCreateMovementHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
-            binding.layoutSearchMovementHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
+            val visibleCount = if (::adapter.isInitialized) adapter.itemCount else 0
+            if (visibleCount in 1 until pageSize) {
+                topSpacerLp.height = 0
+                topSpacerLp.weight = 1f
+                bottomSpacerLp.height = 0
+                bottomSpacerLp.weight = 1f
+                cardLp.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                cardLp.weight = 0f
+                rvLp.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                rvLp.weight = 0f
+                binding.rvMovements.isNestedScrollingEnabled = false
+            } else {
+                topSpacerLp.height = 0
+                topSpacerLp.weight = 0f
+                bottomSpacerLp.height = 0
+                bottomSpacerLp.weight = 0f
+                cardLp.height = 0
+                cardLp.weight = 1f
+                rvLp.height = 0
+                rvLp.weight = 1f
+                binding.rvMovements.isNestedScrollingEnabled = true
+            }
+            binding.viewMovementsTopSpacer.layoutParams = topSpacerLp
+            binding.viewMovementsBottomSpacer.layoutParams = bottomSpacerLp
+            binding.cardMovementsList.layoutParams = cardLp
+            binding.rvMovements.layoutParams = rvLp
         }
     }
 
@@ -1265,9 +1417,9 @@ class MovementsMenuActivity : AppCompatActivity(), TopCenterActionHost {
     }
 
     private fun applySearchFiltersInternal(allowReload: Boolean, showNotFoundDialog: Boolean = false) {
-        val typeRaw = binding.etSearchType.text.toString().trim().uppercase()
-        val sourceRaw = binding.etSearchSource.text.toString().trim().uppercase()
-        val productRaw = binding.etSearchProduct.text.toString().trim()
+        val typeRaw = searchTypeFilter.trim().uppercase()
+        val sourceRaw = searchSourceFilter.trim().uppercase()
+        val productRaw = searchProductFilter.trim()
 
         if (allowReload && !isLoading && (currentOffset > 0 || totalCount > allItems.size)) {
             pendingFilterApply = true
@@ -1311,20 +1463,21 @@ class MovementsMenuActivity : AppCompatActivity(), TopCenterActionHost {
     }
 
     private fun clearSearchFilters() {
-        binding.etSearchType.setText("", false)
-        binding.etSearchSource.setText("", false)
-        binding.etSearchProduct.setText("")
+        searchTypeFilter = ""
+        searchSourceFilter = ""
+        searchProductFilter = ""
         filteredItems = emptyList()
         filteredOffset = 0
         items = allItems
         adapter.submit(toAdapterRows(allItems))
         updatePageInfo(items.size, items.size)
+        updateMovementsListAdaptiveHeight()
     }
 
     private fun hasActiveFilters(): Boolean {
-        return binding.etSearchType.text?.isNotBlank() == true ||
-            binding.etSearchSource.text?.isNotBlank() == true ||
-            binding.etSearchProduct.text?.isNotBlank() == true
+        return searchTypeFilter.isNotBlank() ||
+            searchSourceFilter.isNotBlank() ||
+            searchProductFilter.isNotBlank()
     }
 
     private fun applyFilteredPage() {
@@ -1334,6 +1487,7 @@ class MovementsMenuActivity : AppCompatActivity(), TopCenterActionHost {
         items = page
         adapter.submit(toAdapterRows(page))
         updatePageInfo(page.size, page.size)
+        updateMovementsListAdaptiveHeight()
     }
 
     private fun parseTypeForApi(raw: String): MovementTypeDto? {
