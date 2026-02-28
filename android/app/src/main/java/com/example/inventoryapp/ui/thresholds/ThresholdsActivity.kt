@@ -2,7 +2,13 @@ package com.example.inventoryapp.ui.thresholds
 import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 
 import android.content.Intent
+import android.content.res.Configuration
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -30,13 +36,14 @@ import java.io.IOException
 import com.example.inventoryapp.ui.common.GradientIconUtil
 import com.example.inventoryapp.R
 import android.widget.ArrayAdapter
-import android.graphics.drawable.GradientDrawable
 import androidx.core.content.ContextCompat
-import android.view.View
-import androidx.transition.AutoTransition
-import androidx.transition.TransitionManager
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
+import android.widget.ImageButton
+import android.widget.LinearLayout
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 
 class ThresholdsActivity : AppCompatActivity(), TopCenterActionHost {
     companion object {
@@ -61,6 +68,14 @@ class ThresholdsActivity : AppCompatActivity(), TopCenterActionHost {
     private var bulkProductNamesCache: Map<Int, String>? = null
     private var bulkProductNamesCacheAtMs: Long = 0L
     private val bulkProductNamesCacheTtlMs = 30_000L
+    private var createDialog: AlertDialog? = null
+    private var searchDialog: AlertDialog? = null
+    private var locationDropdownValues: List<String> = listOf("")
+    private var createProductInput: String = ""
+    private var createLocationInput: String = ""
+    private var createMinQtyInput: String = ""
+    private var searchProductFilter: String = ""
+    private var searchLocationFilter: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,9 +84,9 @@ class ThresholdsActivity : AppCompatActivity(), TopCenterActionHost {
         NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
 
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
-        GradientIconUtil.applyGradient(binding.ivCreateThresholdAdd, R.drawable.add)
-        GradientIconUtil.applyGradient(binding.ivSearchThreshold, R.drawable.search)
+        binding.btnRefreshThresholds.setImageResource(R.drawable.glass_refresh)
         applyThresholdTitleGradient()
+        applyRefreshIconTint()
 
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
         cacheStore = CacheStore.getInstance(this)
@@ -94,24 +109,11 @@ class ThresholdsActivity : AppCompatActivity(), TopCenterActionHost {
             }
         }
 
-        binding.btnCreate.setOnClickListener { createThreshold() }
-        binding.btnRefresh.setOnClickListener {
+        binding.btnRefreshThresholds.setOnClickListener {
             invalidateBulkProductNamesCache()
             loadThresholds(withSnack = true)
         }
-        binding.layoutCreateThresholdHeader.setOnClickListener { toggleCreateForm() }
-        binding.layoutSearchThresholdHeader.setOnClickListener { toggleSearchForm() }
-        binding.btnSearch.setOnClickListener {
-            hideKeyboard()
-            applySearchFilters()
-        }
-        binding.btnClear.setOnClickListener {
-            hideKeyboard()
-            clearSearchFilters()
-        }
-
         setupLocationDropdowns()
-        binding.tilCreateLocation.post { applyThresholdDropdownIcons() }
 
         binding.btnPrevThresholdPage.setOnClickListener {
             if (hasActiveFilters()) {
@@ -144,24 +146,22 @@ class ThresholdsActivity : AppCompatActivity(), TopCenterActionHost {
 
         applyPagerButtonStyle(binding.btnPrevThresholdPage, enabled = false)
         applyPagerButtonStyle(binding.btnNextThresholdPage, enabled = false)
+        updateThresholdsListAdaptiveHeight()
     }
 
     override fun onResume() {
         super.onResume()
         currentOffset = 0
         loadThresholds()
+        updateThresholdsListAdaptiveHeight()
     }
 
     override fun onTopCreateAction() {
-        if (binding.layoutCreateThresholdContent.visibility != View.VISIBLE) {
-            toggleCreateForm()
-        }
+        openCreateThresholdDialog()
     }
 
     override fun onTopFilterAction() {
-        if (binding.layoutSearchThresholdContent.visibility != View.VISIBLE) {
-            toggleSearchForm()
-        }
+        openSearchThresholdDialog()
     }
 
     private fun applySearchFilters() {
@@ -172,8 +172,8 @@ class ThresholdsActivity : AppCompatActivity(), TopCenterActionHost {
         allowReload: Boolean,
         showNotFoundDialog: Boolean = false
     ) {
-        val productRaw = binding.etSearchProductId.text.toString().trim()
-        val locationRaw = normalizeLocationInput(binding.etSearchLocation.text.toString().trim())
+        val productRaw = searchProductFilter.trim()
+        val locationRaw = normalizeLocationInput(searchLocationFilter.trim())
 
         if (allowReload && !isLoading && (currentOffset > 0 || totalCount > items.size)) {
             pendingFilterApply = true
@@ -212,8 +212,8 @@ class ThresholdsActivity : AppCompatActivity(), TopCenterActionHost {
     }
 
     private fun clearSearchFilters() {
-        binding.etSearchProductId.setText("")
-        binding.etSearchLocation.setText("")
+        searchProductFilter = ""
+        searchLocationFilter = ""
         filteredItems = emptyList()
         filteredOffset = 0
         val rows = items.map { ThresholdRowUi(it, productNameById[it.productId]) }
@@ -403,17 +403,37 @@ class ThresholdsActivity : AppCompatActivity(), TopCenterActionHost {
         }
     }
 
-    private fun createThreshold() {
-        val productInput = binding.etProductId.text.toString().trim()
+    private fun createThreshold(
+        productInputRaw: String,
+        locationRaw: String,
+        minQtyRaw: String,
+        onFinished: () -> Unit = {}
+    ) {
+        val productInput = productInputRaw.trim()
         val productId = productInput.toIntOrNull() ?: resolveProductIdByName(productInput)
-        val location = normalizeLocationInput(binding.etLocation.text.toString().trim()).ifBlank { null }
-        val minQty = binding.etMinQty.text.toString().trim().toIntOrNull()
+        val location = normalizeLocationInput(locationRaw.trim()).ifBlank { null }
+        val minQty = minQtyRaw.trim().toIntOrNull()
 
-        if (productId == null) { binding.etProductId.error = "Producto ID o nombre valido"; return }
-        if (minQty == null || minQty < 0) { binding.etMinQty.error = "Min >= 0"; return }
+        if (productId == null) {
+            CreateUiFeedback.showErrorPopup(
+                activity = this,
+                title = "No se pudo crear threshold",
+                details = "Producto ID o nombre valido"
+            )
+            onFinished()
+            return
+        }
+        if (minQty == null || minQty < 0) {
+            CreateUiFeedback.showErrorPopup(
+                activity = this,
+                title = "No se pudo crear threshold",
+                details = "Cantidad minima invalida"
+            )
+            onFinished()
+            return
+        }
 
         val dto = ThresholdCreateDto(productId = productId, location = location, minQuantity = minQty)
-        binding.btnCreate.isEnabled = false
         val loading = CreateUiFeedback.showLoading(this, "threshold")
         lifecycleScope.launch {
             var loadingHandled = false
@@ -436,9 +456,9 @@ class ThresholdsActivity : AppCompatActivity(), TopCenterActionHost {
                             details
                         )
                     }
-                    binding.etProductId.setText("")
-                    binding.etLocation.setText("")
-                    binding.etMinQty.setText("")
+                    createProductInput = ""
+                    createLocationInput = ""
+                    createMinQtyInput = ""
                     cacheStore.invalidatePrefix("thresholds")
                     loadThresholds()
                 } else {
@@ -482,7 +502,7 @@ class ThresholdsActivity : AppCompatActivity(), TopCenterActionHost {
                 if (!loadingHandled) {
                     loading.dismiss()
                 }
-                binding.btnCreate.isEnabled = true
+                onFinished()
             }
         }
     }
@@ -716,8 +736,8 @@ class ThresholdsActivity : AppCompatActivity(), TopCenterActionHost {
     }
 
     private fun hasActiveFilters(): Boolean {
-        return binding.etSearchProductId.text?.isNotBlank() == true ||
-            binding.etSearchLocation.text?.isNotBlank() == true
+        return searchProductFilter.isNotBlank() ||
+            searchLocationFilter.isNotBlank()
     }
 
     private fun buildThresholdSearchNotFoundDetails(productRaw: String, locationRaw: String): String {
@@ -855,6 +875,9 @@ class ThresholdsActivity : AppCompatActivity(), TopCenterActionHost {
     private fun updatePageInfo(pageSizeLoaded: Int) {
         if (hasActiveFilters()) {
             val shown = (filteredOffset + pageSizeLoaded).coerceAtMost(filteredItems.size)
+            val currentPage = if (filteredItems.isEmpty()) 0 else (filteredOffset / pageSize) + 1
+            val totalPages = if (filteredItems.isEmpty()) 0 else ((filteredItems.size + pageSize - 1) / pageSize)
+            binding.tvThresholdPageNumber.text = "Pagina $currentPage/$totalPages"
             binding.tvThresholdPageInfo.text = "Mostrando $shown/${filteredItems.size}"
             val prevEnabled = filteredOffset > 0
             val nextEnabled = shown < filteredItems.size
@@ -862,10 +885,14 @@ class ThresholdsActivity : AppCompatActivity(), TopCenterActionHost {
             binding.btnNextThresholdPage.isEnabled = nextEnabled
             applyPagerButtonStyle(binding.btnPrevThresholdPage, prevEnabled)
             applyPagerButtonStyle(binding.btnNextThresholdPage, nextEnabled)
+            updateThresholdsListAdaptiveHeight()
             return
         }
         val shown = (currentOffset + pageSizeLoaded).coerceAtMost(totalCount)
-        val label = if (totalCount > 0) "Mostrando $shown/$totalCount" else "Mostrando ${pageSizeLoaded}/${pageSizeLoaded}"
+        val currentPage = if (totalCount <= 0) 0 else (currentOffset / pageSize) + 1
+        val totalPages = if (totalCount <= 0) 0 else ((totalCount + pageSize - 1) / pageSize)
+        val label = if (totalCount > 0) "Mostrando $shown/$totalCount" else "Mostrando 0/0"
+        binding.tvThresholdPageNumber.text = "Pagina $currentPage/$totalPages"
         binding.tvThresholdPageInfo.text = label
         val prevEnabled = currentOffset > 0
         val nextEnabled = shown < totalCount
@@ -873,76 +900,35 @@ class ThresholdsActivity : AppCompatActivity(), TopCenterActionHost {
         binding.btnNextThresholdPage.isEnabled = nextEnabled
         applyPagerButtonStyle(binding.btnPrevThresholdPage, prevEnabled)
         applyPagerButtonStyle(binding.btnNextThresholdPage, nextEnabled)
+        updateThresholdsListAdaptiveHeight()
     }
 
     private fun applyPagerButtonStyle(button: Button, enabled: Boolean) {
         button.backgroundTintList = null
+        val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         if (!enabled) {
             val colors = intArrayOf(
-                ContextCompat.getColor(this, android.R.color.darker_gray),
-                ContextCompat.getColor(this, android.R.color.darker_gray)
+                if (isDark) 0x334F6480 else 0x33A7BED8,
+                if (isDark) 0x33445A74 else 0x338FA9C6
             )
             val drawable = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
-                cornerRadius = resources.displayMetrics.density * 18f
-                setStroke((resources.displayMetrics.density * 1f).toInt(), 0xFFB0B0B0.toInt())
+                cornerRadius = resources.displayMetrics.density * 16f
+                setStroke((resources.displayMetrics.density * 1f).toInt(), if (isDark) 0x44AFCBEB else 0x5597BCD9)
             }
             button.background = drawable
-            button.setTextColor(ContextCompat.getColor(this, android.R.color.white))
+            button.setTextColor(ContextCompat.getColor(this, R.color.liquid_popup_hint))
             return
         }
         val colors = intArrayOf(
-            ContextCompat.getColor(this, R.color.icon_grad_start),
-            ContextCompat.getColor(this, R.color.icon_grad_mid2),
-            ContextCompat.getColor(this, R.color.icon_grad_mid1),
-            ContextCompat.getColor(this, R.color.icon_grad_end)
+            if (isDark) 0x66789BC4 else 0x99D6EBFA.toInt(),
+            if (isDark) 0x666D8DB4 else 0x99C5E0F4.toInt()
         )
         val drawable = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
-            cornerRadius = resources.displayMetrics.density * 18f
-            setStroke((resources.displayMetrics.density * 1f).toInt(), 0x33000000)
+            cornerRadius = resources.displayMetrics.density * 16f
+            setStroke((resources.displayMetrics.density * 1f).toInt(), if (isDark) 0x88B5D5F4.toInt() else 0x88A7CBE6.toInt())
         }
         button.background = drawable
-        button.setTextColor(ContextCompat.getColor(this, android.R.color.white))
-    }
-
-    private fun toggleCreateForm() {
-        TransitionManager.beginDelayedTransition(binding.scrollThresholds, AutoTransition().setDuration(180))
-        val isVisible = binding.layoutCreateThresholdContent.visibility == View.VISIBLE
-        if (isVisible) {
-            binding.layoutCreateThresholdContent.visibility = View.GONE
-            binding.layoutSearchThresholdContent.visibility = View.GONE
-            setToggleActive(null)
-        } else {
-            binding.layoutCreateThresholdContent.visibility = View.VISIBLE
-            binding.layoutSearchThresholdContent.visibility = View.GONE
-            setToggleActive(binding.layoutCreateThresholdHeader)
-        }
-    }
-
-    private fun toggleSearchForm() {
-        TransitionManager.beginDelayedTransition(binding.scrollThresholds, AutoTransition().setDuration(180))
-        val isVisible = binding.layoutSearchThresholdContent.visibility == View.VISIBLE
-        if (isVisible) {
-            binding.layoutSearchThresholdContent.visibility = View.GONE
-            binding.layoutCreateThresholdContent.visibility = View.GONE
-            setToggleActive(null)
-        } else {
-            binding.layoutSearchThresholdContent.visibility = View.VISIBLE
-            binding.layoutCreateThresholdContent.visibility = View.GONE
-            setToggleActive(binding.layoutSearchThresholdHeader)
-        }
-    }
-
-    private fun setToggleActive(active: View?) {
-        if (active === binding.layoutCreateThresholdHeader) {
-            binding.layoutCreateThresholdHeader.setBackgroundResource(R.drawable.bg_toggle_active)
-            binding.layoutSearchThresholdHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
-        } else if (active === binding.layoutSearchThresholdHeader) {
-            binding.layoutCreateThresholdHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
-            binding.layoutSearchThresholdHeader.setBackgroundResource(R.drawable.bg_toggle_active)
-        } else {
-            binding.layoutCreateThresholdHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
-            binding.layoutSearchThresholdHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
-        }
+        button.setTextColor(ContextCompat.getColor(this, R.color.liquid_popup_button_text))
     }
 
     private fun setupLocationDropdowns() {
@@ -958,18 +944,7 @@ class ThresholdsActivity : AppCompatActivity(), TopCenterActionHost {
                     val values = items.sortedBy { it.id }
                         .map { "(${it.id}) ${it.code}" }
                         .distinct()
-                    val allValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
-                    val adapter = ArrayAdapter(this@ThresholdsActivity, android.R.layout.simple_list_item_1, allValues)
-                    binding.etLocation.setAdapter(adapter)
-                    binding.etLocation.setOnClickListener { binding.etLocation.showDropDown() }
-                    binding.etLocation.setOnFocusChangeListener { _, hasFocus ->
-                        if (hasFocus) binding.etLocation.showDropDown()
-                    }
-                    binding.etSearchLocation.setAdapter(adapter)
-                    binding.etSearchLocation.setOnClickListener { binding.etSearchLocation.showDropDown() }
-                    binding.etSearchLocation.setOnFocusChangeListener { _, hasFocus ->
-                        if (hasFocus) binding.etSearchLocation.showDropDown()
-                    }
+                    locationDropdownValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
                     return@launch
                 }
             } catch (_: Exception) { }
@@ -982,31 +957,163 @@ class ThresholdsActivity : AppCompatActivity(), TopCenterActionHost {
                 val values = cached.items.sortedBy { it.id }
                     .map { "(${it.id}) ${it.code}" }
                     .distinct()
-                val allValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
-                val adapter = ArrayAdapter(this@ThresholdsActivity, android.R.layout.simple_list_item_1, allValues)
-                binding.etLocation.setAdapter(adapter)
-                binding.etLocation.setOnClickListener { binding.etLocation.showDropDown() }
-                binding.etLocation.setOnFocusChangeListener { _, hasFocus ->
-                    if (hasFocus) binding.etLocation.showDropDown()
-                }
-                binding.etSearchLocation.setAdapter(adapter)
-                binding.etSearchLocation.setOnClickListener { binding.etSearchLocation.showDropDown() }
-                binding.etSearchLocation.setOnFocusChangeListener { _, hasFocus ->
-                    if (hasFocus) binding.etSearchLocation.showDropDown()
-                }
+                locationDropdownValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
             }
         }
     }
 
-    private fun applyThresholdDropdownIcons() {
-        binding.tilCreateLocation.setEndIconTintList(null)
-        binding.tilSearchLocation.setEndIconTintList(null)
+    private fun bindLocationDropdown(auto: MaterialAutoCompleteTextView) {
+        val adapter = ArrayAdapter(this, R.layout.item_liquid_dropdown, locationDropdownValues)
+        auto.setAdapter(adapter)
+        auto.setOnClickListener { auto.showDropDown() }
+        auto.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) auto.showDropDown() }
+    }
+
+    private fun applyDialogDropdownStyle(
+        textInputLayouts: List<TextInputLayout>,
+        dropdowns: List<MaterialAutoCompleteTextView>
+    ) {
+        val popupDrawable = ContextCompat.getDrawable(this, R.drawable.bg_liquid_dropdown_popup)
         val endIconId = com.google.android.material.R.id.text_input_end_icon
-        binding.tilCreateLocation.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
-            GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
+        textInputLayouts.forEach { til ->
+            til.setEndIconTintList(null)
+            til.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
+                GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
+            }
         }
-        binding.tilSearchLocation.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
-            GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
+        dropdowns.forEach { auto ->
+            if (popupDrawable != null) auto.setDropDownBackgroundDrawable(popupDrawable)
+        }
+    }
+
+    private fun openCreateThresholdDialog() {
+        if (createDialog?.isShowing == true) return
+
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_thresholds_create_master, null)
+        val btnClose = view.findViewById<ImageButton>(R.id.btnCreateThresholdDialogClose)
+        val btnCreate = view.findViewById<Button>(R.id.btnDialogCreateThreshold)
+        val etProduct = view.findViewById<TextInputEditText>(R.id.etDialogCreateThresholdProduct)
+        val etLocation = view.findViewById<MaterialAutoCompleteTextView>(R.id.etDialogCreateThresholdLocation)
+        val etMinQty = view.findViewById<TextInputEditText>(R.id.etDialogCreateThresholdMinQty)
+        val tilLocation = view.findViewById<TextInputLayout>(R.id.tilDialogCreateThresholdLocation)
+
+        etProduct.setText(createProductInput)
+        etLocation.setText(createLocationInput, false)
+        etMinQty.setText(createMinQtyInput)
+
+        bindLocationDropdown(etLocation)
+        applyDialogDropdownStyle(listOf(tilLocation), listOf(etLocation))
+
+        val dialog = AlertDialog.Builder(this).setView(view).setCancelable(true).create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        btnClose.setOnClickListener { dialog.dismiss() }
+        btnCreate.setOnClickListener {
+            val product = etProduct.text?.toString().orEmpty()
+            val location = etLocation.text?.toString().orEmpty()
+            val minQty = etMinQty.text?.toString().orEmpty()
+
+            createProductInput = product
+            createLocationInput = location
+            createMinQtyInput = minQty
+
+            btnCreate.isEnabled = false
+            createThreshold(product, location, minQty) { btnCreate.isEnabled = true }
+            dialog.dismiss()
+        }
+        dialog.setOnDismissListener {
+            createDialog = null
+            hideKeyboard()
+        }
+        createDialog = dialog
+        dialog.show()
+    }
+
+    private fun openSearchThresholdDialog() {
+        if (searchDialog?.isShowing == true) return
+
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_thresholds_search_master, null)
+        val btnClose = view.findViewById<ImageButton>(R.id.btnSearchThresholdDialogClose)
+        val btnSearch = view.findViewById<Button>(R.id.btnDialogSearchThreshold)
+        val btnClear = view.findViewById<Button>(R.id.btnDialogClearSearchThreshold)
+        val etProduct = view.findViewById<TextInputEditText>(R.id.etDialogSearchThresholdProduct)
+        val etLocation = view.findViewById<MaterialAutoCompleteTextView>(R.id.etDialogSearchThresholdLocation)
+        val tilLocation = view.findViewById<TextInputLayout>(R.id.tilDialogSearchThresholdLocation)
+
+        etProduct.setText(searchProductFilter)
+        etLocation.setText(searchLocationFilter, false)
+
+        bindLocationDropdown(etLocation)
+        applyDialogDropdownStyle(listOf(tilLocation), listOf(etLocation))
+
+        val dialog = AlertDialog.Builder(this).setView(view).setCancelable(true).create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        btnClose.setOnClickListener { dialog.dismiss() }
+        btnSearch.setOnClickListener {
+            searchProductFilter = etProduct.text?.toString().orEmpty().trim()
+            searchLocationFilter = etLocation.text?.toString().orEmpty().trim()
+            hideKeyboard()
+            dialog.dismiss()
+            applySearchFilters()
+        }
+        btnClear.setOnClickListener {
+            etProduct.setText("")
+            etLocation.setText("", false)
+            clearSearchFilters()
+            hideKeyboard()
+        }
+        dialog.setOnDismissListener {
+            searchDialog = null
+            hideKeyboard()
+        }
+        searchDialog = dialog
+        dialog.show()
+    }
+
+    private fun updateThresholdsListAdaptiveHeight() {
+        binding.scrollThresholds.post {
+            val topSpacerLp = binding.viewThresholdsTopSpacer.layoutParams as? LinearLayout.LayoutParams ?: return@post
+            val bottomSpacerLp = binding.viewThresholdsBottomSpacer.layoutParams as? LinearLayout.LayoutParams ?: return@post
+            val cardLp = binding.cardThresholdsList.layoutParams as? LinearLayout.LayoutParams ?: return@post
+            val rvLp = binding.rvThresholds.layoutParams as? LinearLayout.LayoutParams ?: return@post
+
+            val visibleCount = if (::adapter.isInitialized) adapter.itemCount else 0
+            if (visibleCount in 1..pageSize) {
+                topSpacerLp.height = 0
+                topSpacerLp.weight = 1f
+                bottomSpacerLp.height = 0
+                bottomSpacerLp.weight = 1f
+                cardLp.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                cardLp.weight = 0f
+                rvLp.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                rvLp.weight = 0f
+                binding.rvThresholds.isNestedScrollingEnabled = false
+            } else {
+                topSpacerLp.height = 0
+                topSpacerLp.weight = 0f
+                bottomSpacerLp.height = 0
+                bottomSpacerLp.weight = 0f
+                cardLp.height = 0
+                cardLp.weight = 1f
+                rvLp.height = 0
+                rvLp.weight = 1f
+                binding.rvThresholds.isNestedScrollingEnabled = true
+            }
+            binding.viewThresholdsTopSpacer.layoutParams = topSpacerLp
+            binding.viewThresholdsBottomSpacer.layoutParams = bottomSpacerLp
+            binding.cardThresholdsList.layoutParams = cardLp
+            binding.rvThresholds.layoutParams = rvLp
+        }
+    }
+
+    private fun applyRefreshIconTint() {
+        val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        if (!isDark) {
+            val blue = ContextCompat.getColor(this, R.color.icon_grad_mid2)
+            binding.btnRefreshThresholds.setColorFilter(blue)
+        } else {
+            binding.btnRefreshThresholds.clearColorFilter()
         }
     }
 

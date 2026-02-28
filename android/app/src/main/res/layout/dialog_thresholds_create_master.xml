@@ -13,21 +13,16 @@
         android:layout_marginBottom="8dp">
 
         <TextView
-            android:id="@+id/tvEditThresholdTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:paddingStart="40dp"
-            android:paddingEnd="40dp"
-            android:maxLines="1"
-            android:ellipsize="end"
-            android:text="Editar threshold"
+            android:text="Creacion de Threshold"
             android:textColor="@color/liquid_popup_title"
             android:textSize="20sp"
             android:textStyle="bold" />
 
         <ImageButton
-            android:id="@+id/btnEditThresholdClose"
+            android:id="@+id/btnCreateThresholdDialogClose"
             android:layout_width="34dp"
             android:layout_height="34dp"
             android:layout_gravity="end|center_vertical"
@@ -40,15 +35,6 @@
             app:backgroundTint="@null" />
     </FrameLayout>
 
-    <TextView
-        android:id="@+id/tvEditThresholdMeta"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="10dp"
-        android:text="Producto | Ubicacion"
-        android:textColor="@color/liquid_popup_text"
-        android:textSize="13sp" />
-
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -56,12 +42,35 @@
         app:boxBackgroundMode="none">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etEditThresholdLocation"
+            android:id="@+id/etDialogCreateThresholdProduct"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@drawable/bg_liquid_input"
-            android:hint="Ubicacion"
+            android:hint="Producto (ID o nombre)"
             android:inputType="text"
+            android:textColor="@color/liquid_popup_text"
+            android:textColorHint="@color/liquid_popup_hint" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilDialogCreateThresholdLocation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        app:boxBackgroundMode="outline"
+        app:boxStrokeColor="@color/icon_grad_mid2"
+        app:endIconDrawable="@drawable/triangle_down_lg"
+        app:endIconMode="dropdown_menu"
+        app:endIconTint="@null">
+
+        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+            android:id="@+id/etDialogCreateThresholdLocation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Ubicacion (opcional)"
+            android:inputType="none"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
             android:textColor="@color/liquid_popup_text"
             android:textColorHint="@color/liquid_popup_hint" />
     </com.google.android.material.textfield.TextInputLayout>
@@ -73,53 +82,28 @@
         app:boxBackgroundMode="none">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etEditThresholdMinQty"
+            android:id="@+id/etDialogCreateThresholdMinQty"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@drawable/bg_liquid_input"
-            android:hint="Min quantity"
+            android:hint="Cantidad minima"
             android:inputType="number"
             android:textColor="@color/liquid_popup_text"
             android:textColorHint="@color/liquid_popup_hint" />
     </com.google.android.material.textfield.TextInputLayout>
 
-    <LinearLayout
-        android:layout_width="match_parent"
+    <Button
+        android:id="@+id/btnDialogCreateThreshold"
+        android:layout_width="220dp"
         android:layout_height="wrap_content"
-        android:gravity="center"
-        android:orientation="horizontal">
-
-        <Button
-            android:id="@+id/btnEditThresholdSave"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:background="@drawable/bg_liquid_button_pressable"
-            android:backgroundTint="@null"
-            android:paddingVertical="10dp"
-            android:text="Guardar"
-            android:textAllCaps="false"
-            android:textColor="@color/liquid_popup_button_text"
-            android:textStyle="bold"
-            app:backgroundTint="@null" />
-
-        <Space
-            android:layout_width="10dp"
-            android:layout_height="0dp" />
-
-        <Button
-            android:id="@+id/btnEditThresholdDelete"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:background="@drawable/bg_liquid_button_pressable"
-            android:backgroundTint="@null"
-            android:paddingVertical="10dp"
-            android:text="Eliminar"
-            android:textAllCaps="false"
-            android:textColor="@color/liquid_popup_button_text"
-            android:textStyle="bold"
-            app:backgroundTint="@null" />
-    </LinearLayout>
+        android:layout_gravity="center_horizontal"
+        android:background="@drawable/bg_liquid_button_pressable"
+        android:backgroundTint="@null"
+        android:paddingVertical="12dp"
+        android:text="Crear threshold"
+        android:textAllCaps="false"
+        android:textColor="@color/liquid_popup_button_text"
+        android:textStyle="bold"
+        app:backgroundTint="@null" />
 
 </LinearLayout>
