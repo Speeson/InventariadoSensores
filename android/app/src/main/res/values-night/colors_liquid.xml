@@ -7,4 +7,5 @@
     <color name="liquid_popup_button_text">#EAF2FF</color>
     <color name="liquid_popup_list_text">#EAF2FF</color>
     <color name="liquid_popup_divider">#558AA3C7</color>
+    <color name="liquid_header_text_blue">#2A5E91</color>
 </resources>

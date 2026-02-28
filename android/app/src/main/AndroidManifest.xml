@@ -43,8 +43,6 @@
         <activity android:name=".ui.events.EventsActivity" />
         <activity android:name=".ui.rotation.RotationActivity" />
         <activity android:name=".ui.reports.ReportsActivity" />
-        <activity android:name=".ui.reports.TopConsumedActivity" />
-        <activity android:name=".ui.reports.TurnoverReportActivity" />
         <activity android:name=".ui.alerts.AlertsActivity" />
         <activity android:name=".ui.stock.StockActivity" />
         <activity android:name=".ui.movements.ResultActivity" />

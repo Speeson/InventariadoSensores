@@ -80,28 +80,36 @@
             </FrameLayout>
         </LinearLayout>
 
-        <com.google.android.material.card.MaterialCardView
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="12dp"
-            app:cardCornerRadius="14dp"
-            app:cardElevation="3dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="#1A000000"
-            app:cardBackgroundColor="?attr/colorSurface">
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:orientation="vertical">
 
-            <LinearLayout
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp"
+                app:cardCornerRadius="26dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/liquid_popup_divider"
+                app:cardBackgroundColor="@android:color/transparent">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_liquid_popup_card"
+                    android:orientation="vertical"
+                    android:padding="16dp">
 
                 <FrameLayout
                     android:id="@+id/layoutTopHeader"
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
-                    android:background="@drawable/bg_toggle_idle"
+                    android:background="@drawable/bg_liquid_button"
                     android:foreground="?attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true">
@@ -113,7 +121,7 @@
                         android:gravity="center"
                         android:text="Top consumidos"
                         android:textStyle="bold"
-                        android:textColor="?attr/colorOnSurface" />
+                        android:textColor="@color/liquid_popup_title" />
 
                     <ImageView
                         android:id="@+id/ivTopChevron"
@@ -137,21 +145,27 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="12dp"
-                        app:boxBackgroundMode="outline">
+                        app:boxBackgroundMode="outline"
+                        app:boxStrokeColor="@color/icon_grad_mid2"
+                        app:hintTextColor="@color/liquid_popup_hint">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etTopLimit"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:hint="Top N"
-                            android:inputType="number" />
+                            android:inputType="number"
+                            android:textColor="@color/liquid_popup_text"
+                            android:textColorHint="@color/liquid_popup_hint" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="12dp"
-                        app:boxBackgroundMode="outline">
+                        app:boxBackgroundMode="outline"
+                        app:boxStrokeColor="@color/icon_grad_mid2"
+                        app:hintTextColor="@color/liquid_popup_hint">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etTopDateFrom"
@@ -160,14 +174,18 @@
                             android:hint="Fecha desde (YYYY-MM-DD)"
                             android:inputType="none"
                             android:focusable="false"
-                            android:clickable="true" />
+                            android:clickable="true"
+                            android:textColor="@color/liquid_popup_text"
+                            android:textColorHint="@color/liquid_popup_hint" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="12dp"
-                        app:boxBackgroundMode="outline">
+                        app:boxBackgroundMode="outline"
+                        app:boxStrokeColor="@color/icon_grad_mid2"
+                        app:hintTextColor="@color/liquid_popup_hint">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etTopDateTo"
@@ -176,7 +194,9 @@
                             android:hint="Fecha hasta (YYYY-MM-DD)"
                             android:inputType="none"
                             android:focusable="false"
-                            android:clickable="true" />
+                            android:clickable="true"
+                            android:textColor="@color/liquid_popup_text"
+                            android:textColorHint="@color/liquid_popup_hint" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -185,6 +205,8 @@
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="12dp"
                         app:boxBackgroundMode="outline"
+                        app:boxStrokeColor="@color/icon_grad_mid2"
+                        app:hintTextColor="@color/liquid_popup_hint"
                         app:endIconMode="dropdown_menu"
                         app:endIconDrawable="@drawable/triangle_down_lg"
                         app:endIconTint="@null">
@@ -195,25 +217,28 @@
                             android:layout_height="wrap_content"
                             android:hint="Ubicacion (opcional)"
                             android:minHeight="56dp"
+                            android:popupBackground="@drawable/bg_liquid_dropdown_popup"
                             android:paddingStart="8dp"
-                            android:paddingEnd="8dp" />
+                            android:paddingEnd="8dp"
+                            android:textColor="@color/liquid_popup_text"
+                            android:textColorHint="@color/liquid_popup_hint" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <Button
                         android:id="@+id/btnTopConsumedSearch"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:background="@drawable/bg_button_soft_purple"
+                        android:background="@drawable/bg_liquid_button_pressable"
                         android:backgroundTint="@null"
                         app:backgroundTint="@null"
                         android:text="Buscar"
                         android:textAllCaps="false"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/liquid_popup_button_text"
                         android:textStyle="bold"
                         android:textSize="15sp"
                         android:paddingVertical="12dp"
                         android:drawableStart="@drawable/search"
-                        android:drawableTint="@color/icon_grad_end"
+                        android:drawableTint="@color/liquid_popup_button_text"
                         android:drawablePadding="8dp" />
                 </LinearLayout>
 
@@ -225,7 +250,7 @@
                     android:id="@+id/layoutTurnHeader"
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
-                    android:background="@drawable/bg_toggle_idle"
+                    android:background="@drawable/bg_liquid_button"
                     android:foreground="?attr/selectableItemBackground"
                     android:clickable="true"
                     android:focusable="true">
@@ -237,7 +262,7 @@
                         android:gravity="center"
                         android:text="Indice de rotacion"
                         android:textStyle="bold"
-                        android:textColor="?attr/colorOnSurface" />
+                        android:textColor="@color/liquid_popup_title" />
 
                     <ImageView
                         android:id="@+id/ivTurnChevron"
@@ -261,21 +286,27 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="12dp"
-                        app:boxBackgroundMode="outline">
+                        app:boxBackgroundMode="outline"
+                        app:boxStrokeColor="@color/icon_grad_mid2"
+                        app:hintTextColor="@color/liquid_popup_hint">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etTurnLimit"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:hint="Top N"
-                            android:inputType="number" />
+                            android:inputType="number"
+                            android:textColor="@color/liquid_popup_text"
+                            android:textColorHint="@color/liquid_popup_hint" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="12dp"
-                        app:boxBackgroundMode="outline">
+                        app:boxBackgroundMode="outline"
+                        app:boxStrokeColor="@color/icon_grad_mid2"
+                        app:hintTextColor="@color/liquid_popup_hint">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etTurnDateFrom"
@@ -284,14 +315,18 @@
                             android:hint="Fecha desde (YYYY-MM-DD)"
                             android:inputType="none"
                             android:focusable="false"
-                            android:clickable="true" />
+                            android:clickable="true"
+                            android:textColor="@color/liquid_popup_text"
+                            android:textColorHint="@color/liquid_popup_hint" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="12dp"
-                        app:boxBackgroundMode="outline">
+                        app:boxBackgroundMode="outline"
+                        app:boxStrokeColor="@color/icon_grad_mid2"
+                        app:hintTextColor="@color/liquid_popup_hint">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etTurnDateTo"
@@ -300,7 +335,9 @@
                             android:hint="Fecha hasta (YYYY-MM-DD)"
                             android:inputType="none"
                             android:focusable="false"
-                            android:clickable="true" />
+                            android:clickable="true"
+                            android:textColor="@color/liquid_popup_text"
+                            android:textColorHint="@color/liquid_popup_hint" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <com.google.android.material.textfield.TextInputLayout
@@ -309,6 +346,8 @@
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="12dp"
                         app:boxBackgroundMode="outline"
+                        app:boxStrokeColor="@color/icon_grad_mid2"
+                        app:hintTextColor="@color/liquid_popup_hint"
                         app:endIconMode="dropdown_menu"
                         app:endIconDrawable="@drawable/triangle_down_lg"
                         app:endIconTint="@null">
@@ -319,33 +358,35 @@
                             android:layout_height="wrap_content"
                             android:hint="Ubicacion (opcional)"
                             android:minHeight="56dp"
+                            android:popupBackground="@drawable/bg_liquid_dropdown_popup"
                             android:paddingStart="8dp"
-                            android:paddingEnd="8dp" />
+                            android:paddingEnd="8dp"
+                            android:textColor="@color/liquid_popup_text"
+                            android:textColorHint="@color/liquid_popup_hint" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <Button
                         android:id="@+id/btnTurnoverSearch"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:background="@drawable/bg_button_soft_purple"
+                        android:background="@drawable/bg_liquid_button_pressable"
                         android:backgroundTint="@null"
                         app:backgroundTint="@null"
                         android:text="Buscar"
                         android:textAllCaps="false"
-                        android:textColor="@android:color/white"
+                        android:textColor="@color/liquid_popup_button_text"
                         android:textStyle="bold"
                         android:textSize="15sp"
                         android:paddingVertical="12dp"
                         android:drawableStart="@drawable/search"
-                        android:drawableTint="@color/icon_grad_end"
+                        android:drawableTint="@color/liquid_popup_button_text"
                         android:drawablePadding="8dp" />
                 </LinearLayout>
 
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
 
     </LinearLayout>
 
 </FrameLayout>
-
-
