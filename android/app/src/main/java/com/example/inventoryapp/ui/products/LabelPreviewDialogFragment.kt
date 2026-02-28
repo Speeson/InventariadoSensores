@@ -1039,6 +1039,14 @@ class LabelPreviewDialogFragment : DialogFragment() {
         _binding = null
     }
 
+    override fun onDismiss(dialog: android.content.DialogInterface) {
+        super.onDismiss(dialog)
+        val host = activity as? ProductListActivity ?: return
+        if (!host.isFinishing && !host.isDestroyed) {
+            host.recreate()
+        }
+    }
+
 
     private fun saveToDownloads(filename: String, mime: String, bytes: ByteArray): Boolean {
         return try {

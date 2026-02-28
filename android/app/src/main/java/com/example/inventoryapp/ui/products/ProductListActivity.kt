@@ -176,6 +176,7 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
         applyPagerButtonStyle(binding.btnPrevPage, enabled = false)
         applyPagerButtonStyle(binding.btnNextPage, enabled = false)
         setupCategoryDropdowns()
+
         resetAndLoad()
     }
 
