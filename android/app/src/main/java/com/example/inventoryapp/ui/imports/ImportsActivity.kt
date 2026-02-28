@@ -2,7 +2,9 @@ package com.example.inventoryapp.ui.imports
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.example.inventoryapp.R
 import com.example.inventoryapp.data.remote.NetworkModule
@@ -18,14 +20,20 @@ import kotlinx.coroutines.launch
 
 class ImportsActivity : AppCompatActivity(), TopCenterActionHost {
 
+    companion object {
+        private const val TAG = "ImportsActivity"
+    }
+
     private lateinit var binding: ActivityImportsBinding
     private lateinit var pagerAdapter: ImportsPagerAdapter
+    private var tabMediator: TabLayoutMediator? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityImportsBinding.inflate(layoutInflater)
         setContentView(binding.root)
         NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
+        Log.d(TAG, "onCreate()")
 
         binding.btnBack.setOnClickListener { finish() }
         binding.btnAlertsQuick.setOnClickListener {
@@ -35,16 +43,7 @@ class ImportsActivity : AppCompatActivity(), TopCenterActionHost {
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
         applyImportsTitleGradient()
 
-        pagerAdapter = ImportsPagerAdapter(this)
-        binding.pagerImports.adapter = pagerAdapter
-
-        TabLayoutMediator(binding.tabImports, binding.pagerImports) { tab, position ->
-            tab.text = when (position) {
-                0 -> "Eventos"
-                1 -> "Transferencias"
-                else -> "Revisiones"
-            }
-        }.attach()
+        setupPager()
     }
 
     override fun onTopCreateAction() {
@@ -58,18 +57,73 @@ class ImportsActivity : AppCompatActivity(), TopCenterActionHost {
     private fun openImportPopupAt(position: Int) {
         binding.pagerImports.setCurrentItem(position, true)
         binding.pagerImports.post {
-            val fragment = pagerAdapter.getFragment(position)
-            if (fragment is ImportFormFragment) {
-                fragment.openImportDialog()
-            }
+            openImportPopupForPosition(position, retriesLeft = 4)
         }
+    }
+
+    private fun openImportPopupForPosition(position: Int, retriesLeft: Int) {
+        val fragment = findPagerFragment(position)
+        Log.d(
+            TAG,
+            "openImportPopupForPosition(pos=$position,retries=$retriesLeft) fragment=${fragment?.javaClass?.simpleName} added=${fragment?.isAdded} hasView=${fragment?.view != null}"
+        )
+        if (fragment is ImportFormFragment && fragment.isAdded && fragment.view != null) {
+            fragment.openImportDialog()
+            return
+        }
+        if (retriesLeft <= 0) return
+        binding.pagerImports.postDelayed(
+            { openImportPopupForPosition(position, retriesLeft - 1) },
+            80L
+        )
+    }
+
+    private fun findPagerFragment(position: Int): Fragment? {
+        val itemId = pagerAdapter.getItemId(position)
+        return supportFragmentManager.findFragmentByTag("f$itemId")
     }
 
     override fun onResume() {
         super.onResume()
+        normalizeContentPaddingIfCorrupted()
         lifecycleScope.launch {
             updateAlertsBadge()
         }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (!hasFocus) return
+        normalizeContentPaddingIfCorrupted()
+    }
+
+    private fun setupPager() {
+        tabMediator?.detach()
+        pagerAdapter = ImportsPagerAdapter(this)
+        binding.pagerImports.adapter = pagerAdapter
+        tabMediator = TabLayoutMediator(binding.tabImports, binding.pagerImports) { tab, pos ->
+            tab.text = when (pos) {
+                0 -> "Eventos"
+                1 -> "Transferencias"
+                else -> "Revisiones"
+            }
+        }
+        tabMediator?.attach()
+    }
+
+    private fun normalizeContentPaddingIfCorrupted() {
+        val root = binding.importsContentRoot
+        val oldTop = root.paddingTop
+        val maxReasonableTop = (260 * resources.displayMetrics.density).toInt()
+        if (oldTop <= maxReasonableTop) return
+        val expectedTop = (118 * resources.displayMetrics.density).toInt() // 20dp base + 96dp top host + 2dp gap
+        val horizontal = (20 * resources.displayMetrics.density).toInt()
+        val bottom = (8 * resources.displayMetrics.density).toInt()
+        root.setPadding(horizontal, expectedTop, horizontal, bottom)
+        Log.d(
+            TAG,
+            "normalizeContentPaddingIfCorrupted() applied oldTop=$oldTop expectedTop=$expectedTop"
+        )
     }
 
     private suspend fun updateAlertsBadge() {

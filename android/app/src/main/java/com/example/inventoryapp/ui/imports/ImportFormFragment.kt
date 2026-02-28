@@ -46,6 +46,7 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
     private var currentOffset = 0
     private var summaryStatsText: String = "Total: 0 | OK: 0 | Errores: 0 | Reviews: 0"
     private var importDialog: AlertDialog? = null
+    private var reopenImportDialogAfterPick: Boolean = false
 
     data class ImportUiCacheDto(
         val rows: List<ImportErrorRow>,
@@ -65,6 +66,10 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
             selectedUri = uri
             selectedName = guessFileName(uri) ?: "archivo.csv"
             updateDialogSelectedFile()
+        }
+        if (reopenImportDialogAfterPick && isAdded) {
+            reopenImportDialogAfterPick = false
+            openImportDialog()
         }
     }
 
@@ -124,6 +129,8 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
 
         btnClose.setOnClickListener { dialog.dismiss() }
         btnSelect.setOnClickListener {
+            reopenImportDialogAfterPick = true
+            dialog.dismiss()
             pickCsv.launch(arrayOf("text/*", "application/vnd.ms-excel", "application/*"))
         }
         btnSend.setOnClickListener {
@@ -150,6 +157,8 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
         importDialog = dialog
         dialog.show()
     }
+
+    fun isImportDialogVisible(): Boolean = importDialog?.isShowing == true
 
     private fun buildFuzzyLabel(value: Float): String {
         return String.format(Locale.US, "Umbral de similitud (Fuzzy threshold): %.1f", value)
