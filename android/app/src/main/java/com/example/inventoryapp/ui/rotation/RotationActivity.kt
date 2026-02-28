@@ -3,10 +3,15 @@ import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 import com.example.inventoryapp.R
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.ImageButton
+import android.widget.LinearLayout
+import android.graphics.drawable.ColorDrawable
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.inventoryapp.data.local.cache.CacheStore
@@ -24,11 +29,13 @@ import kotlinx.coroutines.launch
 import com.example.inventoryapp.ui.common.GradientIconUtil
 import android.graphics.drawable.GradientDrawable
 import androidx.core.content.ContextCompat
-import android.view.View
-import androidx.transition.AutoTransition
-import androidx.transition.TransitionManager
+import android.view.ViewGroup
+import android.view.LayoutInflater
 import android.view.inputmethod.InputMethodManager
 import java.io.IOException
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 
 class RotationActivity : AppCompatActivity(), TopCenterActionHost {
     companion object {
@@ -46,6 +53,12 @@ class RotationActivity : AppCompatActivity(), TopCenterActionHost {
     private var allRows: List<RotationRow> = emptyList()
     private var filteredRows: List<RotationRow> = emptyList()
     private val rotationCacheKey = "rotation:rows:v1"
+    private var searchDialog: AlertDialog? = null
+    private var locationDropdownValues: List<String> = listOf("")
+    private var searchMovementIdFilter: String = ""
+    private var searchProductFilter: String = ""
+    private var searchFromLocationFilter: String = ""
+    private var searchToLocationFilter: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,8 +67,9 @@ class RotationActivity : AppCompatActivity(), TopCenterActionHost {
         NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
 
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
-        GradientIconUtil.applyGradient(binding.ivSearchRotation, R.drawable.search)
+        binding.btnRefreshRotation.setImageResource(R.drawable.glass_refresh)
         applyRotationTitleGradient()
+        applyRefreshIconTint()
 
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
         snack = SendSnack(binding.root)
@@ -78,16 +92,6 @@ class RotationActivity : AppCompatActivity(), TopCenterActionHost {
         }
 
         binding.btnRefreshRotation.setOnClickListener { loadRotation(withSnack = true) }
-        binding.layoutSearchRotationHeader.setOnClickListener { toggleSearchForm() }
-
-        binding.btnSearchRotation.setOnClickListener {
-            hideKeyboard()
-            applySearchFilters(showNotFoundDialog = true)
-        }
-        binding.btnClearSearchRotation.setOnClickListener {
-            hideKeyboard()
-            clearSearchFilters()
-        }
 
         binding.btnPrevRotationPage.setOnClickListener {
             if (currentPage <= 0) return@setOnClickListener
@@ -104,8 +108,7 @@ class RotationActivity : AppCompatActivity(), TopCenterActionHost {
             binding.rvRotation.scrollToPosition(0)
         }
 
-        setupLocationDropdowns()
-        binding.tilSearchFromLocation.post { applyRotationDropdownIcons() }
+        loadLocationOptions()
 
         applyPagerButtonStyle(binding.btnPrevRotationPage, enabled = false)
         applyPagerButtonStyle(binding.btnNextRotationPage, enabled = false)
@@ -114,14 +117,20 @@ class RotationActivity : AppCompatActivity(), TopCenterActionHost {
     override fun onResume() {
         super.onResume()
         ensureRotationAccessThenLoad()
+        updateRotationListAdaptiveHeight()
     }
 
-    override fun onTopCreateAction() = Unit
+    override fun onTopCreateAction() {
+        UiNotifier.showBlockingTimed(
+            this,
+            "Crear no disponible en Traslados",
+            R.drawable.ic_lock,
+            timeoutMs = 2200L
+        )
+    }
 
     override fun onTopFilterAction() {
-        if (binding.layoutSearchRotationContent.visibility != View.VISIBLE) {
-            toggleSearchForm()
-        }
+        openSearchRotationDialog()
     }
 
     private fun ensureRotationAccessThenLoad() {
@@ -273,10 +282,10 @@ class RotationActivity : AppCompatActivity(), TopCenterActionHost {
     }
 
     private fun applySearchFilters(resetPage: Boolean = true, showNotFoundDialog: Boolean = false) {
-        val movementIdRaw = binding.etSearchMovementId.text.toString().trim()
-        val productRaw = binding.etSearchProduct.text.toString().trim()
-        val fromRaw = normalizeLocationInput(binding.etSearchFromLocation.text.toString().trim())
-        val toRaw = normalizeLocationInput(binding.etSearchToLocation.text.toString().trim())
+        val movementIdRaw = searchMovementIdFilter.trim()
+        val productRaw = searchProductFilter.trim()
+        val fromRaw = normalizeLocationInput(searchFromLocationFilter.trim())
+        val toRaw = normalizeLocationInput(searchToLocationFilter.trim())
 
         var filtered = allRows
 
@@ -325,10 +334,10 @@ class RotationActivity : AppCompatActivity(), TopCenterActionHost {
     }
 
     private fun clearSearchFilters() {
-        binding.etSearchMovementId.setText("")
-        binding.etSearchProduct.setText("")
-        binding.etSearchFromLocation.setText("")
-        binding.etSearchToLocation.setText("")
+        searchMovementIdFilter = ""
+        searchProductFilter = ""
+        searchFromLocationFilter = ""
+        searchToLocationFilter = ""
         filteredRows = allRows
         currentPage = 0
         updatePage()
@@ -367,6 +376,9 @@ class RotationActivity : AppCompatActivity(), TopCenterActionHost {
         adapter.submit(page)
 
         val shown = if (total == 0) 0 else end
+        val currentPageLabel = if (total == 0) 0 else currentPage + 1
+        val totalPages = if (total == 0) 0 else ((total + pageSize - 1) / pageSize)
+        binding.tvRotationPageNumber.text = "Pagina $currentPageLabel/$totalPages"
         binding.tvRotationPageInfo.text = "Mostrando $shown/$total"
         val prevEnabled = currentPage > 0
         val nextEnabled = end < total
@@ -374,38 +386,48 @@ class RotationActivity : AppCompatActivity(), TopCenterActionHost {
         binding.btnNextRotationPage.isEnabled = nextEnabled
         applyPagerButtonStyle(binding.btnPrevRotationPage, prevEnabled)
         applyPagerButtonStyle(binding.btnNextRotationPage, nextEnabled)
+        updateRotationListAdaptiveHeight()
     }
 
     private fun applyPagerButtonStyle(button: Button, enabled: Boolean) {
         button.backgroundTintList = null
+        val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         if (!enabled) {
             val colors = intArrayOf(
-                ContextCompat.getColor(this, android.R.color.darker_gray),
-                ContextCompat.getColor(this, android.R.color.darker_gray)
+                if (isDark) 0x334F6480 else 0x33A7BED8,
+                if (isDark) 0x33445A74 else 0x338FA9C6
             )
             val drawable = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
-                cornerRadius = resources.displayMetrics.density * 18f
-                setStroke((resources.displayMetrics.density * 1f).toInt(), 0xFFB0B0B0.toInt())
+                cornerRadius = resources.displayMetrics.density * 16f
+                setStroke((resources.displayMetrics.density * 1f).toInt(), if (isDark) 0x44AFCBEB else 0x5597BCD9)
             }
             button.background = drawable
-            button.setTextColor(ContextCompat.getColor(this, android.R.color.white))
+            button.setTextColor(ContextCompat.getColor(this, R.color.liquid_popup_hint))
             return
         }
         val colors = intArrayOf(
-            ContextCompat.getColor(this, R.color.icon_grad_start),
-            ContextCompat.getColor(this, R.color.icon_grad_mid2),
-            ContextCompat.getColor(this, R.color.icon_grad_mid1),
-            ContextCompat.getColor(this, R.color.icon_grad_end)
+            if (isDark) 0x66789BC4 else 0x99D6EBFA.toInt(),
+            if (isDark) 0x666D8DB4 else 0x99C5E0F4.toInt()
         )
         val drawable = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
-            cornerRadius = resources.displayMetrics.density * 18f
-            setStroke((resources.displayMetrics.density * 1f).toInt(), 0x33000000)
+            cornerRadius = resources.displayMetrics.density * 16f
+            setStroke((resources.displayMetrics.density * 1f).toInt(), if (isDark) 0x88B5D5F4.toInt() else 0x88A7CBE6.toInt())
         }
         button.background = drawable
-        button.setTextColor(ContextCompat.getColor(this, android.R.color.white))
+        button.setTextColor(ContextCompat.getColor(this, R.color.liquid_popup_button_text))
     }
 
-    private fun setupLocationDropdowns() {
+    private fun applyRefreshIconTint() {
+        val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        if (!isDark) {
+            val blue = ContextCompat.getColor(this, R.color.icon_grad_mid2)
+            binding.btnRefreshRotation.setColorFilter(blue)
+        } else {
+            binding.btnRefreshRotation.clearColorFilter()
+        }
+    }
+
+    private fun loadLocationOptions() {
         lifecycleScope.launch {
             try {
                 val res = NetworkModule.api.listLocations(limit = 200, offset = 0)
@@ -414,54 +436,123 @@ class RotationActivity : AppCompatActivity(), TopCenterActionHost {
                     val values = items.sortedBy { it.id }
                         .map { "(${it.id}) ${it.code}" }
                         .distinct()
-                    val allValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
-                    val adapter = ArrayAdapter(this@RotationActivity, android.R.layout.simple_list_item_1, allValues)
-                    binding.etSearchFromLocation.setAdapter(adapter)
-                    binding.etSearchFromLocation.setOnClickListener { binding.etSearchFromLocation.showDropDown() }
-                    binding.etSearchFromLocation.setOnFocusChangeListener { _, hasFocus ->
-                        if (hasFocus) binding.etSearchFromLocation.showDropDown()
-                    }
-                    binding.etSearchToLocation.setAdapter(adapter)
-                    binding.etSearchToLocation.setOnClickListener { binding.etSearchToLocation.showDropDown() }
-                    binding.etSearchToLocation.setOnFocusChangeListener { _, hasFocus ->
-                        if (hasFocus) binding.etSearchToLocation.showDropDown()
-                    }
+                    locationDropdownValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
+                    return@launch
                 }
             } catch (_: Exception) {
-                // Silent fallback to manual input.
             }
         }
     }
 
-    private fun applyRotationDropdownIcons() {
-        binding.tilSearchFromLocation.setEndIconTintList(null)
-        binding.tilSearchToLocation.setEndIconTintList(null)
+    private fun bindLocationDropdown(auto: MaterialAutoCompleteTextView) {
+        val adapter = ArrayAdapter(this, R.layout.item_liquid_dropdown, locationDropdownValues)
+        auto.setAdapter(adapter)
+        auto.setOnClickListener { auto.showDropDown() }
+        auto.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) auto.showDropDown() }
+    }
+
+    private fun openSearchRotationDialog() {
+        if (searchDialog?.isShowing == true) return
+
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_rotation_search_master, null)
+        val btnClose = view.findViewById<ImageButton>(R.id.btnSearchRotationDialogClose)
+        val btnSearch = view.findViewById<Button>(R.id.btnDialogSearchRotation)
+        val btnClear = view.findViewById<Button>(R.id.btnDialogClearSearchRotation)
+        val etMovementId = view.findViewById<TextInputEditText>(R.id.etDialogSearchMovementId)
+        val etProduct = view.findViewById<TextInputEditText>(R.id.etDialogSearchProduct)
+        val etFrom = view.findViewById<MaterialAutoCompleteTextView>(R.id.etDialogSearchFromLocation)
+        val etTo = view.findViewById<MaterialAutoCompleteTextView>(R.id.etDialogSearchToLocation)
+        val tilFrom = view.findViewById<TextInputLayout>(R.id.tilDialogSearchFromLocation)
+        val tilTo = view.findViewById<TextInputLayout>(R.id.tilDialogSearchToLocation)
+
+        etMovementId.setText(searchMovementIdFilter)
+        etProduct.setText(searchProductFilter)
+        etFrom.setText(searchFromLocationFilter, false)
+        etTo.setText(searchToLocationFilter, false)
+
+        bindLocationDropdown(etFrom)
+        bindLocationDropdown(etTo)
+        applyDialogDropdownStyle(listOf(tilFrom, tilTo), listOf(etFrom, etTo))
+
+        val dialog = AlertDialog.Builder(this).setView(view).setCancelable(true).create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        btnClose.setOnClickListener { dialog.dismiss() }
+        btnSearch.setOnClickListener {
+            searchMovementIdFilter = etMovementId.text?.toString().orEmpty().trim()
+            searchProductFilter = etProduct.text?.toString().orEmpty().trim()
+            searchFromLocationFilter = etFrom.text?.toString().orEmpty().trim()
+            searchToLocationFilter = etTo.text?.toString().orEmpty().trim()
+            hideKeyboard()
+            dialog.dismiss()
+            applySearchFilters(showNotFoundDialog = true)
+        }
+        btnClear.setOnClickListener {
+            etMovementId.setText("")
+            etProduct.setText("")
+            etFrom.setText("", false)
+            etTo.setText("", false)
+            clearSearchFilters()
+            hideKeyboard()
+        }
+        dialog.setOnDismissListener {
+            searchDialog = null
+            hideKeyboard()
+        }
+        searchDialog = dialog
+        dialog.show()
+    }
+
+    private fun applyDialogDropdownStyle(
+        textInputLayouts: List<TextInputLayout>,
+        dropdowns: List<MaterialAutoCompleteTextView>
+    ) {
+        val popupDrawable = ContextCompat.getDrawable(this, R.drawable.bg_liquid_dropdown_popup)
         val endIconId = com.google.android.material.R.id.text_input_end_icon
-        binding.tilSearchFromLocation.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
-            GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
+        textInputLayouts.forEach { til ->
+            til.setEndIconTintList(null)
+            til.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
+                GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
+            }
         }
-        binding.tilSearchToLocation.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
-            GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
-        }
-    }
-
-    private fun toggleSearchForm() {
-        TransitionManager.beginDelayedTransition(binding.scrollRotation, AutoTransition().setDuration(180))
-        val isVisible = binding.layoutSearchRotationContent.visibility == View.VISIBLE
-        if (isVisible) {
-            binding.layoutSearchRotationContent.visibility = View.GONE
-            setToggleActive(false)
-        } else {
-            binding.layoutSearchRotationContent.visibility = View.VISIBLE
-            setToggleActive(true)
+        dropdowns.forEach { auto ->
+            if (popupDrawable != null) auto.setDropDownBackgroundDrawable(popupDrawable)
         }
     }
 
-    private fun setToggleActive(active: Boolean) {
-        if (active) {
-            binding.layoutSearchRotationHeader.setBackgroundResource(R.drawable.bg_toggle_active)
-        } else {
-            binding.layoutSearchRotationHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
+    private fun updateRotationListAdaptiveHeight() {
+        binding.scrollRotation.post {
+            val topSpacerLp = binding.viewRotationTopSpacer.layoutParams as? LinearLayout.LayoutParams ?: return@post
+            val bottomSpacerLp = binding.viewRotationBottomSpacer.layoutParams as? LinearLayout.LayoutParams ?: return@post
+            val cardLp = binding.cardRotationList.layoutParams as? LinearLayout.LayoutParams ?: return@post
+            val rvLp = binding.rvRotation.layoutParams as? LinearLayout.LayoutParams ?: return@post
+
+            val visibleCount = if (::adapter.isInitialized) adapter.itemCount else 0
+            if (visibleCount in 1..pageSize) {
+                topSpacerLp.height = 0
+                topSpacerLp.weight = 1f
+                bottomSpacerLp.height = 0
+                bottomSpacerLp.weight = 1f
+                cardLp.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                cardLp.weight = 0f
+                rvLp.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                rvLp.weight = 0f
+                binding.rvRotation.isNestedScrollingEnabled = false
+            } else {
+                topSpacerLp.height = 0
+                topSpacerLp.weight = 0f
+                bottomSpacerLp.height = 0
+                bottomSpacerLp.weight = 0f
+                cardLp.height = 0
+                cardLp.weight = 1f
+                rvLp.height = 0
+                rvLp.weight = 1f
+                binding.rvRotation.isNestedScrollingEnabled = true
+            }
+            binding.viewRotationTopSpacer.layoutParams = topSpacerLp
+            binding.viewRotationBottomSpacer.layoutParams = bottomSpacerLp
+            binding.cardRotationList.layoutParams = cardLp
+            binding.rvRotation.layoutParams = rvLp
         }
     }
 

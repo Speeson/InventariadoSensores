@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="340dp"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_liquid_popup_card"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="Filtro de Traslados"
+            android:textColor="@color/liquid_popup_title"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/btnSearchRotationDialogClose"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_gravity="end|center_vertical"
+            android:background="@drawable/bg_liquid_button"
+            android:backgroundTint="@null"
+            android:contentDescription="Cerrar"
+            android:padding="7dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_close_red"
+            app:backgroundTint="@null" />
+    </FrameLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        app:boxBackgroundMode="none">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etDialogSearchMovementId"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_liquid_input"
+            android:hint="ID movimiento"
+            android:inputType="number"
+            android:textColor="@color/liquid_popup_text"
+            android:textColorHint="@color/liquid_popup_hint" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        app:boxBackgroundMode="none">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etDialogSearchProduct"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_liquid_input"
+            android:hint="Producto (ID o nombre)"
+            android:inputType="text"
+            android:textColor="@color/liquid_popup_text"
+            android:textColorHint="@color/liquid_popup_hint" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilDialogSearchFromLocation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        app:boxBackgroundMode="outline"
+        app:boxStrokeColor="@color/icon_grad_mid2"
+        app:endIconDrawable="@drawable/triangle_down_lg"
+        app:endIconMode="dropdown_menu"
+        app:endIconTint="@null">
+
+        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+            android:id="@+id/etDialogSearchFromLocation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Ubicacion origen"
+            android:inputType="none"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:textColor="@color/liquid_popup_text"
+            android:textColorHint="@color/liquid_popup_hint" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilDialogSearchToLocation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="14dp"
+        app:boxBackgroundMode="outline"
+        app:boxStrokeColor="@color/icon_grad_mid2"
+        app:endIconDrawable="@drawable/triangle_down_lg"
+        app:endIconMode="dropdown_menu"
+        app:endIconTint="@null">
+
+        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+            android:id="@+id/etDialogSearchToLocation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Ubicacion destino"
+            android:inputType="none"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:textColor="@color/liquid_popup_text"
+            android:textColorHint="@color/liquid_popup_hint" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnDialogSearchRotation"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="@drawable/bg_liquid_button_pressable"
+            android:backgroundTint="@null"
+            android:paddingVertical="10dp"
+            android:text="Buscar"
+            android:textAllCaps="false"
+            android:textColor="@color/liquid_popup_button_text"
+            android:textStyle="bold"
+            app:backgroundTint="@null" />
+
+        <Space
+            android:layout_width="12dp"
+            android:layout_height="0dp" />
+
+        <Button
+            android:id="@+id/btnDialogClearSearchRotation"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="@drawable/bg_liquid_button_pressable"
+            android:backgroundTint="@null"
+            android:paddingVertical="10dp"
+            android:text="Limpiar"
+            android:textAllCaps="false"
+            android:textColor="@color/liquid_popup_button_text"
+            android:textStyle="bold"
+            app:backgroundTint="@null" />
+    </LinearLayout>
+
+</LinearLayout>
