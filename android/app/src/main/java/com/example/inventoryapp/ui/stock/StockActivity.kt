@@ -3,9 +3,12 @@ import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 import com.example.inventoryapp.R
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.ImageButton
+import android.widget.LinearLayout
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -36,11 +39,14 @@ import kotlinx.coroutines.launch
 import java.io.IOException
 import com.example.inventoryapp.ui.common.GradientIconUtil
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.ColorDrawable
 import androidx.core.content.ContextCompat
-import android.view.View
-import androidx.transition.AutoTransition
-import androidx.transition.TransitionManager
+import android.view.ViewGroup
+import android.view.LayoutInflater
 import android.view.inputmethod.InputMethodManager
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -71,6 +77,15 @@ class StockActivity : AppCompatActivity(), TopCenterActionHost {
     private var bulkProductNamesCache: Map<Int, String>? = null
     private var bulkProductNamesCacheAtMs: Long = 0L
     private val bulkProductNamesCacheTtlMs = 30_000L
+    private var createDialog: AlertDialog? = null
+    private var searchDialog: AlertDialog? = null
+    private var locationDropdownValues: List<String> = listOf("")
+    private var createProductInput: String = ""
+    private var createLocationInput: String = ""
+    private var createQuantityInput: String = ""
+    private var searchProductFilter: String = ""
+    private var searchLocationFilter: String = ""
+    private var searchQuantityFilter: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -80,9 +95,9 @@ class StockActivity : AppCompatActivity(), TopCenterActionHost {
 
         
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
-        GradientIconUtil.applyGradient(binding.ivCreateStockAdd, R.drawable.add)
-        GradientIconUtil.applyGradient(binding.ivCreateStockSearch, R.drawable.search)
+        binding.btnRefresh.setImageResource(R.drawable.glass_refresh)
         applyStockTitleGradient()
+        applyRefreshIconTint()
         
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
         snack = SendSnack(binding.root)
@@ -93,25 +108,11 @@ class StockActivity : AppCompatActivity(), TopCenterActionHost {
             startActivity(Intent(this, AlertsActivity::class.java))
         }
 
-        binding.btnCreate.setOnClickListener { createStock() }
         binding.btnRefresh.setOnClickListener {
             invalidateBulkProductNamesCache()
             loadStocks(withSnack = true)
         }
-        binding.layoutCreateStockHeader.setOnClickListener { toggleCreateStockForm() }
-        binding.layoutSearchStockHeader.setOnClickListener { toggleSearchForm() }
-        binding.btnSearchStock.setOnClickListener {
-            hideKeyboard()
-            applySearchFilters()
-        }
-        binding.btnClearSearchStock.setOnClickListener {
-            hideKeyboard()
-            clearSearchFilters()
-        }
-
-        setupLocationDropdown()
-        setupSearchDropdowns()
-        binding.tilCreateLocation.post { applyStockDropdownIcon() }
+        loadLocationOptions()
 
         adapter = StockListAdapter { stock -> showEditDialog(stock) }
         binding.rvStocks.layoutManager = LinearLayoutManager(this)
@@ -163,18 +164,15 @@ class StockActivity : AppCompatActivity(), TopCenterActionHost {
         super.onResume()
         currentOffset = 0
         loadStocks(withSnack = false)
+        updateStocksListAdaptiveHeight()
     }
 
     override fun onTopCreateAction() {
-        if (binding.layoutCreateStockContent.visibility != View.VISIBLE) {
-            toggleCreateStockForm()
-        }
+        openCreateStockDialog()
     }
 
     override fun onTopFilterAction() {
-        if (binding.layoutSearchStockContent.visibility != View.VISIBLE) {
-            toggleSearchForm()
-        }
+        openSearchStockDialog()
     }
 
     private fun loadStocks(withSnack: Boolean = false) {
@@ -355,7 +353,10 @@ class StockActivity : AppCompatActivity(), TopCenterActionHost {
     private fun updatePageInfo(pageSizeLoaded: Int, pendingCount: Int) {
         if (hasActiveFilters()) {
             val shown = (filteredOffset + items.size).coerceAtMost(filteredItems.size)
-            binding.tvStockPageInfo.text = "Mostrando $shown / ${filteredItems.size}"
+            val currentPage = if (filteredItems.isEmpty()) 0 else (filteredOffset / pageSize) + 1
+            val totalPages = if (filteredItems.isEmpty()) 0 else ((filteredItems.size + pageSize - 1) / pageSize)
+            binding.tvStockPageNumber.text = "Pagina $currentPage/$totalPages"
+            binding.tvStockPageInfo.text = "Mostrando $shown/${filteredItems.size}"
             val prevEnabled = filteredOffset > 0
             val nextEnabled = shown < filteredItems.size
             binding.btnPrevPage.isEnabled = prevEnabled
@@ -365,14 +366,18 @@ class StockActivity : AppCompatActivity(), TopCenterActionHost {
             return
         }
         val shownOnline = (currentOffset + pageSizeLoaded).coerceAtMost(totalCount)
-        val label = if (totalCount > 0) {
-            "Mostrando $shownOnline / $totalCount"
+        val totalItems = if (totalCount > 0) totalCount else pendingCount
+        val currentPage = if (totalItems <= 0) 0 else (currentOffset / pageSize) + 1
+        val totalPages = if (totalItems <= 0) 0 else ((totalItems + pageSize - 1) / pageSize)
+        val label = if (totalItems > 0) {
+            "Mostrando $shownOnline/$totalItems"
         } else {
-            "Mostrando $pendingCount / $pendingCount"
+            "Mostrando 0/0"
         }
+        binding.tvStockPageNumber.text = "Pagina $currentPage/$totalPages"
         binding.tvStockPageInfo.text = label
         val prevEnabled = currentOffset > 0
-        val nextEnabled = shownOnline < totalCount
+        val nextEnabled = shownOnline < totalItems
         binding.btnPrevPage.isEnabled = prevEnabled
         binding.btnNextPage.isEnabled = nextEnabled
         applyPagerButtonStyle(binding.btnPrevPage, prevEnabled)
@@ -381,31 +386,40 @@ class StockActivity : AppCompatActivity(), TopCenterActionHost {
 
     private fun applyPagerButtonStyle(button: Button, enabled: Boolean) {
         button.backgroundTintList = null
+        val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         if (!enabled) {
             val colors = intArrayOf(
-                ContextCompat.getColor(this, android.R.color.darker_gray),
-                ContextCompat.getColor(this, android.R.color.darker_gray)
+                if (isDark) 0x334F6480 else 0x33A7BED8,
+                if (isDark) 0x33445A74 else 0x338FA9C6
             )
             val drawable = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
-                cornerRadius = resources.displayMetrics.density * 18f
-                setStroke((resources.displayMetrics.density * 1f).toInt(), 0xFFB0B0B0.toInt())
+                cornerRadius = resources.displayMetrics.density * 16f
+                setStroke((resources.displayMetrics.density * 1f).toInt(), if (isDark) 0x44AFCBEB else 0x5597BCD9)
             }
             button.background = drawable
-            button.setTextColor(ContextCompat.getColor(this, android.R.color.white))
+            button.setTextColor(ContextCompat.getColor(this, R.color.liquid_popup_hint))
             return
         }
         val colors = intArrayOf(
-            ContextCompat.getColor(this, R.color.icon_grad_start),
-            ContextCompat.getColor(this, R.color.icon_grad_mid2),
-            ContextCompat.getColor(this, R.color.icon_grad_mid1),
-            ContextCompat.getColor(this, R.color.icon_grad_end)
+            if (isDark) 0x66789BC4 else 0x99D6EBFA.toInt(),
+            if (isDark) 0x666D8DB4 else 0x99C5E0F4.toInt()
         )
         val drawable = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
-            cornerRadius = resources.displayMetrics.density * 18f
-            setStroke((resources.displayMetrics.density * 1f).toInt(), 0x33000000)
+            cornerRadius = resources.displayMetrics.density * 16f
+            setStroke((resources.displayMetrics.density * 1f).toInt(), if (isDark) 0x88B5D5F4.toInt() else 0x88A7CBE6.toInt())
         }
         button.background = drawable
-        button.setTextColor(ContextCompat.getColor(this, android.R.color.white))
+        button.setTextColor(ContextCompat.getColor(this, R.color.liquid_popup_button_text))
+    }
+
+    private fun applyRefreshIconTint() {
+        val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        if (!isDark) {
+            val blue = ContextCompat.getColor(this, R.color.icon_grad_mid2)
+            binding.btnRefresh.setColorFilter(blue)
+        } else {
+            binding.btnRefresh.clearColorFilter()
+        }
     }
 
     private suspend fun resolveProductNames(stocks: List<StockResponseDto>): Map<Int, String> {
@@ -482,7 +496,12 @@ class StockActivity : AppCompatActivity(), TopCenterActionHost {
         cacheStore.put("products:names", ProductNameCache(merged))
     }
 
-    private fun createStock() {
+    private fun createStock(
+        productInputRaw: String,
+        locationRaw: String,
+        quantityRaw: String,
+        onFinished: () -> Unit = {}
+    ) {
         if (isUserRole()) {
             UiNotifier.showBlocking(
                 this,
@@ -490,21 +509,31 @@ class StockActivity : AppCompatActivity(), TopCenterActionHost {
                 "No tienes permisos para crear stock.",
                 com.example.inventoryapp.R.drawable.ic_lock
             )
+            onFinished()
             return
         }
 
-        val productInput = binding.etProductId.text.toString().trim()
+        val productInput = productInputRaw.trim()
         val productId = productInput.toIntOrNull() ?: resolveProductIdByName(productInput)
-        val location = normalizeLocationInput(binding.etLocation.text.toString().trim())
-        val quantity = binding.etQuantity.text.toString().toIntOrNull()
+        val location = normalizeLocationInput(locationRaw.trim())
+        val quantity = quantityRaw.toIntOrNull()
 
-        if (productId == null) { binding.etProductId.error = "Product ID o nombre vÃ¡lido"; return }
-        if (location.isBlank()) { binding.etLocation.error = "Location requerida"; return }
-        if (quantity == null || quantity < 0) { binding.etQuantity.error = "Quantity >= 0"; return }
+        if (productId == null || location.isBlank() || quantity == null || quantity < 0) {
+            CreateUiFeedback.showErrorPopup(
+                activity = this,
+                title = "No se pudo crear stock",
+                details = when {
+                    productId == null -> "Product ID o nombre valido"
+                    location.isBlank() -> "Location requerida"
+                    else -> "Quantity >= 0"
+                }
+            )
+            onFinished()
+            return
+        }
 
         val dto = StockCreateDto(productId = productId, location = location, quantity = quantity)
 
-        binding.btnCreate.isEnabled = false
         val loading = CreateUiFeedback.showLoading(this, "stock")
 
         lifecycleScope.launch {
@@ -523,7 +552,7 @@ class StockActivity : AppCompatActivity(), TopCenterActionHost {
                     loading.dismissThen {
                         CreateUiFeedback.showCreatedPopup(this@StockActivity, "Stock creado", details)
                     }
-                    binding.etQuantity.setText("")
+                    createQuantityInput = ""
                     cacheStore.invalidatePrefix("stocks")
                     loadStocks()
                 } else {
@@ -576,7 +605,7 @@ class StockActivity : AppCompatActivity(), TopCenterActionHost {
                 if (!loadingHandled) {
                     loading.dismiss()
                 }
-                binding.btnCreate.isEnabled = true
+                onFinished()
             }
         }
     }
@@ -769,7 +798,7 @@ class StockActivity : AppCompatActivity(), TopCenterActionHost {
         return pendingAll.subList(startInPending, endInPending)
     }
 
-    private fun setupLocationDropdown() {
+    private fun loadLocationOptions() {
         lifecycleScope.launch {
             try {
                 val res = NetworkModule.api.listLocations(limit = 200, offset = 0)
@@ -782,18 +811,7 @@ class StockActivity : AppCompatActivity(), TopCenterActionHost {
                     val values = items.sortedBy { it.id }
                         .map { "(${it.id}) ${it.code}" }
                         .distinct()
-                    val allValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
-                    val adapter = ArrayAdapter(this@StockActivity, android.R.layout.simple_list_item_1, allValues)
-                    binding.etLocation.setAdapter(adapter)
-                    binding.etLocation.setOnClickListener { binding.etLocation.showDropDown() }
-                    binding.etLocation.setOnFocusChangeListener { _, hasFocus ->
-                        if (hasFocus) binding.etLocation.showDropDown()
-                    }
-                    binding.etSearchLocation.setAdapter(adapter)
-                    binding.etSearchLocation.setOnClickListener { binding.etSearchLocation.showDropDown() }
-                    binding.etSearchLocation.setOnFocusChangeListener { _, hasFocus ->
-                        if (hasFocus) binding.etSearchLocation.showDropDown()
-                    }
+                    locationDropdownValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
                     return@launch
                 }
             } catch (_: Exception) { }
@@ -806,39 +824,19 @@ class StockActivity : AppCompatActivity(), TopCenterActionHost {
                 val values = cached.items.sortedBy { it.id }
                     .map { "(${it.id}) ${it.code}" }
                     .distinct()
-                val allValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
-                val adapter = ArrayAdapter(this@StockActivity, android.R.layout.simple_list_item_1, allValues)
-                binding.etLocation.setAdapter(adapter)
-                binding.etLocation.setOnClickListener { binding.etLocation.showDropDown() }
-                binding.etLocation.setOnFocusChangeListener { _, hasFocus ->
-                    if (hasFocus) binding.etLocation.showDropDown()
-                }
-                binding.etSearchLocation.setAdapter(adapter)
-                binding.etSearchLocation.setOnClickListener { binding.etSearchLocation.showDropDown() }
-                binding.etSearchLocation.setOnFocusChangeListener { _, hasFocus ->
-                    if (hasFocus) binding.etSearchLocation.showDropDown()
-                }
+                locationDropdownValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
             }
         }
     }
 
-    private fun setupSearchDropdowns() {
-        // Placeholder for future search dropdowns if needed.
+    private fun bindLocationDropdown(auto: MaterialAutoCompleteTextView) {
+        val adapter = ArrayAdapter(this, R.layout.item_liquid_dropdown, locationDropdownValues)
+        auto.setAdapter(adapter)
+        auto.setOnClickListener { auto.showDropDown() }
+        auto.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) auto.showDropDown() }
     }
 
-    private fun applyStockDropdownIcon() {
-        binding.tilCreateLocation.setEndIconTintList(null)
-        binding.tilSearchLocation.setEndIconTintList(null)
-        val endIconId = com.google.android.material.R.id.text_input_end_icon
-        binding.tilCreateLocation.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
-            GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
-        }
-        binding.tilSearchLocation.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
-            GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
-        }
-    }
-
-    private fun toggleCreateStockForm() {
+    private fun openCreateStockDialog() {
         if (isUserRole()) {
             UiNotifier.showBlocking(
                 this,
@@ -848,47 +846,149 @@ class StockActivity : AppCompatActivity(), TopCenterActionHost {
             )
             return
         }
-        TransitionManager.beginDelayedTransition(binding.scrollStock, AutoTransition().setDuration(180))
-        val isVisible = binding.layoutCreateStockContent.visibility == View.VISIBLE
-        if (isVisible) {
-            binding.layoutCreateStockContent.visibility = View.GONE
-            binding.layoutSearchStockContent.visibility = View.GONE
-            setToggleActive(null)
-        } else {
-            binding.layoutCreateStockContent.visibility = View.VISIBLE
-            binding.layoutSearchStockContent.visibility = View.GONE
-            setToggleActive(binding.layoutCreateStockHeader)
+        if (createDialog?.isShowing == true) return
+
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_stock_create_master, null)
+        val btnClose = view.findViewById<ImageButton>(R.id.btnCreateStockDialogClose)
+        val btnCreate = view.findViewById<Button>(R.id.btnDialogCreateStock)
+        val etProduct = view.findViewById<TextInputEditText>(R.id.etDialogCreateStockProduct)
+        val etLocation = view.findViewById<MaterialAutoCompleteTextView>(R.id.etDialogCreateStockLocation)
+        val etQuantity = view.findViewById<TextInputEditText>(R.id.etDialogCreateStockQuantity)
+        val tilLocation = view.findViewById<TextInputLayout>(R.id.tilDialogCreateStockLocation)
+
+        etProduct.setText(createProductInput)
+        etLocation.setText(createLocationInput, false)
+        etQuantity.setText(createQuantityInput)
+
+        bindLocationDropdown(etLocation)
+        applyDialogDropdownStyle(listOf(tilLocation), listOf(etLocation))
+
+        val dialog = AlertDialog.Builder(this).setView(view).setCancelable(true).create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        btnClose.setOnClickListener { dialog.dismiss() }
+        btnCreate.setOnClickListener {
+            val product = etProduct.text?.toString().orEmpty()
+            val location = etLocation.text?.toString().orEmpty()
+            val quantity = etQuantity.text?.toString().orEmpty()
+
+            createProductInput = product
+            createLocationInput = location
+            createQuantityInput = quantity
+
+            btnCreate.isEnabled = false
+            createStock(
+                productInputRaw = product,
+                locationRaw = location,
+                quantityRaw = quantity,
+                onFinished = { btnCreate.isEnabled = true }
+            )
+            dialog.dismiss()
+        }
+        dialog.setOnDismissListener {
+            createDialog = null
+            hideKeyboard()
+        }
+        createDialog = dialog
+        dialog.show()
+    }
+
+    private fun openSearchStockDialog() {
+        if (searchDialog?.isShowing == true) return
+
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_stock_search_master, null)
+        val btnClose = view.findViewById<ImageButton>(R.id.btnSearchStockDialogClose)
+        val btnSearch = view.findViewById<Button>(R.id.btnDialogSearchStock)
+        val btnClear = view.findViewById<Button>(R.id.btnDialogClearSearchStock)
+        val etProduct = view.findViewById<TextInputEditText>(R.id.etDialogSearchStockProduct)
+        val etLocation = view.findViewById<MaterialAutoCompleteTextView>(R.id.etDialogSearchStockLocation)
+        val etQuantity = view.findViewById<TextInputEditText>(R.id.etDialogSearchStockQuantity)
+        val tilLocation = view.findViewById<TextInputLayout>(R.id.tilDialogSearchStockLocation)
+
+        etProduct.setText(searchProductFilter)
+        etLocation.setText(searchLocationFilter, false)
+        etQuantity.setText(searchQuantityFilter)
+
+        bindLocationDropdown(etLocation)
+        applyDialogDropdownStyle(listOf(tilLocation), listOf(etLocation))
+
+        val dialog = AlertDialog.Builder(this).setView(view).setCancelable(true).create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        btnClose.setOnClickListener { dialog.dismiss() }
+        btnSearch.setOnClickListener {
+            searchProductFilter = etProduct.text?.toString().orEmpty().trim()
+            searchLocationFilter = etLocation.text?.toString().orEmpty().trim()
+            searchQuantityFilter = etQuantity.text?.toString().orEmpty().trim()
+            hideKeyboard()
+            dialog.dismiss()
+            applySearchFilters()
+        }
+        btnClear.setOnClickListener {
+            etProduct.setText("")
+            etLocation.setText("", false)
+            etQuantity.setText("")
+            clearSearchFilters()
+            hideKeyboard()
+        }
+        dialog.setOnDismissListener {
+            searchDialog = null
+            hideKeyboard()
+        }
+        searchDialog = dialog
+        dialog.show()
+    }
+
+    private fun applyDialogDropdownStyle(
+        textInputLayouts: List<TextInputLayout>,
+        dropdowns: List<MaterialAutoCompleteTextView>
+    ) {
+        val popupDrawable = ContextCompat.getDrawable(this, R.drawable.bg_liquid_dropdown_popup)
+        val endIconId = com.google.android.material.R.id.text_input_end_icon
+        textInputLayouts.forEach { til ->
+            til.setEndIconTintList(null)
+            til.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
+                GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
+            }
+        }
+        dropdowns.forEach { auto ->
+            if (popupDrawable != null) auto.setDropDownBackgroundDrawable(popupDrawable)
         }
     }
 
-    private fun toggleSearchForm() {
-        TransitionManager.beginDelayedTransition(binding.scrollStock, AutoTransition().setDuration(180))
-        val isVisible = binding.layoutSearchStockContent.visibility == View.VISIBLE
-        if (isVisible) {
-            hideSearchForm()
-        } else {
-            binding.layoutSearchStockContent.visibility = View.VISIBLE
-            binding.layoutCreateStockContent.visibility = View.GONE
-            setToggleActive(binding.layoutSearchStockHeader)
-        }
-    }
+    private fun updateStocksListAdaptiveHeight() {
+        binding.scrollStock.post {
+            val topSpacerLp = binding.viewStockTopSpacer.layoutParams as? LinearLayout.LayoutParams ?: return@post
+            val bottomSpacerLp = binding.viewStockBottomSpacer.layoutParams as? LinearLayout.LayoutParams ?: return@post
+            val cardLp = binding.cardStockList.layoutParams as? LinearLayout.LayoutParams ?: return@post
+            val rvLp = binding.rvStocks.layoutParams as? LinearLayout.LayoutParams ?: return@post
 
-    private fun hideSearchForm() {
-        binding.layoutSearchStockContent.visibility = View.GONE
-        binding.layoutCreateStockContent.visibility = View.GONE
-        setToggleActive(null)
-    }
-
-    private fun setToggleActive(active: View?) {
-        if (active === binding.layoutCreateStockHeader) {
-            binding.layoutCreateStockHeader.setBackgroundResource(R.drawable.bg_toggle_active)
-            binding.layoutSearchStockHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
-        } else if (active === binding.layoutSearchStockHeader) {
-            binding.layoutCreateStockHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
-            binding.layoutSearchStockHeader.setBackgroundResource(R.drawable.bg_toggle_active)
-        } else {
-            binding.layoutCreateStockHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
-            binding.layoutSearchStockHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
+            val visibleCount = if (::adapter.isInitialized) adapter.itemCount else 0
+            if (visibleCount in 1..pageSize) {
+                topSpacerLp.height = 0
+                topSpacerLp.weight = 1f
+                bottomSpacerLp.height = 0
+                bottomSpacerLp.weight = 1f
+                cardLp.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                cardLp.weight = 0f
+                rvLp.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                rvLp.weight = 0f
+                binding.rvStocks.isNestedScrollingEnabled = false
+            } else {
+                topSpacerLp.height = 0
+                topSpacerLp.weight = 0f
+                bottomSpacerLp.height = 0
+                bottomSpacerLp.weight = 0f
+                cardLp.height = 0
+                cardLp.weight = 1f
+                rvLp.height = 0
+                rvLp.weight = 1f
+                binding.rvStocks.isNestedScrollingEnabled = true
+            }
+            binding.viewStockTopSpacer.layoutParams = topSpacerLp
+            binding.viewStockBottomSpacer.layoutParams = bottomSpacerLp
+            binding.cardStockList.layoutParams = cardLp
+            binding.rvStocks.layoutParams = rvLp
         }
     }
 
@@ -923,9 +1023,9 @@ class StockActivity : AppCompatActivity(), TopCenterActionHost {
         allowReload: Boolean,
         showNotFoundDialog: Boolean = false
     ) {
-        val productRaw = binding.etSearchProduct.text.toString().trim()
-        val locationRaw = normalizeLocationInput(binding.etSearchLocation.text.toString().trim())
-        val qtyRaw = binding.etSearchQuantity.text.toString().trim()
+        val productRaw = searchProductFilter.trim()
+        val locationRaw = normalizeLocationInput(searchLocationFilter.trim())
+        val qtyRaw = searchQuantityFilter.trim()
 
         if (allowReload && !isLoading && (currentOffset > 0 || totalCount > allItems.size)) {
             pendingFilterApply = true
@@ -970,14 +1070,15 @@ class StockActivity : AppCompatActivity(), TopCenterActionHost {
     }
 
     private fun clearSearchFilters() {
-        binding.etSearchProduct.setText("")
-        binding.etSearchLocation.setText("")
-        binding.etSearchQuantity.setText("")
+        searchProductFilter = ""
+        searchLocationFilter = ""
+        searchQuantityFilter = ""
         filteredItems = emptyList()
         filteredOffset = 0
         items = allItems
         adapter.submit(allItems, productNameById)
         updatePageInfo(items.size, items.size)
+        updateStocksListAdaptiveHeight()
     }
 
     private fun setAllItemsAndApplyFilters(ordered: List<StockResponseDto>) {
@@ -987,13 +1088,14 @@ class StockActivity : AppCompatActivity(), TopCenterActionHost {
         } else {
             items = ordered
             adapter.submit(ordered, productNameById)
+            updateStocksListAdaptiveHeight()
         }
     }
 
     private fun hasActiveFilters(): Boolean {
-        return binding.etSearchProduct.text?.isNotBlank() == true ||
-            binding.etSearchLocation.text?.isNotBlank() == true ||
-            binding.etSearchQuantity.text?.isNotBlank() == true
+        return searchProductFilter.isNotBlank() ||
+            searchLocationFilter.isNotBlank() ||
+            searchQuantityFilter.isNotBlank()
     }
 
     private fun buildStockSearchNotFoundDetails(
@@ -1030,6 +1132,7 @@ class StockActivity : AppCompatActivity(), TopCenterActionHost {
         items = page
         adapter.submit(page, productNameById)
         updatePageInfo(page.size, page.size)
+        updateStocksListAdaptiveHeight()
     }
 
     private fun normalizeLocationInput(raw: String): String {
