@@ -1,17 +1,20 @@
 package com.example.inventoryapp.ui.categories
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
-import android.view.View
+import android.view.LayoutInflater
+import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
+import android.widget.ImageButton
+import android.widget.LinearLayout
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.transition.AutoTransition
-import androidx.transition.TransitionManager
 import com.example.inventoryapp.R
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.OfflineSyncer
@@ -36,6 +39,7 @@ import com.google.gson.Gson
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.io.IOException
+import com.google.android.material.textfield.TextInputEditText
 class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
     companion object {
         private const val OFFLINE_DELETE_MARKER = "offline_delete"
@@ -52,17 +56,21 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
     private val pageSize = 5
     private var totalCount = 0
     private var isLoading = false
+    private var searchQuery: String = ""
     private var searchName: String? = null
     private var searchId: Int? = null
+    private var createDialog: AlertDialog? = null
+    private var searchDialog: AlertDialog? = null
+    private var createCategoryInput: String = ""
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityCategoriesBinding.inflate(layoutInflater)
         setContentView(binding.root)
         NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
-        GradientIconUtil.applyGradient(binding.ivCreateCategoryAdd, R.drawable.add)
-        GradientIconUtil.applyGradient(binding.ivCreateCategorySearch, R.drawable.search)
+        binding.btnRefreshCategories.setImageResource(R.drawable.glass_refresh)
         applyCategoriesTitleGradient()
+        applyRefreshIconTint()
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
         cacheStore = CacheStore.getInstance(this)
         binding.btnBack.setOnClickListener { finish() }
@@ -80,17 +88,6 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
                     cacheNoticeShownInOfflineSession = false
                 }
             }
-        }
-        binding.layoutCreateCategoryHeader.setOnClickListener { toggleCreateForm() }
-        binding.layoutSearchCategoryHeader.setOnClickListener { toggleSearchForm() }
-        binding.btnCreateCategory.setOnClickListener { createCategory() }
-        binding.btnSearchCategory.setOnClickListener {
-            hideKeyboard()
-            applySearch()
-        }
-        binding.btnClearCategory.setOnClickListener {
-            hideKeyboard()
-            clearSearch()
         }
         binding.btnRefreshCategories.setOnClickListener { loadCategories(withSnack = true) }
         binding.btnPrevPageCategories.setOnClickListener {
@@ -115,21 +112,18 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
         super.onResume()
         currentOffset = 0
         loadCategories()
+        updateCategoriesListAdaptiveHeight()
     }
 
     override fun onTopCreateAction() {
-        if (binding.layoutCreateCategoryContent.visibility != View.VISIBLE) {
-            toggleCreateForm()
-        }
+        openCreateCategoryDialog()
     }
 
     override fun onTopFilterAction() {
-        if (binding.layoutSearchCategoryContent.visibility != View.VISIBLE) {
-            toggleSearchForm()
-        }
+        openSearchCategoryDialog()
     }
     private fun applySearch() {
-        val raw = binding.etSearchQuery.text.toString().trim()
+        val raw = searchQuery.trim()
         if (raw.isBlank()) {
             clearSearch()
             return
@@ -148,9 +142,9 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
         }
     }
     private fun clearSearch() {
+        searchQuery = ""
         searchId = null
         searchName = null
-        binding.etSearchQuery.setText("")
         currentOffset = 0
         loadCategories()
     }
@@ -355,11 +349,18 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
         )
         cacheNoticeShownInOfflineSession = true
     }
-    private fun createCategory() {
-        val name = binding.etCategoryName.text.toString().trim()
-        if (name.isBlank()) { binding.etCategoryName.error = "Nombre requerido"; return }
-        binding.btnCreateCategory.isEnabled = false
-        val loading = CreateUiFeedback.showLoading(this, "categorÃ­a")
+    private fun createCategory(nameRaw: String, onFinished: () -> Unit = {}) {
+        val name = nameRaw.trim()
+        if (name.isBlank()) {
+            CreateUiFeedback.showErrorPopup(
+                activity = this,
+                title = "No se pudo crear categoria",
+                details = "Nombre requerido"
+            )
+            onFinished()
+            return
+        }
+        val loading = CreateUiFeedback.showLoading(this, "categoria")
         lifecycleScope.launch {
             var loadingHandled = false
             try {
@@ -374,9 +375,9 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
                     }
                     loadingHandled = true
                     loading.dismissThen {
-                        CreateUiFeedback.showCreatedPopup(this@CategoriesActivity, "CategorÃ­a creada", details)
+                        CreateUiFeedback.showCreatedPopup(this@CategoriesActivity, "Categoria creada", details)
                     }
-                    binding.etCategoryName.setText("")
+                    createCategoryInput = ""
                     currentOffset = 0
                     cacheStore.invalidatePrefix("categories")
                     loadCategories()
@@ -387,7 +388,7 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
                     loading.dismissThen {
                         CreateUiFeedback.showErrorPopup(
                             activity = this@CategoriesActivity,
-                            title = "No se pudo crear categorÃ­a",
+                            title = "No se pudo crear categoria",
                             details = details
                         )
                     }
@@ -399,7 +400,7 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
                     loading.dismissThen {
                         CreateUiFeedback.showCreatedPopup(
                             this@CategoriesActivity,
-                            "CategorÃ­a creada (offline)",
+                            "Categoria creada (offline)",
                             "Nombre: $name (offline)",
                             accentColorRes = R.color.offline_text
                         )
@@ -411,8 +412,8 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
                     loading.dismissThen {
                         CreateUiFeedback.showErrorPopup(
                             activity = this@CategoriesActivity,
-                            title = "No se pudo crear categorÃ­a",
-                            details = "Ha ocurrido un error inesperado al crear la categorÃ­a."
+                            title = "No se pudo crear categoria",
+                            details = "Ha ocurrido un error inesperado al crear la categoria."
                         )
                     }
                 }
@@ -420,10 +421,11 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
                 if (!loadingHandled) {
                     loading.dismiss()
                 }
-                binding.btnCreateCategory.isEnabled = true
+                onFinished()
             }
         }
     }
+
     private fun showEditDialog(category: CategoryResponseDto) {
         val view = layoutInflater.inflate(R.layout.dialog_edit_category, null)
         val title = view.findViewById<android.widget.TextView>(R.id.tvEditCategoryTitle)
@@ -637,98 +639,177 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
     }
     private fun updatePageInfo(pageSizeLoaded: Int, pendingCount: Int) {
         if (searchId != null) {
-            binding.tvCategoriesPageInfo.text = "Mostrando ${items.size} / ${items.size}"
+            binding.tvCategoriesPageNumber.text = "Pagina 1/1"
+            binding.tvCategoriesPageInfo.text = "Mostrando ${items.size}/${items.size}"
             binding.btnPrevPageCategories.isEnabled = false
             binding.btnNextPageCategories.isEnabled = false
             applyPagerButtonStyle(binding.btnPrevPageCategories, enabled = false)
             applyPagerButtonStyle(binding.btnNextPageCategories, enabled = false)
+            updateCategoriesListAdaptiveHeight()
             return
         }
         val shownOnline = (currentOffset + pageSizeLoaded).coerceAtMost(totalCount)
-        val label = if (totalCount > 0) {
-            "Mostrando $shownOnline / $totalCount"
+        val totalItems = if (totalCount > 0) totalCount else pendingCount
+        val currentPage = if (totalItems <= 0) 0 else (currentOffset / pageSize) + 1
+        val totalPages = if (totalItems <= 0) 0 else ((totalItems + pageSize - 1) / pageSize)
+        val label = if (totalItems > 0) {
+            "Mostrando $shownOnline/$totalItems"
         } else {
-            "Mostrando $pendingCount / $pendingCount"
+            "Mostrando 0/0"
         }
+        binding.tvCategoriesPageNumber.text = "Pagina $currentPage/$totalPages"
         binding.tvCategoriesPageInfo.text = label
         val prevEnabled = currentOffset > 0
-        val nextEnabled = shownOnline < totalCount
+        val nextEnabled = shownOnline < totalItems
         binding.btnPrevPageCategories.isEnabled = prevEnabled
         binding.btnNextPageCategories.isEnabled = nextEnabled
         applyPagerButtonStyle(binding.btnPrevPageCategories, prevEnabled)
         applyPagerButtonStyle(binding.btnNextPageCategories, nextEnabled)
+        updateCategoriesListAdaptiveHeight()
     }
+
     private fun applyPagerButtonStyle(button: Button, enabled: Boolean) {
         button.backgroundTintList = null
+        val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         if (!enabled) {
             val colors = intArrayOf(
-                ContextCompat.getColor(this, android.R.color.darker_gray),
-                ContextCompat.getColor(this, android.R.color.darker_gray)
+                if (isDark) 0x334F6480 else 0x33A7BED8,
+                if (isDark) 0x33445A74 else 0x338FA9C6
             )
             val drawable = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
-                cornerRadius = resources.displayMetrics.density * 18f
-                setStroke((resources.displayMetrics.density * 1f).toInt(), 0xFFB0B0B0.toInt())
+                cornerRadius = resources.displayMetrics.density * 16f
+                setStroke((resources.displayMetrics.density * 1f).toInt(), if (isDark) 0x44AFCBEB else 0x5597BCD9)
             }
             button.background = drawable
-            button.setTextColor(ContextCompat.getColor(this, android.R.color.white))
+            button.setTextColor(ContextCompat.getColor(this, R.color.liquid_popup_hint))
             return
         }
         val colors = intArrayOf(
-            ContextCompat.getColor(this, R.color.icon_grad_start),
-            ContextCompat.getColor(this, R.color.icon_grad_mid2),
-            ContextCompat.getColor(this, R.color.icon_grad_mid1),
-            ContextCompat.getColor(this, R.color.icon_grad_end)
+            if (isDark) 0x66789BC4 else 0x99D6EBFA.toInt(),
+            if (isDark) 0x666D8DB4 else 0x99C5E0F4.toInt()
         )
         val drawable = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
-            cornerRadius = resources.displayMetrics.density * 18f
-            setStroke((resources.displayMetrics.density * 1f).toInt(), 0x33000000)
+            cornerRadius = resources.displayMetrics.density * 16f
+            setStroke((resources.displayMetrics.density * 1f).toInt(), if (isDark) 0x88B5D5F4.toInt() else 0x88A7CBE6.toInt())
         }
         button.background = drawable
-        button.setTextColor(ContextCompat.getColor(this, android.R.color.white))
+        button.setTextColor(ContextCompat.getColor(this, R.color.liquid_popup_button_text))
     }
-    private fun toggleCreateForm() {
-        TransitionManager.beginDelayedTransition(binding.scrollCategories, AutoTransition().setDuration(180))
-        val isVisible = binding.layoutCreateCategoryContent.visibility == View.VISIBLE
-        if (isVisible) {
-            binding.layoutCreateCategoryContent.visibility = View.GONE
-            binding.layoutSearchCategoryContent.visibility = View.GONE
-            setToggleActive(null)
+
+    private fun applyRefreshIconTint() {
+        val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        if (!isDark) {
+            val blue = ContextCompat.getColor(this, R.color.icon_grad_mid2)
+            binding.btnRefreshCategories.setColorFilter(blue)
         } else {
-            binding.layoutCreateCategoryContent.visibility = View.VISIBLE
-            binding.layoutSearchCategoryContent.visibility = View.GONE
-            setToggleActive(binding.layoutCreateCategoryHeader)
+            binding.btnRefreshCategories.clearColorFilter()
         }
     }
-    private fun toggleSearchForm() {
-        TransitionManager.beginDelayedTransition(binding.scrollCategories, AutoTransition().setDuration(180))
-        val isVisible = binding.layoutSearchCategoryContent.visibility == View.VISIBLE
-        if (isVisible) {
-            binding.layoutSearchCategoryContent.visibility = View.GONE
-            binding.layoutCreateCategoryContent.visibility = View.GONE
-            setToggleActive(null)
-        } else {
-            binding.layoutSearchCategoryContent.visibility = View.VISIBLE
-            binding.layoutCreateCategoryContent.visibility = View.GONE
-            setToggleActive(binding.layoutSearchCategoryHeader)
+
+    private fun openCreateCategoryDialog() {
+        if (createDialog?.isShowing == true) return
+
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_categories_create_master, null)
+        val btnClose = view.findViewById<ImageButton>(R.id.btnCreateCategoryDialogClose)
+        val btnCreate = view.findViewById<Button>(R.id.btnDialogCreateCategory)
+        val etName = view.findViewById<TextInputEditText>(R.id.etDialogCategoryName)
+
+        etName.setText(createCategoryInput)
+
+        val dialog = AlertDialog.Builder(this).setView(view).setCancelable(true).create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        btnClose.setOnClickListener { dialog.dismiss() }
+        btnCreate.setOnClickListener {
+            createCategoryInput = etName.text?.toString().orEmpty()
+            btnCreate.isEnabled = false
+            createCategory(createCategoryInput) { btnCreate.isEnabled = true }
+            dialog.dismiss()
+        }
+        dialog.setOnDismissListener {
+            createDialog = null
+            hideKeyboard()
+        }
+        createDialog = dialog
+        dialog.show()
+    }
+
+    private fun openSearchCategoryDialog() {
+        if (searchDialog?.isShowing == true) return
+
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_categories_search_master, null)
+        val btnClose = view.findViewById<ImageButton>(R.id.btnSearchCategoryDialogClose)
+        val btnSearch = view.findViewById<Button>(R.id.btnDialogSearchCategory)
+        val btnClear = view.findViewById<Button>(R.id.btnDialogClearSearchCategory)
+        val etQuery = view.findViewById<TextInputEditText>(R.id.etDialogCategoryQuery)
+
+        etQuery.setText(searchQuery)
+
+        val dialog = AlertDialog.Builder(this).setView(view).setCancelable(true).create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        btnClose.setOnClickListener { dialog.dismiss() }
+        btnSearch.setOnClickListener {
+            searchQuery = etQuery.text?.toString().orEmpty().trim()
+            hideKeyboard()
+            dialog.dismiss()
+            applySearch()
+        }
+        btnClear.setOnClickListener {
+            etQuery.setText("")
+            clearSearch()
+            hideKeyboard()
+        }
+        dialog.setOnDismissListener {
+            searchDialog = null
+            hideKeyboard()
+        }
+        searchDialog = dialog
+        dialog.show()
+    }
+
+    private fun updateCategoriesListAdaptiveHeight() {
+        binding.scrollCategories.post {
+            val topSpacerLp = binding.viewCategoriesTopSpacer.layoutParams as? LinearLayout.LayoutParams ?: return@post
+            val bottomSpacerLp = binding.viewCategoriesBottomSpacer.layoutParams as? LinearLayout.LayoutParams ?: return@post
+            val cardLp = binding.cardCategoriesList.layoutParams as? LinearLayout.LayoutParams ?: return@post
+            val rvLp = binding.rvCategories.layoutParams as? LinearLayout.LayoutParams ?: return@post
+
+            val visibleCount = if (::adapter.isInitialized) adapter.itemCount else 0
+            if (visibleCount in 1..pageSize) {
+                topSpacerLp.height = 0
+                topSpacerLp.weight = 1f
+                bottomSpacerLp.height = 0
+                bottomSpacerLp.weight = 1f
+                cardLp.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                cardLp.weight = 0f
+                rvLp.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                rvLp.weight = 0f
+                binding.rvCategories.isNestedScrollingEnabled = false
+            } else {
+                topSpacerLp.height = 0
+                topSpacerLp.weight = 0f
+                bottomSpacerLp.height = 0
+                bottomSpacerLp.weight = 0f
+                cardLp.height = 0
+                cardLp.weight = 1f
+                rvLp.height = 0
+                rvLp.weight = 1f
+                binding.rvCategories.isNestedScrollingEnabled = true
+            }
+            binding.viewCategoriesTopSpacer.layoutParams = topSpacerLp
+            binding.viewCategoriesBottomSpacer.layoutParams = bottomSpacerLp
+            binding.cardCategoriesList.layoutParams = cardLp
+            binding.rvCategories.layoutParams = rvLp
         }
     }
-    private fun setToggleActive(active: View?) {
-        if (active === binding.layoutCreateCategoryHeader) {
-            binding.layoutCreateCategoryHeader.setBackgroundResource(R.drawable.bg_toggle_active)
-            binding.layoutSearchCategoryHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
-        } else if (active === binding.layoutSearchCategoryHeader) {
-            binding.layoutCreateCategoryHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
-            binding.layoutSearchCategoryHeader.setBackgroundResource(R.drawable.bg_toggle_active)
-        } else {
-            binding.layoutCreateCategoryHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
-            binding.layoutSearchCategoryHeader.setBackgroundResource(R.drawable.bg_toggle_idle)
-        }
-    }
+
     private fun hideKeyboard() {
         val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager ?: return
         val view = currentFocus ?: binding.root
         imm.hideSoftInputFromWindow(view.windowToken, 0)
     }
+
     private fun applyCategoriesTitleGradient() {
         val title = binding.tvCategoriesTitle
         title.post {
