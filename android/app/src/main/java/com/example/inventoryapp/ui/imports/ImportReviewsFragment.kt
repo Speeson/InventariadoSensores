@@ -59,9 +59,74 @@ class ImportReviewsFragment : Fragment(R.layout.fragment_import_reviews) {
         }
 
         binding.btnRefreshReviews.setOnClickListener { loadReviews(showFeedback = true) }
+        binding.btnApproveAllReviews.setOnClickListener { confirmApproveAll() }
         binding.btnRejectAllReviews.setOnClickListener { confirmRejectAll() }
+        applyRefreshIconTint()
+        applyPagerButtonStyle(binding.btnPrevReviews, enabled = false)
+        applyPagerButtonStyle(binding.btnNextReviews, enabled = false)
+        applyPagerButtonStyle(binding.btnApproveAllReviews, enabled = true)
+        applyPagerButtonStyle(binding.btnRejectAllReviews, enabled = true)
         loadCachedReviews()
         loadReviews(showFeedback = false)
+    }
+
+    private fun confirmApproveAll() {
+        if (allReviews.isEmpty()) {
+            CreateUiFeedback.showErrorPopup(
+                activity = requireActivity(),
+                title = "Sin revisiones",
+                details = "No hay revisiones para aprobar.",
+                animationRes = R.raw.notfound
+            )
+            return
+        }
+        AlertDialog.Builder(requireContext())
+            .setTitle("Aceptar todas")
+            .setMessage("Se aprobaran ${allReviews.size} revisiones. Continuar?")
+            .setNegativeButton("Cancelar", null)
+            .setPositiveButton("Aceptar") { _, _ ->
+                approveAllReviews()
+            }
+            .show()
+    }
+
+    private fun approveAllReviews() {
+        lifecycleScope.launch {
+            binding.btnApproveAllReviews.isEnabled = false
+            binding.btnRejectAllReviews.isEnabled = false
+            binding.btnRefreshReviews.isEnabled = false
+            var approved = 0
+            var failed = 0
+            val ids = allReviews.map { it.id }
+            for (id in ids) {
+                try {
+                    val res = NetworkModule.api.approveImportReview(id)
+                    if (res.isSuccessful) approved++ else failed++
+                } catch (_: Exception) {
+                    failed++
+                }
+            }
+            binding.btnApproveAllReviews.isEnabled = true
+            binding.btnRejectAllReviews.isEnabled = true
+            binding.btnRefreshReviews.isEnabled = true
+
+            loadReviews(showFeedback = false)
+            if (failed == 0) {
+                CreateUiFeedback.showStatusPopup(
+                    activity = requireActivity(),
+                    title = "Revisiones aprobadas",
+                    details = "Se aprobaron $approved revisiones correctamente.",
+                    animationRes = R.raw.correct_create
+                )
+            } else {
+                CreateUiFeedback.showErrorPopup(
+                    activity = requireActivity(),
+                    title = "Aprobacion parcial",
+                    details = "Aprobadas: $approved. Fallidas: $failed.",
+                    animationRes = R.raw.error
+                )
+            }
+        }
     }
 
     private fun confirmRejectAll() {
@@ -87,6 +152,7 @@ class ImportReviewsFragment : Fragment(R.layout.fragment_import_reviews) {
     private fun rejectAllReviews() {
         lifecycleScope.launch {
             binding.btnRejectAllReviews.isEnabled = false
+            binding.btnApproveAllReviews.isEnabled = false
             binding.btnRefreshReviews.isEnabled = false
             var rejected = 0
             var failed = 0
@@ -100,6 +166,7 @@ class ImportReviewsFragment : Fragment(R.layout.fragment_import_reviews) {
                 }
             }
             binding.btnRejectAllReviews.isEnabled = true
+            binding.btnApproveAllReviews.isEnabled = true
             binding.btnRefreshReviews.isEnabled = true
 
             loadReviews(showFeedback = false)
@@ -185,20 +252,30 @@ class ImportReviewsFragment : Fragment(R.layout.fragment_import_reviews) {
         if (_binding == null) return
         val total = allReviews.size
         if (total == 0) {
-            binding.tvReviewsInfo.text = "0 revisiones"
+            binding.tvReviewsPageNumber.text = "Pagina 0/0"
+            binding.tvReviewsInfo.text = "Mostrando 0/0"
             binding.btnPrevReviews.isEnabled = false
             binding.btnNextReviews.isEnabled = false
+            applyPagerButtonStyle(binding.btnPrevReviews, enabled = false)
+            applyPagerButtonStyle(binding.btnNextReviews, enabled = false)
             adapter.submit(emptyList())
             return
         }
 
         val from = currentOffset.coerceAtMost((total - 1).coerceAtLeast(0))
         val to = (from + pageSize).coerceAtMost(total)
+        val currentPage = (from / pageSize) + 1
+        val totalPages = (total + pageSize - 1) / pageSize
         adapter.submit(allReviews.subList(from, to).toList())
 
-        binding.tvReviewsInfo.text = "Mostrando $to/$total revisiones"
-        binding.btnPrevReviews.isEnabled = from > 0
-        binding.btnNextReviews.isEnabled = to < total
+        binding.tvReviewsPageNumber.text = "Pagina $currentPage/$totalPages"
+        binding.tvReviewsInfo.text = "Mostrando $to/$total"
+        val prevEnabled = from > 0
+        val nextEnabled = to < total
+        binding.btnPrevReviews.isEnabled = prevEnabled
+        binding.btnNextReviews.isEnabled = nextEnabled
+        applyPagerButtonStyle(binding.btnPrevReviews, enabled = prevEnabled)
+        applyPagerButtonStyle(binding.btnNextReviews, enabled = nextEnabled)
     }
 
     private fun loadCachedReviews() {
@@ -326,9 +403,47 @@ class ImportReviewsFragment : Fragment(R.layout.fragment_import_reviews) {
         val tv = TextView(requireContext())
         tv.text = "$label: ${value.toString()}"
         tv.textSize = 14f
-        tv.setTextColor(ContextCompat.getColor(requireContext(), R.color.black))
+        tv.setTextColor(ContextCompat.getColor(requireContext(), R.color.liquid_popup_list_text))
         tv.setPadding(0, 2, 0, 2)
         container.addView(tv)
+    }
+
+    private fun applyPagerButtonStyle(button: android.widget.Button, enabled: Boolean) {
+        button.backgroundTintList = null
+        val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        if (!enabled) {
+            val colors = intArrayOf(
+                if (isDark) 0x334F6480 else 0x33A7BED8,
+                if (isDark) 0x33445A74 else 0x338FA9C6
+            )
+            val drawable = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
+                cornerRadius = resources.displayMetrics.density * 16f
+                setStroke((resources.displayMetrics.density * 1f).toInt(), if (isDark) 0x44AFCBEB else 0x5597BCD9)
+            }
+            button.background = drawable
+            button.setTextColor(ContextCompat.getColor(requireContext(), R.color.liquid_popup_hint))
+            return
+        }
+        val colors = intArrayOf(
+            if (isDark) 0x66789BC4 else 0x99D6EBFA.toInt(),
+            if (isDark) 0x666D8DB4 else 0x99C5E0F4.toInt()
+        )
+        val drawable = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
+            cornerRadius = resources.displayMetrics.density * 16f
+            setStroke((resources.displayMetrics.density * 1f).toInt(), if (isDark) 0x88B5D5F4.toInt() else 0x88A7CBE6.toInt())
+        }
+        button.background = drawable
+        button.setTextColor(ContextCompat.getColor(requireContext(), R.color.liquid_popup_button_text))
+    }
+
+    private fun applyRefreshIconTint() {
+        val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        if (!isDark) {
+            val blue = ContextCompat.getColor(requireContext(), R.color.icon_grad_mid2)
+            binding.btnRefreshReviews.setColorFilter(blue)
+        } else {
+            binding.btnRefreshReviews.clearColorFilter()
+        }
     }
 
     private fun buildSuggestions(review: ImportReviewItemDto): String {

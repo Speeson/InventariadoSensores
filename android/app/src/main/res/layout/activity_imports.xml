@@ -79,14 +79,31 @@
             </FrameLayout>
         </LinearLayout>
 
-        <com.google.android.material.tabs.TabLayout
-            android:id="@+id/tabImports"
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:tabTextAppearance="@style/TextAppearance.ImportTabs"
-            app:tabIndicatorFullWidth="false"
-            app:tabMode="fixed"
-            app:tabGravity="fill" />
+            app:cardBackgroundColor="@android:color/transparent"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/liquid_popup_divider"
+            app:strokeWidth="1dp">
+
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/tabImports"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_liquid_popup_card"
+                android:padding="6dp"
+                app:tabTextAppearance="@style/TextAppearance.ImportTabs"
+                app:tabTextColor="@color/liquid_popup_text"
+                app:tabSelectedTextColor="@color/liquid_popup_button_text"
+                app:tabIndicatorColor="@color/icon_grad_mid2"
+                app:tabIndicatorHeight="2dp"
+                app:tabRippleColor="@android:color/transparent"
+                app:tabIndicatorFullWidth="false"
+                app:tabMode="fixed"
+                app:tabGravity="fill" />
+        </com.google.android.material.card.MaterialCardView>
 
         <androidx.viewpager2.widget.ViewPager2
             android:id="@+id/pagerImports"
@@ -98,4 +115,3 @@
     </LinearLayout>
 
 </FrameLayout>
-

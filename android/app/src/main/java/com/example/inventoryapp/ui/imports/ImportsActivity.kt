@@ -11,13 +11,15 @@ import com.example.inventoryapp.databinding.ActivityImportsBinding
 import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.common.GradientIconUtil
+import com.example.inventoryapp.ui.common.TopCenterActionHost
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.coroutines.launch
 
 
-class ImportsActivity : AppCompatActivity() {
+class ImportsActivity : AppCompatActivity(), TopCenterActionHost {
 
     private lateinit var binding: ActivityImportsBinding
+    private lateinit var pagerAdapter: ImportsPagerAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,7 +35,7 @@ class ImportsActivity : AppCompatActivity() {
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
         applyImportsTitleGradient()
 
-        val pagerAdapter = ImportsPagerAdapter(this)
+        pagerAdapter = ImportsPagerAdapter(this)
         binding.pagerImports.adapter = pagerAdapter
 
         TabLayoutMediator(binding.tabImports, binding.pagerImports) { tab, position ->
@@ -43,6 +45,24 @@ class ImportsActivity : AppCompatActivity() {
                 else -> "Revisiones"
             }
         }.attach()
+    }
+
+    override fun onTopCreateAction() {
+        openImportPopupAt(position = 0)
+    }
+
+    override fun onTopFilterAction() {
+        openImportPopupAt(position = 1)
+    }
+
+    private fun openImportPopupAt(position: Int) {
+        binding.pagerImports.setCurrentItem(position, true)
+        binding.pagerImports.post {
+            val fragment = pagerAdapter.getFragment(position)
+            if (fragment is ImportFormFragment) {
+                fragment.openImportDialog()
+            }
+        }
     }
 
     override fun onResume() {

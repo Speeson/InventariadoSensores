@@ -590,9 +590,11 @@ object LiquidTopNav {
         setLiquidIcon(host.findViewById(R.id.btnTopMidRight), R.drawable.glass_audit)
         setLiquidIcon(host.findViewById(R.id.btnAlertsQuick), R.drawable.glass_noti)
         setLiquidIcon(host.findViewById<ImageView>(R.id.btnTopCenterMain), R.drawable.glass_add)
-        setLiquidIcon(host.findViewById(R.id.btnTopCenterActionOne), R.drawable.glass_add)
+        val createIcon = if (activity is ImportsActivity) R.drawable.glass_import else R.drawable.glass_add
+        val filterIcon = if (activity is ImportsActivity) R.drawable.glass_import_trans else R.drawable.glass_filter
+        setLiquidIcon(host.findViewById(R.id.btnTopCenterActionOne), createIcon)
         host.findViewById<ImageButton>(R.id.btnTopCenterClose)?.let { setDialogCloseButtonStyle(it) }
-        setLiquidIcon(host.findViewById(R.id.btnTopCenterActionTwo), R.drawable.glass_filter)
+        setLiquidIcon(host.findViewById(R.id.btnTopCenterActionTwo), filterIcon)
         host.findViewById<ImageButton>(R.id.btnTopCenterActionOne)?.apply {
             applyTopActionAvailabilityStyle(this, capability.createEnabled)
         }
@@ -612,7 +614,7 @@ object LiquidTopNav {
             is RotationActivity -> TopActionsCapability(createEnabled = false, filterEnabled = true, screenLabel = "Traslados")
             is ReportsActivity -> TopActionsCapability(createEnabled = false, filterEnabled = false, screenLabel = "Reportes")
             is ThresholdsActivity -> TopActionsCapability(createEnabled = true, filterEnabled = true, screenLabel = "Umbrales")
-            is ImportsActivity -> TopActionsCapability(createEnabled = false, filterEnabled = false, screenLabel = "Importar CSV")
+            is ImportsActivity -> TopActionsCapability(createEnabled = true, filterEnabled = true, screenLabel = "Importar CSV")
             else -> TopActionsCapability(createEnabled = false, filterEnabled = false, screenLabel = activity.javaClass.simpleName)
         }
     }

@@ -4,40 +4,33 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="8dp"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="2dp"
+    app:cardBackgroundColor="@android:color/transparent"
+    app:cardCornerRadius="18dp"
+    app:cardElevation="0dp"
     app:strokeWidth="1dp"
-    app:strokeColor="#1A000000"
-    app:cardBackgroundColor="?attr/colorSurface">
+    app:strokeColor="@color/liquid_popup_divider">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@drawable/bg_liquid_input"
         android:orientation="horizontal"
         android:padding="12dp">
 
         <LinearLayout
-            android:layout_width="90dp"
+            android:layout_width="66dp"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center_horizontal">
-
-            <ImageView
-                android:id="@+id/ivReviewBatchIcon"
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:src="@drawable/addfile"
-                android:contentDescription="Review icon" />
 
             <TextView
                 android:id="@+id/tvReviewBatchLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
                 android:text="Lote ID"
                 android:textStyle="bold"
                 android:textSize="11sp"
-                android:textColor="?attr/colorOnSurface" />
+                android:textColor="@color/liquid_popup_list_text" />
 
             <TextView
                 android:id="@+id/tvReviewBatchId"
@@ -45,7 +38,7 @@
                 android:layout_height="wrap_content"
                 android:text="-"
                 android:textSize="11sp"
-                android:textColor="?attr/colorOnSurface" />
+                android:textColor="@color/liquid_popup_list_text" />
         </LinearLayout>
 
         <LinearLayout
@@ -61,7 +54,7 @@
                 android:text="Fila 0"
                 android:textStyle="bold"
                 android:textSize="13sp"
-                android:textColor="?attr/colorOnSurface" />
+                android:textColor="@color/liquid_popup_list_text" />
 
             <TextView
                 android:id="@+id/tvReviewMeta"
@@ -70,7 +63,7 @@
                 android:layout_marginTop="4dp"
                 android:text="SKU - Qty"
                 android:textSize="12sp"
-                android:textColor="?attr/colorOnSurface" />
+                android:textColor="@color/liquid_popup_list_text" />
 
             <TextView
                 android:id="@+id/tvReviewReason"
@@ -80,7 +73,7 @@
                 android:text="Reason"
                 android:textSize="12sp"
                 android:textStyle="bold"
-                android:textColor="@android:color/holo_orange_dark" />
+                android:textColor="@color/liquid_popup_button_text" />
         </LinearLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

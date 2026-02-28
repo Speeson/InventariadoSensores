@@ -1,9 +1,13 @@
-﻿package com.example.inventoryapp.ui.imports
+package com.example.inventoryapp.ui.imports
 
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -12,10 +16,12 @@ import com.example.inventoryapp.data.local.cache.CacheStore
 import com.example.inventoryapp.data.remote.model.ImportSummaryResponseDto
 import com.example.inventoryapp.databinding.FragmentImportFormBinding
 import com.example.inventoryapp.ui.common.CreateUiFeedback
+import com.google.android.material.slider.Slider
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.util.Locale
 
 abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
 
@@ -38,11 +44,12 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
     private val allErrorRows = mutableListOf<ImportErrorRow>()
     private val pageSize = 5
     private var currentOffset = 0
-    private var importExpanded = true
+    private var summaryStatsText: String = "Total: 0 | OK: 0 | Errores: 0 | Reviews: 0"
+    private var importDialog: AlertDialog? = null
 
     data class ImportUiCacheDto(
         val rows: List<ImportErrorRow>,
-        val summary: String
+        val summaryStats: String
     )
 
     private val pickCsv = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -50,14 +57,14 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
             try {
                 requireContext().contentResolver.takePersistableUriPermission(
                     uri,
-                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
             } catch (_: SecurityException) {
-                // Ignore if persistable permission is not granted
+                // Ignore if persistable permission is not granted.
             }
             selectedUri = uri
             selectedName = guessFileName(uri) ?: "archivo.csv"
-            binding.tvSelectedFile.text = selectedName
+            updateDialogSelectedFile()
         }
     }
 
@@ -66,30 +73,60 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
         _binding = FragmentImportFormBinding.bind(view)
         cacheStore = CacheStore.getInstance(requireContext())
 
-        binding.tvImportTitle.text = titleLabel
-        binding.btnSendCsv.text = sendLabel
-        binding.switchDryRun.isChecked = true
-        binding.ivImportSectionIcon.setImageResource(R.drawable.addfile)
-        applyImportSectionExpanded(expanded = true)
-
-        binding.layoutImportHeader.setOnClickListener {
-            applyImportSectionExpanded(!importExpanded)
-        }
-
         val errorAdapter = ImportErrorAdapter(emptyList())
         binding.rvErrors.layoutManager = LinearLayoutManager(requireContext())
         binding.rvErrors.adapter = errorAdapter
-        binding.btnClearLocalImportCache.setOnClickListener {
-            clearLocalCache(errorAdapter)
-        }
+
+        binding.tvSummaryTitle.text = "Importacion completada"
+        binding.tvSummaryStats.text = summaryStatsText
+        binding.btnRefreshErrors.setOnClickListener { loadCachedErrors(errorAdapter) }
+        binding.btnClearLocalImportCache.setOnClickListener { clearLocalCache(errorAdapter) }
+
         setupPagination(errorAdapter)
         loadCachedErrors(errorAdapter)
+        applyRefreshIconTint()
+        applyPagerButtonStyle(binding.btnPrevErrors, enabled = false)
+        applyPagerButtonStyle(binding.btnNextErrors, enabled = false)
+    }
 
-        binding.btnSelectFile.setOnClickListener {
-            pickCsv.launch(arrayOf("text/*", "application/vnd.ms-excel", "application/*"))
+    fun openImportDialog() {
+        if (!isAdded) return
+        if (importDialog?.isShowing == true) return
+
+        val view = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_import_csv_master, null)
+        val tvTitle = view.findViewById<android.widget.TextView>(R.id.tvDialogImportTitle)
+        val btnClose = view.findViewById<android.widget.ImageButton>(R.id.btnDialogImportClose)
+        val btnSelect = view.findViewById<android.widget.Button>(R.id.btnDialogSelectFile)
+        val tvSelected = view.findViewById<android.widget.TextView>(R.id.tvDialogSelectedFile)
+        val switchDryRun = view.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.switchDialogDryRun)
+        val tvFuzzy = view.findViewById<android.widget.TextView>(R.id.tvDialogFuzzyLabel)
+        val slider = view.findViewById<Slider>(R.id.sliderDialogFuzzy)
+        val btnSend = view.findViewById<android.widget.Button>(R.id.btnDialogSendCsv)
+        val progress = view.findViewById<android.widget.ProgressBar>(R.id.progressDialogImport)
+
+        tvTitle.text = titleLabel
+        btnSend.text = sendLabel
+        tvSelected.text = selectedName ?: "Ningun archivo seleccionado"
+
+        slider.stepSize = 0.1f
+        slider.valueFrom = 0f
+        slider.valueTo = 1f
+        slider.value = 0.9f
+        tvFuzzy.text = buildFuzzyLabel(slider.value)
+
+        slider.addOnChangeListener { _, value, _ ->
+            val rounded = ((value * 10f).toInt() / 10f)
+            tvFuzzy.text = buildFuzzyLabel(rounded)
         }
 
-        binding.btnSendCsv.setOnClickListener {
+        val dialog = AlertDialog.Builder(requireContext()).setView(view).setCancelable(true).create()
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        btnClose.setOnClickListener { dialog.dismiss() }
+        btnSelect.setOnClickListener {
+            pickCsv.launch(arrayOf("text/*", "application/vnd.ms-excel", "application/*"))
+        }
+        btnSend.setOnClickListener {
             val uri = selectedUri
             if (uri == null) {
                 CreateUiFeedback.showStatusPopup(
@@ -100,19 +137,27 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
                 )
                 return@setOnClickListener
             }
-            val fuzzy = binding.etFuzzy.text?.toString()?.trim()?.toDoubleOrNull() ?: 0.9
-            if (fuzzy < 0.0 || fuzzy > 1.0) {
-                CreateUiFeedback.showErrorPopup(
-                    activity = requireActivity(),
-                    title = "Valor invalido",
-                    details = "Los valores deben estar entre 0 y 1.",
-                    animationRes = R.raw.error
-                )
-                return@setOnClickListener
-            }
-            val dryRun = binding.switchDryRun.isChecked
-            upload(uri, selectedName ?: "import.csv", dryRun, fuzzy, errorAdapter)
+
+            val fuzzy = ((slider.value * 10f).toInt() / 10.0)
+            val dryRun = switchDryRun.isChecked
+            btnSend.isEnabled = false
+            progress.visibility = View.VISIBLE
+            upload(uri, selectedName ?: "import.csv", dryRun, fuzzy, btnSend, progress)
+            dialog.dismiss()
         }
+
+        dialog.setOnDismissListener { importDialog = null }
+        importDialog = dialog
+        dialog.show()
+    }
+
+    private fun buildFuzzyLabel(value: Float): String {
+        return String.format(Locale.US, "Umbral de similitud (Fuzzy threshold): %.1f", value)
+    }
+
+    private fun updateDialogSelectedFile() {
+        val dialogView = importDialog?.findViewById<android.widget.TextView>(R.id.tvDialogSelectedFile) ?: return
+        dialogView.text = selectedName ?: "Ningun archivo seleccionado"
     }
 
     private fun setupPagination(errorAdapter: ImportErrorAdapter) {
@@ -136,10 +181,14 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
             if (cached != null) {
                 allErrorRows.clear()
                 allErrorRows.addAll(cached.rows)
-                binding.tvSummary.text = cached.summary
+                summaryStatsText = cached.summaryStats
+                binding.tvSummaryStats.text = summaryStatsText
                 if (allErrorRows.isNotEmpty()) {
                     currentOffset = ((allErrorRows.size - 1) / pageSize) * pageSize
                 }
+                renderPage(errorAdapter)
+            } else {
+                binding.tvSummaryStats.text = summaryStatsText
                 renderPage(errorAdapter)
             }
         }
@@ -150,11 +199,9 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
         fileName: String,
         dryRun: Boolean,
         fuzzy: Double,
-        errorAdapter: ImportErrorAdapter
+        btnSend: android.widget.Button,
+        progress: android.widget.ProgressBar
     ) {
-        binding.progressImport.visibility = View.VISIBLE
-        binding.btnSendCsv.isEnabled = false
-
         lifecycleScope.launch {
             try {
                 val bytes = requireContext().contentResolver.openInputStream(uri)?.readBytes()
@@ -171,7 +218,7 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
                 val part = MultipartBody.Part.createFormData("file", fileName, requestBody)
                 val res = uploadCsv(part, dryRun, fuzzy)
                 if (res != null) {
-                    showSummary(res, errorAdapter)
+                    showSummary(res)
                 } else {
                     CreateUiFeedback.showErrorPopup(
                         activity = requireActivity(),
@@ -183,19 +230,19 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
             } catch (e: Exception) {
                 showImportError(e.message ?: "Error de importacion")
             } finally {
-                binding.progressImport.visibility = View.GONE
-                binding.btnSendCsv.isEnabled = true
+                progress.visibility = View.GONE
+                btnSend.isEnabled = true
             }
         }
     }
 
     private fun showImportError(details: String) {
         val detailLower = details.lowercase()
-        val isOfflineError = detailLower.contains("offline")
-            || detailLower.contains("backend unavailable")
-            || detailLower.contains("manual offline mode")
-            || detailLower.contains("sin conexión")
-            || detailLower.contains("sin conexion")
+        val isOfflineError = detailLower.contains("offline") ||
+            detailLower.contains("backend unavailable") ||
+            detailLower.contains("manual offline mode") ||
+            detailLower.contains("sin conexi�n") ||
+            detailLower.contains("sin conexion")
         if (isOfflineError) {
             CreateUiFeedback.showErrorPopup(
                 activity = requireActivity(),
@@ -214,11 +261,9 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
         )
     }
 
-    private fun showSummary(res: ImportSummaryResponseDto, errorAdapter: ImportErrorAdapter) {
-        val mode = if (res.dry_run) "Dry-run" else "Importacion"
-        binding.tvSummary.text =
-            "$mode completado\n" +
-            "Total: ${res.total_rows} | OK: ${res.ok_rows} | Errores: ${res.error_rows} | Reviews: ${res.review_rows}"
+    private fun showSummary(res: ImportSummaryResponseDto) {
+        summaryStatsText = "Total: ${res.total_rows} | OK: ${res.ok_rows} | Errores: ${res.error_rows} | Reviews: ${res.review_rows}"
+        binding.tvSummaryStats.text = summaryStatsText
 
         if (res.errors.isNotEmpty()) {
             val appended = res.errors.map {
@@ -233,7 +278,7 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
             allErrorRows.addAll(appended)
             currentOffset = ((allErrorRows.size - 1) / pageSize) * pageSize
         }
-        renderPage(errorAdapter)
+        renderPage(binding.rvErrors.adapter as ImportErrorAdapter)
         saveUiCache()
 
         if (res.dry_run) {
@@ -251,7 +296,6 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
                 animationRes = R.raw.correct_create
             )
         }
-        applyImportSectionExpanded(expanded = false)
     }
 
     private fun renderPage(errorAdapter: ImportErrorAdapter) {
@@ -259,9 +303,12 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
         val total = allErrorRows.size
         if (total == 0) {
             binding.tvErrorsEmpty.visibility = View.VISIBLE
+            binding.tvErrorsPageNumber.text = "Pagina 0/0"
             binding.tvErrorsPageInfo.text = "Mostrando 0/0"
             binding.btnPrevErrors.isEnabled = false
             binding.btnNextErrors.isEnabled = false
+            applyPagerButtonStyle(binding.btnPrevErrors, enabled = false)
+            applyPagerButtonStyle(binding.btnNextErrors, enabled = false)
             errorAdapter.submit(emptyList())
             return
         }
@@ -269,13 +316,19 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
         binding.tvErrorsEmpty.visibility = View.GONE
         val from = currentOffset.coerceAtMost((total - 1).coerceAtLeast(0))
         val to = (from + pageSize).coerceAtMost(total)
-        // Use a snapshot list to avoid invalidating adapter data when allErrorRows mutates.
+        val currentPage = (from / pageSize) + 1
+        val totalPages = (total + pageSize - 1) / pageSize
         val pageItems = allErrorRows.subList(from, to).toList()
         errorAdapter.submit(pageItems)
 
+        binding.tvErrorsPageNumber.text = "Pagina $currentPage/$totalPages"
         binding.tvErrorsPageInfo.text = "Mostrando $to/$total"
-        binding.btnPrevErrors.isEnabled = from > 0
-        binding.btnNextErrors.isEnabled = to < total
+        val prevEnabled = from > 0
+        val nextEnabled = to < total
+        binding.btnPrevErrors.isEnabled = prevEnabled
+        binding.btnNextErrors.isEnabled = nextEnabled
+        applyPagerButtonStyle(binding.btnPrevErrors, enabled = prevEnabled)
+        applyPagerButtonStyle(binding.btnNextErrors, enabled = nextEnabled)
     }
 
     private fun saveUiCache() {
@@ -285,7 +338,7 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
                 key,
                 ImportUiCacheDto(
                     rows = allErrorRows,
-                    summary = binding.tvSummary.text?.toString() ?: "Resultado: -"
+                    summaryStats = summaryStatsText
                 )
             )
         }
@@ -295,7 +348,8 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
         lifecycleScope.launch {
             allErrorRows.clear()
             currentOffset = 0
-            binding.tvSummary.text = "Resultado: -"
+            summaryStatsText = "Total: 0 | OK: 0 | Errores: 0 | Reviews: 0"
+            binding.tvSummaryStats.text = summaryStatsText
             val key = "$cacheKeyPrefix:import_ui_state"
             cacheStore.invalidatePrefix(key)
             renderPage(errorAdapter)
@@ -308,10 +362,44 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
         }
     }
 
-    private fun applyImportSectionExpanded(expanded: Boolean) {
-        importExpanded = expanded
-        binding.layoutImportContent.visibility = if (expanded) View.VISIBLE else View.GONE
-        binding.ivImportSectionToggle.setImageResource(if (expanded) R.drawable.up else R.drawable.down)
+    private fun applyPagerButtonStyle(button: android.widget.Button, enabled: Boolean) {
+        button.backgroundTintList = null
+        val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        if (!enabled) {
+            val colors = intArrayOf(
+                if (isDark) 0x334F6480 else 0x33A7BED8,
+                if (isDark) 0x33445A74 else 0x338FA9C6
+            )
+            val drawable = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
+                cornerRadius = resources.displayMetrics.density * 16f
+                setStroke((resources.displayMetrics.density * 1f).toInt(), if (isDark) 0x44AFCBEB else 0x5597BCD9)
+            }
+            button.background = drawable
+            button.setTextColor(ContextCompat.getColor(requireContext(), R.color.liquid_popup_hint))
+            return
+        }
+        val colors = intArrayOf(
+            if (isDark) 0x66789BC4 else 0x99D6EBFA.toInt(),
+            if (isDark) 0x666D8DB4 else 0x99C5E0F4.toInt()
+        )
+        val drawable = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
+            cornerRadius = resources.displayMetrics.density * 16f
+            setStroke((resources.displayMetrics.density * 1f).toInt(), if (isDark) 0x88B5D5F4.toInt() else 0x88A7CBE6.toInt())
+        }
+        button.background = drawable
+        button.setTextColor(ContextCompat.getColor(requireContext(), R.color.liquid_popup_button_text))
+    }
+
+    private fun applyRefreshIconTint() {
+        val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        if (!isDark) {
+            val blue = ContextCompat.getColor(requireContext(), R.color.icon_grad_mid2)
+            binding.btnRefreshErrors.setColorFilter(blue)
+            binding.btnClearLocalImportCache.setColorFilter(blue)
+        } else {
+            binding.btnRefreshErrors.clearColorFilter()
+            binding.btnClearLocalImportCache.clearColorFilter()
+        }
     }
 
     private fun guessFileName(uri: Uri): String? {
@@ -329,6 +417,9 @@ abstract class ImportFormFragment : Fragment(R.layout.fragment_import_form) {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        importDialog?.dismiss()
+        importDialog = null
         _binding = null
     }
 }
+

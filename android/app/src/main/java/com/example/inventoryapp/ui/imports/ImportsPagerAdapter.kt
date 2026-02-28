@@ -6,13 +6,21 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 
 class ImportsPagerAdapter(activity: FragmentActivity) : FragmentStateAdapter(activity) {
 
+    private val fragments = mutableMapOf<Int, Fragment>()
+
     override fun getItemCount(): Int = 3
 
     override fun createFragment(position: Int): Fragment {
-        return when (position) {
+        val fragment = when (position) {
             0 -> ImportEventsFragment()
             1 -> ImportTransfersFragment()
             else -> ImportReviewsFragment()
         }
+        fragments[position] = fragment
+        return fragment
+    }
+
+    fun getFragment(position: Int): Fragment? {
+        return fragments[position]
     }
 }

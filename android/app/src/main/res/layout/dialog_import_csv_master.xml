@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="340dp"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_liquid_popup_card"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:id="@+id/tvDialogImportTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:paddingStart="40dp"
+            android:paddingEnd="40dp"
+            android:text="Importar CSV"
+            android:textColor="@color/liquid_popup_title"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/btnDialogImportClose"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_gravity="end|center_vertical"
+            android:background="@drawable/bg_liquid_button"
+            android:backgroundTint="@null"
+            android:contentDescription="Cerrar"
+            android:padding="7dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_close_red"
+            app:backgroundTint="@null" />
+    </FrameLayout>
+
+    <Button
+        android:id="@+id/btnDialogSelectFile"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_liquid_button_pressable"
+        android:backgroundTint="@null"
+        android:paddingVertical="10dp"
+        android:text="Seleccionar CSV"
+        android:textAllCaps="false"
+        android:textColor="@color/liquid_popup_button_text"
+        android:textStyle="bold"
+        app:backgroundTint="@null" />
+
+    <TextView
+        android:id="@+id/tvDialogSelectedFile"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="Ningun archivo seleccionado"
+        android:textColor="@color/liquid_popup_text"
+        android:textSize="12sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Modo validacion (Dry-run | No se aplican cambios)"
+            android:textColor="@color/liquid_popup_text"
+            android:textSize="13sp" />
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/switchDialogDryRun"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="true" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvDialogFuzzyLabel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="Umbral de similitud (Fuzzy threshold): 0.9"
+        android:textColor="@color/liquid_popup_text"
+        android:textSize="13sp" />
+
+    <com.google.android.material.slider.Slider
+        android:id="@+id/sliderDialogFuzzy"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:valueFrom="0.0"
+        android:valueTo="1.0"
+        android:stepSize="0.1"
+        android:value="0.9" />
+
+    <Button
+        android:id="@+id/btnDialogSendCsv"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_liquid_button_pressable"
+        android:backgroundTint="@null"
+        android:paddingVertical="10dp"
+        android:text="Enviar CSV"
+        android:textAllCaps="false"
+        android:textColor="@color/liquid_popup_button_text"
+        android:textStyle="bold"
+        app:backgroundTint="@null" />
+
+    <ProgressBar
+        android:id="@+id/progressDialogImport"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="8dp"
+        android:visibility="gone" />
+
+</LinearLayout>

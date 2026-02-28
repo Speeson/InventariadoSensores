@@ -3,7 +3,6 @@
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.inventoryapp.R
@@ -24,8 +23,7 @@ class ImportErrorAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = items[position]
-        holder.ivBatchIcon.setImageResource(item.iconRes)
-        holder.tvBatchLabel.text = if (item.iconRes == R.drawable.transfer) "Transfer ID" else "Lote ID"
+        holder.tvBatchLabel.text = "Lote ID"
         holder.tvBatchId.text = (item.batchId ?: "-").toString()
         holder.tvTitle.text = "Fila ${item.rowNumber} - ${item.errorCode}"
         holder.tvMessage.text = item.message
@@ -34,7 +32,6 @@ class ImportErrorAdapter(
     override fun getItemCount(): Int = items.size
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val ivBatchIcon: ImageView = view.findViewById(R.id.ivErrorBatchIcon)
         val tvBatchLabel: TextView = view.findViewById(R.id.tvErrorBatchLabel)
         val tvBatchId: TextView = view.findViewById(R.id.tvErrorBatchId)
         val tvTitle: TextView = view.findViewById(R.id.tvErrorTitle)
