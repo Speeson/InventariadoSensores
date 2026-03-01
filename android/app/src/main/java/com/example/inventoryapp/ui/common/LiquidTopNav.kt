@@ -53,6 +53,8 @@ object LiquidTopNav {
     private const val PREFS_UI = "ui_prefs"
     private const val PREF_REOPEN_DRAWER = "reopen_global_drawer"
     private const val TAG = "LiquidTopNav"
+    private const val DIAG_TAG = "NavDiag"
+    private const val DIAG_ENABLED = true
     private const val MENU_CONTENT_GAP_DP = 2
     private const val TOP_HOST_HEIGHT_DP = 96
     private const val LIQUID_CRYSTAL_BLUE = "#7FD8FF"
@@ -84,6 +86,9 @@ object LiquidTopNav {
             if (excluded.contains(activity.javaClass.name)) return
 
             val content = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
+            if (DIAG_ENABLED) {
+                Log.d(DIAG_TAG, "top.install.before act=${activity.javaClass.simpleName} contentChildren=${content.childCount}")
+            }
             val drawerState = ensureGlobalDrawer(activity, content) ?: return
 
             hideLegacyNetworkBar(drawerState.contentRoot)
@@ -102,6 +107,14 @@ object LiquidTopNav {
             setupDrawerMenu(drawerState)
             collapseCenterMenu(host, dismissOverlay, animate = false)
             host.bringToFront()
+            if (DIAG_ENABLED) {
+                Log.d(
+                    DIAG_TAG,
+                    "top.install.after act=${activity.javaClass.simpleName} root=${drawerState.contentRoot.javaClass.simpleName}" +
+                        " root(y=${drawerState.contentRoot.top},h=${drawerState.contentRoot.height},pT=${drawerState.contentRoot.paddingTop})" +
+                        " host(y=${host.top},h=${host.height})"
+                )
+            }
         } catch (t: Throwable) {
             Log.e(TAG, "Top nav install failed in ${activity.javaClass.simpleName}", t)
         }
@@ -237,8 +250,11 @@ object LiquidTopNav {
     }
 
     private fun ensureTopHost(activity: AppCompatActivity, drawerLayout: DrawerLayout): FrameLayout {
-        val existing = drawerLayout.findViewById<FrameLayout>(R.id.topMenuHost)
-        if (existing != null) return existing
+        val existing = findDirectTopHost(drawerLayout)
+        if (existing != null) {
+            normalizeTopHostLayout(existing)
+            return existing
+        }
 
         val host = FrameLayout(activity).apply {
             id = R.id.topMenuHost
@@ -251,7 +267,7 @@ object LiquidTopNav {
         }
         val params = DrawerLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
-            dp(host, 96)
+            dp(host, TOP_HOST_HEIGHT_DP)
         ).apply {
             // DrawerLayout only accepts LEFT/RIGHT for drawer children.
             // This host is regular content, so keep NO_GRAVITY to avoid runtime crash.
@@ -259,7 +275,44 @@ object LiquidTopNav {
             topMargin = dp(host, 0)
         }
         drawerLayout.addView(host, params)
+        normalizeTopHostLayout(host)
         return host
+    }
+
+    private fun findDirectTopHost(drawerLayout: DrawerLayout): FrameLayout? {
+        for (i in 0 until drawerLayout.childCount) {
+            val child = drawerLayout.getChildAt(i)
+            if (child.id == R.id.topMenuHost && child is FrameLayout) {
+                return child
+            }
+        }
+        return null
+    }
+
+    private fun normalizeTopHostLayout(host: FrameLayout) {
+        val targetHeight = dp(host, TOP_HOST_HEIGHT_DP)
+        val lp = (host.layoutParams as? DrawerLayout.LayoutParams)
+            ?: DrawerLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                targetHeight
+            )
+        var changed = false
+        if (lp.height != targetHeight) {
+            lp.height = targetHeight
+            changed = true
+        }
+        if (lp.width != ViewGroup.LayoutParams.MATCH_PARENT) {
+            lp.width = ViewGroup.LayoutParams.MATCH_PARENT
+            changed = true
+        }
+        if (lp.gravity != Gravity.NO_GRAVITY) {
+            lp.gravity = Gravity.NO_GRAVITY
+            changed = true
+        }
+        if (changed || host.layoutParams !is DrawerLayout.LayoutParams) {
+            host.layoutParams = lp
+            host.requestLayout()
+        }
     }
 
     private fun hideLegacyNetworkBar(contentRoot: View) {
@@ -291,13 +344,17 @@ object LiquidTopNav {
             ?: target.paddingTop.also {
                 target.setTag(R.id.tag_liquid_top_original_padding_top, it)
             }
-        val hostHeight = when {
-            host.height > 0 -> host.height
-            host.layoutParams?.height != null && host.layoutParams.height > 0 -> host.layoutParams.height
-            else -> dp(contentRoot, TOP_HOST_HEIGHT_DP)
-        }
+        // Top host must be fixed-height; never use measured full-screen values here.
+        val hostHeight = dp(contentRoot, TOP_HOST_HEIGHT_DP)
         // Keep a stable content clearance below the full top menu host.
         val targetTop = initial + hostHeight + dp(contentRoot, MENU_CONTENT_GAP_DP)
+        if (DIAG_ENABLED) {
+            Log.d(
+                DIAG_TAG,
+                "top.ensureSpace target=${target.javaClass.simpleName} y=${target.top} h=${target.height} pT=${target.paddingTop}" +
+                    " initial=$initial hostH=$hostHeight targetTop=$targetTop"
+            )
+        }
         if (target.paddingTop != targetTop) {
             target.updatePadding(top = targetTop)
         }
@@ -1066,3 +1123,6 @@ object LiquidTopNav {
         button.scaleType = ImageView.ScaleType.CENTER_INSIDE
     }
 }
+
+
+

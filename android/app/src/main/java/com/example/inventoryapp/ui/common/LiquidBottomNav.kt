@@ -15,6 +15,7 @@ import android.graphics.Rect
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Log
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.Gravity
@@ -87,6 +88,8 @@ object LiquidBottomNav {
     private const val CAMERA_PERMISSION_FRAGMENT_TAG = "liquid_camera_permission_fragment"
     private const val PREFS_UI = "ui_prefs"
     private const val MENU_CONTENT_GAP_DP = 2
+    private const val DIAG_TAG = "NavDiag"
+    private const val DIAG_ENABLED = true
     private const val PROFILE_PANEL_MARGIN_END_DP = 12
     private const val PROFILE_PANEL_MARGIN_BOTTOM_DP = 72
     private const val LIQUID_CRYSTAL_BLUE = "#7FD8FF"
@@ -114,6 +117,9 @@ object LiquidBottomNav {
         if (excluded.contains(activity.javaClass.name)) return
 
         val content = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
+        if (DIAG_ENABLED) {
+            Log.d(DIAG_TAG, "bottom.install.before act=${activity.javaClass.simpleName} contentChildren=${content.childCount}")
+        }
         val existingNav = content.findViewById<View>(R.id.liquidBottomNavRoot)
         if (existingNav != null) {
             ensureDismissOverlay(activity, content, existingNav)
@@ -125,6 +131,13 @@ object LiquidBottomNav {
             existingNav.post { captureCenterFabBaseline(existingNav) }
             val contentRoot = content.getChildAt(0) ?: content
             setupKeyboardAwareBehavior(activity, content, contentRoot, existingNav)
+            if (DIAG_ENABLED) {
+                Log.d(
+                    DIAG_TAG,
+                    "bottom.install.reuse act=${activity.javaClass.simpleName} root=${contentRoot.javaClass.simpleName}" +
+                        " y=${contentRoot.top} h=${contentRoot.height} pB=${contentRoot.paddingBottom}"
+                )
+            }
             return
         }
         content.setBackgroundResource(R.drawable.bg_home_gradient)
@@ -154,6 +167,13 @@ object LiquidBottomNav {
             }
         }
         setupKeyboardAwareBehavior(activity, content, originalChild, nav)
+        if (DIAG_ENABLED) {
+            Log.d(
+                DIAG_TAG,
+                "bottom.install.new act=${activity.javaClass.simpleName} root=${originalChild.javaClass.simpleName}" +
+                    " y=${originalChild.top} h=${originalChild.height} pB=${originalChild.paddingBottom}"
+            )
+        }
     }
 
     private fun applyBottomBarAppearance(nav: View) {
@@ -327,6 +347,13 @@ object LiquidBottomNav {
 
         val extra = if (includeNavHeight) nav.height + dp(nav, MENU_CONTENT_GAP_DP) else 0
         val targetBottom = initial + extra
+        if (DIAG_ENABLED) {
+            Log.d(
+                DIAG_TAG,
+                "bottom.ensureSpace target=${target.javaClass.simpleName} y=${target.top} h=${target.height} pB=${target.paddingBottom}" +
+                    " initial=$initial navH=${nav.height} extra=$extra targetBottom=$targetBottom"
+            )
+        }
         if (target.paddingBottom != targetBottom) {
             target.updatePadding(bottom = targetBottom)
         }
@@ -1027,3 +1054,5 @@ class CameraPermissionRequestFragment : Fragment() {
         }
     }
 }
+
+
