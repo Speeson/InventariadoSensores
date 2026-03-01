@@ -13,14 +13,15 @@
         android:background="@color/online_bar" />
 
     <ScrollView
+        android:id="@+id/scanScrollView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fillViewport="true">
 
         <LinearLayout
+            android:id="@+id/scanContentRoot"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:gravity="center_vertical"
             android:orientation="vertical"
             android:paddingLeft="16dp"
             android:paddingTop="14dp"
@@ -28,6 +29,7 @@
             android:paddingBottom="14dp">
 
             <LinearLayout
+                android:id="@+id/scanHeaderContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
@@ -84,130 +86,201 @@
                 </FrameLayout>
             </LinearLayout>
 
-            <com.google.android.material.card.MaterialCardView
+            <LinearLayout
+                android:id="@+id/scanCardsContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:layout_marginBottom="12dp"
-                app:cardBackgroundColor="@android:color/transparent"
-                app:cardCornerRadius="26dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="0dp">
+                android:orientation="vertical">
 
-                <LinearLayout
+                <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="@drawable/bg_liquid_popup_card"
-                    android:orientation="vertical"
-                    android:padding="16dp">
+                    android:layout_marginBottom="12dp"
+                    app:cardBackgroundColor="@android:color/transparent"
+                    app:cardCornerRadius="26dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp"
-                        android:text="Escaneo (camara)"
-                        android:textColor="@color/liquid_popup_text"
-                        android:textStyle="bold" />
-
-                    <Button
-                        android:id="@+id/btnActivateScanner"
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:background="@drawable/bg_liquid_button_pressable"
-                        android:backgroundTint="@null"
-                        android:paddingVertical="12dp"
-                        android:text="Activar escaner"
-                        android:textAllCaps="false"
-                        android:textColor="@color/liquid_popup_button_text"
-                        android:textSize="15sp"
-                        android:textStyle="bold"
-                        app:backgroundTint="@null" />
+                        android:background="@drawable/bg_liquid_popup_card"
+                        android:orientation="vertical"
+                        android:padding="16dp">
 
-                    <Button
-                        android:id="@+id/btnCloseScanner"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:background="@drawable/bg_liquid_button_pressable"
-                        android:backgroundTint="@null"
-                        android:paddingVertical="12dp"
-                        android:text="Cerrar escaner"
-                        android:textAllCaps="false"
-                        android:textColor="@color/liquid_popup_button_text"
-                        android:textSize="15sp"
-                        android:textStyle="bold"
-                        android:visibility="gone"
-                        app:backgroundTint="@null" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="8dp"
+                            android:text="Escaneo (camara)"
+                            android:textColor="@color/liquid_popup_text"
+                            android:textStyle="bold" />
 
-                    <androidx.camera.view.PreviewView
-                        android:id="@+id/previewView"
-                        android:layout_width="match_parent"
-                        android:layout_height="220dp"
-                        android:layout_marginTop="12dp" />
-
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
-                app:cardBackgroundColor="@android:color/transparent"
-                app:cardCornerRadius="26dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="0dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/bg_liquid_popup_card"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp"
-                        android:text="Escaneo manual"
-                        android:textColor="@color/liquid_popup_text"
-                        android:textStyle="bold" />
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="12dp"
-                        app:boxBackgroundMode="none">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/etBarcode"
+                        <Button
+                            android:id="@+id/btnActivateScanner"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:background="@drawable/bg_liquid_input"
-                            android:hint="Introduce el codigo manual"
-                            android:inputType="number"
-                            android:maxLength="13"
-                            android:paddingStart="8dp"
-                            android:paddingEnd="8dp"
-                            android:textColor="@color/liquid_popup_text"
-                            android:textColorHint="@color/liquid_popup_hint" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                            android:background="@drawable/bg_liquid_button_pressable"
+                            android:backgroundTint="@null"
+                            android:paddingVertical="12dp"
+                            android:text="Activar escaner"
+                            android:textAllCaps="false"
+                            android:textColor="@color/liquid_popup_button_text"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            app:backgroundTint="@null" />
 
-                    <Button
-                        android:id="@+id/btnContinue"
+                        <Button
+                            android:id="@+id/btnCloseScanner"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:background="@drawable/bg_liquid_button_pressable"
+                            android:backgroundTint="@null"
+                            android:paddingVertical="12dp"
+                            android:text="Cerrar escaner"
+                            android:textAllCaps="false"
+                            android:textColor="@color/liquid_popup_button_text"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:visibility="gone"
+                            app:backgroundTint="@null" />
+
+                        <FrameLayout
+                            android:id="@+id/previewFrame"
+                            android:layout_width="match_parent"
+                            android:layout_height="220dp"
+                            android:layout_marginTop="12dp"
+                            android:visibility="gone">
+
+                            <androidx.camera.view.PreviewView
+                                android:id="@+id/previewView"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                app:implementationMode="compatible"
+                                app:scaleType="fillCenter" />
+
+                            <FrameLayout
+                                android:layout_width="250dp"
+                                android:layout_height="104dp"
+                                android:layout_gravity="center">
+
+                                <View
+                                    android:layout_width="32dp"
+                                    android:layout_height="3dp"
+                                    android:layout_gravity="top|start"
+                                    android:background="#E8FFFFFF" />
+
+                                <View
+                                    android:layout_width="3dp"
+                                    android:layout_height="32dp"
+                                    android:layout_gravity="top|start"
+                                    android:background="#E8FFFFFF" />
+
+                                <View
+                                    android:layout_width="32dp"
+                                    android:layout_height="3dp"
+                                    android:layout_gravity="top|end"
+                                    android:background="#E8FFFFFF" />
+
+                                <View
+                                    android:layout_width="3dp"
+                                    android:layout_height="32dp"
+                                    android:layout_gravity="top|end"
+                                    android:background="#E8FFFFFF" />
+
+                                <View
+                                    android:layout_width="32dp"
+                                    android:layout_height="3dp"
+                                    android:layout_gravity="bottom|start"
+                                    android:background="#E8FFFFFF" />
+
+                                <View
+                                    android:layout_width="3dp"
+                                    android:layout_height="32dp"
+                                    android:layout_gravity="bottom|start"
+                                    android:background="#E8FFFFFF" />
+
+                                <View
+                                    android:layout_width="32dp"
+                                    android:layout_height="3dp"
+                                    android:layout_gravity="bottom|end"
+                                    android:background="#E8FFFFFF" />
+
+                                <View
+                                    android:layout_width="3dp"
+                                    android:layout_height="32dp"
+                                    android:layout_gravity="bottom|end"
+                                    android:background="#E8FFFFFF" />
+                            </FrameLayout>
+                        </FrameLayout>
+
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    app:cardBackgroundColor="@android:color/transparent"
+                    app:cardCornerRadius="26dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp">
+
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:background="@drawable/bg_liquid_button_pressable"
-                        android:backgroundTint="@null"
-                        android:paddingVertical="12dp"
-                        android:text="Continuar"
-                        android:textAllCaps="false"
-                        android:textColor="@color/liquid_popup_button_text"
-                        android:textSize="15sp"
-                        android:textStyle="bold"
-                        app:backgroundTint="@null" />
+                        android:background="@drawable/bg_liquid_popup_card"
+                        android:orientation="vertical"
+                        android:padding="16dp">
 
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="8dp"
+                            android:text="Escaneo manual"
+                            android:textColor="@color/liquid_popup_text"
+                            android:textStyle="bold" />
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="12dp"
+                            app:boxBackgroundMode="none">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/etBarcode"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/bg_liquid_input"
+                                android:hint="Introduce el codigo manual"
+                                android:inputType="number"
+                                android:maxLength="13"
+                                android:paddingStart="8dp"
+                                android:paddingEnd="8dp"
+                                android:textColor="@color/liquid_popup_text"
+                                android:textColorHint="@color/liquid_popup_hint" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <Button
+                            android:id="@+id/btnContinue"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_liquid_button_pressable"
+                            android:backgroundTint="@null"
+                            android:paddingVertical="12dp"
+                            android:text="Continuar"
+                            android:textAllCaps="false"
+                            android:textColor="@color/liquid_popup_button_text"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            app:backgroundTint="@null" />
+
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+            </LinearLayout>
 
         </LinearLayout>
     </ScrollView>

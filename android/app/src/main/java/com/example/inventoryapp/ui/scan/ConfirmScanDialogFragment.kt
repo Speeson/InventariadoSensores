@@ -1,72 +1,87 @@
 package com.example.inventoryapp.ui.scan
-import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 
-import android.content.Intent
 import android.content.Context
+import android.content.DialogInterface
 import android.content.res.Configuration
 import android.os.Bundle
+import android.view.WindowManager
+import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.TextView
-import android.view.inputmethod.InputMethodManager
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.os.bundleOf
+import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
 import com.airbnb.lottie.LottieAnimationView
+import com.example.inventoryapp.R
 import com.example.inventoryapp.data.local.OfflineQueue
 import com.example.inventoryapp.data.local.OfflineSyncer
 import com.example.inventoryapp.data.local.PendingType
-import com.example.inventoryapp.databinding.ActivityConfirmScanBinding
 import com.example.inventoryapp.data.remote.NetworkModule
-import com.example.inventoryapp.domain.model.Movement
-import com.example.inventoryapp.domain.model.MovementType
 import com.example.inventoryapp.data.repository.remote.RemoteScanRepository
 import com.example.inventoryapp.data.repository.remote.ScanSendResult
-import com.example.inventoryapp.ui.alerts.AlertsActivity
-import com.example.inventoryapp.ui.common.SendSnack
-import com.example.inventoryapp.ui.common.NetworkStatusBar
+import com.example.inventoryapp.databinding.DialogConfirmScanBinding
+import com.example.inventoryapp.domain.model.Movement
+import com.example.inventoryapp.domain.model.MovementType
+import com.example.inventoryapp.ui.common.GradientIconUtil
 import com.google.gson.Gson
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import com.example.inventoryapp.ui.common.GradientIconUtil
-import com.example.inventoryapp.R
 import java.text.NumberFormat
 import java.util.Locale
 
-class ConfirmScanActivity : AppCompatActivity() {
+class ConfirmScanDialogFragment : DialogFragment() {
 
-    private lateinit var binding: ActivityConfirmScanBinding
+    private var _binding: DialogConfirmScanBinding? = null
+    private val binding get() = _binding!!
+
     private val repo = RemoteScanRepository()
+    private val gson = Gson()
+
     private var selectedType: MovementType = MovementType.OUT
     private var productExists: Boolean = true
     private var isOfflineMode: Boolean = false
-    private val gson = Gson()
     private var productId: Int? = null
     private var productName: String? = null
     private var lastQuantity: Int = 0
     private var lastLocationRaw: String = ""
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        binding = ActivityConfirmScanBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-        NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
+    override fun onCreateDialog(savedInstanceState: Bundle?): android.app.Dialog {
+        _binding = DialogConfirmScanBinding.inflate(layoutInflater)
 
-        
-        GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
-        applyConfirmTitleGradient()
-        
-        AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
-binding.btnBack.setOnClickListener { finish() }
-        binding.btnAlertsQuick.setOnClickListener {
-            startActivity(Intent(this, AlertsActivity::class.java))
+        val barcode = requireArguments().getString(ARG_BARCODE).orEmpty()
+        isOfflineMode = requireArguments().getBoolean(ARG_OFFLINE, false)
+
+        setupUi(barcode)
+
+        val dialog = AlertDialog.Builder(requireContext())
+            .setView(binding.root)
+            .setCancelable(true)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+            val width = (resources.displayMetrics.widthPixels * 0.92f).toInt()
+            dialog.window?.setLayout(width, WindowManager.LayoutParams.WRAP_CONTENT)
         }
 
-        val snack = SendSnack(binding.root)
-        val barcode = intent.getStringExtra("barcode").orEmpty()
-        isOfflineMode = intent.getBooleanExtra("offline", false)
-        binding.tvBarcode.text = "Codigo de barras: $barcode"
+        return dialog
+    }
+
+    override fun onDismiss(dialog: DialogInterface) {
+        super.onDismiss(dialog)
+        parentFragmentManager.setFragmentResult(REQUEST_KEY, bundleOf())
+    }
+
+    override fun onDestroyView() {
+        _binding = null
+        super.onDestroyView()
+    }
+
+    private fun setupUi(barcode: String) {        binding.tvBarcode.text = "Codigo de barras: $barcode"
+        binding.btnClose.setOnClickListener { dismissAllowingStateLoss() }
 
         applyTypeSelection(MovementType.OUT)
         binding.btnTypeIn.setOnClickListener { applyTypeSelection(MovementType.IN) }
@@ -78,7 +93,7 @@ binding.btnBack.setOnClickListener { finish() }
         if (isOfflineMode) {
             binding.tvProductName.text = "Sin conexion: validacion pendiente"
             binding.tvProductName.setTextColor(
-                ContextCompat.getColor(this@ConfirmScanActivity, android.R.color.holo_orange_dark)
+                ContextCompat.getColor(requireContext(), android.R.color.holo_orange_dark)
             )
             productExists = true
         } else {
@@ -94,7 +109,7 @@ binding.btnBack.setOnClickListener { finish() }
                     } else {
                         binding.tvProductName.text = "Producto no encontrado"
                         binding.tvProductName.setTextColor(
-                            ContextCompat.getColor(this@ConfirmScanActivity, android.R.color.holo_red_dark)
+                            ContextCompat.getColor(requireContext(), android.R.color.holo_red_dark)
                         )
                         productExists = false
                         showProductNotFoundWarning(barcode)
@@ -103,10 +118,9 @@ binding.btnBack.setOnClickListener { finish() }
                     isOfflineMode = true
                     binding.tvProductName.text = "Sin conexion: validacion pendiente"
                     binding.tvProductName.setTextColor(
-                        ContextCompat.getColor(this@ConfirmScanActivity, android.R.color.holo_orange_dark)
+                        ContextCompat.getColor(requireContext(), android.R.color.holo_orange_dark)
                     )
                     productExists = true
-                    snack.showError("Sin conexion. Se enviara cuando vuelvas a estar online")
                 }
             }
         }
@@ -138,10 +152,9 @@ binding.btnBack.setOnClickListener { finish() }
                 try {
                     if (isOfflineMode) {
                         enqueueOffline(movement)
-                        showSendResultDialog(
-                            success = true,
-                            msg = "Guardado offline. Se enviara al reconectar"
-                        ) { goBackToScan() }
+                        showSendResultDialog(success = true, msg = "Guardado offline. Se enviara al reconectar") {
+                            dismissAllowingStateLoss()
+                        }
                     } else {
                         val result = repo.sendFromBarcode(movement)
                         if (result.isSuccess) {
@@ -158,7 +171,9 @@ binding.btnBack.setOnClickListener { finish() }
                                     success = true,
                                     msg = buildSendMessage(payload),
                                     eventStatus = payload?.status
-                                ) { goBackToScan() }
+                                ) {
+                                    dismissAllowingStateLoss()
+                                }
                             }
                         } else {
                             val error = result.exceptionOrNull()
@@ -167,30 +182,27 @@ binding.btnBack.setOnClickListener { finish() }
                                 showSendResultDialog(
                                     success = true,
                                     msg = "Guardado offline. Se enviara al reconectar"
-                                ) { goBackToScan() }
+                                ) {
+                                    dismissAllowingStateLoss()
+                                }
                             } else {
-                                showSendResultDialog(
-                                    success = false,
-                                    msg = error?.message ?: "Error"
-                                )
+                                showSendResultDialog(success = false, msg = error?.message ?: "Error")
                             }
                         }
                     }
                 } catch (e: Exception) {
                     if (e is java.io.IOException) {
                         enqueueOffline(movement)
-                        showSendResultDialog(
-                            success = true,
-                            msg = "Guardado offline. Se enviara al reconectar"
-                        ) { goBackToScan() }
+                        showSendResultDialog(success = true, msg = "Guardado offline. Se enviara al reconectar") {
+                            dismissAllowingStateLoss()
+                        }
                     } else {
-                        showSendResultDialog(
-                            success = false,
-                            msg = e.message ?: "Error"
-                        )
+                        showSendResultDialog(success = false, msg = e.message ?: "Error")
                     }
                 } finally {
-                    binding.btnConfirm.isEnabled = true
+                    if (isAdded) {
+                        binding.btnConfirm.isEnabled = true
+                    }
                 }
             }
         }
@@ -204,7 +216,7 @@ binding.btnBack.setOnClickListener { finish() }
             location = movement.location?.ifBlank { "default" } ?: "default",
             source = "SCAN"
         )
-        OfflineQueue(this).enqueue(PendingType.SCAN_EVENT, gson.toJson(payload))
+        OfflineQueue(requireContext()).enqueue(PendingType.SCAN_EVENT, gson.toJson(payload))
     }
 
     private fun setupLocationDropdown() {
@@ -212,7 +224,7 @@ binding.btnBack.setOnClickListener { finish() }
             showSoftInputOnFocus = false
             isCursorVisible = false
             setDropDownBackgroundDrawable(
-                ContextCompat.getDrawable(this@ConfirmScanActivity, R.drawable.bg_liquid_dropdown_popup)
+                ContextCompat.getDrawable(requireContext(), R.drawable.bg_liquid_dropdown_popup)
             )
             setOnClickListener {
                 hideKeyboard()
@@ -236,14 +248,14 @@ binding.btnBack.setOnClickListener { finish() }
                         .distinct()
                     val allValues = listOf("") + if (values.any { it.contains(") default") }) values else listOf("(0) default") + values
                     val adapter = object : ArrayAdapter<String>(
-                        this@ConfirmScanActivity,
+                        requireContext(),
                         android.R.layout.simple_list_item_1,
                         allValues
                     ) {
                         override fun getView(position: Int, convertView: android.view.View?, parent: android.view.ViewGroup): android.view.View {
                             val view = super.getView(position, convertView, parent)
                             val text = view.findViewById<TextView>(android.R.id.text1)
-                            text?.setTextColor(ContextCompat.getColor(this@ConfirmScanActivity, R.color.liquid_popup_list_text))
+                            text?.setTextColor(ContextCompat.getColor(requireContext(), R.color.liquid_popup_list_text))
                             view.setBackgroundResource(R.drawable.bg_liquid_dropdown_item)
                             return view
                         }
@@ -251,7 +263,7 @@ binding.btnBack.setOnClickListener { finish() }
                         override fun getDropDownView(position: Int, convertView: android.view.View?, parent: android.view.ViewGroup): android.view.View {
                             val view = super.getDropDownView(position, convertView, parent)
                             val text = view.findViewById<TextView>(android.R.id.text1)
-                            text?.setTextColor(ContextCompat.getColor(this@ConfirmScanActivity, R.color.liquid_popup_list_text))
+                            text?.setTextColor(ContextCompat.getColor(requireContext(), R.color.liquid_popup_list_text))
                             view.setBackgroundResource(R.drawable.bg_liquid_dropdown_item)
                             return view
                         }
@@ -277,14 +289,14 @@ binding.btnBack.setOnClickListener { finish() }
         val isIn = type == MovementType.IN
         val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         val normalText = if (isDark) {
-            ContextCompat.getColor(this, R.color.liquid_popup_body)
+            ContextCompat.getColor(requireContext(), R.color.liquid_popup_body)
         } else {
-            ContextCompat.getColor(this, R.color.liquid_popup_button_text)
+            ContextCompat.getColor(requireContext(), R.color.liquid_popup_button_text)
         }
         val selectedText = if (isDark) {
-            ContextCompat.getColor(this, android.R.color.white)
+            ContextCompat.getColor(requireContext(), android.R.color.white)
         } else {
-            ContextCompat.getColor(this, R.color.liquid_popup_button_text)
+            ContextCompat.getColor(requireContext(), R.color.liquid_popup_button_text)
         }
 
         binding.btnTypeIn.setBackgroundResource(
@@ -326,44 +338,21 @@ binding.btnBack.setOnClickListener { finish() }
         binding.tilLocation.setEndIconTintList(null)
         val endIconId = com.google.android.material.R.id.text_input_end_icon
         binding.tilLocation.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
-            GradientIconUtil.applyGradient(iv, com.example.inventoryapp.R.drawable.triangle_down_lg)
+            GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
             iv.scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
-        }
-    }
-
-    private fun applyConfirmTitleGradient() {
-        binding.tvConfirmTitle.post {
-            val paint = binding.tvConfirmTitle.paint
-            val width = paint.measureText(binding.tvConfirmTitle.text.toString())
-            if (width <= 0f) return@post
-            val c1 = ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_start)
-            val c2 = ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_mid2)
-            val c3 = ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_mid1)
-            val c4 = ContextCompat.getColor(this, com.example.inventoryapp.R.color.icon_grad_end)
-            val shader = android.graphics.LinearGradient(
-                0f,
-                0f,
-                width,
-                0f,
-                intArrayOf(c1, c2, c3, c4),
-                null,
-                android.graphics.Shader.TileMode.CLAMP
-            )
-            paint.shader = shader
-            binding.tvConfirmTitle.invalidate()
         }
     }
 
     private fun showProductNotFoundWarning(barcode: String) {
         val view = layoutInflater.inflate(R.layout.dialog_liquid_scan_warning, null)
-        val dialog = AlertDialog.Builder(this).setView(view).create()
+        val dialog = AlertDialog.Builder(requireContext()).setView(view).create()
         view.findViewById<TextView>(R.id.tvScanWarnMessage).text =
             "No se ha encontrado un producto con el codigo de barras $barcode."
         view.findViewById<Button>(R.id.btnScanWarnClose).setOnClickListener { dialog.dismiss() }
         dialog.show()
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
         val width = (resources.displayMetrics.widthPixels * 0.9f).toInt()
-        dialog.window?.setLayout(width, android.view.WindowManager.LayoutParams.WRAP_CONTENT)
+        dialog.window?.setLayout(width, WindowManager.LayoutParams.WRAP_CONTENT)
     }
 
     private fun showSendResultDialog(
@@ -373,7 +362,7 @@ binding.btnBack.setOnClickListener { finish() }
         onConfirm: (() -> Unit)? = null
     ) {
         val view = layoutInflater.inflate(R.layout.dialog_liquid_scan_result, null)
-        val dialog = AlertDialog.Builder(this)
+        val dialog = AlertDialog.Builder(requireContext())
             .setView(view)
             .setCancelable(false)
             .create()
@@ -411,7 +400,7 @@ binding.btnBack.setOnClickListener { finish() }
         dialog.show()
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
         val width = (resources.displayMetrics.widthPixels * 0.9f).toInt()
-        dialog.window?.setLayout(width, android.view.WindowManager.LayoutParams.WRAP_CONTENT)
+        dialog.window?.setLayout(width, WindowManager.LayoutParams.WRAP_CONTENT)
     }
 
     private suspend fun awaitFinalEventStatus(payload: ScanSendResult?): String {
@@ -430,15 +419,25 @@ binding.btnBack.setOnClickListener { finish() }
         return initial
     }
 
-    private fun goBackToScan() {
-        val intent = Intent(this, ScanActivity::class.java)
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        startActivity(intent)
-        finish()
+    private fun hideKeyboard() {
+        val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager ?: return
+        imm.hideSoftInputFromWindow(binding.etLocation.windowToken, 0)
     }
 
-    private fun hideKeyboard() {
-        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager ?: return
-        imm.hideSoftInputFromWindow(binding.etLocation.windowToken, 0)
+    companion object {
+        const val TAG = "confirm_scan_dialog"
+        const val REQUEST_KEY = "confirm_scan_closed"
+
+        private const val ARG_BARCODE = "barcode"
+        private const val ARG_OFFLINE = "offline"
+
+        fun newInstance(barcode: String, offline: Boolean): ConfirmScanDialogFragment {
+            return ConfirmScanDialogFragment().apply {
+                arguments = bundleOf(
+                    ARG_BARCODE to barcode,
+                    ARG_OFFLINE to offline
+                )
+            }
+        }
     }
 }

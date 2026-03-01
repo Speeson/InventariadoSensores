@@ -111,8 +111,6 @@ class LabelPreviewDialogFragment : DialogFragment() {
         binding.btnBack.setOnClickListener { dismissAllowingStateLoss() }
         binding.tvTitle.text = "Etiqueta"
         binding.tvMeta.text = "SKU $sku  -  Barcode $barcode"
-        applyTitleGradient()
-
         setupWebView()
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
 
@@ -154,32 +152,6 @@ class LabelPreviewDialogFragment : DialogFragment() {
         binding.webLabel.settings.cacheMode = WebSettings.LOAD_NO_CACHE
         binding.webLabel.clearCache(true)
         binding.webLabel.webViewClient = WebViewClient()
-    }
-
-    private fun applyTitleGradient() {
-        val titleView = binding.tvTitle
-        titleView.post {
-            val text = titleView.text?.toString().orEmpty()
-            if (text.isEmpty()) return@post
-            val width = titleView.paint.measureText(text)
-            if (width <= 0f) return@post
-            val shader = LinearGradient(
-                0f,
-                0f,
-                width,
-                0f,
-                intArrayOf(
-                    ContextCompat.getColor(requireContext(), R.color.icon_grad_start),
-                    ContextCompat.getColor(requireContext(), R.color.icon_grad_mid2),
-                    ContextCompat.getColor(requireContext(), R.color.icon_grad_mid1),
-                    ContextCompat.getColor(requireContext(), R.color.icon_grad_end)
-                ),
-                floatArrayOf(0f, 0.35f, 0.7f, 1f),
-                Shader.TileMode.CLAMP
-            )
-            titleView.paint.shader = shader
-            titleView.invalidate()
-        }
     }
 
     private fun loadLabel() {
@@ -426,7 +398,7 @@ class LabelPreviewDialogFragment : DialogFragment() {
                 )
             }
             if (explicit.resolveActivity(requireContext().packageManager) != null) {
-                UiNotifier.show(requireActivity(), "Abriendo Niimbot…")
+                UiNotifier.show(requireActivity(), "Abriendo NiimbotÃ¢â‚¬Â¦")
                 startActivity(explicit)
                 return
             }
@@ -439,14 +411,14 @@ class LabelPreviewDialogFragment : DialogFragment() {
                 )
             }
             if (explicitAlt.resolveActivity(requireContext().packageManager) != null) {
-                UiNotifier.show(requireActivity(), "Abriendo Niimbot…")
+                UiNotifier.show(requireActivity(), "Abriendo NiimbotÃ¢â‚¬Â¦")
                 startActivity(explicitAlt)
                 return
             }
 
             val intent = requireContext().packageManager.getLaunchIntentForPackage(niimbotPackage)
             if (intent != null) {
-                UiNotifier.show(requireActivity(), "Abriendo Niimbot…")
+                UiNotifier.show(requireActivity(), "Abriendo NiimbotÃ¢â‚¬Â¦")
                 startActivity(intent)
                 return
             }
@@ -468,7 +440,7 @@ class LabelPreviewDialogFragment : DialogFragment() {
             val settingsIntent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
                 .setData(Uri.parse("package:$niimbotPackage"))
             startActivity(settingsIntent)
-            UiNotifier.show(requireActivity(), "No se encontró el launcher de Niimbot")
+            UiNotifier.show(requireActivity(), "No se encontrÃƒÂ³ el launcher de Niimbot")
         } catch (e: Exception) {
             CreateUiFeedback.showErrorPopup(
                 activity = requireActivity(),
@@ -887,12 +859,12 @@ class LabelPreviewDialogFragment : DialogFragment() {
                 val resolver = requireContext().contentResolver
                 val uri = resolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
                 if (uri == null) {
-                    UiNotifier.show(requireActivity(), "No se pudo crear el archivo en la galería")
+                    UiNotifier.show(requireActivity(), "No se pudo crear el archivo en la galerÃƒÂ­a")
                     return false
                 }
                 val outStream = resolver.openOutputStream(uri)
                 if (outStream == null) {
-                    UiNotifier.show(requireActivity(), "No se pudo abrir el archivo en la galería")
+                    UiNotifier.show(requireActivity(), "No se pudo abrir el archivo en la galerÃƒÂ­a")
                     return false
                 }
                 outStream.use { out ->

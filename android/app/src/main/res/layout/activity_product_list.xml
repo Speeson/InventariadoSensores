@@ -280,37 +280,7 @@
                                 android:textSize="12sp" />
                         </LinearLayout>
                     </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="end"
-                    android:orientation="horizontal"
-                    android:paddingStart="6dp"
-                    android:paddingEnd="6dp"
-                    android:paddingBottom="4dp">
-
-                    <ImageButton
-                        android:id="@+id/btnSortUp"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:background="@android:color/transparent"
-                        android:contentDescription="Orden ascendente"
-                        android:scaleType="fitCenter"
-                        android:src="@drawable/up" />
-
-                    <ImageButton
-                        android:id="@+id/btnSortDown"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:layout_marginStart="6dp"
-                        android:background="@android:color/transparent"
-                        android:contentDescription="Orden descendente"
-                        android:scaleType="fitCenter"
-                        android:src="@drawable/down" />
-                </LinearLayout>
-
+                </com.google.android.material.card.MaterialCardView>`r`n
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rvProducts"
                     android:layout_width="match_parent"

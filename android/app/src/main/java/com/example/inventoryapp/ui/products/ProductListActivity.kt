@@ -74,7 +74,6 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
     private var currentOffset = 0
     private val pageSize = 5
     private var totalCount = 0
-    private var sortAsc = true
 
     private var categoryCache: Map<Int, String> = emptyMap()
     private var categoryIdByName: Map<String, Int> = emptyMap()
@@ -95,8 +94,6 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
         GradientIconUtil.applyGradient(binding.ivCreateProductAdd, R.drawable.glass_add)
         GradientIconUtil.applyGradient(binding.ivCreateProductSearch, R.drawable.glass_search)
         binding.btnRefresh.setImageResource(R.drawable.glass_refresh)
-        GradientIconUtil.applyGradient(binding.btnSortUp, R.drawable.up)
-        GradientIconUtil.applyGradient(binding.btnSortDown, R.drawable.down)
         applyProductsTitleGradient()
         applyRefreshIconTint()
 
@@ -164,14 +161,7 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
             loadProducts(withSnack = false)
             binding.rvProducts.scrollToPosition(0)
         }
-        binding.btnSortUp.setOnClickListener {
-            sortAsc = true
-            resetAndLoad()
-        }
-        binding.btnSortDown.setOnClickListener {
-            sortAsc = false
-            resetAndLoad()
-        }
+
 
         applyPagerButtonStyle(binding.btnPrevPage, enabled = false)
         applyPagerButtonStyle(binding.btnNextPage, enabled = false)
@@ -249,7 +239,7 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
                     "barcode" to barcodeParam,
                     "category" to categoryParam,
                     "order_by" to "id",
-                    "order_dir" to if (sortAsc) "asc" else "desc",
+                    "order_dir" to "asc",
                     "limit" to effectiveLimit,
                     "offset" to effectiveOffset
                 )
@@ -273,7 +263,7 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
                     barcode = barcodeParam,
                     categoryId = categoryParam,
                     orderBy = "id",
-                    orderDir = if (sortAsc) "asc" else "desc",
+                    orderDir = "asc",
                     limit = effectiveLimit,
                     offset = effectiveOffset
                 )
@@ -561,11 +551,11 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
                 return@setOnClickListener
             }
             if (rawBarcode.isNotBlank() && !rawBarcode.matches(Regex("^\\d{13}$"))) {
-                barcodeInput.error = "Barcode debe tener 13 dÃ­gitos"
+                barcodeInput.error = "Barcode debe tener 13 dÃƒÆ’Ã‚Â­gitos"
                 return@setOnClickListener
             }
             if (categoryId == null) {
-                categoryInput.error = "CategorÃ­a requerida"
+                categoryInput.error = "CategorÃƒÆ’Ã‚Â­a requerida"
                 return@setOnClickListener
             }
 
@@ -576,9 +566,9 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
         btnDelete.setOnClickListener {
             val titleText = if (isOffline) "Eliminar producto offline" else "Eliminar producto"
             val bodyText = if (isOffline) {
-                "Se eliminará de la cola offline para que no se sincronice. ¿Continuar?"
+                "Se eliminarÃƒÂ¡ de la cola offline para que no se sincronice. Ã‚Â¿Continuar?"
             } else {
-                "¿Seguro que quieres eliminar este producto?"
+                "Ã‚Â¿Seguro que quieres eliminar este producto?"
             }
             CreateUiFeedback.showQuestionConfirmDialog(
                 activity = this,
@@ -646,7 +636,7 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
             } catch (e: IOException) {
                 val payload = OfflineSyncer.ProductUpdatePayload(id, body)
                 OfflineQueue(this@ProductListActivity).enqueue(PendingType.PRODUCT_UPDATE, gson.toJson(payload))
-                UiNotifier.show(this@ProductListActivity, "Sin conexiÃ³n. ActualizaciÃ³n guardada offline")
+                UiNotifier.show(this@ProductListActivity, "Sin conexiÃƒÆ’Ã‚Â³n. ActualizaciÃƒÆ’Ã‚Â³n guardada offline")
                 resetAndLoad()
             } catch (e: Exception) {
                 UiNotifier.show(this@ProductListActivity, "Error: ${e.message}")
@@ -822,7 +812,7 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
         }
         if (skuRaw.isNotBlank()) parts.add("SKU \"$skuRaw\"")
         if (barcodeRaw.isNotBlank()) parts.add("barcode \"$barcodeRaw\"")
-        if (categoryRaw.isNotBlank()) parts.add("categorÃ­a \"$categoryRaw\"")
+        if (categoryRaw.isNotBlank()) parts.add("categorÃƒÆ’Ã‚Â­a \"$categoryRaw\"")
         return if (parts.isEmpty()) {
             "No se encontraron productos con los filtros actuales."
         } else {
@@ -1166,11 +1156,7 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
     }
 
     private fun loadOfflineOnly() {
-        val items = if (sortAsc) {
-            buildOfflineProducts().sortedBy { it.id }
-        } else {
-            buildOfflineProducts().sortedByDescending { it.id }
-        }
+        val items = buildOfflineProducts().sortedBy { it.id }
         products.clear()
         products.addAll(items)
         totalCount = items.size
@@ -1254,7 +1240,7 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
                 "barcode" to barcodeParam,
                 "category" to categoryParam,
                 "order_by" to "id",
-                "order_dir" to if (sortAsc) "asc" else "desc",
+                "order_dir" to "asc",
                 "limit" to effectiveLimit,
                 "offset" to 0
             )
@@ -1271,7 +1257,7 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
                     "barcode" to barcodeParam,
                     "category" to categoryParam,
                     "order_by" to "id",
-                    "order_dir" to if (sortAsc) "asc" else "desc",
+                    "order_dir" to "asc",
                     "limit" to pageSize,
                     "offset" to 0
                 )
@@ -1341,19 +1327,19 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
                     if (code > 0) append("\nHTTP $code")
                 }
             } else {
-                "Ese SKU ya estÃ¡ en uso. Introduce un SKU diferente."
+                "Ese SKU ya estÃƒÆ’Ã‚Â¡ en uso. Introduce un SKU diferente."
             }
         }
 
         if (looksLikeDuplicateBarcode) {
             return if (technical) {
                 buildString {
-                    append("Barcode duplicado: ya existe un producto con ese cÃ³digo.")
+                    append("Barcode duplicado: ya existe un producto con ese cÃƒÆ’Ã‚Â³digo.")
                     if (raw.isNotBlank()) append("\nDetalle: ${compactErrorDetail(raw)}")
                     if (code > 0) append("\nHTTP $code")
                 }
             } else {
-                "Ese cÃ³digo de barras ya estÃ¡ en uso. Introduce otro diferente."
+                "Ese cÃƒÆ’Ã‚Â³digo de barras ya estÃƒÆ’Ã‚Â¡ en uso. Introduce otro diferente."
             }
         }
 
@@ -1361,7 +1347,7 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
             buildString {
                 append(
                     when (code) {
-                        400, 422 -> "Datos invÃ¡lidos para crear producto."
+                        400, 422 -> "Datos invÃƒÆ’Ã‚Â¡lidos para crear producto."
                         409 -> "Conflicto al crear producto."
                         500 -> "Error interno del servidor al crear producto."
                         else -> "No se pudo crear el producto."
@@ -1374,8 +1360,8 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
             when (code) {
                 400, 422 -> "No se pudo crear el producto. Revisa los datos introducidos."
                 409 -> "No se pudo crear el producto porque entra en conflicto con otro existente."
-                500 -> "No se pudo crear el producto por un problema del servidor. IntÃ©ntalo de nuevo."
-                else -> "No se pudo crear el producto. IntÃ©ntalo de nuevo."
+                500 -> "No se pudo crear el producto por un problema del servidor. IntÃƒÆ’Ã‚Â©ntalo de nuevo."
+                else -> "No se pudo crear el producto. IntÃƒÆ’Ã‚Â©ntalo de nuevo."
             }
         }
     }

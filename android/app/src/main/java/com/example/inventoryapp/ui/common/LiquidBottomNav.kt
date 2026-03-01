@@ -57,7 +57,7 @@ import com.example.inventoryapp.ui.movements.MovementsMenuActivity
 import com.example.inventoryapp.ui.products.ProductListActivity
 import com.example.inventoryapp.ui.reports.ReportsActivity
 import com.example.inventoryapp.ui.rotation.RotationActivity
-import com.example.inventoryapp.ui.scan.ConfirmScanActivity
+import com.example.inventoryapp.ui.scan.ScanActivity
 import com.example.inventoryapp.ui.stock.StockActivity
 import com.example.inventoryapp.ui.thresholds.ThresholdsActivity
 import com.google.android.material.bottomappbar.BottomAppBar
@@ -464,7 +464,7 @@ object LiquidBottomNav {
     private fun currentTab(activity: AppCompatActivity): NavTab {
         return when (activity) {
             is HomeActivity -> NavTab.HOME
-            is ConfirmScanActivity -> NavTab.SCAN
+            is ScanActivity -> NavTab.SCAN
             else -> NavTab.NONE
         }
     }
@@ -574,9 +574,12 @@ object LiquidBottomNav {
                 return@setOnClickListener
             }
             dialog.dismiss()
-            val intent = Intent(activity, ConfirmScanActivity::class.java)
-                .putExtra("barcode", code)
-                .putExtra("offline", false)
+            val intent = ScanActivity.buildConfirmIntent(
+                context = activity,
+                barcode = code,
+                offline = false,
+                returnHomeOnDialogClose = true
+            )
             activity.startActivity(intent)
         }
         dialog.setOnDismissListener { onDismiss?.invoke() }
@@ -636,9 +639,12 @@ object LiquidBottomNav {
                         if (hasNavigated) return@analyzeBarcode
                         hasNavigated = true
                         dialog.dismiss()
-                        val intent = Intent(activity, ConfirmScanActivity::class.java)
-                            .putExtra("barcode", code)
-                            .putExtra("offline", false)
+                        val intent = ScanActivity.buildConfirmIntent(
+                            context = activity,
+                            barcode = code,
+                            offline = false,
+                            returnHomeOnDialogClose = true
+                        )
                         activity.startActivity(intent)
                     }
                 }

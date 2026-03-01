@@ -1,33 +1,56 @@
-package com.example.inventoryapp.ui.scan
-import com.example.inventoryapp.ui.common.AlertsBadgeUtil
+﻿package com.example.inventoryapp.ui.scan
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.widget.Toast
+import android.view.View
+import android.view.inputmethod.InputMethodManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.camera.core.ImageProxy
 import androidx.lifecycle.lifecycleScope
+import com.example.inventoryapp.R
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.databinding.ActivityScanBinding
 import com.example.inventoryapp.ui.alerts.AlertsActivity
-import com.example.inventoryapp.ui.common.UiNotifier
-import com.example.inventoryapp.ui.common.NetworkStatusBar
+import com.example.inventoryapp.ui.home.HomeActivity
+import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 import com.example.inventoryapp.ui.common.CreateUiFeedback
+import com.example.inventoryapp.ui.common.GradientIconUtil
+import com.example.inventoryapp.ui.common.NetworkStatusBar
+import com.example.inventoryapp.ui.common.UiNotifier
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import kotlinx.coroutines.launch
-import com.example.inventoryapp.ui.common.GradientIconUtil
-import com.example.inventoryapp.R
 
 class ScanActivity : AppCompatActivity() {
+
+    companion object {
+        const val EXTRA_OPEN_CONFIRM = "extra_open_confirm"
+        const val EXTRA_BARCODE = "extra_barcode"
+        const val EXTRA_OFFLINE = "extra_offline"
+        const val EXTRA_RETURN_HOME_ON_DIALOG_CLOSE = "extra_return_home_on_dialog_close"
+
+        fun buildConfirmIntent(
+            context: Context,
+            barcode: String,
+            offline: Boolean,
+            returnHomeOnDialogClose: Boolean = false
+        ): Intent {
+            return Intent(context, ScanActivity::class.java)
+                .putExtra(EXTRA_OPEN_CONFIRM, true)
+                .putExtra(EXTRA_BARCODE, barcode)
+                .putExtra(EXTRA_OFFLINE, offline)
+                .putExtra(EXTRA_RETURN_HOME_ON_DIALOG_CLOSE, returnHomeOnDialogClose)
+        }
+    }
 
     private lateinit var binding: ActivityScanBinding
 
@@ -39,6 +62,7 @@ class ScanActivity : AppCompatActivity() {
     private var cameraProvider: ProcessCameraProvider? = null
     private var lastNotFoundCode: String? = null
     private var lastNotFoundAt: Long = 0L
+    private var returnHomeAfterDialogClose = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,32 +70,42 @@ class ScanActivity : AppCompatActivity() {
         setContentView(binding.root)
         NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
 
-        
         GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
         applyScanTitleGradient()
-        
+
         AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
-binding.btnBack.setOnClickListener { finish() }
+        binding.btnBack.setOnClickListener { finish() }
         binding.btnAlertsQuick.setOnClickListener {
             startActivity(Intent(this, AlertsActivity::class.java))
         }
 
-        binding.previewView.visibility = android.view.View.GONE
+        supportFragmentManager.setFragmentResultListener(
+            ConfirmScanDialogFragment.REQUEST_KEY,
+            this
+        ) { _, _ ->
+            onConfirmDialogClosed()
+        }
+
+        binding.previewFrame.visibility = View.GONE
+        binding.etBarcode.clearFocus()
+        binding.scanContentRoot.requestFocus()
+        hideKeyboard()
 
         binding.btnActivateScanner.setOnClickListener {
-            binding.btnActivateScanner.visibility = android.view.View.GONE
-            binding.btnCloseScanner.visibility = android.view.View.VISIBLE
-            binding.previewView.visibility = android.view.View.VISIBLE
+            binding.btnActivateScanner.visibility = View.GONE
+            binding.btnCloseScanner.visibility = View.VISIBLE
+            binding.previewFrame.visibility = View.VISIBLE
 
             if (hasCameraPermission()) {
                 startCamera()
             } else {
                 requestCameraPermission()
             }
+            schedulePositionRecalc()
         }
 
         binding.btnCloseScanner.setOnClickListener {
-            stopCamera()
+            collapseCamera(resetSession = true)
         }
 
         binding.btnContinue.setOnClickListener {
@@ -85,6 +119,129 @@ binding.btnBack.setOnClickListener { finish() }
             if (isValidating) return@setOnClickListener
             validateAndNavigate(codeToUse)
         }
+
+        binding.previewFrame.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            schedulePositionRecalc()
+        }
+        binding.scanCardsContainer.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            schedulePositionRecalc()
+        }
+
+        schedulePositionRecalc()
+        handleLaunchIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleLaunchIntent(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        schedulePositionRecalc()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        cameraProvider?.unbindAll()
+        isProcessing = false
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            schedulePositionRecalc()
+        }
+    }
+
+    private fun handleLaunchIntent(startIntent: Intent?) {
+        returnHomeAfterDialogClose =
+            startIntent?.getBooleanExtra(EXTRA_RETURN_HOME_ON_DIALOG_CLOSE, false) == true
+
+        val explicitBarcode = startIntent?.getStringExtra(EXTRA_BARCODE)?.trim().orEmpty()
+        val legacyBarcode = startIntent?.getStringExtra("barcode")?.trim().orEmpty()
+        val barcode = if (explicitBarcode.isNotBlank()) explicitBarcode else legacyBarcode
+
+        val shouldOpenConfirm =
+            (startIntent?.getBooleanExtra(EXTRA_OPEN_CONFIRM, false) == true) || barcode.isNotBlank()
+        if (!shouldOpenConfirm || barcode.isBlank()) return
+
+        val offline =
+            startIntent?.getBooleanExtra(EXTRA_OFFLINE, false)
+                ?: startIntent?.getBooleanExtra("offline", false)
+                ?: false
+
+        startIntent?.removeExtra(EXTRA_OPEN_CONFIRM)
+        startIntent?.removeExtra(EXTRA_BARCODE)
+        startIntent?.removeExtra(EXTRA_OFFLINE)
+        startIntent?.removeExtra(EXTRA_RETURN_HOME_ON_DIALOG_CLOSE)
+        startIntent?.removeExtra("barcode")
+        startIntent?.removeExtra("offline")
+
+        binding.etBarcode.setText(barcode)
+        hasNavigated = true
+        binding.scanScrollView.post {
+            openConfirm(barcode, offline)
+        }
+    }
+
+    private fun onConfirmDialogClosed() {
+        if (returnHomeAfterDialogClose) {
+            navigateToHome()
+            return
+        }
+
+        hasNavigated = false
+        isValidating = false
+        lastScannedCode = null
+        schedulePositionRecalc()
+    }
+
+    private fun navigateToHome() {
+        val intent = Intent(this, HomeActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        startActivity(intent)
+        finish()
+    }
+
+    private fun schedulePositionRecalc() {
+        binding.scanScrollView.post {
+            applyDynamicCardsPosition()
+            binding.scanScrollView.postDelayed({ applyDynamicCardsPosition() }, 48L)
+        }
+    }
+
+    private fun applyDynamicCardsPosition() {
+        val scrollHeight = binding.scanScrollView.height
+        val cardsHeight = binding.scanCardsContainer.height
+        if (scrollHeight <= 0 || cardsHeight <= 0) return
+
+        val topSafePx = dpToPx(84f)
+        val bottomSafePx = dpToPx(104f)
+        val sectionTop = maxOf(topSafePx, binding.scanHeaderContainer.bottom + dpToPx(14f))
+        val sectionBottom = scrollHeight - bottomSafePx
+
+        if (sectionBottom <= sectionTop) {
+            binding.scanCardsContainer.translationY = 0f
+            return
+        }
+
+        val maxTop = maxOf(sectionTop, sectionBottom - cardsHeight)
+        val centeredTop = sectionTop + ((sectionBottom - sectionTop - cardsHeight) / 2f)
+        val targetTop = centeredTop.coerceIn(sectionTop.toFloat(), maxTop.toFloat())
+        val baseTop = binding.scanCardsContainer.top.toFloat()
+
+        binding.scanCardsContainer.translationY = targetTop - baseTop
+    }
+
+    private fun dpToPx(dp: Float): Int {
+        return (dp * resources.displayMetrics.density).toInt()
+    }
+
+    private fun hideKeyboard() {
+        val imm = getSystemService(InputMethodManager::class.java) ?: return
+        imm.hideSoftInputFromWindow(binding.etBarcode.windowToken, 0)
     }
 
     private fun hasCameraPermission(): Boolean {
@@ -119,6 +276,7 @@ binding.btnBack.setOnClickListener { finish() }
                     details = "",
                     animationRes = R.raw.camera
                 )
+                collapseCamera(resetSession = true)
             }
         }
     }
@@ -154,22 +312,20 @@ binding.btnBack.setOnClickListener { finish() }
         }, ContextCompat.getMainExecutor(this))
     }
 
-    private fun stopCamera() {
+    private fun collapseCamera(resetSession: Boolean) {
         cameraProvider?.unbindAll()
-        binding.previewView.visibility = android.view.View.GONE
-        binding.btnActivateScanner.visibility = android.view.View.VISIBLE
-        binding.btnCloseScanner.visibility = android.view.View.GONE
+        binding.previewFrame.visibility = View.GONE
+        binding.btnActivateScanner.visibility = View.VISIBLE
+        binding.btnCloseScanner.visibility = View.GONE
         isProcessing = false
         isValidating = false
-        hasNavigated = false
-        lastScannedCode = null
-        lastNotFoundCode = null
-        lastNotFoundAt = 0L
-    }
-
-    override fun onPause() {
-        super.onPause()
-        stopCamera()
+        if (resetSession) {
+            hasNavigated = false
+            lastScannedCode = null
+            lastNotFoundCode = null
+            lastNotFoundAt = 0L
+        }
+        schedulePositionRecalc()
     }
 
     @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
@@ -205,7 +361,7 @@ binding.btnBack.setOnClickListener { finish() }
                 }
             }
             .addOnFailureListener {
-                // silencio
+                // silence
             }
             .addOnCompleteListener {
                 isProcessing = false
@@ -235,6 +391,7 @@ binding.btnBack.setOnClickListener { finish() }
             } catch (_: Exception) {
                 lastScannedCode = null
                 UiNotifier.show(this@ScanActivity, "Sin conexion. Se enviara al reconectar")
+                hasNavigated = true
                 openConfirm(barcode, true)
             } finally {
                 isValidating = false
@@ -243,10 +400,12 @@ binding.btnBack.setOnClickListener { finish() }
     }
 
     private fun openConfirm(barcode: String, offline: Boolean) {
-        val i = Intent(this, ConfirmScanActivity::class.java)
-        i.putExtra("barcode", barcode)
-        i.putExtra("offline", offline)
-        startActivity(i)
+        collapseCamera(resetSession = false)
+        if (supportFragmentManager.findFragmentByTag(ConfirmScanDialogFragment.TAG) != null) {
+            return
+        }
+        ConfirmScanDialogFragment.newInstance(barcode, offline)
+            .show(supportFragmentManager, ConfirmScanDialogFragment.TAG)
     }
 
     private fun applyScanTitleGradient() {
@@ -272,5 +431,3 @@ binding.btnBack.setOnClickListener { finish() }
         }
     }
 }
-
-

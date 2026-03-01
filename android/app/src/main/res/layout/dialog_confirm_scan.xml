@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_liquid_popup_card"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:id="@+id/tvConfirmTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="Confirmar escaneo"
+            android:textColor="@color/liquid_popup_title"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/btnClose"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:layout_gravity="end|center_vertical"
+            android:background="@drawable/bg_liquid_button_pressable"
+            android:contentDescription="Cerrar"
+            android:padding="8dp"
+            android:src="@drawable/ic_close_red"
+            android:tint="@null" />
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/tvProductName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="6dp"
+        android:text="Producto"
+        android:textColor="@color/liquid_popup_text"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tvBarcode"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        android:text="Codigo de barras:"
+        android:textColor="@color/liquid_popup_text" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="6dp"
+        android:text="Tipo de movimiento"
+        android:textColor="@color/liquid_popup_text"
+        android:textStyle="bold" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnTypeIn"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_liquid_button_pressable"
+            android:backgroundTint="@null"
+            android:text="IN"
+            android:textAllCaps="false"
+            android:textColor="@color/liquid_popup_button_text"
+            app:backgroundTint="@null" />
+
+        <Button
+            android:id="@+id/btnTypeOut"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bg_liquid_button_pressable"
+            android:backgroundTint="@null"
+            android:text="OUT"
+            android:textAllCaps="false"
+            android:textColor="@color/liquid_popup_button_text"
+            app:backgroundTint="@null" />
+    </LinearLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        app:boxBackgroundMode="outline">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etQuantity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_liquid_input"
+            android:hint="Cantidad (obligatorio)"
+            android:inputType="number"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:textColor="@color/liquid_popup_text"
+            android:textColorHint="@color/liquid_popup_hint" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilLocation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        app:boxBackgroundMode="outline"
+        app:endIconMode="dropdown_menu"
+        app:endIconDrawable="@drawable/triangle_down_lg"
+        app:endIconTint="@null">
+
+        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+            android:id="@+id/etLocation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_liquid_input"
+            android:hint="Ubicacion (opcional)"
+            android:minHeight="56dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:textColor="@color/liquid_popup_text"
+            android:textColorHint="@color/liquid_popup_hint" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <Button
+        android:id="@+id/btnConfirm"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_liquid_button_pressable"
+        android:backgroundTint="@null"
+        android:paddingVertical="12dp"
+        android:text="Confirmar"
+        android:textAllCaps="false"
+        android:textColor="@color/liquid_popup_button_text"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        app:backgroundTint="@null" />
+
+</LinearLayout>
