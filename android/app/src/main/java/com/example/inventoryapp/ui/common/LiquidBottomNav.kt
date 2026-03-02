@@ -49,7 +49,9 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.example.inventoryapp.R
+import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.ui.categories.CategoriesActivity
 import com.example.inventoryapp.ui.events.EventsActivity
 import com.example.inventoryapp.ui.home.HomeActivity
@@ -65,6 +67,7 @@ import com.google.android.material.bottomappbar.BottomAppBar
 import com.google.android.material.shape.MaterialShapeDrawable
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
+import kotlinx.coroutines.launch
 
 object LiquidBottomNav {
 
@@ -589,6 +592,47 @@ object LiquidBottomNav {
         restoreCurrentSelection(activity, nav)
     }
 
+    private fun validateProductAndOpenConfirm(
+        activity: AppCompatActivity,
+        code: String,
+        onFinished: ((openedConfirm: Boolean) -> Unit)? = null
+    ) {
+        activity.lifecycleScope.launch {
+            try {
+                val res = NetworkModule.api.listProducts(barcode = code, limit = 1, offset = 0)
+                val found = res.isSuccessful && res.body() != null && res.body()!!.items.isNotEmpty()
+                if (found) {
+                    val intent = ScanActivity.buildConfirmIntent(
+                        context = activity,
+                        barcode = code,
+                        offline = false,
+                        returnHomeOnDialogClose = true
+                    )
+                    activity.startActivity(intent)
+                    onFinished?.invoke(true)
+                } else {
+                    CreateUiFeedback.showErrorPopup(
+                        activity = activity,
+                        title = "Producto no encontrado",
+                        details = "Detectado: $code",
+                        animationRes = R.raw.notfound
+                    )
+                    onFinished?.invoke(false)
+                }
+            } catch (_: Exception) {
+                UiNotifier.show(activity, "Sin conexion. Se enviara al reconectar")
+                val intent = ScanActivity.buildConfirmIntent(
+                    context = activity,
+                    barcode = code,
+                    offline = true,
+                    returnHomeOnDialogClose = true
+                )
+                activity.startActivity(intent)
+                onFinished?.invoke(true)
+            }
+        }
+    }
+
     private fun showManualPopup(activity: AppCompatActivity, onDismiss: (() -> Unit)? = null) {
         val view = LayoutInflater.from(activity).inflate(R.layout.dialog_liquid_manual, null)
         val dialog = AlertDialog.Builder(activity).setView(view).create()
@@ -601,13 +645,7 @@ object LiquidBottomNav {
                 return@setOnClickListener
             }
             dialog.dismiss()
-            val intent = ScanActivity.buildConfirmIntent(
-                context = activity,
-                barcode = code,
-                offline = false,
-                returnHomeOnDialogClose = true
-            )
-            activity.startActivity(intent)
+            validateProductAndOpenConfirm(activity, code)
         }
         dialog.setOnDismissListener { onDismiss?.invoke() }
         styleDialog(dialog)
@@ -665,14 +703,13 @@ object LiquidBottomNav {
                     analyzeBarcode(imageProxy) { code ->
                         if (hasNavigated) return@analyzeBarcode
                         hasNavigated = true
-                        dialog.dismiss()
-                        val intent = ScanActivity.buildConfirmIntent(
-                            context = activity,
-                            barcode = code,
-                            offline = false,
-                            returnHomeOnDialogClose = true
-                        )
-                        activity.startActivity(intent)
+                        validateProductAndOpenConfirm(activity, code) { openedConfirm ->
+                            if (openedConfirm) {
+                                dialog.dismiss()
+                            } else {
+                                hasNavigated = false
+                            }
+                        }
                     }
                 }
 
@@ -1054,5 +1091,9 @@ class CameraPermissionRequestFragment : Fragment() {
         }
     }
 }
+
+
+
+
 
 
