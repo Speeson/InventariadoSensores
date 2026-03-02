@@ -1013,10 +1013,6 @@ class LabelPreviewDialogFragment : DialogFragment() {
 
     override fun onDismiss(dialog: android.content.DialogInterface) {
         super.onDismiss(dialog)
-        val host = activity as? ProductListActivity ?: return
-        if (!host.isFinishing && !host.isDestroyed) {
-            host.recreate()
-        }
     }
 
 
@@ -1070,6 +1066,7 @@ private object WebViewPdfExporter {
         }
     }
 }
+
 
 
 
