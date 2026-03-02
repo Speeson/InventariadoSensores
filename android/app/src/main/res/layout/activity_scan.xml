@@ -86,11 +86,16 @@
                 </FrameLayout>
             </LinearLayout>
 
+            <View
+                android:id="@+id/viewScanTopSpacer"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
             <LinearLayout
                 android:id="@+id/scanCardsContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
                 android:orientation="vertical">
 
                 <com.google.android.material.card.MaterialCardView
@@ -281,6 +286,12 @@
                 </com.google.android.material.card.MaterialCardView>
 
             </LinearLayout>
+
+            <View
+                android:id="@+id/viewScanBottomSpacer"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
 
         </LinearLayout>
     </ScrollView>

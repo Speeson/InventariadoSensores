@@ -1,4 +1,4 @@
-﻿package com.example.inventoryapp.ui.scan
+package com.example.inventoryapp.ui.scan
 
 import android.Manifest
 import android.content.Context
@@ -101,7 +101,6 @@ class ScanActivity : AppCompatActivity() {
             } else {
                 requestCameraPermission()
             }
-            schedulePositionRecalc()
         }
 
         binding.btnCloseScanner.setOnClickListener {
@@ -120,14 +119,7 @@ class ScanActivity : AppCompatActivity() {
             validateAndNavigate(codeToUse)
         }
 
-        binding.previewFrame.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-            schedulePositionRecalc()
-        }
-        binding.scanCardsContainer.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-            schedulePositionRecalc()
-        }
 
-        schedulePositionRecalc()
         handleLaunchIntent(intent)
     }
 
@@ -137,10 +129,6 @@ class ScanActivity : AppCompatActivity() {
         handleLaunchIntent(intent)
     }
 
-    override fun onResume() {
-        super.onResume()
-        schedulePositionRecalc()
-    }
 
     override fun onPause() {
         super.onPause()
@@ -148,12 +136,6 @@ class ScanActivity : AppCompatActivity() {
         isProcessing = false
     }
 
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) {
-            schedulePositionRecalc()
-        }
-    }
 
     private fun handleLaunchIntent(startIntent: Intent?) {
         returnHomeAfterDialogClose =
@@ -195,7 +177,6 @@ class ScanActivity : AppCompatActivity() {
         hasNavigated = false
         isValidating = false
         lastScannedCode = null
-        schedulePositionRecalc()
     }
 
     private fun navigateToHome() {
@@ -205,39 +186,6 @@ class ScanActivity : AppCompatActivity() {
         finish()
     }
 
-    private fun schedulePositionRecalc() {
-        binding.scanScrollView.post {
-            applyDynamicCardsPosition()
-            binding.scanScrollView.postDelayed({ applyDynamicCardsPosition() }, 48L)
-        }
-    }
-
-    private fun applyDynamicCardsPosition() {
-        val scrollHeight = binding.scanScrollView.height
-        val cardsHeight = binding.scanCardsContainer.height
-        if (scrollHeight <= 0 || cardsHeight <= 0) return
-
-        val topSafePx = dpToPx(84f)
-        val bottomSafePx = dpToPx(104f)
-        val sectionTop = maxOf(topSafePx, binding.scanHeaderContainer.bottom + dpToPx(14f))
-        val sectionBottom = scrollHeight - bottomSafePx
-
-        if (sectionBottom <= sectionTop) {
-            binding.scanCardsContainer.translationY = 0f
-            return
-        }
-
-        val maxTop = maxOf(sectionTop, sectionBottom - cardsHeight)
-        val centeredTop = sectionTop + ((sectionBottom - sectionTop - cardsHeight) / 2f)
-        val targetTop = centeredTop.coerceIn(sectionTop.toFloat(), maxTop.toFloat())
-        val baseTop = binding.scanCardsContainer.top.toFloat()
-
-        binding.scanCardsContainer.translationY = targetTop - baseTop
-    }
-
-    private fun dpToPx(dp: Float): Int {
-        return (dp * resources.displayMetrics.density).toInt()
-    }
 
     private fun hideKeyboard() {
         val imm = getSystemService(InputMethodManager::class.java) ?: return
@@ -325,7 +273,6 @@ class ScanActivity : AppCompatActivity() {
             lastNotFoundCode = null
             lastNotFoundAt = 0L
         }
-        schedulePositionRecalc()
     }
 
     @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
@@ -431,3 +378,5 @@ class ScanActivity : AppCompatActivity() {
         }
     }
 }
+
+

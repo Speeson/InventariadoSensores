@@ -39,7 +39,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="6dp"
-        android:text="Producto"
+        android:minLines="2"
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:text="Validando producto..."
         android:textColor="@color/liquid_popup_text"
         android:textSize="18sp"
         android:textStyle="bold" />

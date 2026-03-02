@@ -56,18 +56,17 @@ class ConfirmScanDialogFragment : DialogFragment() {
 
         setupUi(barcode)
 
-        val dialog = AlertDialog.Builder(requireContext())
+        return AlertDialog.Builder(requireContext())
             .setView(binding.root)
             .setCancelable(true)
             .create()
+    }
 
-        dialog.setOnShowListener {
-            dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-            val width = (resources.displayMetrics.widthPixels * 0.92f).toInt()
-            dialog.window?.setLayout(width, WindowManager.LayoutParams.WRAP_CONTENT)
-        }
-
-        return dialog
+    override fun onStart() {
+        super.onStart()
+        val width = (resources.displayMetrics.widthPixels * 0.92f).toInt()
+        dialog?.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog?.window?.setLayout(width, WindowManager.LayoutParams.WRAP_CONTENT)
     }
 
     override fun onDismiss(dialog: DialogInterface) {
@@ -80,7 +79,8 @@ class ConfirmScanDialogFragment : DialogFragment() {
         super.onDestroyView()
     }
 
-    private fun setupUi(barcode: String) {        binding.tvBarcode.text = "Codigo de barras: $barcode"
+    private fun setupUi(barcode: String) {
+        binding.tvBarcode.text = "Codigo de barras: $barcode"
         binding.btnClose.setOnClickListener { dismissAllowingStateLoss() }
 
         applyTypeSelection(MovementType.OUT)
@@ -441,3 +441,5 @@ class ConfirmScanDialogFragment : DialogFragment() {
         }
     }
 }
+
+
