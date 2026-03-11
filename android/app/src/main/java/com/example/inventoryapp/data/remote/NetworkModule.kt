@@ -1,4 +1,4 @@
-﻿package com.example.inventoryapp.data.remote
+package com.example.inventoryapp.data.remote
 
 import android.content.Context
 import android.os.Build
@@ -231,7 +231,7 @@ object NetworkModule {
                                 activity = activity,
                                 title = title,
                                 details = message,
-                                animationRes = R.raw.error
+                                animationRes = R.raw.wrong
                             )
                         } else {
                             UiNotifier.showBlocking(activity, title, message, iconRes)

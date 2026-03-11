@@ -145,6 +145,5 @@ class InventoryApp : Application() {
 
     private fun scheduleOfflineSync() {
         OfflineSyncScheduler.schedulePeriodic(this)
-        OfflineSyncScheduler.scheduleOneTime(this)
     }
 }

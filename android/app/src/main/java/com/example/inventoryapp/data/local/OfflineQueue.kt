@@ -48,7 +48,8 @@ class OfflineQueue(context: Context) {
         val all = getAll().toMutableList()
         all.add(PendingRequest(type, payloadJson))
         savePending(all)
-        OfflineSyncScheduler.scheduleOneTime(appContext)
+        // Sync in foreground is handled by NetworkModule on reconnect.
+        // Keep periodic background sync to avoid duplicate sends/races.
     }
 
     fun getAll(): List<PendingRequest> {

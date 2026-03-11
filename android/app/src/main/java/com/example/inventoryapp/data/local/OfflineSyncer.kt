@@ -8,11 +8,13 @@ import com.example.inventoryapp.domain.model.MovementType
 import com.google.gson.Gson
 import retrofit2.Response
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicBoolean
 
 object OfflineSyncer {
 
     private const val TAG = "OfflineSyncer"
     private val gson = Gson()
+    private val flushInProgress = AtomicBoolean(false)
 
     data class FlushReport(
         val sent: Int,
@@ -22,9 +24,14 @@ object OfflineSyncer {
     )
 
     suspend fun flush(context: Context): FlushReport {
-        val queue = OfflineQueue(context)
-        val token = SessionManager(context).getToken()
-        val items = queue.getAll().toMutableList()
+        if (!flushInProgress.compareAndSet(false, true)) {
+            return FlushReport(sent = 0, movedToFailed = 0, stoppedReason = "ALREADY_SYNCING")
+        }
+
+        try {
+            val queue = OfflineQueue(context)
+            val token = SessionManager(context).getToken()
+            val items = queue.getAll().toMutableList()
 
         if (items.isEmpty()) return FlushReport(sent = 0, movedToFailed = 0)
 
@@ -94,18 +101,21 @@ object OfflineSyncer {
             }
         }
 
-        // Guardar “pending” restante
+        // Guardar ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œpendingÃƒÂ¢Ã¢â€šÂ¬Ã‚Â restante
         queue.saveAll(items)
 
         val stoppedReason =
             if (items.isEmpty()) null else "STOPPED_WITH_${items.size}_PENDING"
 
-        return FlushReport(
-            sent = sent,
-            movedToFailed = movedToFailed,
-            stoppedReason = stoppedReason,
-            newlyFailed = newlyFailed
-        )
+            return FlushReport(
+                sent = sent,
+                movedToFailed = movedToFailed,
+                stoppedReason = stoppedReason,
+                newlyFailed = newlyFailed
+            )
+        } finally {
+            flushInProgress.set(false)
+        }
     }
 
     // --- Resultado detallado por request ---
@@ -244,7 +254,7 @@ object OfflineSyncer {
                 }
                 val created = NetworkModule.api.createStock(dto)
                 if (created.code() == 400) {
-                    // "Ya existe stock para esta ubicación" -> considerar éxito
+                    // "Ya existe stock para esta ubicaciÃƒÆ’Ã‚Â³n" -> considerar ÃƒÆ’Ã‚Â©xito
                     return SendResult.Success
                 }
                 created
@@ -260,9 +270,9 @@ object OfflineSyncer {
         val code = res.code()
         val err = res.safeError()
 
-        // Clasificación: ajusta si quieres
+        // ClasificaciÃƒÆ’Ã‚Â³n: ajusta si quieres
         return when (code) {
-            400, 404, 409, 422 -> SendResult.PermanentFailure(code, err) // “no va a funcionar reintentando”
+            400, 404, 409, 422 -> SendResult.PermanentFailure(code, err) // ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œno va a funcionar reintentandoÃƒÂ¢Ã¢â€šÂ¬Ã‚Â
             401, 403 -> SendResult.TransientFailure(code, err) // requiere re-login/permisos -> no descartes
             408, 429 -> SendResult.TransientFailure(code, err) // timeout/rate limit
             in 500..599 -> SendResult.TransientFailure(code, err) // backend roto temporalmente
