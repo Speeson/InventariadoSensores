@@ -239,7 +239,7 @@
         android:contentDescription="Menu central superior"
         android:padding="0dp"
         android:scaleType="centerInside"
-        android:translationY="16dp"
+        android:translationY="11dp"
         android:src="@drawable/glass_add"
         app:backgroundTint="#8CB3D9"
         app:borderWidth="0dp"

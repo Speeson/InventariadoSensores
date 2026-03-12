@@ -1077,11 +1077,11 @@ class ThresholdsActivity : AppCompatActivity(), TopCenterActionHost {
             val bottomSpacerLp = binding.viewThresholdsBottomSpacer.layoutParams as? LinearLayout.LayoutParams ?: return@post
             val cardLp = binding.cardThresholdsList.layoutParams as? LinearLayout.LayoutParams ?: return@post
             val rvLp = binding.rvThresholds.layoutParams as? LinearLayout.LayoutParams ?: return@post
-
             val visibleCount = if (::adapter.isInitialized) adapter.itemCount else 0
-            if (visibleCount in 1..pageSize) {
-                topSpacerLp.height = 0
-                topSpacerLp.weight = 1f
+
+            topSpacerLp.height = 0
+            topSpacerLp.weight = 0f
+            if (visibleCount <= pageSize) {
                 bottomSpacerLp.height = 0
                 bottomSpacerLp.weight = 1f
                 cardLp.height = ViewGroup.LayoutParams.WRAP_CONTENT
@@ -1090,8 +1090,6 @@ class ThresholdsActivity : AppCompatActivity(), TopCenterActionHost {
                 rvLp.weight = 0f
                 binding.rvThresholds.isNestedScrollingEnabled = false
             } else {
-                topSpacerLp.height = 0
-                topSpacerLp.weight = 0f
                 bottomSpacerLp.height = 0
                 bottomSpacerLp.weight = 0f
                 cardLp.height = 0

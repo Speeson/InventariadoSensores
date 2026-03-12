@@ -1386,9 +1386,10 @@ snack = SendSnack(binding.root)
             val rvLp = binding.rvEvents.layoutParams as? LinearLayout.LayoutParams ?: return@post
             val visibleCount = items.size
 
-            if (visibleCount in 1..pageSize) {
-                topSpacerLp.height = 0
-                topSpacerLp.weight = 1f
+            // Fijamos el inicio del listado (como en Eventos) y solo cambiamos la altura final.
+            topSpacerLp.height = 0
+            topSpacerLp.weight = 0f
+            if (visibleCount <= pageSize) {
                 bottomSpacerLp.height = 0
                 bottomSpacerLp.weight = 1f
                 cardLp.height = ViewGroup.LayoutParams.WRAP_CONTENT
@@ -1397,8 +1398,6 @@ snack = SendSnack(binding.root)
                 rvLp.weight = 0f
                 binding.rvEvents.isNestedScrollingEnabled = false
             } else {
-                topSpacerLp.height = 0
-                topSpacerLp.weight = 0f
                 bottomSpacerLp.height = 0
                 bottomSpacerLp.weight = 0f
                 cardLp.height = 0

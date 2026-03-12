@@ -514,11 +514,11 @@ class AuditActivity : AppCompatActivity(), TopCenterActionHost {
             val bottomSpacerLp = binding.viewAuditBottomSpacer.layoutParams as? LinearLayout.LayoutParams ?: return@post
             val cardLp = binding.cardAuditList.layoutParams as? LinearLayout.LayoutParams ?: return@post
             val rvLp = binding.rvAudit.layoutParams as? LinearLayout.LayoutParams ?: return@post
-
             val visibleCount = if (::adapter.isInitialized) adapter.itemCount else 0
-            if (visibleCount in 1..pageSize) {
-                topSpacerLp.height = 0
-                topSpacerLp.weight = 1f
+
+            topSpacerLp.height = 0
+            topSpacerLp.weight = 0f
+            if (visibleCount <= pageSize) {
                 bottomSpacerLp.height = 0
                 bottomSpacerLp.weight = 1f
                 cardLp.height = ViewGroup.LayoutParams.WRAP_CONTENT
@@ -527,8 +527,6 @@ class AuditActivity : AppCompatActivity(), TopCenterActionHost {
                 rvLp.weight = 0f
                 binding.rvAudit.isNestedScrollingEnabled = false
             } else {
-                topSpacerLp.height = 0
-                topSpacerLp.weight = 0f
                 bottomSpacerLp.height = 0
                 bottomSpacerLp.weight = 0f
                 cardLp.height = 0

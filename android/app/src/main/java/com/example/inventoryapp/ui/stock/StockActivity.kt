@@ -962,11 +962,11 @@ class StockActivity : AppCompatActivity(), TopCenterActionHost {
             val bottomSpacerLp = binding.viewStockBottomSpacer.layoutParams as? LinearLayout.LayoutParams ?: return@post
             val cardLp = binding.cardStockList.layoutParams as? LinearLayout.LayoutParams ?: return@post
             val rvLp = binding.rvStocks.layoutParams as? LinearLayout.LayoutParams ?: return@post
-
             val visibleCount = if (::adapter.isInitialized) adapter.itemCount else 0
-            if (visibleCount in 1..pageSize) {
-                topSpacerLp.height = 0
-                topSpacerLp.weight = 1f
+
+            topSpacerLp.height = 0
+            topSpacerLp.weight = 0f
+            if (visibleCount <= pageSize) {
                 bottomSpacerLp.height = 0
                 bottomSpacerLp.weight = 1f
                 cardLp.height = ViewGroup.LayoutParams.WRAP_CONTENT
@@ -975,8 +975,6 @@ class StockActivity : AppCompatActivity(), TopCenterActionHost {
                 rvLp.weight = 0f
                 binding.rvStocks.isNestedScrollingEnabled = false
             } else {
-                topSpacerLp.height = 0
-                topSpacerLp.weight = 0f
                 bottomSpacerLp.height = 0
                 bottomSpacerLp.weight = 0f
                 cardLp.height = 0
