@@ -3,9 +3,11 @@ package com.example.inventoryapp.ui.products
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.PorterDuff
@@ -71,9 +73,16 @@ class ProductListAdapter(
         } else {
             "Guardado en modo offline, pendiente de sincronizacion"
         }
-        holder.binding.ivOfflineAlert.setImageResource(
-            if (isPendingDelete) R.drawable.ic_close_red else R.drawable.sync
-        )
+        val warningIconRes = if (isPendingDelete) R.drawable.ic_close_red else R.drawable.sync
+        holder.binding.ivOfflineAlert.setImageResource(warningIconRes)
+        val isDarkMode = (holder.itemView.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        if (warningIconRes == R.drawable.sync && isDarkMode) {
+            holder.binding.ivOfflineAlert.setColorFilter(Color.WHITE)
+            holder.binding.ivOfflineAlert.alpha = 0.95f
+        } else {
+            holder.binding.ivOfflineAlert.clearColorFilter()
+            holder.binding.ivOfflineAlert.alpha = 1f
+        }
         TooltipCompat.setTooltipText(
             holder.binding.ivOfflineAlert,
             if (isOffline || isPendingDelete) pendingTooltip else null
@@ -139,10 +148,10 @@ class ProductListAdapter(
         val out = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(out)
         val colors = intArrayOf(
-            ContextCompat.getColor(context, R.color.icon_grad_start),  // light blue (top)
-            ContextCompat.getColor(context, R.color.icon_grad_mid2),   // dark blue (mid)
-            ContextCompat.getColor(context, R.color.icon_grad_mid1),   // pink (lower-mid)
-            ContextCompat.getColor(context, R.color.icon_grad_end)     // violet (bottom)
+            ContextCompat.getColor(context, R.color.icon_grad_start),
+            ContextCompat.getColor(context, R.color.icon_grad_mid2),
+            ContextCompat.getColor(context, R.color.icon_grad_mid1),
+            ContextCompat.getColor(context, R.color.icon_grad_end)
         )
         val shader = LinearGradient(
             0f,

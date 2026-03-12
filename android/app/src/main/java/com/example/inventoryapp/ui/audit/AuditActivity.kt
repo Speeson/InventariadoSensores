@@ -1,63 +1,81 @@
-﻿package com.example.inventoryapp.ui.audit
+package com.example.inventoryapp.ui.audit
 
+import android.Manifest
 import android.app.DatePickerDialog
 import android.app.Dialog
-import android.Manifest
 import android.content.ContentValues
 import android.content.Intent
-import android.net.Uri
-import android.os.Build
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
+import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
-import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.transition.AutoTransition
-import androidx.transition.TransitionManager
 import com.example.inventoryapp.R
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.model.AuditLogResponseDto
 import com.example.inventoryapp.databinding.ActivityAuditBinding
+import com.example.inventoryapp.ui.alerts.AlertsActivity
+import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.example.inventoryapp.ui.common.GradientIconUtil
 import com.example.inventoryapp.ui.common.NetworkStatusBar
+import com.example.inventoryapp.ui.common.TopCenterActionHost
 import com.example.inventoryapp.ui.common.UiNotifier
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Calendar
 import java.util.Locale
 import kotlin.math.absoluteValue
 
-class AuditActivity : AppCompatActivity() {
+class AuditActivity : AppCompatActivity(), TopCenterActionHost {
 
     private lateinit var binding: ActivityAuditBinding
     private lateinit var adapter: AuditAdapter
 
-    private val pageSize = 20
+    private val pageSize = 5
     private var currentPage = 0
     private var currentTotal = 0
     private var currentItemsCount = 0
     private var csvSeparator = ','
+
+    private var searchDialog: AlertDialog? = null
+    private var exportDialog: AlertDialog? = null
+
+    private var searchEntityFilter: String = ""
+    private var searchActionFilter: String = ""
+    private var searchUserIdFilter: String = ""
+    private var searchDateFromFilter: String = ""
+    private var searchDateToFilter: String = ""
 
     private enum class RequestSource {
         INITIAL,
@@ -88,6 +106,7 @@ class AuditActivity : AppCompatActivity() {
         setContentView(binding.root)
         NetworkStatusBar.bind(this, findViewById(R.id.viewNetworkBar))
         applyTitleGradient()
+        applyRefreshIconTint()
 
         val role = getSharedPreferences("ui_prefs", MODE_PRIVATE).getString("cached_role", null)
         if (!role.equals("ADMIN", ignoreCase = true)) {
@@ -101,18 +120,33 @@ class AuditActivity : AppCompatActivity() {
             return
         }
 
-        GradientIconUtil.applyGradient(binding.ivSearchAudit, R.drawable.search)
-        GradientIconUtil.applyGradient(binding.ivExportAudit, R.drawable.export)
+        GradientIconUtil.applyGradient(binding.btnAlertsQuick, R.drawable.ic_bell)
+        AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
+
         binding.btnBack.setOnClickListener { finish() }
+        binding.btnAlertsQuick.setOnClickListener {
+            startActivity(Intent(this, AlertsActivity::class.java))
+        }
 
         setupRecycler()
-        setupFilters()
-        setupDatePickers()
         setupActions()
         applyPagerButtonStyle(binding.btnPrevAudit, enabled = false)
         applyPagerButtonStyle(binding.btnNextAudit, enabled = false)
 
         loadAudit(resetPage = true, source = RequestSource.INITIAL)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updateAuditListAdaptiveHeight()
+    }
+
+    override fun onTopCreateAction() {
+        openExportAuditDialog()
+    }
+
+    override fun onTopFilterAction() {
+        openSearchAuditDialog()
     }
 
     private fun setupRecycler() {
@@ -121,100 +155,7 @@ class AuditActivity : AppCompatActivity() {
         binding.rvAudit.adapter = adapter
     }
 
-    private fun setupFilters() {
-        val entities = listOf(
-            "",
-            "PRODUCT",
-            "STOCK",
-            "MOVEMENT",
-            "IMPORT",
-            "CATEGORY",
-            "EVENT",
-            "ALERT",
-            "STOCK_THRESHOLD",
-            "USER"
-        )
-        val actions = listOf("", "CREATE", "UPDATE", "DELETE")
-
-        binding.etEntity.setAdapter(ArrayAdapter(this, android.R.layout.simple_list_item_1, entities))
-        binding.etAction.setAdapter(ArrayAdapter(this, android.R.layout.simple_list_item_1, actions))
-
-        binding.etEntity.setOnClickListener { binding.etEntity.showDropDown() }
-        binding.etAction.setOnClickListener { binding.etAction.showDropDown() }
-        disableKeyboardForDropdown(binding.etEntity)
-        disableKeyboardForDropdown(binding.etAction)
-
-        applyDropdownIconGradient()
-    }
-
-    private fun applyDropdownIconGradient() {
-        binding.tilEntity.setEndIconTintList(null)
-        binding.tilAction.setEndIconTintList(null)
-        val endIconId = com.google.android.material.R.id.text_input_end_icon
-        binding.tilEntity.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
-            GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
-        }
-        binding.tilAction.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
-            GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
-        }
-    }
-
-    private fun setupDatePickers() {
-        bindDateField(binding.etDateFrom)
-        bindDateField(binding.etDateTo)
-    }
-
-    private fun bindDateField(field: android.widget.EditText) {
-        field.setOnClickListener { showDatePicker(field) }
-        field.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) showDatePicker(field)
-        }
-    }
-
-    private fun showDatePicker(target: android.widget.EditText) {
-        val cal = Calendar.getInstance()
-        val dialog = DatePickerDialog(
-            this,
-            { _, year, month, dayOfMonth ->
-                val mm = String.format("%02d", month + 1)
-                val dd = String.format("%02d", dayOfMonth)
-                target.setText("$year-$mm-$dd")
-            },
-            cal.get(Calendar.YEAR),
-            cal.get(Calendar.MONTH),
-            cal.get(Calendar.DAY_OF_MONTH)
-        )
-        dialog.setButton(
-            DatePickerDialog.BUTTON_NEUTRAL,
-            "Hoy"
-        ) { _, _ ->
-            target.setText(todayIsoDate())
-        }
-        dialog.show()
-    }
-
     private fun setupActions() {
-        binding.layoutSearchAuditHeader.setOnClickListener { toggleSearchForm() }
-        binding.layoutExportAuditHeader.setOnClickListener { toggleExportForm() }
-        binding.btnExportAuditJson.setOnClickListener { exportFilteredAudit(ExportFormat.JSON) }
-        binding.btnExportAuditCsv.setOnClickListener { showCsvSeparatorPickerAndExport() }
-        binding.btnExportAuditText.setOnClickListener { exportFilteredAudit(ExportFormat.TEXT) }
-
-        binding.btnApplyFilters.setOnClickListener {
-            hideKeyboard()
-            loadAudit(resetPage = true, source = RequestSource.APPLY)
-        }
-
-        binding.btnClearFilters.setOnClickListener {
-            hideKeyboard()
-            binding.etEntity.setText("")
-            binding.etAction.setText("")
-            binding.etUserId.setText("")
-            binding.etDateFrom.setText("")
-            binding.etDateTo.setText("")
-            loadAudit(resetPage = true, source = RequestSource.CLEAR)
-        }
-
         binding.btnRefreshAudit.setOnClickListener {
             loadAudit(resetPage = false, source = RequestSource.REFRESH)
         }
@@ -235,22 +176,160 @@ class AuditActivity : AppCompatActivity() {
         }
     }
 
-    private fun toggleSearchForm() {
-        TransitionManager.beginDelayedTransition(binding.scrollAudit, AutoTransition().setDuration(180))
-        val isVisible = binding.layoutSearchAuditContent.isVisible
-        binding.layoutSearchAuditContent.visibility = if (isVisible) View.GONE else View.VISIBLE
-        binding.layoutSearchAuditHeader.setBackgroundResource(
-            if (isVisible) R.drawable.bg_toggle_idle else R.drawable.bg_toggle_active
-        )
+    private fun openExportAuditDialog() {
+        if (exportDialog?.isShowing == true) return
+
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_audit_export_master, null)
+        val btnClose = view.findViewById<ImageButton>(R.id.btnAuditExportDialogClose)
+        val btnJson = view.findViewById<Button>(R.id.btnExportAuditJson)
+        val btnCsv = view.findViewById<Button>(R.id.btnExportAuditCsv)
+        val btnText = view.findViewById<Button>(R.id.btnExportAuditText)
+
+        val dialog = AlertDialog.Builder(this).setView(view).setCancelable(true).create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        btnClose.setOnClickListener { dialog.dismiss() }
+        btnJson.setOnClickListener {
+            dialog.dismiss()
+            exportFilteredAudit(ExportFormat.JSON)
+        }
+        btnCsv.setOnClickListener {
+            dialog.dismiss()
+            showCsvSeparatorPickerAndExport()
+        }
+        btnText.setOnClickListener {
+            dialog.dismiss()
+            exportFilteredAudit(ExportFormat.TEXT)
+        }
+
+        dialog.setOnDismissListener { exportDialog = null }
+        exportDialog = dialog
+        dialog.show()
     }
 
-    private fun toggleExportForm() {
-        TransitionManager.beginDelayedTransition(binding.scrollAudit, AutoTransition().setDuration(180))
-        val isVisible = binding.layoutExportAuditContent.isVisible
-        binding.layoutExportAuditContent.visibility = if (isVisible) View.GONE else View.VISIBLE
-        binding.layoutExportAuditHeader.setBackgroundResource(
-            if (isVisible) R.drawable.bg_toggle_idle else R.drawable.bg_toggle_active
+    private fun openSearchAuditDialog() {
+        if (searchDialog?.isShowing == true) return
+
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_audit_search_master, null)
+        val btnClose = view.findViewById<ImageButton>(R.id.btnSearchAuditDialogClose)
+        val btnSearch = view.findViewById<Button>(R.id.btnDialogSearchAudit)
+        val btnClear = view.findViewById<Button>(R.id.btnDialogClearSearchAudit)
+        val etEntity = view.findViewById<MaterialAutoCompleteTextView>(R.id.etDialogAuditEntity)
+        val etAction = view.findViewById<MaterialAutoCompleteTextView>(R.id.etDialogAuditAction)
+        val etUserId = view.findViewById<TextInputEditText>(R.id.etDialogAuditUserId)
+        val etDateFrom = view.findViewById<TextInputEditText>(R.id.etDialogAuditDateFrom)
+        val etDateTo = view.findViewById<TextInputEditText>(R.id.etDialogAuditDateTo)
+        val tilEntity = view.findViewById<TextInputLayout>(R.id.tilDialogAuditEntity)
+        val tilAction = view.findViewById<TextInputLayout>(R.id.tilDialogAuditAction)
+
+        val entities = listOf(
+            "",
+            "PRODUCT",
+            "STOCK",
+            "MOVEMENT",
+            "IMPORT",
+            "CATEGORY",
+            "EVENT",
+            "ALERT",
+            "STOCK_THRESHOLD",
+            "USER"
         )
+        val actions = listOf("", "CREATE", "UPDATE", "DELETE")
+
+        etEntity.setAdapter(buildDropdownAdapter(entities))
+        etAction.setAdapter(buildDropdownAdapter(actions))
+        disableKeyboardForDropdown(etEntity)
+        disableKeyboardForDropdown(etAction)
+        etEntity.setOnClickListener { etEntity.showDropDown() }
+        etAction.setOnClickListener { etAction.showDropDown() }
+
+        etEntity.setText(searchEntityFilter, false)
+        etAction.setText(searchActionFilter, false)
+        etUserId.setText(searchUserIdFilter)
+        etDateFrom.setText(searchDateFromFilter)
+        etDateTo.setText(searchDateToFilter)
+
+        etDateFrom.setOnClickListener { showDatePicker(etDateFrom) }
+        etDateTo.setOnClickListener { showDatePicker(etDateTo) }
+
+        applyDialogDropdownStyle(listOf(tilEntity, tilAction), listOf(etEntity, etAction))
+
+        val dialog = AlertDialog.Builder(this).setView(view).setCancelable(true).create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        btnClose.setOnClickListener { dialog.dismiss() }
+        btnSearch.setOnClickListener {
+            searchEntityFilter = etEntity.text?.toString().orEmpty().trim()
+            searchActionFilter = etAction.text?.toString().orEmpty().trim()
+            searchUserIdFilter = etUserId.text?.toString().orEmpty().trim()
+            searchDateFromFilter = etDateFrom.text?.toString().orEmpty().trim()
+            searchDateToFilter = etDateTo.text?.toString().orEmpty().trim()
+            hideKeyboard()
+            dialog.dismiss()
+            loadAudit(resetPage = true, source = RequestSource.APPLY)
+        }
+        btnClear.setOnClickListener {
+            etEntity.setText("", false)
+            etAction.setText("", false)
+            etUserId.setText("")
+            etDateFrom.setText("")
+            etDateTo.setText("")
+            searchEntityFilter = ""
+            searchActionFilter = ""
+            searchUserIdFilter = ""
+            searchDateFromFilter = ""
+            searchDateToFilter = ""
+            hideKeyboard()
+            dialog.dismiss()
+            loadAudit(resetPage = true, source = RequestSource.CLEAR)
+        }
+
+        dialog.setOnDismissListener {
+            searchDialog = null
+            hideKeyboard()
+        }
+        searchDialog = dialog
+        dialog.show()
+    }
+
+    private fun buildDropdownAdapter(values: List<String>): ArrayAdapter<String> {
+        return ArrayAdapter(this, R.layout.item_liquid_dropdown, values)
+    }
+
+    private fun applyDialogDropdownStyle(
+        textInputLayouts: List<TextInputLayout>,
+        dropdowns: List<MaterialAutoCompleteTextView>
+    ) {
+        val popupDrawable = ContextCompat.getDrawable(this, R.drawable.bg_liquid_dropdown_popup)
+        val endIconId = com.google.android.material.R.id.text_input_end_icon
+        textInputLayouts.forEach { til ->
+            til.setEndIconTintList(null)
+            til.findViewById<android.widget.ImageView>(endIconId)?.let { iv ->
+                GradientIconUtil.applyGradient(iv, R.drawable.triangle_down_lg)
+            }
+        }
+        dropdowns.forEach { auto ->
+            if (popupDrawable != null) auto.setDropDownBackgroundDrawable(popupDrawable)
+        }
+    }
+
+    private fun showDatePicker(target: TextInputEditText) {
+        val cal = Calendar.getInstance()
+        val dialog = DatePickerDialog(
+            this,
+            { _, year, month, dayOfMonth ->
+                val mm = String.format("%02d", month + 1)
+                val dd = String.format("%02d", dayOfMonth)
+                target.setText("$year-$mm-$dd")
+            },
+            cal.get(Calendar.YEAR),
+            cal.get(Calendar.MONTH),
+            cal.get(Calendar.DAY_OF_MONTH)
+        )
+        dialog.setButton(DatePickerDialog.BUTTON_NEUTRAL, "Hoy") { _, _ ->
+            target.setText(todayIsoDate())
+        }
+        dialog.show()
     }
 
     private fun loadAudit(resetPage: Boolean, source: RequestSource) {
@@ -290,6 +369,7 @@ class AuditActivity : AppCompatActivity() {
                     binding.btnNextAudit.isEnabled = nextEnabled
                     applyPagerButtonStyle(binding.btnPrevAudit, prevEnabled)
                     applyPagerButtonStyle(binding.btnNextAudit, nextEnabled)
+                    updateAuditListAdaptiveHeight()
                     if (body.items.isEmpty() && (source == RequestSource.APPLY || source == RequestSource.REFRESH)) {
                         CreateUiFeedback.showErrorPopup(
                             this@AuditActivity,
@@ -326,9 +406,9 @@ class AuditActivity : AppCompatActivity() {
     }
 
     private fun readFiltersOrShowError(): AuditFilters? {
-        val entity = binding.etEntity.text?.toString()?.trim().orEmpty().ifBlank { null }
-        val action = binding.etAction.text?.toString()?.trim().orEmpty().ifBlank { null }
-        val userIdRaw = binding.etUserId.text?.toString()?.trim().orEmpty()
+        val entity = searchEntityFilter.trim().ifBlank { null }
+        val action = searchActionFilter.trim().ifBlank { null }
+        val userIdRaw = searchUserIdFilter.trim()
         if (userIdRaw.isNotBlank() && userIdRaw.toIntOrNull() == null) {
             CreateUiFeedback.showErrorPopup(
                 this,
@@ -338,8 +418,8 @@ class AuditActivity : AppCompatActivity() {
             return null
         }
         val userId = userIdRaw.toIntOrNull()
-        val dateFrom = normalizeDateStart(binding.etDateFrom.text?.toString()?.trim())
-        val dateTo = normalizeDateEnd(binding.etDateTo.text?.toString()?.trim())
+        val dateFrom = normalizeDateStart(searchDateFromFilter)
+        val dateTo = normalizeDateEnd(searchDateToFilter)
         return AuditFilters(
             entity = entity,
             action = action,
@@ -351,11 +431,15 @@ class AuditActivity : AppCompatActivity() {
     }
 
     private fun updateCounter(offset: Int) {
-        if (currentTotal == 0 || currentItemsCount == 0) {
+        if (currentTotal <= 0 || currentItemsCount <= 0) {
+            binding.tvAuditPageNumber.text = "Pagina 0/0"
             binding.tvAuditCounter.text = "Mostrando 0/0"
             return
         }
-        val shown = offset + currentItemsCount
+        val shown = (offset + currentItemsCount).coerceAtMost(currentTotal)
+        val totalPages = ((currentTotal + pageSize - 1) / pageSize).coerceAtLeast(1)
+        val page = (currentPage + 1).coerceAtMost(totalPages)
+        binding.tvAuditPageNumber.text = "Pagina $page/$totalPages"
         binding.tvAuditCounter.text = "Mostrando $shown/$currentTotal"
     }
 
@@ -398,31 +482,66 @@ class AuditActivity : AppCompatActivity() {
 
     private fun applyPagerButtonStyle(button: Button, enabled: Boolean) {
         button.backgroundTintList = null
+        val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         if (!enabled) {
             val colors = intArrayOf(
-                ContextCompat.getColor(this, android.R.color.darker_gray),
-                ContextCompat.getColor(this, android.R.color.darker_gray)
+                if (isDark) 0x334F6480 else 0x33A7BED8,
+                if (isDark) 0x33445A74 else 0x338FA9C6
             )
             val drawable = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
-                cornerRadius = resources.displayMetrics.density * 18f
-                setStroke((resources.displayMetrics.density * 1f).toInt(), 0xFFB0B0B0.toInt())
+                cornerRadius = resources.displayMetrics.density * 16f
+                setStroke((resources.displayMetrics.density * 1f).toInt(), if (isDark) 0x44AFCBEB else 0x5597BCD9)
             }
             button.background = drawable
-            button.setTextColor(ContextCompat.getColor(this, android.R.color.white))
+            button.setTextColor(ContextCompat.getColor(this, R.color.liquid_popup_hint))
             return
         }
         val colors = intArrayOf(
-            ContextCompat.getColor(this, R.color.icon_grad_start),
-            ContextCompat.getColor(this, R.color.icon_grad_mid2),
-            ContextCompat.getColor(this, R.color.icon_grad_mid1),
-            ContextCompat.getColor(this, R.color.icon_grad_end)
+            if (isDark) 0x66789BC4 else 0x99D6EBFA.toInt(),
+            if (isDark) 0x666D8DB4 else 0x99C5E0F4.toInt()
         )
         val drawable = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors).apply {
-            cornerRadius = resources.displayMetrics.density * 18f
-            setStroke((resources.displayMetrics.density * 1f).toInt(), 0x33000000)
+            cornerRadius = resources.displayMetrics.density * 16f
+            setStroke((resources.displayMetrics.density * 1f).toInt(), if (isDark) 0x88B5D5F4.toInt() else 0x88A7CBE6.toInt())
         }
         button.background = drawable
-        button.setTextColor(ContextCompat.getColor(this, android.R.color.white))
+        button.setTextColor(ContextCompat.getColor(this, R.color.liquid_popup_button_text))
+    }
+
+    private fun updateAuditListAdaptiveHeight() {
+        binding.scrollAudit.post {
+            val topSpacerLp = binding.viewAuditTopSpacer.layoutParams as? LinearLayout.LayoutParams ?: return@post
+            val bottomSpacerLp = binding.viewAuditBottomSpacer.layoutParams as? LinearLayout.LayoutParams ?: return@post
+            val cardLp = binding.cardAuditList.layoutParams as? LinearLayout.LayoutParams ?: return@post
+            val rvLp = binding.rvAudit.layoutParams as? LinearLayout.LayoutParams ?: return@post
+
+            val visibleCount = if (::adapter.isInitialized) adapter.itemCount else 0
+            if (visibleCount in 1..pageSize) {
+                topSpacerLp.height = 0
+                topSpacerLp.weight = 1f
+                bottomSpacerLp.height = 0
+                bottomSpacerLp.weight = 1f
+                cardLp.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                cardLp.weight = 0f
+                rvLp.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                rvLp.weight = 0f
+                binding.rvAudit.isNestedScrollingEnabled = false
+            } else {
+                topSpacerLp.height = 0
+                topSpacerLp.weight = 0f
+                bottomSpacerLp.height = 0
+                bottomSpacerLp.weight = 0f
+                cardLp.height = 0
+                cardLp.weight = 1f
+                rvLp.height = 0
+                rvLp.weight = 1f
+                binding.rvAudit.isNestedScrollingEnabled = true
+            }
+            binding.viewAuditTopSpacer.layoutParams = topSpacerLp
+            binding.viewAuditBottomSpacer.layoutParams = bottomSpacerLp
+            binding.cardAuditList.layoutParams = cardLp
+            binding.rvAudit.layoutParams = rvLp
+        }
     }
 
     private fun applyTitleGradient() {
@@ -448,6 +567,16 @@ class AuditActivity : AppCompatActivity() {
         }
     }
 
+    private fun applyRefreshIconTint() {
+        val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        if (!isDark) {
+            val blue = ContextCompat.getColor(this, R.color.icon_grad_mid2)
+            binding.btnRefreshAudit.setColorFilter(blue)
+        } else {
+            binding.btnRefreshAudit.clearColorFilter()
+        }
+    }
+
     private fun hideKeyboard() {
         val imm = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager ?: return
         val view = currentFocus ?: binding.root
@@ -467,7 +596,6 @@ class AuditActivity : AppCompatActivity() {
         val dd = String.format("%02d", cal.get(Calendar.DAY_OF_MONTH))
         return "$year-$mm-$dd"
     }
-
     private fun buildNoResultsMessage(
         entity: String?,
         action: String?,

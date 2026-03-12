@@ -18,10 +18,13 @@ import com.example.inventoryapp.R
 import com.google.android.material.snackbar.Snackbar
 import androidx.appcompat.app.AlertDialog
 import android.content.Context
+import android.content.res.Configuration
 import com.example.inventoryapp.BuildConfig
 import com.airbnb.lottie.LottieAnimationView
 
 object UiNotifier {
+    private const val SESSION_EXPIRED_MSG = "Sesión caducada. Inicia sesión."
+
     private fun canShowDialog(activity: Activity): Boolean {
         return !activity.isFinishing && !activity.isDestroyed
     }
@@ -42,6 +45,15 @@ object UiNotifier {
     }
 
     fun showBlocking(activity: Activity, title: String, message: String, iconRes: Int? = null) {
+        if (isSessionExpiredNotice(title, message)) {
+            showBlockingTimed(
+                activity = activity,
+                message = SESSION_EXPIRED_MSG,
+                iconRes = R.drawable.expired,
+                timeoutMs = 20_000L
+            )
+            return
+        }
         if (iconRes == R.drawable.ic_lock) {
             showPermissionDeniedDialog(activity, title, message)
             return
@@ -113,6 +125,14 @@ object UiNotifier {
         val icon = view.findViewById<ImageView>(R.id.noticeIcon)
         val text = view.findViewById<TextView>(R.id.noticeMessage)
         icon.setImageResource(iconRes)
+        val isDarkMode = (activity.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        if (iconRes == R.drawable.sync && isDarkMode) {
+            icon.setColorFilter(Color.WHITE)
+            icon.alpha = 0.95f
+        } else {
+            icon.clearColorFilter()
+            icon.alpha = 1f
+        }
         text.text = message
 
         val dialog = Dialog(activity)
@@ -143,6 +163,11 @@ object UiNotifier {
         handler.postDelayed(dismissRunnable, timeoutMs)
     }
 
+    private fun isSessionExpiredNotice(title: String, message: String): Boolean {
+        val combined = "$title $message".lowercase()
+        return combined.contains("sesion caducada") || combined.contains("sesión caducada")
+    }
+
     fun showCentered(activity: Activity, message: String, duration: Int = Toast.LENGTH_SHORT) {
         val toast = Toast.makeText(activity, message, duration)
         toast.setGravity(Gravity.CENTER, 0, 0)
@@ -171,7 +196,7 @@ object UiNotifier {
         val friendly = "No se pudo conectar. Revisa la IP o la red."
         if (detail.isNullOrBlank()) return friendly
         return if (allowTechnical && shouldShowTechnical(context)) {
-            "Error de conexión: $detail"
+            "Error de conexion: $detail"
         } else {
             friendly
         }

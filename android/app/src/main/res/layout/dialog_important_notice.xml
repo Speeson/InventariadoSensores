@@ -1,42 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/noticeCard"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_margin="8dp"
-    app:cardUseCompatPadding="true"
-    app:cardElevation="6dp"
-    app:cardCornerRadius="16dp"
-    app:strokeWidth="1dp"
-    app:strokeColor="#E1D5F0"
-    app:cardBackgroundColor="#F7F2FA">
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent"
+    android:padding="24dp">
 
     <LinearLayout
         android:id="@+id/noticeRoot"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
+        android:layout_gravity="center"
+        android:background="@drawable/bg_liquid_popup_card"
+        android:gravity="center_horizontal"
         android:minWidth="300dp"
         android:orientation="vertical"
-        android:gravity="center_horizontal"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:paddingTop="14dp"
-        android:paddingBottom="14dp">
+        android:padding="20dp">
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
             android:gravity="center"
-            android:paddingBottom="8dp">
+            android:orientation="horizontal"
+            android:paddingBottom="10dp">
 
             <ImageView
                 android:id="@+id/noticeIcon"
-                android:layout_width="34dp"
-                android:layout_height="34dp"
-                android:layout_marginEnd="8dp"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:layout_marginEnd="10dp"
                 android:contentDescription="@null"
                 android:scaleType="centerInside" />
 
@@ -44,16 +35,12 @@
                 android:id="@+id/noticeMessage"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:maxWidth="220dp"
                 android:gravity="center"
+                android:maxWidth="230dp"
                 android:textAlignment="center"
-                android:textStyle="bold"
+                android:textColor="@color/liquid_popup_title"
                 android:textSize="15sp"
-                android:textColor="@android:color/black"
-                android:shadowColor="#4A000000"
-                android:shadowDx="1"
-                android:shadowDy="1"
-                android:shadowRadius="2" />
+                android:textStyle="bold" />
         </LinearLayout>
 
         <androidx.appcompat.widget.AppCompatButton
@@ -61,21 +48,15 @@
             android:layout_width="wrap_content"
             android:layout_height="40dp"
             android:layout_gravity="center_horizontal"
+            android:background="@drawable/bg_liquid_button_pressable"
+            android:backgroundTint="@null"
             android:minWidth="136dp"
             android:minHeight="0dp"
-            android:background="@drawable/bg_button_soft_purple"
-            android:backgroundTint="@null"
-            android:elevation="0dp"
-            android:foreground="@null"
             android:paddingStart="24dp"
             android:paddingEnd="24dp"
-            android:paddingTop="0dp"
-            android:paddingBottom="0dp"
-            android:stateListAnimator="@null"
-            android:translationZ="0dp"
             android:text="Aceptar"
             android:textAllCaps="false"
             android:textColor="@android:color/white" />
 
     </LinearLayout>
-</com.google.android.material.card.MaterialCardView>
+</FrameLayout>

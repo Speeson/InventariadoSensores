@@ -224,7 +224,7 @@ object NetworkModule {
                                 activity = activity,
                                 title = title,
                                 details = message,
-                                animationRes = R.raw.sync
+                                animationRes = R.raw.correct_create
                             )
                         } else if (title == "Pendientes con error" || title == "Sincronización offline parcial") {
                             CreateUiFeedback.showErrorPopup(

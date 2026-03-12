@@ -1,10 +1,10 @@
 package com.example.inventoryapp.ui.thresholds
 
+import android.content.res.Configuration
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.TextView
 import androidx.appcompat.widget.TooltipCompat
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
@@ -55,6 +55,14 @@ class ThresholdListAdapter(
         holder.binding.ivWarning.visibility =
             if (isOffline) View.VISIBLE else View.GONE
         holder.binding.ivWarning.setImageResource(R.drawable.sync)
+        val isDarkMode = (holder.itemView.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        if (isOffline && isDarkMode) {
+            holder.binding.ivWarning.setColorFilter(Color.WHITE)
+            holder.binding.ivWarning.alpha = 0.95f
+        } else {
+            holder.binding.ivWarning.clearColorFilter()
+            holder.binding.ivWarning.alpha = 1f
+        }
         val pendingTooltip = "Guardado en modo offline, pendiente de sincronizacion"
         TooltipCompat.setTooltipText(holder.binding.ivWarning, if (isOffline) pendingTooltip else null)
         holder.binding.ivWarning.contentDescription = if (isOffline) pendingTooltip else "Pendiente"

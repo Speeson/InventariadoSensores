@@ -47,7 +47,7 @@ class LoginActivity : AppCompatActivity() {
         if (alreadyNotified) {
             UiNotifier.showBlockingTimed(
                 this@LoginActivity,
-                "SesiÃ³n caducada. Inicia sesiÃ³n.",
+                "Sesión caducada. Inicia sesión.",
                 R.drawable.expired,
                 timeoutMs = 20_000L
             )
@@ -58,7 +58,7 @@ class LoginActivity : AppCompatActivity() {
             if (!alreadyNotified) {
                 UiNotifier.showBlockingTimed(
                     this@LoginActivity,
-                    "SesiÃ³n caducada. Inicia sesiÃ³n.",
+                    "Sesión caducada. Inicia sesión.",
                     R.drawable.expired,
                     timeoutMs = 20_000L
                 )
@@ -158,13 +158,13 @@ class LoginActivity : AppCompatActivity() {
                     FcmTokenManager.sync(this@LoginActivity)
                     FcmTokenManager.sync(this@LoginActivity)
 
-                    UiNotifier.show(this@LoginActivity, "Â¡Bienvenido!")
+                    UiNotifier.show(this@LoginActivity, "¡Bienvenido!")
 
                     persistEmailIfNeeded(user)
                     navigateToHome(Intent(this@LoginActivity, HomeActivity::class.java))
                 } else {
                     val errorMsg = when (response.code()) {
-                        401 -> "Usuario o contraseÃ±a incorrectos"
+                        401 -> "Usuario o contraseña incorrectos"
                         else -> "Error en el servidor: ${response.code()}"
                     }
                     UiNotifier.show(this@LoginActivity, errorMsg)
@@ -190,10 +190,10 @@ class LoginActivity : AppCompatActivity() {
                 } else {
                     session.clearToken()
                     clearCachedUiRole()
-                    UiNotifier.showBlockingTimed(this@LoginActivity, "SesiÃ³n caducada. Inicia sesiÃ³n.", R.drawable.expired)
+                    UiNotifier.showBlockingTimed(this@LoginActivity, "Sesión caducada. Inicia sesión.", R.drawable.expired)
                 }
             } catch (e: Exception) {
-                UiNotifier.showBlockingTimed(this@LoginActivity, "Sin conexiÃ³n. No se puede validar la sesiÃ³n.", R.drawable.offline)
+                UiNotifier.showBlockingTimed(this@LoginActivity, "Sin conexión. No se puede validar la sesión.", R.drawable.offline)
             } finally {
                 setUiEnabled(true)
                 setLoading(false)
@@ -391,5 +391,4 @@ class LoginActivity : AppCompatActivity() {
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
     }
 }
-
 

@@ -43,7 +43,6 @@ import com.example.inventoryapp.ui.scan.ScanActivity
 import com.example.inventoryapp.ui.stock.StockActivity
 import com.example.inventoryapp.ui.thresholds.ThresholdsActivity
 import com.google.android.material.bottomappbar.BottomAppBar
-import com.google.android.material.color.MaterialColors
 import com.google.android.material.navigation.NavigationView
 import com.google.android.material.shape.MaterialShapeDrawable
 import kotlinx.coroutines.launch
@@ -413,9 +412,11 @@ object LiquidTopNav {
         }
 
         btnTopRight.setOnClickListener {
-            setTopActionSelection(host, R.id.btnTopMidRight)
             collapseCenterMenu(host, dismissOverlay, animate = true)
-            if (activity !is AuditActivity) {
+            if (activity is AuditActivity) {
+                setTopActionSelection(host, R.id.btnTopMidRight)
+            } else {
+                setTopActionSelection(host, null)
                 activity.startActivity(Intent(activity, AuditActivity::class.java))
             }
         }
@@ -623,12 +624,7 @@ object LiquidTopNav {
     }
 
     private fun applySystemStatusComponentIconTint(activity: AppCompatActivity, view: View) {
-        val prefs = activity.getSharedPreferences(PREFS_UI, Context.MODE_PRIVATE)
-        val isDark = prefs.getBoolean("dark_mode", false)
-        val tint = if (isDark) Color.WHITE else MaterialColors.getColor(
-            view,
-            com.google.android.material.R.attr.colorOnSurface
-        )
+        val tint = Color.parseColor("#EAF3FF")
         val ids = intArrayOf(
             R.id.ivApiIcon,
             R.id.ivDbIcon,
@@ -647,7 +643,11 @@ object LiquidTopNav {
         setLiquidIcon(host.findViewById(R.id.btnTopMidRight), R.drawable.glass_audit)
         setLiquidIcon(host.findViewById(R.id.btnAlertsQuick), R.drawable.glass_noti)
         setLiquidIcon(host.findViewById<ImageView>(R.id.btnTopCenterMain), R.drawable.glass_add)
-        val createIcon = if (activity is ImportsActivity) R.drawable.glass_import else R.drawable.glass_add
+        val createIcon = when (activity) {
+            is ImportsActivity -> R.drawable.glass_import
+            is AuditActivity -> R.drawable.export
+            else -> R.drawable.glass_add
+        }
         val filterIcon = if (activity is ImportsActivity) R.drawable.glass_import_trans else R.drawable.glass_filter
         setLiquidIcon(host.findViewById(R.id.btnTopCenterActionOne), createIcon)
         host.findViewById<ImageButton>(R.id.btnTopCenterClose)?.let { setDialogCloseButtonStyle(it) }
@@ -672,6 +672,7 @@ object LiquidTopNav {
             is ReportsActivity -> TopActionsCapability(createEnabled = false, filterEnabled = false, screenLabel = "Reportes")
             is ThresholdsActivity -> TopActionsCapability(createEnabled = true, filterEnabled = true, screenLabel = "Umbrales")
             is ImportsActivity -> TopActionsCapability(createEnabled = true, filterEnabled = true, screenLabel = "Importar CSV")
+            is AuditActivity -> TopActionsCapability(createEnabled = true, filterEnabled = true, screenLabel = "Auditoria")
             else -> TopActionsCapability(createEnabled = false, filterEnabled = false, screenLabel = activity.javaClass.simpleName)
         }
     }
@@ -1073,6 +1074,7 @@ object LiquidTopNav {
     private fun currentTopActionFor(activity: AppCompatActivity): Int? {
         return when (activity) {
             is AlertsActivity -> R.id.btnAlertsQuick
+            is AuditActivity -> R.id.btnTopMidRight
             else -> null
         }
     }
@@ -1123,6 +1125,7 @@ object LiquidTopNav {
         button.scaleType = ImageView.ScaleType.CENTER_INSIDE
     }
 }
+
 
 
 

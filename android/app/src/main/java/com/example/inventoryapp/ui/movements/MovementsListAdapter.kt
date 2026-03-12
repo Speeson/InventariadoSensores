@@ -1,5 +1,7 @@
 package com.example.inventoryapp.ui.movements
 
+import android.content.res.Configuration
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.appcompat.widget.TooltipCompat
@@ -57,6 +59,14 @@ class MovementsListAdapter : RecyclerView.Adapter<MovementsListAdapter.VH>() {
         holder.binding.ivWarning.visibility =
             if (row.isPending) android.view.View.VISIBLE else android.view.View.GONE
         holder.binding.ivWarning.setImageResource(R.drawable.sync)
+        val isDarkMode = (holder.itemView.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        if (row.isPending && isDarkMode) {
+            holder.binding.ivWarning.setColorFilter(Color.WHITE)
+            holder.binding.ivWarning.alpha = 0.95f
+        } else {
+            holder.binding.ivWarning.clearColorFilter()
+            holder.binding.ivWarning.alpha = 1f
+        }
         val pendingTooltip = "Guardado en modo offline, pendiente de sincronizacion"
         TooltipCompat.setTooltipText(holder.binding.ivWarning, if (row.isPending) pendingTooltip else null)
         holder.binding.ivWarning.contentDescription = if (row.isPending) pendingTooltip else "Pendiente"

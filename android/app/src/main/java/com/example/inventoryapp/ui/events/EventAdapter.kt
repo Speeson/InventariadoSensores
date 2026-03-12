@@ -1,5 +1,7 @@
 package com.example.inventoryapp.ui.events
 
+import android.content.res.Configuration
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -52,7 +54,15 @@ class EventAdapter(
         holder.tvDate.text = item.createdAt
         holder.ivPending.visibility = if (item.isPending) View.VISIBLE else View.GONE
         holder.ivPending.setImageResource(R.drawable.sync)
-        val pendingTooltip = item.pendingMessage ?: "Guardado en modo offline, pendiente de sincronización"
+        val isDarkMode = (holder.itemView.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        if (item.isPending && isDarkMode) {
+            holder.ivPending.setColorFilter(Color.WHITE)
+            holder.ivPending.alpha = 0.95f
+        } else {
+            holder.ivPending.clearColorFilter()
+            holder.ivPending.alpha = 1f
+        }
+        val pendingTooltip = item.pendingMessage ?: "Guardado en modo offline, pendiente de sincronizacion"
         TooltipCompat.setTooltipText(holder.ivPending, if (item.isPending) pendingTooltip else null)
         holder.ivPending.contentDescription = if (item.isPending) pendingTooltip else "Pendiente"
         val offlineColor = ContextCompat.getColor(holder.itemView.context, R.color.offline_text)

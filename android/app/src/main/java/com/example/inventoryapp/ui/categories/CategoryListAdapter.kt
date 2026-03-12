@@ -1,5 +1,7 @@
 package com.example.inventoryapp.ui.categories
 
+import android.content.res.Configuration
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.appcompat.widget.TooltipCompat
@@ -42,9 +44,16 @@ class CategoryListAdapter(
         } else {
             "Guardado en modo offline, pendiente de sincronizacion"
         }
-        holder.binding.ivWarning.setImageResource(
-            if (isPendingDelete) R.drawable.ic_close_red else R.drawable.sync
-        )
+        val warningIconRes = if (isPendingDelete) R.drawable.ic_close_red else R.drawable.sync
+        holder.binding.ivWarning.setImageResource(warningIconRes)
+        val isDarkMode = (holder.itemView.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        if (warningIconRes == R.drawable.sync && isDarkMode) {
+            holder.binding.ivWarning.setColorFilter(Color.WHITE)
+            holder.binding.ivWarning.alpha = 0.95f
+        } else {
+            holder.binding.ivWarning.clearColorFilter()
+            holder.binding.ivWarning.alpha = 1f
+        }
         TooltipCompat.setTooltipText(holder.binding.ivWarning, if (isOffline || isPendingDelete) pendingTooltip else null)
         holder.binding.ivWarning.contentDescription = if (isOffline || isPendingDelete) pendingTooltip else "Pendiente"
         val offlineColor = ContextCompat.getColor(holder.itemView.context, R.color.offline_text)
