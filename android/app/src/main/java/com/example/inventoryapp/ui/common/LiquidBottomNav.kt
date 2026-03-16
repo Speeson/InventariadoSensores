@@ -63,6 +63,7 @@ import com.example.inventoryapp.ui.rotation.RotationActivity
 import com.example.inventoryapp.ui.scan.ScanActivity
 import com.example.inventoryapp.ui.stock.StockActivity
 import com.example.inventoryapp.ui.thresholds.ThresholdsActivity
+import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.google.android.material.bottomappbar.BottomAppBar
 import com.google.android.material.shape.MaterialShapeDrawable
 import com.google.mlkit.vision.barcode.BarcodeScanning
@@ -296,7 +297,7 @@ object LiquidBottomNav {
             collapseCenterMenu(nav, true)
             collapseProfileMenu(nav, true)
             setActiveTab(nav, NavTab.ASSISTANT)
-            showAssistantPlaceholder(activity, nav)
+            open(activity, AlertsActivity::class.java)
         }
         nav.findViewById<ImageButton>(R.id.btnLiquidProfile).setOnClickListener {
             collapseCenterMenu(nav, true)
@@ -451,7 +452,7 @@ object LiquidBottomNav {
         setLiquidIcon(home, R.drawable.glass_home)
         setLiquidIcon(theme, R.drawable.glass_search)
         setLiquidIcon(center, R.drawable.glass_add)
-        setLiquidIcon(search, R.drawable.glass_cloud)
+        setLiquidIcon(search, R.drawable.glass_actividades)
         setLiquidIcon(profile, R.drawable.glass_user)
 
         applyBottomIconOffsets(nav, home, theme, search, profile)
@@ -495,6 +496,7 @@ object LiquidBottomNav {
         return when (activity) {
             is HomeActivity -> NavTab.HOME
             is ScanActivity -> NavTab.SCAN
+            is AlertsActivity -> NavTab.ASSISTANT
             else -> NavTab.NONE
         }
     }
@@ -1091,7 +1093,6 @@ class CameraPermissionRequestFragment : Fragment() {
         }
     }
 }
-
 
 
 

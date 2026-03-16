@@ -44,7 +44,7 @@ import com.example.inventoryapp.ui.reports.ReportsActivity
 import kotlinx.coroutines.launch
 import com.example.inventoryapp.ui.categories.CategoriesActivity
 import com.example.inventoryapp.ui.thresholds.ThresholdsActivity
-import com.example.inventoryapp.ui.alerts.AlertsActivity
+import com.example.inventoryapp.ui.alerts.UrgentAlertsPopup
 import com.example.inventoryapp.ui.audit.AuditActivity
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
 import com.example.inventoryapp.ui.common.CreateUiFeedback
@@ -331,8 +331,9 @@ class HomeActivity : AppCompatActivity() {
 
         btnTopAlerts?.setOnClickListener {
             setTopButtonSelection(R.id.btnAlertsQuick)
-            startActivity(Intent(this, AlertsActivity::class.java))
-            tvTopAlertsBadge?.visibility = View.GONE
+            UrgentAlertsPopup.show(this) {
+                setTopButtonSelection(null)
+            }
         }
 
         binding.drawerLayout.addDrawerListener(object : DrawerLayout.SimpleDrawerListener() {

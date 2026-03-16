@@ -29,7 +29,7 @@ import com.example.inventoryapp.R
 import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.model.LocationResponseDto
-import com.example.inventoryapp.ui.alerts.AlertsActivity
+import com.example.inventoryapp.ui.alerts.UrgentAlertsPopup
 import com.example.inventoryapp.ui.audit.AuditActivity
 import com.example.inventoryapp.ui.auth.LoginActivity
 import com.example.inventoryapp.ui.categories.CategoriesActivity
@@ -424,8 +424,8 @@ object LiquidTopNav {
         btnAlerts.setOnClickListener {
             setTopActionSelection(host, R.id.btnAlertsQuick)
             collapseCenterMenu(host, dismissOverlay, animate = true)
-            if (activity !is AlertsActivity) {
-                activity.startActivity(Intent(activity, AlertsActivity::class.java))
+            UrgentAlertsPopup.show(activity) {
+                setTopActionSelection(host, null)
             }
         }
 
@@ -1073,7 +1073,6 @@ object LiquidTopNav {
 
     private fun currentTopActionFor(activity: AppCompatActivity): Int? {
         return when (activity) {
-            is AlertsActivity -> R.id.btnAlertsQuick
             is AuditActivity -> R.id.btnTopMidRight
             else -> null
         }
