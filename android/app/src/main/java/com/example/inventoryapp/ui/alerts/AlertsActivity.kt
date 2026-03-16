@@ -25,7 +25,7 @@ class AlertsActivity : AppCompatActivity() {
         binding.viewPager.adapter = adapter
 
         TabLayoutMediator(binding.tabLayout, binding.viewPager) { tab, position ->
-            tab.text = if (position == 0) "Alertas" else "Alertas Offline"
+            tab.text = if (position == 0) "Alertas" else "Sincronizacion"
         }.attach()
     }
 

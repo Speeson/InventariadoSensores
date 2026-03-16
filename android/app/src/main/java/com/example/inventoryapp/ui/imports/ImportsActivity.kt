@@ -7,10 +7,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.example.inventoryapp.R
-import com.example.inventoryapp.data.remote.NetworkModule
-import com.example.inventoryapp.data.remote.model.AlertStatusDto
 import com.example.inventoryapp.databinding.ActivityImportsBinding
 import com.example.inventoryapp.ui.alerts.AlertsActivity
+import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 import com.example.inventoryapp.ui.common.NetworkStatusBar
 import com.example.inventoryapp.ui.common.GradientIconUtil
 import com.example.inventoryapp.ui.common.TopCenterActionHost
@@ -127,23 +126,7 @@ class ImportsActivity : AppCompatActivity(), TopCenterActionHost {
     }
 
     private suspend fun updateAlertsBadge() {
-        try {
-            val res = NetworkModule.api.listAlerts(status = AlertStatusDto.PENDING, limit = 1, offset = 0)
-            if (!res.isSuccessful || res.body() == null) {
-                binding.tvAlertsBadge.visibility = android.view.View.GONE
-                return
-            }
-            val total = res.body()!!.total
-            if (total > 0) {
-                val label = if (total > 99) "99+" else total.toString()
-                binding.tvAlertsBadge.text = label
-                binding.tvAlertsBadge.visibility = android.view.View.VISIBLE
-            } else {
-                binding.tvAlertsBadge.visibility = android.view.View.GONE
-            }
-        } catch (_: Exception) {
-            binding.tvAlertsBadge.visibility = android.view.View.GONE
-        }
+        AlertsBadgeUtil.refresh(lifecycleScope, binding.tvAlertsBadge)
     }
 
     private fun applyImportsTitleGradient() {

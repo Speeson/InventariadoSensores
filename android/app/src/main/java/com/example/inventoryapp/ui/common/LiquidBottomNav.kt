@@ -296,8 +296,8 @@ object LiquidBottomNav {
         nav.findViewById<ImageButton>(R.id.btnLiquidSearch).setOnClickListener {
             collapseCenterMenu(nav, true)
             collapseProfileMenu(nav, true)
-            setActiveTab(nav, NavTab.ASSISTANT)
-            open(activity, AlertsActivity::class.java)
+            setActiveTab(nav, NavTab.NONE)
+            LiquidTopNav.showLocationSelector(activity, null)
         }
         nav.findViewById<ImageButton>(R.id.btnLiquidProfile).setOnClickListener {
             collapseCenterMenu(nav, true)
@@ -452,7 +452,7 @@ object LiquidBottomNav {
         setLiquidIcon(home, R.drawable.glass_home)
         setLiquidIcon(theme, R.drawable.glass_search)
         setLiquidIcon(center, R.drawable.glass_add)
-        setLiquidIcon(search, R.drawable.glass_actividades)
+        setLiquidIcon(search, R.drawable.glass_location)
         setLiquidIcon(profile, R.drawable.glass_user)
 
         applyBottomIconOffsets(nav, home, theme, search, profile)
@@ -496,7 +496,6 @@ object LiquidBottomNav {
         return when (activity) {
             is HomeActivity -> NavTab.HOME
             is ScanActivity -> NavTab.SCAN
-            is AlertsActivity -> NavTab.ASSISTANT
             else -> NavTab.NONE
         }
     }
@@ -1093,7 +1092,6 @@ class CameraPermissionRequestFragment : Fragment() {
         }
     }
 }
-
 
 
 

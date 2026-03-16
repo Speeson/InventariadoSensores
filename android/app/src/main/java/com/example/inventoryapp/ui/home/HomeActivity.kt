@@ -45,13 +45,14 @@ import kotlinx.coroutines.launch
 import com.example.inventoryapp.ui.categories.CategoriesActivity
 import com.example.inventoryapp.ui.thresholds.ThresholdsActivity
 import com.example.inventoryapp.ui.alerts.UrgentAlertsPopup
+import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.audit.AuditActivity
 import com.example.inventoryapp.ui.common.ApiErrorFormatter
+import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 import com.example.inventoryapp.ui.common.CreateUiFeedback
 import com.example.inventoryapp.ui.common.LiquidTopNav
 import com.example.inventoryapp.ui.common.TopNavShared
 import com.example.inventoryapp.ui.common.UiNotifier
-import com.example.inventoryapp.data.remote.model.AlertStatusDto
 import com.example.inventoryapp.ui.imports.ImportsActivity
 import com.google.android.material.bottomappbar.BottomAppBar
 import com.google.android.material.card.MaterialCardView
@@ -205,6 +206,9 @@ class HomeActivity : AppCompatActivity() {
         if (selectedTopButtonId == R.id.btnAlertsQuick) {
             selectedTopButtonId = null
         }
+        if (selectedTopButtonId == R.id.btnTopMidLeft) {
+            selectedTopButtonId = null
+        }
         if (selectedTopButtonId == R.id.btnTopMidRight) {
             selectedTopButtonId = null
         }
@@ -279,10 +283,10 @@ class HomeActivity : AppCompatActivity() {
         )
         btnTopAlerts?.let { setLiquidImage(it, R.drawable.glass_noti) }
         findViewById<ImageButton>(R.id.btnTopMidLeft)?.let {
-            setLiquidImage(it, R.drawable.glass_location)
+            setLiquidImage(it, R.drawable.glass_audit)
         }
         findViewById<ImageButton>(R.id.btnTopMidRight)?.let {
-            setLiquidImage(it, R.drawable.glass_audit)
+            setLiquidImage(it, R.drawable.glass_actividades)
         }
         findViewById<ImageView>(R.id.btnTopCenterMain)?.let {
             setLiquidImage(it, R.drawable.glass_add)
@@ -314,19 +318,14 @@ class HomeActivity : AppCompatActivity() {
         }
         findViewById<ImageButton>(R.id.btnTopMidLeft)?.setOnClickListener {
             setTopButtonSelection(R.id.btnTopMidLeft)
-            LiquidTopNav.showLocationSelector(
-                activity = this,
-                button = findViewById(R.id.btnTopMidLeft),
-                onDismiss = { setTopButtonSelection(null) }
-            )
+            startActivity(Intent(this, AuditActivity::class.java))
         }
         findViewById<ImageButton>(R.id.btnTopMidLeft)?.setOnLongClickListener {
-            LiquidTopNav.showLocationInfo(this)
-            true
+            false
         }
         findViewById<ImageButton>(R.id.btnTopMidRight)?.setOnClickListener {
             setTopButtonSelection(R.id.btnTopMidRight)
-            startActivity(Intent(this, AuditActivity::class.java))
+            startActivity(Intent(this, AlertsActivity::class.java))
         }
 
         btnTopAlerts?.setOnClickListener {
@@ -390,7 +389,7 @@ class HomeActivity : AppCompatActivity() {
 
     private fun updateLocationSelectorHint() {
         val currentCode = prefs.getString("selected_location_code", null)
-        findViewById<ImageButton>(R.id.btnTopMidLeft)?.contentDescription = if (currentCode.isNullOrBlank()) {
+        findViewById<ImageButton>(R.id.btnLiquidSearch)?.contentDescription = if (currentCode.isNullOrBlank()) {
             "Seleccionar ubicacion"
         } else {
             "Ubicacion activa: $currentCode"
@@ -870,23 +869,7 @@ class HomeActivity : AppCompatActivity() {
 
 
     private suspend fun updateAlertsBadge() {
-        try {
-            val res = NetworkModule.api.listAlerts(status = AlertStatusDto.PENDING, limit = 1, offset = 0)
-            if (!res.isSuccessful || res.body() == null) {
-                tvTopAlertsBadge?.visibility = android.view.View.GONE
-                return
-            }
-            val total = res.body()!!.total
-            if (total > 0) {
-                val label = if (total > 99) "99+" else total.toString()
-                tvTopAlertsBadge?.text = label
-                tvTopAlertsBadge?.visibility = android.view.View.VISIBLE
-            } else {
-                tvTopAlertsBadge?.visibility = android.view.View.GONE
-            }
-        } catch (_: Exception) {
-            tvTopAlertsBadge?.visibility = android.view.View.GONE
-        }
+        tvTopAlertsBadge?.let { AlertsBadgeUtil.refresh(lifecycleScope, it) }
     }
 
     private fun logout() {

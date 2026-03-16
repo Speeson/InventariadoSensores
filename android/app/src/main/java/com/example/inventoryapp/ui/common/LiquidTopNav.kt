@@ -29,6 +29,7 @@ import com.example.inventoryapp.R
 import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.data.remote.model.LocationResponseDto
+import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.alerts.UrgentAlertsPopup
 import com.example.inventoryapp.ui.audit.AuditActivity
 import com.example.inventoryapp.ui.auth.LoginActivity
@@ -101,7 +102,7 @@ object LiquidTopNav {
             applyIconStyle(host, activity)
             setTopActionSelection(host, currentTopActionFor(activity))
             updateStatusTint(host)
-            updateLocationSelectorHint(activity, host.findViewById(R.id.btnTopMidLeft))
+            updateLocationSelectorHint(activity, null)
             AlertsBadgeUtil.refresh(activity.lifecycleScope, host.findViewById(R.id.tvAlertsBadge))
             setupDrawerMenu(drawerState)
             collapseCenterMenu(host, dismissOverlay, animate = false)
@@ -404,20 +405,26 @@ object LiquidTopNav {
         btnLocation.setOnClickListener {
             setTopActionSelection(host, R.id.btnTopMidLeft)
             collapseCenterMenu(host, dismissOverlay, animate = true)
-            showLocationSelectorDialog(activity, btnLocation)
+            if (activity is AuditActivity) {
+                showLocationSelectorDialog(activity, btnLocation)
+            } else {
+                activity.startActivity(Intent(activity, AuditActivity::class.java))
+            }
         }
         btnLocation.setOnLongClickListener {
-            showLocationInfoDialogToast(activity)
+            if (activity is AuditActivity) {
+                showLocationInfoDialogToast(activity)
+            }
             true
         }
 
         btnTopRight.setOnClickListener {
             collapseCenterMenu(host, dismissOverlay, animate = true)
-            if (activity is AuditActivity) {
+            if (activity is AlertsActivity) {
                 setTopActionSelection(host, R.id.btnTopMidRight)
             } else {
                 setTopActionSelection(host, null)
-                activity.startActivity(Intent(activity, AuditActivity::class.java))
+                activity.startActivity(Intent(activity, AlertsActivity::class.java))
             }
         }
 
@@ -639,8 +646,8 @@ object LiquidTopNav {
     private fun applyIconStyle(host: View, activity: AppCompatActivity) {
         val capability = topActionsCapability(activity)
         setLiquidIcon(host.findViewById(R.id.btnMenu), R.drawable.glass_back)
-        setLiquidIcon(host.findViewById(R.id.btnTopMidLeft), R.drawable.glass_location)
-        setLiquidIcon(host.findViewById(R.id.btnTopMidRight), R.drawable.glass_audit)
+        setLiquidIcon(host.findViewById(R.id.btnTopMidLeft), R.drawable.glass_audit)
+        setLiquidIcon(host.findViewById(R.id.btnTopMidRight), R.drawable.glass_actividades)
         setLiquidIcon(host.findViewById(R.id.btnAlertsQuick), R.drawable.glass_noti)
         setLiquidIcon(host.findViewById<ImageView>(R.id.btnTopCenterMain), R.drawable.glass_add)
         val createIcon = when (activity) {
@@ -1073,7 +1080,8 @@ object LiquidTopNav {
 
     private fun currentTopActionFor(activity: AppCompatActivity): Int? {
         return when (activity) {
-            is AuditActivity -> R.id.btnTopMidRight
+            is AuditActivity -> R.id.btnTopMidLeft
+            is AlertsActivity -> R.id.btnTopMidRight
             else -> null
         }
     }
