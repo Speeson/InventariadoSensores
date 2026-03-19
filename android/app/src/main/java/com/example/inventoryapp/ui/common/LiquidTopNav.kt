@@ -33,6 +33,7 @@ import com.example.inventoryapp.ui.alerts.AlertsActivity
 import com.example.inventoryapp.ui.alerts.UrgentAlertsPopup
 import com.example.inventoryapp.ui.audit.AuditActivity
 import com.example.inventoryapp.ui.auth.LoginActivity
+import com.example.inventoryapp.ui.auth.LoginTestActivity
 import com.example.inventoryapp.ui.categories.CategoriesActivity
 import com.example.inventoryapp.ui.events.EventsActivity
 import com.example.inventoryapp.ui.imports.ImportsActivity
@@ -78,6 +79,7 @@ object LiquidTopNav {
 
     private val excluded = setOf(
         "com.example.inventoryapp.ui.auth.LoginActivity",
+        "com.example.inventoryapp.ui.auth.LoginTestActivity",
         "com.example.inventoryapp.ui.home.HomeActivity",
     )
 
@@ -505,7 +507,8 @@ object LiquidTopNav {
         val itemIds = intArrayOf(
             R.id.nav_theme,
             R.id.nav_system_status,
-            R.id.nav_offline
+            R.id.nav_offline,
+            R.id.nav_login_test
         )
         itemIds.forEach { id ->
             navView.menu.findItem(id)?.setOnMenuItemClickListener {
@@ -539,6 +542,9 @@ object LiquidTopNav {
                     "Modo debug offline desactivado"
                 }
                 UiNotifier.show(activity, msg)
+            }
+            R.id.nav_login_test -> {
+                activity.startActivity(Intent(activity, LoginTestActivity::class.java))
             }
         }
         if (shouldCloseDrawer) {

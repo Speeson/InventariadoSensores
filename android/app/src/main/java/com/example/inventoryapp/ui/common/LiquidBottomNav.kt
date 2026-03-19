@@ -103,6 +103,7 @@ object LiquidBottomNav {
 
     private val excluded = setOf(
         "com.example.inventoryapp.ui.auth.LoginActivity",
+        "com.example.inventoryapp.ui.auth.LoginTestActivity",
     )
 
     private val quickTargets = listOf(
@@ -1092,7 +1093,6 @@ class CameraPermissionRequestFragment : Fragment() {
         }
     }
 }
-
 
 
 

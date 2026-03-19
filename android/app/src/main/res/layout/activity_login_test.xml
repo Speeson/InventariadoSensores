@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/loginTestRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black">
+
+    <eightbitlab.com.blurview.BlurTarget
+        android:id="@+id/blurTarget"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <ImageView
+            android:id="@+id/ivLoginTestBackground"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:adjustViewBounds="false"
+            android:contentDescription="@null"
+            android:scaleType="centerCrop"
+            android:src="@drawable/iotrack_bg" />
+
+    </eightbitlab.com.blurview.BlurTarget>
+
+    <eightbitlab.com.blurview.BlurView
+        android:id="@+id/layoutLoginPanel"
+        android:layout_width="380dp"
+        android:layout_height="560dp"
+        android:layout_gravity="center"
+        android:background="@drawable/bg_login_panel_clip"
+        android:clipToOutline="true"
+        android:elevation="18dp"
+        android:outlineAmbientShadowColor="#7A0E1224"
+        android:outlineSpotShadowColor="#A8BFEFFF">
+
+        <View
+            android:id="@+id/viewLoginPanelBase"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_login_panel_glass" />
+
+        <View
+            android:id="@+id/viewLoginPanelGloss"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:alpha="0.62"
+            android:background="@drawable/bg_login_panel_gloss" />
+
+        <LinearLayout
+            android:id="@+id/layoutLoginPanelContent"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:paddingStart="34dp"
+            android:paddingTop="44dp"
+            android:paddingEnd="34dp"
+            android:paddingBottom="34dp">
+
+            <TextView
+                android:id="@+id/tvLoginTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:shadowColor="#66FFFFFF"
+                android:shadowDx="0"
+                android:shadowDy="0"
+                android:shadowRadius="18"
+                android:text="Bienvenido"
+                android:textColor="#F4FBFF"
+                android:textSize="34sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvLoginSubtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:shadowColor="#44000000"
+                android:shadowDx="0"
+                android:shadowDy="1"
+                android:shadowRadius="6"
+                android:text="Accede con tus credenciales"
+                android:textColor="#F0F7FF"
+                android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/tvLoginTestEmailLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="38dp"
+                android:layout_marginStart="12dp"
+                android:text="Email"
+                android:textColor="#F2F8FF"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginTop="8dp"
+                app:cardBackgroundColor="#2AF8FCFF"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="0dp"
+                app:strokeColor="#C8FFFFFF"
+                app:strokeWidth="1.2dp">
+
+                <EditText
+                    android:id="@+id/etLoginTestEmail"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_login_input_glass"
+                    android:gravity="center_vertical"
+                    android:hint="Introduce tu email"
+                    android:inputType="textEmailAddress"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="18dp"
+                    android:singleLine="true"
+                    android:textColor="@android:color/white"
+                    android:textColorHint="#E5F1FF"
+                    android:textSize="15sp" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:id="@+id/tvLoginTestPasswordLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:layout_marginStart="12dp"
+                android:text="Contrasena"
+                android:textColor="#F2F8FF"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginTop="8dp"
+                app:cardBackgroundColor="#2AF8FCFF"
+                app:cardCornerRadius="18dp"
+                app:cardElevation="0dp"
+                app:strokeColor="#C8FFFFFF"
+                app:strokeWidth="1.2dp">
+
+                <EditText
+                    android:id="@+id/etLoginTestPassword"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_login_input_glass"
+                    android:gravity="center_vertical"
+                    android:hint="Introduce tu contrasena"
+                    android:inputType="textPassword"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="18dp"
+                    android:singleLine="true"
+                    android:textColor="@android:color/white"
+                    android:textColorHint="#E5F1FF"
+                    android:textSize="15sp" />
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+
+    </eightbitlab.com.blurview.BlurView>
+
+</FrameLayout>
