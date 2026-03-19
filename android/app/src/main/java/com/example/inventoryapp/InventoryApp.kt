@@ -2,6 +2,7 @@ package com.example.inventoryapp
 
 import android.app.Activity
 import android.app.Application
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -9,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.view.WindowCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
@@ -16,6 +18,7 @@ import com.example.inventoryapp.data.local.OfflineSyncScheduler
 import com.example.inventoryapp.data.remote.AlertsWebSocketManager
 import com.example.inventoryapp.data.remote.FcmTokenManager
 import com.example.inventoryapp.data.remote.NetworkModule
+import com.example.inventoryapp.ui.auth.LoginActivity
 import com.example.inventoryapp.ui.common.ActivityTracker
 import com.example.inventoryapp.ui.common.AlertsBadgeUtil
 import com.example.inventoryapp.ui.common.LiquidBottomNav
@@ -45,6 +48,7 @@ class InventoryApp : Application() {
             override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
                 ActivityTracker.setCurrent(activity)
                 (activity as? AppCompatActivity)?.let {
+                    applyTransparentStatusBar(it)
                     kotlin.runCatching { LiquidBottomNav.install(it) }
                     kotlin.runCatching { LiquidTopNav.install(it) }
                     diagState(it, "onCreated_afterInstall")
@@ -145,5 +149,11 @@ class InventoryApp : Application() {
 
     private fun scheduleOfflineSync() {
         OfflineSyncScheduler.schedulePeriodic(this)
+    }
+
+    private fun applyTransparentStatusBar(activity: AppCompatActivity) {
+        if (activity is LoginActivity) return
+        WindowCompat.setDecorFitsSystemWindows(activity.window, true)
+        activity.window.statusBarColor = Color.TRANSPARENT
     }
 }
