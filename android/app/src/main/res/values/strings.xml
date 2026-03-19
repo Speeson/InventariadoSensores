@@ -4,14 +4,35 @@
     <string name="login_test_subtitle">Accede con tus credenciales</string>
     <string name="login_test_email_label">Email</string>
     <string name="login_test_email_hint">Introduce tu email</string>
-    <string name="login_test_password_label">Contraseña</string>
-    <string name="login_test_password_hint">Introduce tu contraseña</string>
-    <string name="login_test_toggle_password">Mostrar u ocultar contraseña</string>
+    <string name="login_test_password_label">Contrase&#241;a</string>
+    <string name="login_test_password_hint">Introduce tu contrase&#241;a</string>
+    <string name="login_test_toggle_password">Mostrar u ocultar contrase&#241;a</string>
     <string name="login_test_remember_email">Recordar email</string>
-    <string name="login_test_forgot_password">¿Has olvidado tu contraseña?</string>
+    <string name="login_test_forgot_password">&#191;Has olvidado tu contrase&#241;a?</string>
     <string name="login_test_login_action">Login</string>
     <string name="login_test_alt_access">O accede mediante</string>
-    <string name="login_test_biometric">Accede mediante biometría</string>
-    <string name="login_test_signup_prompt">¿Aún no te has registrado?</string>
+    <string name="login_test_biometric">Accede mediante biometr&#237;a</string>
+    <string name="login_test_signup_prompt">&#191;A&#250;n no te has registrado?</string>
     <string name="login_test_signup_action">Crear cuenta</string>
+    <string name="register_test_title">Reg&#237;strate</string>
+    <string name="register_test_subtitle">Introduce los siguientes datos</string>
+    <string name="register_test_username_label">Username</string>
+    <string name="register_test_username_hint">Introduce tu username</string>
+    <string name="register_test_phone_label">Tel&#233;fono</string>
+    <string name="register_test_phone_prefix_hint">34</string>
+    <string name="register_test_phone_hint">Introduce tu tel&#233;fono</string>
+    <string name="register_test_age_label">Edad</string>
+    <string name="register_test_age_hint">Edad</string>
+    <string name="register_test_gender_label">Sexo</string>
+    <string name="register_test_gender_hint">Selecciona tu sexo</string>
+    <string name="register_test_confirm_password_label">Confirmar contrase&#241;a</string>
+    <string name="register_test_confirm_password_hint">Confirma tu contrase&#241;a</string>
+    <string name="register_test_create_action">Crear cuenta</string>
+    <string name="register_test_back_action">Volver al login</string>
+    <string-array name="register_test_gender_options">
+        <item>Masculino</item>
+        <item>Femenino</item>
+        <item>No binario</item>
+        <item>Prefiero no decirlo</item>
+    </string-array>
 </resources>

@@ -1,11 +1,14 @@
 package com.example.inventoryapp.ui.auth
 
+import android.animation.ValueAnimator
 import android.graphics.Color
 import android.os.Bundle
 import android.os.Build
 import android.view.MotionEvent
 import android.view.View
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.inputmethod.InputMethodManager
+import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -18,6 +21,9 @@ import com.example.inventoryapp.databinding.ActivityLoginTestBinding
 class LoginTestActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityLoginTestBinding
+    private var loginPanelHeightPx = 0
+    private var registerPanelHeightPx = 0
+    private var isRegisterVisible = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,15 +31,16 @@ class LoginTestActivity : AppCompatActivity() {
         window.statusBarColor = Color.TRANSPARENT
         binding = ActivityLoginTestBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        loginPanelHeightPx = dpToPx(610)
+        registerPanelHeightPx = dpToPx(800)
 
         setupBackdropBlur()
-        setupHintOnFocus(binding.etLoginTestEmail)
-        setupHintOnFocus(binding.etLoginTestPassword)
-        setupKeyboardFocus(binding.etLoginTestEmail)
-        setupKeyboardFocus(binding.etLoginTestPassword)
+        setupTextFieldBehaviors()
         setupBiometricTransition()
         setupRememberEmailCheckbox()
         setupWhiteCursor()
+        setupRegisterTransition()
+        setupGenderDropdown()
         binding.loginTestRoot.isFocusableInTouchMode = true
     }
 
@@ -47,9 +54,8 @@ class LoginTestActivity : AppCompatActivity() {
             }
 
             val focusedView = currentFocus
-            val touchInsideEmail = isTouchInsideView(ev, binding.etLoginTestEmail)
-            val touchInsidePassword = isTouchInsideView(ev, binding.etLoginTestPassword)
-            if (focusedView is EditText && !touchInsideEmail && !touchInsidePassword) {
+            val touchInsideAnyInput = allInputViews().any { isTouchInsideView(ev, it) }
+            if (focusedView is EditText && !touchInsideAnyInput) {
                 clearInputFocus()
             }
         }
@@ -65,26 +71,26 @@ class LoginTestActivity : AppCompatActivity() {
             .setBlurAutoUpdate(true)
     }
 
-    private fun setupHintOnFocus(view: View) {
-        when (view) {
-            binding.etLoginTestEmail -> {
-                val originalHint = binding.etLoginTestEmail.hint
-                binding.etLoginTestEmail.setOnFocusChangeListener { _, hasFocus ->
-                    binding.etLoginTestEmail.hint = if (hasFocus) "" else originalHint
-                }
-            }
-            binding.etLoginTestPassword -> {
-                val originalHint = binding.etLoginTestPassword.hint
-                binding.etLoginTestPassword.setOnFocusChangeListener { _, hasFocus ->
-                    binding.etLoginTestPassword.hint = if (hasFocus) "" else originalHint
-                }
-            }
+    private fun setupTextFieldBehaviors() {
+        allInputViews().forEach { view ->
+            setupHintOnFocus(view)
+            setupKeyboardFocus(view)
+        }
+    }
+
+    private fun setupHintOnFocus(view: TextView) {
+        val originalHint = view.hint
+        view.setOnFocusChangeListener { _, hasFocus ->
+            view.hint = if (hasFocus) "" else originalHint
         }
     }
 
     private fun setupKeyboardFocus(view: View) {
         view.setOnClickListener {
             view.requestFocus()
+            if (view === binding.actvRegisterGender) {
+                binding.actvRegisterGender.showDropDown()
+            }
             getSystemService<InputMethodManager>()?.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT)
         }
     }
@@ -101,15 +107,40 @@ class LoginTestActivity : AppCompatActivity() {
         binding.btnBiometricAction.getChildAt(0)?.setOnClickListener(openBiometric)
     }
 
+    private fun setupRegisterTransition() {
+        val openRegister = View.OnClickListener { showRegisterState() }
+        val backToLogin = View.OnClickListener { showLoginState() }
+        binding.tvSignupAction.setOnClickListener(openRegister)
+        binding.btnBackToLoginAction.setOnClickListener(backToLogin)
+        binding.btnBackToLoginAction.getChildAt(0)?.setOnClickListener(backToLogin)
+    }
+
     private fun setupRememberEmailCheckbox() {
         CompoundButtonCompat.setButtonTintList(binding.cbRememberEmail, null)
         binding.cbRememberEmail.buttonTintList = null
         binding.cbRememberEmail.compoundDrawablePadding = dpToPx(8)
     }
 
+    private fun setupGenderDropdown() {
+        val adapter = ArrayAdapter.createFromResource(
+            this,
+            R.array.register_test_gender_options,
+            R.layout.item_login_dropdown_option
+        )
+        binding.actvRegisterGender.setAdapter(adapter)
+    }
+
     private fun setupWhiteCursor() {
         forceCursorDrawable(binding.etLoginTestEmail, R.drawable.bg_cursor_white)
         forceCursorDrawable(binding.etLoginTestPassword, R.drawable.bg_cursor_white)
+        forceCursorDrawable(binding.etRegisterUsername, R.drawable.bg_cursor_white)
+        forceCursorDrawable(binding.etRegisterEmail, R.drawable.bg_cursor_white)
+        forceCursorDrawable(binding.etRegisterPhonePrefix, R.drawable.bg_cursor_white)
+        forceCursorDrawable(binding.etRegisterPhone, R.drawable.bg_cursor_white)
+        forceCursorDrawable(binding.etRegisterAge, R.drawable.bg_cursor_white)
+        forceCursorDrawable(binding.actvRegisterGender, R.drawable.bg_cursor_white)
+        forceCursorDrawable(binding.etRegisterPassword, R.drawable.bg_cursor_white)
+        forceCursorDrawable(binding.etRegisterConfirmPassword, R.drawable.bg_cursor_white)
     }
 
     private fun showFingerprintOnly() {
@@ -122,6 +153,55 @@ class LoginTestActivity : AppCompatActivity() {
         binding.layoutFingerprintOnly.visibility = View.GONE
     }
 
+    private fun showRegisterState() {
+        if (isRegisterVisible) return
+        isRegisterVisible = true
+        showPrimaryActions()
+        animatePanelHeight(loginPanelHeightPx, registerPanelHeightPx)
+        binding.layoutRegisterState.alpha = 0f
+        binding.layoutRegisterState.visibility = View.VISIBLE
+        binding.layoutLoginState.animate()
+            .alpha(0f)
+            .setDuration(180)
+            .withEndAction { binding.layoutLoginState.visibility = View.GONE }
+            .start()
+        binding.layoutRegisterState.animate()
+            .alpha(1f)
+            .setDuration(220)
+            .start()
+    }
+
+    private fun showLoginState() {
+        if (!isRegisterVisible) return
+        isRegisterVisible = false
+        clearInputFocus()
+        animatePanelHeight(registerPanelHeightPx, loginPanelHeightPx)
+        binding.layoutLoginState.alpha = 0f
+        binding.layoutLoginState.visibility = View.VISIBLE
+        binding.layoutRegisterState.animate()
+            .alpha(0f)
+            .setDuration(180)
+            .withEndAction { binding.layoutRegisterState.visibility = View.GONE }
+            .start()
+        binding.layoutLoginState.animate()
+            .alpha(1f)
+            .setDuration(220)
+            .start()
+    }
+
+    private fun animatePanelHeight(from: Int, to: Int) {
+        ValueAnimator.ofInt(from, to).apply {
+            duration = 260L
+            interpolator = AccelerateDecelerateInterpolator()
+            addUpdateListener { animator ->
+                binding.layoutLoginPanel.layoutParams = binding.layoutLoginPanel.layoutParams.apply {
+                    height = animator.animatedValue as Int
+                }
+            }
+            start()
+        }
+    }
+
     private fun isTouchInsideView(event: MotionEvent, view: View): Boolean {
         val location = IntArray(2)
         view.getLocationOnScreen(location)
@@ -132,6 +212,19 @@ class LoginTestActivity : AppCompatActivity() {
             y >= location[1] &&
             y <= location[1] + view.height
     }
+
+    private fun allInputViews(): List<TextView> = listOf(
+        binding.etLoginTestEmail,
+        binding.etLoginTestPassword,
+        binding.etRegisterUsername,
+        binding.etRegisterEmail,
+        binding.etRegisterPhonePrefix,
+        binding.etRegisterPhone,
+        binding.etRegisterAge,
+        binding.actvRegisterGender,
+        binding.etRegisterPassword,
+        binding.etRegisterConfirmPassword
+    )
 
     private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).toInt()
 
