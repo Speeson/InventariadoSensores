@@ -1,5 +1,6 @@
 package com.example.inventoryapp.ui.auth
 
+import android.graphics.Color
 import android.os.Bundle
 import android.os.Build
 import android.view.MotionEvent
@@ -8,8 +9,9 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.widget.CompoundButtonCompat
 import androidx.core.content.getSystemService
+import androidx.core.view.WindowCompat
+import androidx.core.widget.CompoundButtonCompat
 import com.example.inventoryapp.R
 import com.example.inventoryapp.databinding.ActivityLoginTestBinding
 
@@ -19,6 +21,8 @@ class LoginTestActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.statusBarColor = Color.TRANSPARENT
         binding = ActivityLoginTestBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -57,7 +61,7 @@ class LoginTestActivity : AppCompatActivity() {
         binding.layoutLoginPanel
             .setupWith(binding.blurTarget)
             .setFrameClearDrawable(windowBackground)
-            .setBlurRadius(3f)
+            .setBlurRadius(8f)
             .setBlurAutoUpdate(true)
     }
 

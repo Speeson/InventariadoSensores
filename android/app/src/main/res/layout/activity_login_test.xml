@@ -54,7 +54,7 @@
             android:paddingStart="34dp"
             android:paddingTop="20dp"
             android:paddingEnd="34dp"
-            android:paddingBottom="24dp">
+            android:paddingBottom="20dp">
 
             <TextView
                 android:id="@+id/tvLoginTitle"
@@ -350,7 +350,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
+                android:layout_marginTop="22dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
@@ -386,7 +386,7 @@
                 android:id="@+id/layoutSocialButtons"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
+                android:layout_marginTop="24dp"
                 android:gravity="center"
                 android:orientation="horizontal">
 
@@ -477,10 +477,14 @@
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
 
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
                 android:gravity="center"
                 android:orientation="horizontal">
 
