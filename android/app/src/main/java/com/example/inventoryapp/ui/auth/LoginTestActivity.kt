@@ -1,8 +1,10 @@
 package com.example.inventoryapp.ui.auth
 
 import android.os.Bundle
+import android.view.MotionEvent
 import android.view.View
 import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.getSystemService
 import com.example.inventoryapp.databinding.ActivityLoginTestBinding
@@ -19,10 +21,21 @@ class LoginTestActivity : AppCompatActivity() {
         setupBackdropBlur()
         setupHintOnFocus(binding.etLoginTestEmail)
         setupHintOnFocus(binding.etLoginTestPassword)
-        binding.loginTestRoot.apply {
-            isFocusableInTouchMode = true
-            setOnClickListener { clearInputFocus() }
+        setupKeyboardFocus(binding.etLoginTestEmail)
+        setupKeyboardFocus(binding.etLoginTestPassword)
+        binding.loginTestRoot.isFocusableInTouchMode = true
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (ev.action == MotionEvent.ACTION_DOWN) {
+            val focusedView = currentFocus
+            val touchInsideEmail = isTouchInsideView(ev, binding.etLoginTestEmail)
+            val touchInsidePassword = isTouchInsideView(ev, binding.etLoginTestPassword)
+            if (focusedView is EditText && !touchInsideEmail && !touchInsidePassword) {
+                clearInputFocus()
+            }
         }
+        return super.dispatchTouchEvent(ev)
     }
 
     private fun setupBackdropBlur() {
@@ -51,9 +64,27 @@ class LoginTestActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupKeyboardFocus(view: View) {
+        view.setOnClickListener {
+            view.requestFocus()
+            getSystemService<InputMethodManager>()?.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT)
+        }
+    }
+
     private fun clearInputFocus() {
         currentFocus?.clearFocus()
         getSystemService<InputMethodManager>()?.hideSoftInputFromWindow(binding.root.windowToken, 0)
         binding.loginTestRoot.requestFocus()
+    }
+
+    private fun isTouchInsideView(event: MotionEvent, view: View): Boolean {
+        val location = IntArray(2)
+        view.getLocationOnScreen(location)
+        val x = event.rawX
+        val y = event.rawY
+        return x >= location[0] &&
+            x <= location[0] + view.width &&
+            y >= location[1] &&
+            y <= location[1] + view.height
     }
 }

@@ -61,10 +61,10 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:shadowColor="#66FFFFFF"
+                android:shadowColor="#F5000000"
                 android:shadowDx="0"
                 android:shadowDy="0"
-                android:shadowRadius="18"
+                android:shadowRadius="12"
                 android:text="Bienvenido"
                 android:textColor="#F4FBFF"
                 android:textSize="34sp"
@@ -76,10 +76,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:gravity="center"
-                android:shadowColor="#44000000"
+                android:shadowColor="#EE000000"
                 android:shadowDx="0"
-                android:shadowDy="1"
-                android:shadowRadius="6"
+                android:shadowDy="0"
+                android:shadowRadius="7"
                 android:text="Accede con tus credenciales"
                 android:textColor="#F0F7FF"
                 android:textSize="15sp" />
@@ -90,6 +90,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="38dp"
                 android:layout_marginStart="12dp"
+                android:shadowColor="#EA000000"
+                android:shadowDx="0"
+                android:shadowDy="0"
+                android:shadowRadius="6"
                 android:text="Email"
                 android:textColor="#F2F8FF"
                 android:textSize="14sp"
@@ -116,6 +120,10 @@
                     android:paddingStart="20dp"
                     android:paddingEnd="18dp"
                     android:singleLine="true"
+                    android:shadowColor="#DD000000"
+                    android:shadowDx="0"
+                    android:shadowDy="0"
+                    android:shadowRadius="6"
                     android:textColor="@android:color/white"
                     android:textColorHint="#E5F1FF"
                     android:textSize="15sp" />
@@ -127,7 +135,11 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:layout_marginStart="12dp"
-                android:text="Contrasena"
+                android:shadowColor="#EA000000"
+                android:shadowDx="0"
+                android:shadowDy="0"
+                android:shadowRadius="6"
+                android:text="Contraseña"
                 android:textColor="#F2F8FF"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -148,11 +160,15 @@
                     android:layout_height="match_parent"
                     android:background="@drawable/bg_login_input_glass"
                     android:gravity="center_vertical"
-                    android:hint="Introduce tu contrasena"
+                    android:hint="Introduce tu contraseña"
                     android:inputType="textPassword"
                     android:paddingStart="20dp"
                     android:paddingEnd="18dp"
                     android:singleLine="true"
+                    android:shadowColor="#DD000000"
+                    android:shadowDx="0"
+                    android:shadowDy="0"
+                    android:shadowRadius="6"
                     android:textColor="@android:color/white"
                     android:textColorHint="#E5F1FF"
                     android:textSize="15sp" />
@@ -163,3 +179,7 @@
     </eightbitlab.com.blurview.BlurView>
 
 </FrameLayout>
+
+
+
+
