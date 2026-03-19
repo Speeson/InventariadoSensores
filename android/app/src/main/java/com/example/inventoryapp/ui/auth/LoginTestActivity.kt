@@ -23,6 +23,7 @@ class LoginTestActivity : AppCompatActivity() {
         setupHintOnFocus(binding.etLoginTestPassword)
         setupKeyboardFocus(binding.etLoginTestEmail)
         setupKeyboardFocus(binding.etLoginTestPassword)
+        setupBiometricTransition()
         binding.loginTestRoot.isFocusableInTouchMode = true
     }
 
@@ -75,6 +76,13 @@ class LoginTestActivity : AppCompatActivity() {
         currentFocus?.clearFocus()
         getSystemService<InputMethodManager>()?.hideSoftInputFromWindow(binding.root.windowToken, 0)
         binding.loginTestRoot.requestFocus()
+    }
+
+    private fun setupBiometricTransition() {
+        binding.btnBiometricAction.setOnClickListener {
+            binding.layoutPrimaryActions.visibility = View.GONE
+            binding.layoutFingerprintOnly.visibility = View.VISIBLE
+        }
     }
 
     private fun isTouchInsideView(event: MotionEvent, view: View): Boolean {

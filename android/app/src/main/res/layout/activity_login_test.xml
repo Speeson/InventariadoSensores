@@ -25,7 +25,7 @@
     <eightbitlab.com.blurview.BlurView
         android:id="@+id/layoutLoginPanel"
         android:layout_width="380dp"
-        android:layout_height="560dp"
+        android:layout_height="610dp"
         android:layout_gravity="center"
         android:background="@drawable/bg_login_panel_clip"
         android:clipToOutline="true"
@@ -52,9 +52,9 @@
             android:layout_height="match_parent"
             android:orientation="vertical"
             android:paddingStart="34dp"
-            android:paddingTop="44dp"
+            android:paddingTop="20dp"
             android:paddingEnd="34dp"
-            android:paddingBottom="34dp">
+            android:paddingBottom="24dp">
 
             <TextView
                 android:id="@+id/tvLoginTitle"
@@ -65,7 +65,7 @@
                 android:shadowDx="0"
                 android:shadowDy="0"
                 android:shadowRadius="12"
-                android:text="Bienvenido"
+                android:text="@string/login_test_title"
                 android:textColor="#F4FBFF"
                 android:textSize="34sp"
                 android:textStyle="bold" />
@@ -74,13 +74,13 @@
                 android:id="@+id/tvLoginSubtitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="4dp"
                 android:gravity="center"
                 android:shadowColor="#EE000000"
                 android:shadowDx="0"
                 android:shadowDy="0"
                 android:shadowRadius="7"
-                android:text="Accede con tus credenciales"
+                android:text="@string/login_test_subtitle"
                 android:textColor="#F0F7FF"
                 android:textSize="15sp" />
 
@@ -88,13 +88,13 @@
                 android:id="@+id/tvLoginTestEmailLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="38dp"
                 android:layout_marginStart="12dp"
+                android:layout_marginTop="16dp"
                 android:shadowColor="#EA000000"
                 android:shadowDx="0"
                 android:shadowDy="0"
                 android:shadowRadius="6"
-                android:text="Email"
+                android:text="@string/login_test_email_label"
                 android:textColor="#F2F8FF"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -109,37 +109,47 @@
                 app:strokeColor="#C8FFFFFF"
                 app:strokeWidth="1.2dp">
 
-                <EditText
-                    android:id="@+id/etLoginTestEmail"
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilLoginTestEmail"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:background="@drawable/bg_login_input_glass"
-                    android:gravity="center_vertical"
-                    android:hint="Introduce tu email"
-                    android:inputType="textEmailAddress"
-                    android:paddingStart="20dp"
-                    android:paddingEnd="18dp"
-                    android:singleLine="true"
-                    android:shadowColor="#DD000000"
-                    android:shadowDx="0"
-                    android:shadowDy="0"
-                    android:shadowRadius="6"
-                    android:textColor="@android:color/white"
-                    android:textColorHint="#E5F1FF"
-                    android:textSize="15sp" />
+                    app:hintEnabled="false">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etLoginTestEmail"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@android:color/transparent"
+                        android:fontFamily="sans-serif"
+                        android:gravity="center_vertical"
+                        android:hint="@string/login_test_email_hint"
+                        android:inputType="textEmailAddress"
+                        android:paddingStart="20dp"
+                        android:paddingEnd="18dp"
+                        android:singleLine="true"
+                        android:shadowColor="#DD000000"
+                        android:shadowDx="0"
+                        android:shadowDy="0"
+                        android:shadowRadius="6"
+                        android:textColor="@android:color/white"
+                        android:textColorHint="#E5F1FF"
+                        android:textSize="15sp" />
+
+                </com.google.android.material.textfield.TextInputLayout>
             </com.google.android.material.card.MaterialCardView>
 
             <TextView
                 android:id="@+id/tvLoginTestPasswordLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
                 android:layout_marginStart="12dp"
+                android:layout_marginTop="16dp"
                 android:shadowColor="#EA000000"
                 android:shadowDx="0"
                 android:shadowDy="0"
                 android:shadowRadius="6"
-                android:text="Contraseña"
+                android:text="@string/login_test_password_label"
                 android:textColor="#F2F8FF"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -154,32 +164,320 @@
                 app:strokeColor="#C8FFFFFF"
                 app:strokeWidth="1.2dp">
 
-                <EditText
-                    android:id="@+id/etLoginTestPassword"
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilLoginTestPassword"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:background="@drawable/bg_login_input_glass"
-                    android:gravity="center_vertical"
-                    android:hint="Introduce tu contraseña"
-                    android:inputType="textPassword"
-                    android:paddingStart="20dp"
-                    android:paddingEnd="18dp"
-                    android:singleLine="true"
+                    app:endIconMode="password_toggle"
+                    app:endIconTint="#F2F8FF"
+                    app:hintEnabled="false">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etLoginTestPassword"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@android:color/transparent"
+                        android:fontFamily="sans-serif"
+                        android:gravity="center_vertical"
+                        android:hint="@string/login_test_password_hint"
+                        android:inputType="textPassword"
+                        android:paddingStart="20dp"
+                        android:paddingEnd="20dp"
+                        android:singleLine="true"
+                        android:shadowColor="#DD000000"
+                        android:shadowDx="0"
+                        android:shadowDy="0"
+                        android:shadowRadius="6"
+                        android:textColor="@android:color/white"
+                        android:textColorHint="#E5F1FF"
+                        android:textSize="15sp" />
+
+                </com.google.android.material.textfield.TextInputLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <CheckBox
+                    android:id="@+id/cbRememberEmail"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:buttonTint="#F2F8FF"
+                    android:minHeight="0dp"
+                    android:padding="0dp"
+                    android:text="@string/login_test_remember_email"
+                    android:textColor="#F0F7FF"
+                    android:textSize="13sp" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="18dp"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:background="#66FFFFFF" />
+
+                <TextView
+                    android:id="@+id/tvForgotPassword"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="end"
                     android:shadowColor="#DD000000"
                     android:shadowDx="0"
                     android:shadowDy="0"
                     android:shadowRadius="6"
-                    android:textColor="@android:color/white"
-                    android:textColorHint="#E5F1FF"
-                    android:textSize="15sp" />
-            </com.google.android.material.card.MaterialCardView>
+                    android:text="@string/login_test_forgot_password"
+                    android:textColor="#F0F7FF"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <FrameLayout
+                android:id="@+id/loginActionsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="112dp"
+                android:layout_marginTop="14dp">
+
+                <LinearLayout
+                    android:id="@+id/layoutPrimaryActions"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical">
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/btnLoginAction"
+                        android:layout_width="match_parent"
+                        android:layout_height="50dp"
+                        app:cardBackgroundColor="#2AF8FCFF"
+                        app:cardCornerRadius="18dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="#C8FFFFFF"
+                        app:strokeWidth="1.2dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="@drawable/bg_login_input_glass"
+                            android:gravity="center"
+                            android:shadowColor="#DD000000"
+                            android:shadowDx="0"
+                            android:shadowDy="0"
+                            android:shadowRadius="6"
+                            android:text="@string/login_test_login_action"
+                            android:textColor="@android:color/white"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/btnBiometricAction"
+                        android:layout_width="match_parent"
+                        android:layout_height="50dp"
+                        android:layout_marginTop="12dp"
+                        app:cardBackgroundColor="#2AF8FCFF"
+                        app:cardCornerRadius="18dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="#C8FFFFFF"
+                        app:strokeWidth="1.2dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="@drawable/bg_login_input_glass"
+                            android:gravity="center"
+                            android:shadowColor="#DD000000"
+                            android:shadowDx="0"
+                            android:shadowDy="0"
+                            android:shadowRadius="6"
+                            android:text="@string/login_test_biometric"
+                            android:textColor="@android:color/white"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+
+                <FrameLayout
+                    android:id="@+id/layoutFingerprintOnly"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:visibility="gone">
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/btnFingerprintLogin"
+                        android:layout_width="112dp"
+                        android:layout_height="112dp"
+                        android:layout_gravity="center"
+                        app:cardBackgroundColor="#2AF8FCFF"
+                        app:cardCornerRadius="28dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="#C8FFFFFF"
+                        app:strokeWidth="1.2dp">
+
+                        <ImageView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="@drawable/bg_login_input_glass"
+                            android:contentDescription="@null"
+                            android:padding="20dp"
+                            android:scaleType="fitCenter"
+                            android:src="@drawable/glass_huella" />
+
+                    </com.google.android.material.card.MaterialCardView>
+
+                </FrameLayout>
+            </FrameLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1"
+                    android:background="#66FFFFFF" />
+
+                <TextView
+                    android:id="@+id/tvLoginDivider"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:shadowColor="#DD000000"
+                    android:shadowDx="0"
+                    android:shadowDy="0"
+                    android:shadowRadius="5"
+                    android:text="@string/login_test_alt_access"
+                    android:textColor="#F0F7FF"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1"
+                    android:background="#66FFFFFF" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/layoutSocialButtons"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/btnSocialGoogle"
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:layout_marginEnd="10dp"
+                    app:cardBackgroundColor="#2AF8FCFF"
+                    app:cardCornerRadius="18dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="#C8FFFFFF"
+                    app:strokeWidth="1.2dp">
+
+                    <ImageView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/bg_login_input_glass"
+                        android:contentDescription="@null"
+                        android:padding="8dp"
+                        android:scaleType="centerInside"
+                        android:src="@drawable/glass_google" />
+
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/btnSocialGithub"
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:layout_marginEnd="10dp"
+                    app:cardBackgroundColor="#2AF8FCFF"
+                    app:cardCornerRadius="18dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="#C8FFFFFF"
+                    app:strokeWidth="1.2dp">
+
+                    <ImageView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/bg_login_input_glass"
+                        android:contentDescription="@null"
+                        android:padding="8dp"
+                        android:scaleType="centerInside"
+                        android:src="@drawable/glass_github" />
+
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/btnSocialMac"
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    app:cardBackgroundColor="#2AF8FCFF"
+                    app:cardCornerRadius="18dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="#C8FFFFFF"
+                    app:strokeWidth="1.2dp">
+
+                    <ImageView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/bg_login_input_glass"
+                        android:contentDescription="@null"
+                        android:padding="8dp"
+                        android:scaleType="centerInside"
+                        android:src="@drawable/glass_mac" />
+
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvSignupPrompt"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:shadowColor="#DD000000"
+                    android:shadowDx="0"
+                    android:shadowDy="0"
+                    android:shadowRadius="5"
+                    android:text="@string/login_test_signup_prompt"
+                    android:textColor="#F0F7FF"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvSignupAction"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:shadowColor="#DD000000"
+                    android:shadowDx="0"
+                    android:shadowDy="0"
+                    android:shadowRadius="5"
+                    android:text="@string/login_test_signup_action"
+                    android:textColor="#F4FBFF"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
 
         </LinearLayout>
 
     </eightbitlab.com.blurview.BlurView>
 
 </FrameLayout>
-
-
-
-

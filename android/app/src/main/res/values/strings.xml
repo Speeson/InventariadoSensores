@@ -1,3 +1,17 @@
 <resources>
     <string name="app_name">Inventoryapp</string>
+    <string name="login_test_title">Bienvenido</string>
+    <string name="login_test_subtitle">Accede con tus credenciales</string>
+    <string name="login_test_email_label">Email</string>
+    <string name="login_test_email_hint">Introduce tu email</string>
+    <string name="login_test_password_label">Contraseña</string>
+    <string name="login_test_password_hint">Introduce tu contraseña</string>
+    <string name="login_test_toggle_password">Mostrar u ocultar contraseña</string>
+    <string name="login_test_remember_email">Recordar email</string>
+    <string name="login_test_forgot_password">¿Has olvidado tu contraseña?</string>
+    <string name="login_test_login_action">Login</string>
+    <string name="login_test_alt_access">O accede mediante</string>
+    <string name="login_test_biometric">Accede mediante biometría</string>
+    <string name="login_test_signup_prompt">¿Aún no te has registrado?</string>
+    <string name="login_test_signup_action">Crear cuenta</string>
 </resources>
