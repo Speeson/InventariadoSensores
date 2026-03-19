@@ -1,12 +1,16 @@
 package com.example.inventoryapp.ui.auth
 
 import android.os.Bundle
+import android.os.Build
 import android.view.MotionEvent
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.widget.CompoundButtonCompat
 import androidx.core.content.getSystemService
+import com.example.inventoryapp.R
 import com.example.inventoryapp.databinding.ActivityLoginTestBinding
 
 class LoginTestActivity : AppCompatActivity() {
@@ -24,11 +28,20 @@ class LoginTestActivity : AppCompatActivity() {
         setupKeyboardFocus(binding.etLoginTestEmail)
         setupKeyboardFocus(binding.etLoginTestPassword)
         setupBiometricTransition()
+        setupRememberEmailCheckbox()
+        setupWhiteCursor()
         binding.loginTestRoot.isFocusableInTouchMode = true
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         if (ev.action == MotionEvent.ACTION_DOWN) {
+            if (binding.layoutFingerprintOnly.visibility == View.VISIBLE &&
+                !isTouchInsideView(ev, binding.btnFingerprintLogin)
+            ) {
+                showPrimaryActions()
+                return true
+            }
+
             val focusedView = currentFocus
             val touchInsideEmail = isTouchInsideView(ev, binding.etLoginTestEmail)
             val touchInsidePassword = isTouchInsideView(ev, binding.etLoginTestPassword)
@@ -79,10 +92,30 @@ class LoginTestActivity : AppCompatActivity() {
     }
 
     private fun setupBiometricTransition() {
-        binding.btnBiometricAction.setOnClickListener {
-            binding.layoutPrimaryActions.visibility = View.GONE
-            binding.layoutFingerprintOnly.visibility = View.VISIBLE
-        }
+        val openBiometric = View.OnClickListener { showFingerprintOnly() }
+        binding.btnBiometricAction.setOnClickListener(openBiometric)
+        binding.btnBiometricAction.getChildAt(0)?.setOnClickListener(openBiometric)
+    }
+
+    private fun setupRememberEmailCheckbox() {
+        CompoundButtonCompat.setButtonTintList(binding.cbRememberEmail, null)
+        binding.cbRememberEmail.buttonTintList = null
+        binding.cbRememberEmail.compoundDrawablePadding = dpToPx(8)
+    }
+
+    private fun setupWhiteCursor() {
+        forceCursorDrawable(binding.etLoginTestEmail, R.drawable.bg_cursor_white)
+        forceCursorDrawable(binding.etLoginTestPassword, R.drawable.bg_cursor_white)
+    }
+
+    private fun showFingerprintOnly() {
+        binding.layoutPrimaryActions.visibility = View.GONE
+        binding.layoutFingerprintOnly.visibility = View.VISIBLE
+    }
+
+    private fun showPrimaryActions() {
+        binding.layoutPrimaryActions.visibility = View.VISIBLE
+        binding.layoutFingerprintOnly.visibility = View.GONE
     }
 
     private fun isTouchInsideView(event: MotionEvent, view: View): Boolean {
@@ -94,5 +127,20 @@ class LoginTestActivity : AppCompatActivity() {
             x <= location[0] + view.width &&
             y >= location[1] &&
             y <= location[1] + view.height
+    }
+
+    private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).toInt()
+
+    private fun forceCursorDrawable(textView: TextView, drawableRes: Int) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            textView.textCursorDrawable = getDrawable(drawableRes)
+            return
+        }
+
+        runCatching {
+            val f = TextView::class.java.getDeclaredField("mCursorDrawableRes")
+            f.isAccessible = true
+            f.set(textView, drawableRes)
+        }
     }
 }
