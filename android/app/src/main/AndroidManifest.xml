@@ -33,7 +33,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".ui.auth.LoginTestActivity" />
 
         <activity android:name=".ui.products.ProductListActivity" />
         <activity android:name=".ui.scan.ScanActivity" />

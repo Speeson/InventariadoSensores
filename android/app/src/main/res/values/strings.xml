@@ -4,8 +4,10 @@
     <string name="login_test_subtitle">Accede con tus credenciales</string>
     <string name="login_test_email_label">Email</string>
     <string name="login_test_email_hint">Introduce tu email</string>
+    <string name="login_test_email_required">Debes introducir tu email</string>
     <string name="login_test_password_label">Contrase&#241;a</string>
     <string name="login_test_password_hint">Introduce tu contrase&#241;a</string>
+    <string name="login_test_password_required">Debes introducir tu contrase&#241;a</string>
     <string name="login_test_toggle_password">Mostrar u ocultar contrase&#241;a</string>
     <string name="login_test_remember_email">Recordar email</string>
     <string name="login_test_forgot_password">&#191;Has olvidado tu contrase&#241;a?</string>
@@ -14,6 +16,8 @@
     <string name="login_test_biometric">Accede mediante biometr&#237;a</string>
     <string name="login_test_signup_prompt">&#191;A&#250;n no te has registrado?</string>
     <string name="login_test_signup_action">Crear cuenta</string>
+    <string name="login_invalid_credentials_title">Error</string>
+    <string name="login_invalid_credentials_message">Usuario o contrase&#241;a no v&#225;lidos</string>
     <string name="register_test_title">Reg&#237;strate</string>
     <string name="register_test_subtitle">Introduce los siguientes datos</string>
     <string name="register_test_username_label">Username</string>

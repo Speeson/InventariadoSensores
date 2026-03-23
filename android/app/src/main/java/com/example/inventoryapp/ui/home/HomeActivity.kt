@@ -1,4 +1,4 @@
-﻿package com.example.inventoryapp.ui.home
+package com.example.inventoryapp.ui.home
 
 import android.content.Intent
 import android.os.Bundle
@@ -34,7 +34,6 @@ import com.example.inventoryapp.data.local.SessionManager
 import com.example.inventoryapp.data.remote.NetworkModule
 import com.example.inventoryapp.databinding.ActivityHomeBinding
 import com.example.inventoryapp.ui.auth.LoginActivity
-import com.example.inventoryapp.ui.auth.LoginTestActivity
 import com.example.inventoryapp.ui.events.EventsActivity
 import com.example.inventoryapp.ui.movements.MovementsMenuActivity
 import com.example.inventoryapp.ui.products.ProductListActivity
@@ -511,9 +510,6 @@ class HomeActivity : AppCompatActivity() {
                     "Modo debug offline desactivado"
                 }
                 UiNotifier.show(this, msg)
-            }
-            R.id.nav_login_test -> {
-                startActivity(Intent(this, LoginTestActivity::class.java))
             }
         }
         binding.drawerLayout.closeDrawer(GravityCompat.START)
