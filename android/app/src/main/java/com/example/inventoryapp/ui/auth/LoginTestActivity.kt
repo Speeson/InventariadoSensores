@@ -2,6 +2,7 @@ package com.example.inventoryapp.ui.auth
 
 import android.animation.ValueAnimator
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.Build
 import android.view.MotionEvent
@@ -125,9 +126,16 @@ class LoginTestActivity : AppCompatActivity() {
         val adapter = ArrayAdapter.createFromResource(
             this,
             R.array.register_test_gender_options,
-            R.layout.item_login_dropdown_option
+            android.R.layout.simple_dropdown_item_1line
         )
         binding.actvRegisterGender.setAdapter(adapter)
+        binding.actvRegisterGender.setDropDownBackgroundDrawable(
+            GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpToPx(16).toFloat()
+                setColor(Color.parseColor("#B8344558"))
+            }
+        )
     }
 
     private fun setupWhiteCursor() {
