@@ -20,6 +20,7 @@
 - [ ] Motor de reglas de reposicion automatica (reabastecimiento).
 - [ ] Forecast basico de consumo y rotacion (consumo semanal/mensual y sugerencia de umbrales).
 - [ ] Soportar generacion de distintos tipos de codigo de barras y desacoplar el dato almacenado en BD del formato especifico Code 128.
+- [ ] Busqueda de eventos: anadir campo de busqueda por delta/cantidad para filtrar eventos segun las cantidades movidas.
 - [ ] Panel de alertas: anadir pestana "Actividad" (timeline operativo unificado).
 - [ ] Pestana Actividad: registrar eventos de alertas, offline/online, ultimos escaneos (manual/camara), sincronizaciones y reintentos.
 - [ ] Pestana Actividad: mostrar estado de cola offline (pendientes, enviados, fallidos) y transiciones relevantes.

@@ -23,6 +23,7 @@
     <string name="register_test_username_label">Username</string>
     <string name="register_test_username_hint">Introduce tu username</string>
     <string name="register_test_phone_label">Tel&#233;fono</string>
+    <string name="register_test_prefix_label">Prefijo</string>
     <string name="register_test_phone_prefix_hint">34</string>
     <string name="register_test_phone_hint">Introduce tu tel&#233;fono</string>
     <string name="register_test_age_label">Edad</string>

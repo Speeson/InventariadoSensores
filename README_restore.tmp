@@ -1,6 +1,6 @@
 # 📦 IoTrack - Sistema de Gestión de Inventario con Sensores IoT (simulados)
 
-Proyecto desarrollado íntegramente por **Esteban Garcés Pérez**, alumno de **2º DAM** en **Pro2FP**.  
+Proyecto transversal — **2º Desarrollo de Aplicaciones Multiplataforma (2ª Evaluación)**  
 **Actividad 4:** *Inventario con sensores IoT simulados*.
 
 ---
@@ -9,7 +9,6 @@ Proyecto desarrollado íntegramente por **Esteban Garcés Pérez**, alumno de **
 
 Sistema para **gestionar inventario y stock** de productos, registrando movimientos por:
 - **Escaneo de códigos de barras** desde la app Android (cámara).
-- **Impresión de etiquetas** desde la propia app Android.
 - **Eventos de sensores IoT simulados** (entradas/salidas automáticas).
 - **Movimientos manuales** (entrada/salida/ajuste) desde la API.
 
@@ -19,8 +18,6 @@ El objetivo es entregar una solución **segura, documentada y desplegable en con
 - reportes,
 - importación CSV,
 - auditoría de cambios.
-
-La aplicación no solo escanea códigos de barras, sino que también permite **imprimir etiquetas** mediante la integración directa del **SDK oficial de Niimbot** para etiquetadoras Bluetooth, dentro del propio flujo de la app.
 
 ---
 
@@ -48,9 +45,8 @@ Comunicación: **JSON sobre HTTP** y autenticación **JWT Bearer**.
 - Kotlin + AndroidX
 - Retrofit + OkHttp
 - CameraX + ML Kit (barcode scanning)
-- Persistencia local con Room sobre SQLite (`app_cache.db`) para caché y soporte offline
 - Sesión persistente (token)
-- Integración del SDK oficial de Niimbot (impresión Bluetooth B1)
+- Integración de API/SDK externo Niimbot (impresión Bluetooth B1)
 
 **SDK (según Gradle detectado):**
 - compileSdk: 34
@@ -59,6 +55,20 @@ Comunicación: **JSON sobre HTTP** y autenticación **JWT Bearer**.
 - applicationId: com.example.inventoryapp
 
 ---
+
+## 👥 Reparto de tareas
+
+| Persona   | Responsabilidad |
+|----------|-----------------|
+| **Esteban** | Backend – Autenticación, Seguridad, Calidad, Tests y CI |
+| Carolina | Backend – CRUD de Inventario (productos, stock, movimientos) |
+| Christian | Backend – Eventos de sensores simulados y apoyo |
+| Jorge | Android – App base, autenticación y listados |
+| Natalia | Android – Escaneo, movimientos y sincronización |
+| Gonzalo | Base de datos, migraciones y entorno |
+
+---
+
 ## ✅ Funcionalidades implementadas (estado actual)
 
 ### Seguridad / Auth
@@ -489,6 +499,17 @@ Documentacion de apoyo (backend/context):
 - `backend/context/README_observabilidad_prometheus_grafana.md`
 - `backend/context/README_import_swagger.md`
 - `backend/context/GUIA_DEFENSA_REQUISITOS_ACTIVIDAD4.md`
+
+---
+
+## 👥 Equipo (2º DAM)
+
+- Christian Ballesteros  
+- Gonzalo Bravo  
+- Natalia Chuquillanqui  
+- Carolina de la Losa  
+- Esteban Garcés  
+- Jorge Llanes  
 
 ---
 

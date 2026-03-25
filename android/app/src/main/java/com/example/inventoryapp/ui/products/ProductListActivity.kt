@@ -551,11 +551,11 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
                 return@setOnClickListener
             }
             if (rawBarcode.isNotBlank() && !rawBarcode.matches(Regex("^\\d{13}$"))) {
-                barcodeInput.error = "Barcode debe tener 13 dÃƒÆ’Ã‚Â­gitos"
+                barcodeInput.error = "Barcode debe tener 13 dígitos"
                 return@setOnClickListener
             }
             if (categoryId == null) {
-                categoryInput.error = "CategorÃƒÆ’Ã‚Â­a requerida"
+                categoryInput.error = "Categoría requerida"
                 return@setOnClickListener
             }
 
@@ -566,9 +566,9 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
         btnDelete.setOnClickListener {
             val titleText = if (isOffline) "Eliminar producto offline" else "Eliminar producto"
             val bodyText = if (isOffline) {
-                "Se eliminarÃƒÂ¡ de la cola offline para que no se sincronice. Ã‚Â¿Continuar?"
+                "Se eliminará de la cola offline para que no se sincronice. ¿Continuar?"
             } else {
-                "Ã‚Â¿Seguro que quieres eliminar este producto?"
+                "¿Seguro que quieres eliminar este producto?"
             }
             CreateUiFeedback.showQuestionConfirmDialog(
                 activity = this,
@@ -580,7 +580,12 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
                 if (isOffline) {
                     val removed = removeOfflineProduct(product)
                     if (removed) {
-                        UiNotifier.show(this@ProductListActivity, "Producto offline eliminado")
+                        CreateUiFeedback.showStatusPopup(
+                            activity = this@ProductListActivity,
+                            title = "Producto eliminado",
+                            details = "Producto eliminado correctamente.",
+                            animationRes = R.raw.correct_create
+                        )
                         resetAndLoad()
                     } else {
                         UiNotifier.show(this@ProductListActivity, "No se pudo eliminar de la cola offline")
@@ -620,7 +625,12 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
                 val res = NetworkModule.api.updateProduct(id, body)
                 if (res.code() == 401) return@launch
                 if (res.isSuccessful) {
-                    UiNotifier.show(this@ProductListActivity, "Producto actualizado")
+                    CreateUiFeedback.showStatusPopup(
+                        activity = this@ProductListActivity,
+                        title = "Producto actualizado",
+                        details = "Producto actualizado correctamente.",
+                        animationRes = R.raw.correct_create
+                    )
                     cacheStore.invalidatePrefix("products")
                     resetAndLoad()
                 } else if (res.code() == 403) {
@@ -636,7 +646,7 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
             } catch (e: IOException) {
                 val payload = OfflineSyncer.ProductUpdatePayload(id, body)
                 OfflineQueue(this@ProductListActivity).enqueue(PendingType.PRODUCT_UPDATE, gson.toJson(payload))
-                UiNotifier.show(this@ProductListActivity, "Sin conexiÃƒÆ’Ã‚Â³n. ActualizaciÃƒÆ’Ã‚Â³n guardada offline")
+                UiNotifier.show(this@ProductListActivity, "Sin conexión. Actualización guardada offline")
                 resetAndLoad()
             } catch (e: Exception) {
                 UiNotifier.show(this@ProductListActivity, "Error: ${e.message}")
@@ -650,7 +660,12 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
                 val res = NetworkModule.api.deleteProduct(id)
                 if (res.code() == 401) return@launch
                 if (res.isSuccessful) {
-                    UiNotifier.show(this@ProductListActivity, "Producto eliminado")
+                    CreateUiFeedback.showStatusPopup(
+                        activity = this@ProductListActivity,
+                        title = "Producto eliminado",
+                        details = "Producto eliminado correctamente.",
+                        animationRes = R.raw.correct_create
+                    )
                     cacheStore.invalidatePrefix("products")
                     resetAndLoad()
                 } else if (res.code() == 403) {
@@ -812,7 +827,7 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
         }
         if (skuRaw.isNotBlank()) parts.add("SKU \"$skuRaw\"")
         if (barcodeRaw.isNotBlank()) parts.add("barcode \"$barcodeRaw\"")
-        if (categoryRaw.isNotBlank()) parts.add("categorÃƒÆ’Ã‚Â­a \"$categoryRaw\"")
+        if (categoryRaw.isNotBlank()) parts.add("categoría \"$categoryRaw\"")
         return if (parts.isEmpty()) {
             "No se encontraron productos con los filtros actuales."
         } else {
@@ -1031,7 +1046,7 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
                 return@setOnClickListener
             }
             if (categoryId == null) {
-                etCategory.error = "Categoria requerida"
+                etCategory.error = "Categoría requerida"
                 return@setOnClickListener
             }
 
@@ -1325,19 +1340,19 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
                     if (code > 0) append("\nHTTP $code")
                 }
             } else {
-                "Ese SKU ya estÃƒÆ’Ã‚Â¡ en uso. Introduce un SKU diferente."
+                "Ese SKU ya estÃ¡ en uso. Introduce un SKU diferente."
             }
         }
 
         if (looksLikeDuplicateBarcode) {
             return if (technical) {
                 buildString {
-                    append("Barcode duplicado: ya existe un producto con ese cÃƒÆ’Ã‚Â³digo.")
+                    append("Barcode duplicado: ya existe un producto con ese cÃ³digo.")
                     if (raw.isNotBlank()) append("\nDetalle: ${compactErrorDetail(raw)}")
                     if (code > 0) append("\nHTTP $code")
                 }
             } else {
-                "Ese cÃƒÆ’Ã‚Â³digo de barras ya estÃƒÆ’Ã‚Â¡ en uso. Introduce otro diferente."
+                "Ese cÃ³digo de barras ya estÃ¡ en uso. Introduce otro diferente."
             }
         }
 
@@ -1345,7 +1360,7 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
             buildString {
                 append(
                     when (code) {
-                        400, 422 -> "Datos invÃƒÆ’Ã‚Â¡lidos para crear producto."
+                        400, 422 -> "Datos invÃ¡lidos para crear producto."
                         409 -> "Conflicto al crear producto."
                         500 -> "Error interno del servidor al crear producto."
                         else -> "No se pudo crear el producto."
@@ -1358,8 +1373,8 @@ class ProductListActivity : AppCompatActivity(), TopCenterActionHost {
             when (code) {
                 400, 422 -> "No se pudo crear el producto. Revisa los datos introducidos."
                 409 -> "No se pudo crear el producto porque entra en conflicto con otro existente."
-                500 -> "No se pudo crear el producto por un problema del servidor. IntÃƒÆ’Ã‚Â©ntalo de nuevo."
-                else -> "No se pudo crear el producto. IntÃƒÆ’Ã‚Â©ntalo de nuevo."
+                500 -> "No se pudo crear el producto por un problema del servidor. IntÃ©ntalo de nuevo."
+                else -> "No se pudo crear el producto. IntÃ©ntalo de nuevo."
             }
         }
     }

@@ -195,7 +195,7 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
         val loading = if (withSnack) {
             CreateUiFeedback.showListLoading(
                 this,
-                message = "Cargando categorias",
+                message = "Cargando categorías",
                 animationRes = R.raw.glass_loading_list,
                 minCycles = 2
             )
@@ -248,7 +248,7 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
                         postLoadingNotice = {
                             CreateUiFeedback.showStatusPopup(
                                 activity = this@CategoriesActivity,
-                                title = "Categorias cargadas",
+                                title = "Categorías cargadas",
                                 details = "Se han cargado correctamente.",
                                 animationRes = R.raw.correct_create,
                                 autoDismissMs = 2500L
@@ -343,7 +343,7 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
         if (cacheNoticeShownInOfflineSession) return
         UiNotifier.showBlockingTimed(
             this,
-            "Mostrando categorias en cache y pendientes offline",
+            "Mostrando categorías en caché y pendientes offline",
             R.drawable.sync,
             timeoutMs = 3_200L
         )
@@ -354,7 +354,7 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
         if (name.isBlank()) {
             CreateUiFeedback.showErrorPopup(
                 activity = this,
-                title = "No se pudo crear categoria",
+                title = "No se pudo crear categoría",
                 details = "Nombre requerido"
             )
             onFinished()
@@ -375,7 +375,7 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
                     }
                     loadingHandled = true
                     loading.dismissThen {
-                        CreateUiFeedback.showCreatedPopup(this@CategoriesActivity, "Categoria creada", details)
+                        CreateUiFeedback.showCreatedPopup(this@CategoriesActivity, "Categoría creada", details)
                     }
                     createCategoryInput = ""
                     currentOffset = 0
@@ -388,7 +388,7 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
                     loading.dismissThen {
                         CreateUiFeedback.showErrorPopup(
                             activity = this@CategoriesActivity,
-                            title = "No se pudo crear categoria",
+                            title = "No se pudo crear categoría",
                             details = details
                         )
                     }
@@ -400,7 +400,7 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
                     loading.dismissThen {
                         CreateUiFeedback.showCreatedPopup(
                             this@CategoriesActivity,
-                            "Categoria creada (offline)",
+                            "Categoría creada (offline)",
                             "Nombre: $name (offline)",
                             accentColorRes = R.color.offline_text
                         )
@@ -412,8 +412,8 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
                     loading.dismissThen {
                         CreateUiFeedback.showErrorPopup(
                             activity = this@CategoriesActivity,
-                            title = "No se pudo crear categoria",
-                            details = "Ha ocurrido un error inesperado al crear la categoria."
+                            title = "No se pudo crear categoría",
+                            details = "Ha ocurrido un error inesperado al crear la categoría."
                         )
                     }
                 }
@@ -472,8 +472,8 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
                 if (res.isSuccessful) {
                     CreateUiFeedback.showCreatedPopup(
                         this@CategoriesActivity,
-                        "CategorÃ­a actualizada",
-                        "CategorÃ­a actualizada a: $name"
+                        "Categoría actualizada",
+                        "Categoría actualizada a: $name"
                     )
                     currentOffset = 0
                     cacheStore.invalidatePrefix("categories")
@@ -491,13 +491,13 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
 
     private fun showCategoryNotFoundDialog(query: String, byId: Boolean) {
         val details = if (byId) {
-            "CategorÃ­a ID $query no encontrada"
+            "Categoría ID $query no encontrada"
         } else {
-            "CategorÃ­a \"$query\" no encontrada"
+            "Categoría \"$query\" no encontrada"
         }
         CreateUiFeedback.showErrorPopup(
             activity = this,
-            title = "CategorÃ­a no encontrada",
+            title = "Categoría no encontrada",
             details = details,
             animationRes = R.raw.notfound
         )
@@ -512,7 +512,7 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
 
         if (duplicateName) {
             return buildString {
-                append("Ya existe una categorÃ­a con ese nombre.")
+                append("Ya existe una categoría con ese nombre.")
                 if (raw.isNotBlank()) append("\nDetalle: ${compactCategoryErrorDetail(raw)}")
                 if (code > 0) append("\nHTTP $code")
             }
@@ -521,11 +521,11 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
         return buildString {
             append(
                 when (code) {
-                    400, 422 -> "Datos invÃ¡lidos para crear categorÃ­a."
-                    403 -> "No tienes permisos para crear categorÃ­as."
-                    409 -> "Conflicto al crear categorÃ­a."
-                    500 -> "Error interno del servidor al crear categorÃ­a."
-                    else -> "No se pudo crear la categorÃ­a."
+                    400, 422 -> "Datos inválidos para crear categoría."
+                    403 -> "No tienes permisos para crear categorías."
+                    409 -> "Conflicto al crear categoría."
+                    500 -> "Error interno del servidor al crear categoría."
+                    else -> "No se pudo crear la categoría."
                 }
             )
             if (raw.isNotBlank()) append("\nDetalle: ${compactCategoryErrorDetail(raw)}")
@@ -555,8 +555,8 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
                     OfflineQueue(this@CategoriesActivity).enqueue(PendingType.CATEGORY_DELETE, gson.toJson(payload))
                     CreateUiFeedback.showErrorPopup(
                         activity = this@CategoriesActivity,
-                        title = "Sin conexion",
-                        details = "No se pudo eliminar ahora. La solicitud se guardo en cola offline.",
+                        title = "Sin conexión",
+                        details = "No se pudo eliminar ahora. La solicitud se guardó en cola offline.",
                         animationRes = R.raw.error
                     )
                     currentOffset = 0
@@ -572,7 +572,7 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
             val dto = runCatching { gson.fromJson(p.payloadJson, CategoryCreateDto::class.java) }.getOrNull()
             CategoryResponseDto(
                 id = -1 - index,
-                name = dto?.name ?: "CategorÃ­a offline",
+                name = dto?.name ?: "Categoría offline",
                 createdAt = "offline",
                 updatedAt = null
             )
@@ -639,7 +639,7 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
     }
     private fun updatePageInfo(pageSizeLoaded: Int, pendingCount: Int) {
         if (searchId != null) {
-            binding.tvCategoriesPageNumber.text = "Pagina 1/1"
+            binding.tvCategoriesPageNumber.text = "Página 1/1"
             binding.tvCategoriesPageInfo.text = "Mostrando ${items.size}/${items.size}"
             binding.btnPrevPageCategories.isEnabled = false
             binding.btnNextPageCategories.isEnabled = false
@@ -657,7 +657,7 @@ class CategoriesActivity : AppCompatActivity(), TopCenterActionHost {
         } else {
             "Mostrando 0/0"
         }
-        binding.tvCategoriesPageNumber.text = "Pagina $currentPage/$totalPages"
+        binding.tvCategoriesPageNumber.text = "Página $currentPage/$totalPages"
         binding.tvCategoriesPageInfo.text = label
         val prevEnabled = currentOffset > 0
         val nextEnabled = shownOnline < totalItems
