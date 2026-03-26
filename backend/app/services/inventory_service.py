@@ -128,6 +128,25 @@ def _get_or_create_stock_by_location_id(db: Session, product_id: int, location_i
     return stock
 
 
+def _log_stock_update(
+    db: Session,
+    *,
+    stock: Stock,
+    user_id: int,
+    delta: int,
+) -> None:
+    audit_log_repo.create_log(
+        db,
+        entity=Entity.STOCK,
+        action=ActionType.UPDATE,
+        user_id=user_id,
+        details=(
+            f"stock_id={stock.id} product_id={stock.product_id} "
+            f"location={stock.location} quantity={stock.quantity} delta={delta}"
+        ),
+    )
+
+
 def increase_stock(
     db: Session,
     *,
@@ -159,6 +178,7 @@ def increase_stock(
         user_id=user_id,
         details=f"movement_id={movement.id} product_id={product_id} delta={quantity} type=IN",
     )
+    _log_stock_update(db, stock=updated_stock, user_id=user_id, delta=quantity)
     _maybe_create_alerts(db, stock=updated_stock, delta=quantity)
     return updated_stock, movement
 
@@ -197,6 +217,7 @@ def decrease_stock(
         user_id=user_id,
         details=f"movement_id={movement.id} product_id={product_id} delta={-quantity} type=OUT",
     )
+    _log_stock_update(db, stock=updated_stock, user_id=user_id, delta=-quantity)
     _maybe_create_alerts(db, stock=updated_stock, delta=-quantity)
     return updated_stock, movement
 
@@ -239,6 +260,7 @@ def adjust_stock(
         user_id=user_id,
         details=f"movement_id={movement.id} product_id={product_id} delta={quantity} type=ADJUST",
     )
+    _log_stock_update(db, stock=updated_stock, user_id=user_id, delta=quantity)
     _maybe_create_alerts(db, stock=updated_stock, delta=quantity)
     return updated_stock, movement
 
@@ -325,6 +347,8 @@ def transfer_stock(
         user_id=user_id,
         details=f"movement_id={in_movement.id} product_id={product_id} delta={quantity} type=IN transfer_id={transfer_id}",
     )
+    _log_stock_update(db, stock=from_stock, user_id=user_id, delta=-quantity)
+    _log_stock_update(db, stock=to_stock, user_id=user_id, delta=quantity)
 
     _maybe_create_alerts(db, stock=from_stock, delta=-quantity, include_large_movement=True)
     _maybe_create_alerts(db, stock=to_stock, delta=quantity, include_large_movement=False)
@@ -371,6 +395,7 @@ def increase_stock_by_location_id(
         user_id=user_id,
         details=f"movement_id={movement.id} product_id={product_id} delta={quantity} type=IN",
     )
+    _log_stock_update(db, stock=updated_stock, user_id=user_id, delta=quantity)
     _maybe_create_alerts(db, stock=updated_stock, delta=quantity)
     return updated_stock, movement
 
@@ -409,6 +434,7 @@ def decrease_stock_by_location_id(
         user_id=user_id,
         details=f"movement_id={movement.id} product_id={product_id} delta={-quantity} type=OUT",
     )
+    _log_stock_update(db, stock=updated_stock, user_id=user_id, delta=-quantity)
     _maybe_create_alerts(db, stock=updated_stock, delta=-quantity)
     return updated_stock, movement
 
@@ -448,6 +474,7 @@ def adjust_stock_by_location_id(
         user_id=user_id,
         details=f"movement_id={movement.id} product_id={product_id} delta={quantity} type=ADJUST",
     )
+    _log_stock_update(db, stock=updated_stock, user_id=user_id, delta=quantity)
     _maybe_create_alerts(db, stock=updated_stock, delta=quantity)
     return updated_stock, movement
 
@@ -537,6 +564,8 @@ def transfer_stock_by_location_id(
         user_id=user_id,
         details=f"movement_id={in_movement.id} product_id={product_id} delta={quantity} type=IN transfer_id={transfer_id}",
     )
+    _log_stock_update(db, stock=from_stock, user_id=user_id, delta=-quantity)
+    _log_stock_update(db, stock=to_stock, user_id=user_id, delta=quantity)
 
     _maybe_create_alerts(db, stock=from_stock, delta=-quantity, include_large_movement=True)
     _maybe_create_alerts(db, stock=to_stock, delta=quantity, include_large_movement=False)

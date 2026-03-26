@@ -45,7 +45,7 @@ def _create_product(db):
     return product
 
 
-def test_increase_stock_creates_movement_and_audit_log(db):
+def test_increase_stock_creates_movement_and_stock_audit_logs(db):
     user = _create_user(db)
     product = _create_product(db)
 
@@ -69,6 +69,7 @@ def test_increase_stock_creates_movement_and_audit_log(db):
 
     logs = db.query(AuditLog).filter(AuditLog.user_id == user.id).all()
     assert any(log.entity == Entity.MOVEMENT and log.action == ActionType.CREATE for log in logs)
+    assert any(log.entity == Entity.STOCK and log.action == ActionType.UPDATE for log in logs)
 
 
 def test_decrease_stock_with_insufficient_quantity_raises_error(db):
