@@ -146,6 +146,7 @@ def create_event(
             db,
             event_type=payload.event_type,
             product_id=payload.product_id,
+            user_id=user.id,
             delta=payload.delta,
             source=payload.source,
             location_id=location_obj.id,

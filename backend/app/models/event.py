@@ -10,6 +10,7 @@ class Event(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     event_type: Mapped[EventType] = mapped_column(Enum(EventType), nullable=False)
     product_id: Mapped[int] = mapped_column(ForeignKey("products.id"), nullable=False)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     delta: Mapped[int] = mapped_column(Integer, nullable=False)
     location_id: Mapped[int] = mapped_column(ForeignKey("locations.id"), nullable=True)
     source: Mapped[Source] = mapped_column(Enum(Source), nullable=False)

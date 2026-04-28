@@ -4,6 +4,7 @@ import logging
 from app.celery_app import celery_app
 from app.db.session import SessionLocal
 from app.models.enums import EventStatus, MovementType
+from app.models.enums import Entity, ActionType
 from app.models.event import Event
 from app.models.product import Product
 from app.models.movement import Movement
@@ -13,7 +14,7 @@ from app.models.location import Location
 from app.services.notification_service import send_low_stock_email
 from app.models.stock import Stock
 from app.models.stock_threshold import StockThreshold
-from app.repositories import alert_repo
+from app.repositories import alert_repo, audit_log_repo
 
 # Numero maximo de intentos para reintentar una tarea en caso de error retryable
 MAX_RETRIES = 3
@@ -233,6 +234,27 @@ def process_event(event_id: int) -> dict:
             db.add(event)
 
             db.commit()
+            if event.user_id is not None:
+                audit_log_repo.create_log(
+                    db,
+                    entity=Entity.MOVEMENT,
+                    action=ActionType.CREATE,
+                    user_id=event.user_id,
+                    details=(
+                        f"event_id={event.id} movement_id={movement.id} "
+                        f"product_id={event.product_id} delta={stock_delta} type={movement_type.value}"
+                    ),
+                )
+                audit_log_repo.create_log(
+                    db,
+                    entity=Entity.STOCK,
+                    action=ActionType.UPDATE,
+                    user_id=event.user_id,
+                    details=(
+                        f"event_id={event.id} stock_id={stock.id} product_id={event.product_id} "
+                        f"location={location.code} quantity={stock.quantity} delta={stock_delta}"
+                    ),
+                )
             logger.info(
                 "process_event processed event_id=%s status=%s stock_delta=%s movement_type=%s",
                 event.id,

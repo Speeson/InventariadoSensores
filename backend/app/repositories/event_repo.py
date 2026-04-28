@@ -11,6 +11,7 @@ def create_event(
     *,
     event_type: EventType,
     product_id: int,
+    user_id: int | None = None,
     delta: int,
     source: Source | str,
     location_id: int | None = None,
@@ -25,6 +26,7 @@ def create_event(
     event = Event(
         event_type=event_type,
         product_id=product_id,
+        user_id=user_id,
         delta=delta,
         source=normalized_source,
         location_id=location_id,
@@ -67,4 +69,3 @@ def list_events(
 #Esto te permite "si ya existe, devuelvo el mismo".
 def get_by_idempotency_key(db: Session, key: str) -> Event | None:
     return db.scalar(select(Event).where(Event.idempotency_key == key))
-

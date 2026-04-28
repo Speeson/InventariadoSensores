@@ -4,7 +4,8 @@ from app.models.category import Category
 from app.models.product import Product
 from app.models.movement import Movement
 from app.models.event import Event
-from app.models.enums import EventType
+from app.models.audit_log import AuditLog
+from app.models.enums import EventType, Entity, ActionType, UserRole
 from app.repositories import stock_repo, event_repo, location_repo
 from app.tasks import process_event
 
@@ -67,6 +68,7 @@ def test_event_creates_pending_and_enqueues(client, db, monkeypatch):
     )
     assert response.status_code == 201
     body = response.json()
+    assert body["user_id"] is not None
     assert body["processed"] is False
     assert body["event_status"] == "PENDING"
     assert enqueued["event_id"] == body["id"]
@@ -137,10 +139,24 @@ def test_process_event_creates_stock_and_movement(db):
 
     location = location_repo.get_or_create(db, "Laboratorio")
 
+    from app.models.user import User
+    from app.core.security import hash_password
+
+    user = User(
+        username=f"user_{uuid4().hex[:8]}",
+        email=f"user_{uuid4().hex}@example.com",
+        password_hash=hash_password("Password123!"),
+        role=UserRole.MANAGER,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
     event = event_repo.create_event(
         db,
         event_type=EventType.SENSOR_IN,
         product_id=product.id,
+        user_id=user.id,
         delta=3,
         source="sensor_simulado",
         location_id=location.id,
@@ -163,3 +179,7 @@ def test_process_event_creates_stock_and_movement(db):
     movement = db.query(Movement).filter(Movement.product_id == product.id).first()
     assert movement is not None
     assert movement.delta == 3
+
+    logs = db.query(AuditLog).filter(AuditLog.user_id == user.id).all()
+    assert any(log.entity == Entity.MOVEMENT and log.action == ActionType.CREATE for log in logs)
+    assert any(log.entity == Entity.STOCK and log.action == ActionType.UPDATE for log in logs)

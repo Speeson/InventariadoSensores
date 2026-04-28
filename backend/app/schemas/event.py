@@ -30,6 +30,7 @@ class EventResponse(BaseModel):
     id: int
     event_type: EventType
     product_id: int
+    user_id: int | None = None
     delta: int
     source: str
     processed: bool
@@ -42,6 +43,7 @@ class EventResponse(BaseModel):
                 "id": 55,
                 "event_type": "SENSOR_IN",
                 "product_id": 1,
+                "user_id": 10,
                 "delta": 3,
                 "source": "sensor_simulado",
                 "processed": False,

@@ -7,3 +7,6 @@ data class Product(
     val category: String,
     val stock: Int
 )
+
+
+
