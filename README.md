@@ -495,88 +495,618 @@ Documentacion de apoyo (backend/context):
 ## Estructura completa del proyecto (todas las carpetas y archivos)
 
 ```
+
+
 InventariadoSensores/
-├── .github/
-│   └── workflows/
-│       ├── backend-ci.yml
-│       └── backend-contract.yml
-│
-├── backend/
-│   ├── app/
-│   │   ├── api/
-│   │   │   └── routes/
-│   │   ├── cache/
-│   │   ├── core/
-│   │   ├── db/
-│   │   ├── models/
-│   │   ├── repositories/
-│   │   ├── schemas/
-│   │   ├── services/
-│   │   ├── tasks.py
-│   │   └── main.py
-│   │
-│   ├── alembic/
-│   │   └── versions/
-│   │
-│   ├── observability/
-│   │   ├── grafana/
-│   │   └── prometheus/
-│   │
-│   ├── openapi/
-│   │   └── openapi.json
-│   │
-│   ├── scripts/
-│   │   ├── export_openapi.py
-│   │   ├── seed_db.py
-│   │   ├── seed2_db.py
-│   │   ├── demo_grafana_errors.ps1
-│   │   ├── demo_grafana_load.ps1
-│   │   ├── k6_grafana_load.js
-│   │   └── generate_flowchart_png.ps1
-│   │
-│   ├── tests/
-│   │   ├── conftest.py
-│   │   ├── test_openapi_snapshot.py
-│   │   ├── test_contract.py
-│   │   ├── test_inventory_service_unit.py
-│   │   └── ...
-│   │
-│   ├── test-reports/
-│   │
-│   ├── context/
-│   │   ├── GUIA_DEFENSA_REQUISITOS_ACTIVIDAD4.md
-│   │   ├── GUIA_DEMOSTRACIONES_REQUISITOS.md
-│   │   ├── RECAP_GLOBAL_REQUISITOS_DEMO.md
-│   │   ├── RECAP_GLOBAL_REQUISITOS_DEMO.pdf
-│   │   ├── DIAGRAMA_FLUJO_APP.md
-│   │   ├── DIAGRAMA_FLUJO_APP.png
-│   │   ├── README_import_swagger.md
-│   │   ├── README_observabilidad_prometheus_grafana.md
-│   │   ├── README_tests_contrato_openapi.md
-│   │   └── import_samples/
-│   │       ├── README_stress_pack.md
-│   │       └── *.csv
-│   │
-│   ├── docker-compose.yml
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   └── requirements-dev.txt
-│
-├── android/
-│   ├── app/
-│   │   ├── src/main/java/com/example/inventoryapp/
-│   │   │   ├── data/
-│   │   │   ├── domain/
-│   │   │   └── ui/
-│   │   │
-│   │   └── src/main/res/
-│   │
-│   ├── build.gradle.kts
-│   └── settings.gradle.kts
-│
-├── readmeSprint3.md
-├── README_USUARIO.md
-└── README.md
+    ├── .github/
+    │   ├── workflows/
+    │   │   ├── backend-ci.yml
+    │   │   ├── backend-contract.yml
+    ├── android/
+    │   ├── .idea/
+    │   │   ├── codeStyles/
+    │   │   │   ├── codeStyleConfig.xml
+    │   │   │   ├── Project.xml
+    │   │   ├── inspectionProfiles/
+    │   │   │   ├── Project_Default.xml
+    │   │   ├── .gitignore
+    │   │   ├── .name
+    │   │   ├── AndroidProjectSystem.xml
+    │   │   ├── appInsightsSettings.xml
+    │   │   ├── compiler.xml
+    │   │   ├── deploymentTargetSelector.xml
+    │   │   ├── deviceManager.xml
+    │   │   ├── gradle.xml
+    │   │   ├── markdown.xml
+    │   │   ├── migrations.xml
+    │   │   ├── misc.xml
+    │   │   ├── runConfigurations.xml
+    │   │   ├── studiobot.xml
+    │   │   ├── vcs.xml
+    │   ├── app/
+    │   │   ├── libs/
+    │   │   │   ├── 4.0.2-release.aar
+    │   │   │   ├── image-1.9.5-20260121.aar
+    │   │   │   ├── LPAPI-2019-11-20-R.jar
+    │   │   ├── src/
+    │   │   │   ├── androidTest/
+    │   │   │   │   ├── java/
+    │   │   │   │   │   ├── com/
+    │   │   │   │   │   │   ├── example/
+    │   │   │   │   │   │   │   ├── inventoryapp/
+    │   │   │   │   │   │   │   │   ├── ExampleInstrumentedTest.kt
+    │   │   │   ├── main/
+    │   │   │   │   ├── java/
+    │   │   │   │   │   ├── com/
+    │   │   │   │   │   │   ├── example/
+    │   │   │   │   │   │   │   ├── inventoryapp/
+    │   │   │   │   │   │   │   │   ├── data/
+    │   │   │   │   │   │   │   │   │   ├── local/
+    │   │   │   │   │   │   │   │   │   │   ├── cache/
+    │   │   │   │   │   │   │   │   │   │   │   ├── CacheDao.kt
+    │   │   │   │   │   │   │   │   │   │   │   ├── CacheDatabase.kt
+    │   │   │   │   │   │   │   │   │   │   │   ├── CacheEntry.kt
+    │   │   │   │   │   │   │   │   │   │   │   ├── CacheKeys.kt
+    │   │   │   │   │   │   │   │   │   │   │   ├── CacheStore.kt
+    │   │   │   │   │   │   │   │   │   │   │   ├── ProductNameCache.kt
+    │   │   │   │   │   │   │   │   │   │   ├── EventAlertDismissStore.kt
+    │   │   │   │   │   │   │   │   │   │   ├── OfflineQueue.kt
+    │   │   │   │   │   │   │   │   │   │   ├── OfflineSyncer.kt
+    │   │   │   │   │   │   │   │   │   │   ├── OfflineSyncScheduler.kt
+    │   │   │   │   │   │   │   │   │   │   ├── OfflineSyncWorker.kt
+    │   │   │   │   │   │   │   │   │   │   ├── SessionManager.kt
+    │   │   │   │   │   │   │   │   │   │   ├── SystemAlertStore.kt
+    │   │   │   │   │   │   │   │   │   ├── remote/
+    │   │   │   │   │   │   │   │   │   │   ├── model/
+    │   │   │   │   │   │   │   │   │   │   │   ├── AlertDtos.kt
+    │   │   │   │   │   │   │   │   │   │   │   ├── AuditDtos.kt
+    │   │   │   │   │   │   │   │   │   │   │   ├── CategoryDtos.kt
+    │   │   │   │   │   │   │   │   │   │   │   ├── EventDtos.kt
+    │   │   │   │   │   │   │   │   │   │   │   ├── FcmDtos.kt
+    │   │   │   │   │   │   │   │   │   │   │   ├── HealthResponseDto.kt
+    │   │   │   │   │   │   │   │   │   │   │   ├── ImportDtos.kt
+    │   │   │   │   │   │   │   │   │   │   │   ├── LocationDtos.kt
+    │   │   │   │   │   │   │   │   │   │   │   ├── MovementDtos.kt
+    │   │   │   │   │   │   │   │   │   │   │   ├── ProductDtos.kt
+    │   │   │   │   │   │   │   │   │   │   │   ├── ReportDtos.kt
+    │   │   │   │   │   │   │   │   │   │   │   ├── StockDtos.kt
+    │   │   │   │   │   │   │   │   │   │   │   ├── ThresholdDtos.kt
+    │   │   │   │   │   │   │   │   │   │   │   ├── TokenResponse.kt
+    │   │   │   │   │   │   │   │   │   │   ├── AlertsWebSocketManager.kt
+    │   │   │   │   │   │   │   │   │   │   ├── AuthInterceptor.kt
+    │   │   │   │   │   │   │   │   │   │   ├── FcmService.kt
+    │   │   │   │   │   │   │   │   │   │   ├── FcmTokenManager.kt
+    │   │   │   │   │   │   │   │   │   │   ├── InventoryApi.kt
+    │   │   │   │   │   │   │   │   │   │   ├── NetworkModule.kt
+    │   │   │   │   │   │   │   │   │   ├── repository/
+    │   │   │   │   │   │   │   │   │   │   ├── remote/
+    │   │   │   │   │   │   │   │   │   │   │   ├── EventRepository.kt
+    │   │   │   │   │   │   │   │   │   │   │   └── RemoteScanRepository.kt
+    │   │   │   │   │   │   │   │   │   │   ├── MovementRepository.kt
+    │   │   │   │   │   │   │   │   ├── domain/
+    │   │   │   │   │   │   │   │   │   ├── model/
+    │   │   │   │   │   │   │   │   │   │   ├── EventMovementResult.kt
+    │   │   │   │   │   │   │   │   │   │   ├── EventMovementStatus.kt
+    │   │   │   │   │   │   │   │   │   │   ├── Movement.kt
+    │   │   │   │   │   │   │   │   │   │   ├── MovementType.kt
+    │   │   │   │   │   │   │   │   │   │   ├── Product.kt
+    │   │   │   │   │   │   │   │   ├── ui/
+    │   │   │   │   │   │   │   │   │   ├── alerts/
+    │   │   │   │   │   │   │   │   │   │   ├── AlertListAdapter.kt
+    │   │   │   │   │   │   │   │   │   │   ├── AlertsActivity.kt
+    │   │   │   │   │   │   │   │   │   │   ├── AlertsListFragment.kt
+    │   │   │   │   │   │   │   │   │   │   ├── AlertsPagerAdapter.kt
+    │   │   │   │   │   │   │   │   │   │   ├── OfflinePendingAdapter.kt
+    │   │   │   │   │   │   │   │   │   │   ├── OfflinePendingFragment.kt
+    │   │   │   │   │   │   │   │   │   │   ├── SystemAlertAdapter.kt
+    │   │   │   │   │   │   │   │   │   ├── audit/
+    │   │   │   │   │   │   │   │   │   │   ├── AuditActivity.kt
+    │   │   │   │   │   │   │   │   │   │   ├── AuditAdapter.kt
+    │   │   │   │   │   │   │   │   │   ├── auth/
+    │   │   │   │   │   │   │   │   │   │   ├── LoginActivity.kt
+    │   │   │   │   │   │   │   │   │   ├── categories/
+    │   │   │   │   │   │   │   │   │   │   ├── CategoriesActivity.kt
+    │   │   │   │   │   │   │   │   │   │   ├── CategoryListAdapter.kt
+    │   │   │   │   │   │   │   │   │   ├── common/
+    │   │   │   │   │   │   │   │   │   │   ├── ActivityTracker.kt
+    │   │   │   │   │   │   │   │   │   │   ├── AlertsBadgeUtil.kt
+    │   │   │   │   │   │   │   │   │   │   ├── ApiErrorFormatter.kt
+    │   │   │   │   │   │   │   │   │   │   ├── CreateUiFeedback.kt
+    │   │   │   │   │   │   │   │   │   │   ├── GradientIconUtil.kt
+    │   │   │   │   │   │   │   │   │   │   ├── NetworkStatusBar.kt
+    │   │   │   │   │   │   │   │   │   │   ├── SendSnack.kt
+    │   │   │   │   │   │   │   │   │   │   ├── SystemAlertManager.kt
+    │   │   │   │   │   │   │   │   │   │   ├── UiNotifier.kt
+    │   │   │   │   │   │   │   │   │   ├── events/
+    │   │   │   │   │   │   │   │   │   │   ├── EventAdapter.kt
+    │   │   │   │   │   │   │   │   │   │   ├── EventRowUi.kt
+    │   │   │   │   │   │   │   │   │   │   ├── EventsActivity.kt
+    │   │   │   │   │   │   │   │   │   ├── home/
+    │   │   │   │   │   │   │   │   │   │   ├── HomeActivity.kt
+    │   │   │   │   │   │   │   │   │   ├── imports/
+    │   │   │   │   │   │   │   │   │   │   ├── ImportErrorAdapter.kt
+    │   │   │   │   │   │   │   │   │   │   ├── ImportEventsFragment.kt
+    │   │   │   │   │   │   │   │   │   │   ├── ImportFormFragment.kt
+    │   │   │   │   │   │   │   │   │   │   ├── ImportReviewAdapter.kt
+    │   │   │   │   │   │   │   │   │   │   ├── ImportReviewsFragment.kt
+    │   │   │   │   │   │   │   │   │   │   ├── ImportsActivity.kt
+    │   │   │   │   │   │   │   │   │   │   ├── ImportsPagerAdapter.kt
+    │   │   │   │   │   │   │   │   │   │   ├── ImportTransfersFragment.kt
+    │   │   │   │   │   │   │   │   │   ├── movements/
+    │   │   │   │   │   │   │   │   │   │   ├── MovementsListAdapter.kt
+    │   │   │   │   │   │   │   │   │   │   ├── MovementsMenuActivity.kt
+    │   │   │   │   │   │   │   │   │   │   ├── ResultActivity.kt
+    │   │   │   │   │   │   │   │   │   ├── offline/
+    │   │   │   │   │   │   │   │   │   │   ├── OfflineErrorsAdapter.kt
+    │   │   │   │   │   │   │   │   │   ├── products/
+    │   │   │   │   │   │   │   │   │   │   ├── LabelPreviewActivity.kt
+    │   │   │   │   │   │   │   │   │   │   ├── NiimbotSdkManager.kt
+    │   │   │   │   │   │   │   │   │   │   ├── ProductAdapter.kt
+    │   │   │   │   │   │   │   │   │   │   ├── ProductListActivity.kt
+    │   │   │   │   │   │   │   │   │   │   ├── ProductListAdapter.kt
+    │   │   │   │   │   │   │   │   │   ├── reports/
+    │   │   │   │   │   │   │   │   │   │   ├── ReportsActivity.kt
+    │   │   │   │   │   │   │   │   │   │   ├── TopConsumedActivity.kt
+    │   │   │   │   │   │   │   │   │   │   ├── TopConsumedAdapter.kt
+    │   │   │   │   │   │   │   │   │   │   ├── TurnoverAdapter.kt
+    │   │   │   │   │   │   │   │   │   │   ├── TurnoverReportActivity.kt
+    │   │   │   │   │   │   │   │   │   │   ├── TurnoverRow.kt
+    │   │   │   │   │   │   │   │   │   ├── rotation/
+    │   │   │   │   │   │   │   │   │   │   ├── RotationActivity.kt
+    │   │   │   │   │   │   │   │   │   │   ├── RotationAdapter.kt
+    │   │   │   │   │   │   │   │   │   │   ├── RotationRow.kt
+    │   │   │   │   │   │   │   │   │   ├── scan/
+    │   │   │   │   │   │   │   │   │   │   ├── ConfirmScanActivity.kt
+    │   │   │   │   │   │   │   │   │   ├── stock/
+    │   │   │   │   │   │   │   │   │   │   ├── StockActivity.kt
+    │   │   │   │   │   │   │   │   │   │   ├── StockListAdapter.kt
+    │   │   │   │   │   │   │   │   │   ├── thresholds/
+    │   │   │   │   │   │   │   │   │   │   ├── ThresholdListAdapter.kt
+    │   │   │   │   │   │   │   │   │   │   └── ThresholdsActivity.kt
+    │   │   │   │   │   │   │   │   │   └── ScanActivity.kt
+    │   │   │   │   │   │   │   │   ├── InventoryApp.kt
+    │   │   │   │   │   │   │   │   ├── MainActivity.kt
+    │   │   │   │   ├── res/
+    │   │   │   │   │   ├── anim/
+    │   │   │   │   │   │   ├── alert_icon_pulse.xml
+    │   │   │   │   │   │   ├── alert_popup_in.xml
+    │   │   │   │   │   │   ├── alert_popup_out.xml
+    │   │   │   │   │   │   ├── screen_enter_soft.xml
+    │   │   │   │   │   │   ├── screen_exit_soft.xml
+    │   │   │   │   │   │   ├── screen_pop_enter_soft.xml
+    │   │   │   │   │   │   ├── screen_pop_exit_soft.xml
+    │   │   │   │   │   ├── drawable/
+    │   │   │   │   │   │   ├── add.png
+    │   │   │   │   │   │   ├── addfile.png
+    │   │   │   │   │   │   ├── adjust.png
+    │   │   │   │   │   │   ├── ajustes.png
+    │   │   │   │   │   │   ├── alert_blue.png
+    │   │   │   │   │   │   ├── alert_green.png
+    │   │   │   │   │   │   ├── alert_red.png
+    │   │   │   │   │   │   ├── alert_violet.png
+    │   │   │   │   │   │   ├── alert_yellow.png
+    │   │   │   │   │   │   ├── api.png
+    │   │   │   │   │   │   ├── back.png
+    │   │   │   │   │   │   ├── baseline_account_circle_24.xml
+    │   │   │   │   │   │   ├── bg_avatar_circle.xml
+    │   │   │   │   │   │   ├── bg_back_shadow.xml
+    │   │   │   │   │   │   ├── bg_badge_red.xml
+    │   │   │   │   │   │   ├── bg_button_danger.xml
+    │   │   │   │   │   │   ├── bg_button_gradient.xml
+    │   │   │   │   │   │   ├── bg_button_soft_purple.xml
+    │   │   │   │   │   │   ├── bg_circle_icon.xml
+    │   │   │   │   │   │   ├── bg_event_id_badge.xml
+    │   │   │   │   │   │   ├── bg_home_gradient.xml
+    │   │   │   │   │   │   ├── bg_login_blue_gradient.xml
+    │   │   │   │   │   │   ├── bg_snackbar.xml
+    │   │   │   │   │   │   ├── bg_toggle_active.xml
+    │   │   │   │   │   │   ├── bg_toggle_idle.xml
+    │   │   │   │   │   │   ├── category.png
+    │   │   │   │   │   │   ├── celery.png
+    │   │   │   │   │   │   ├── clear.png
+    │   │   │   │   │   │   ├── close.png
+    │   │   │   │   │   │   ├── copy.png
+    │   │   │   │   │   │   ├── correct.png
+    │   │   │   │   │   │   ├── database.png
+    │   │   │   │   │   │   ├── down.png
+    │   │   │   │   │   │   ├── events.png
+    │   │   │   │   │   │   ├── expired.png
+    │   │   │   │   │   │   ├── export.png
+    │   │   │   │   │   │   ├── ic_bell.xml
+    │   │   │   │   │   │   ├── ic_category.xml
+    │   │   │   │   │   │   ├── ic_check_green.xml
+    │   │   │   │   │   │   ├── ic_close_red.xml
+    │   │   │   │   │   │   ├── ic_copy.xml
+    │   │   │   │   │   │   ├── ic_error_red.xml
+    │   │   │   │   │   │   ├── ic_launcher_background.xml
+    │   │   │   │   │   │   ├── ic_launcher_foreground.xml
+    │   │   │   │   │   │   ├── ic_lock.xml
+    │   │   │   │   │   │   ├── ic_moon.xml
+    │   │   │   │   │   │   ├── ic_print.xml
+    │   │   │   │   │   │   ├── ic_profile.xml
+    │   │   │   │   │   │   ├── ic_status.xml
+    │   │   │   │   │   │   ├── ic_sun.xml
+    │   │   │   │   │   │   ├── ic_user_avatar.xml
+    │   │   │   │   │   │   ├── iotrack_adaptative.png
+    │   │   │   │   │   │   ├── iotrack_icon.png
+    │   │   │   │   │   │   ├── iotrack.png
+    │   │   │   │   │   │   ├── loaded.png
+    │   │   │   │   │   │   ├── lote.png
+    │   │   │   │   │   │   ├── menu.png
+    │   │   │   │   │   │   ├── movements.png
+    │   │   │   │   │   │   ├── niimbot.png
+    │   │   │   │   │   │   ├── offline.png
+    │   │   │   │   │   │   ├── online.png
+    │   │   │   │   │   │   ├── orderby.png
+    │   │   │   │   │   │   ├── print_label.png
+    │   │   │   │   │   │   ├── print.png
+    │   │   │   │   │   │   ├── products.png
+    │   │   │   │   │   │   ├── redis.png
+    │   │   │   │   │   │   ├── reports.png
+    │   │   │   │   │   │   ├── rotation.png
+    │   │   │   │   │   │   ├── rotations.png
+    │   │   │   │   │   │   ├── scaner.png
+    │   │   │   │   │   │   ├── search.png
+    │   │   │   │   │   │   ├── splash_empty_icon.xml
+    │   │   │   │   │   │   ├── splash_iotrack_icon.xml
+    │   │   │   │   │   │   ├── splash_login_style_icon.png
+    │   │   │   │   │   │   ├── stock.png
+    │   │   │   │   │   │   ├── sync.png
+    │   │   │   │   │   │   ├── system.png
+    │   │   │   │   │   │   ├── threshold.png
+    │   │   │   │   │   │   ├── transfer.png
+    │   │   │   │   │   │   ├── triangle_down_lg.xml
+    │   │   │   │   │   │   ├── triangle_down.xml
+    │   │   │   │   │   │   ├── triangle_up.xml
+    │   │   │   │   │   │   ├── umbral.png
+    │   │   │   │   │   │   ├── up.png
+    │   │   │   │   │   │   ├── user.png
+    │   │   │   │   │   ├── drawable-night/
+    │   │   │   │   │   │   ├── splash_login_style_icon.xml
+    │   │   │   │   │   ├── layout/
+    │   │   │   │   │   │   ├── activity_alerts.xml
+    │   │   │   │   │   │   ├── activity_audit.xml
+    │   │   │   │   │   │   ├── activity_categories.xml
+    │   │   │   │   │   │   ├── activity_confirm_scan.xml
+    │   │   │   │   │   │   ├── activity_events.xml
+    │   │   │   │   │   │   ├── activity_home.xml
+    │   │   │   │   │   │   ├── activity_imports.xml
+    │   │   │   │   │   │   ├── activity_label_preview.xml
+    │   │   │   │   │   │   ├── activity_login.xml
+    │   │   │   │   │   │   ├── activity_main.xml
+    │   │   │   │   │   │   ├── activity_movements_menu.xml
+    │   │   │   │   │   │   ├── activity_offline_errors.xml
+    │   │   │   │   │   │   ├── activity_product_list.xml
+    │   │   │   │   │   │   ├── activity_reports.xml
+    │   │   │   │   │   │   ├── activity_result.xml
+    │   │   │   │   │   │   ├── activity_rotation.xml
+    │   │   │   │   │   │   ├── activity_scan.xml
+    │   │   │   │   │   │   ├── activity_stock.xml
+    │   │   │   │   │   │   ├── activity_thresholds.xml
+    │   │   │   │   │   │   ├── activity_top_consumed.xml
+    │   │   │   │   │   │   ├── activity_turnover_report.xml
+    │   │   │   │   │   │   ├── dialog_alert_popup.xml
+    │   │   │   │   │   │   ├── dialog_audit_detail.xml
+    │   │   │   │   │   │   ├── dialog_create_failure.xml
+    │   │   │   │   │   │   ├── dialog_create_loading.xml
+    │   │   │   │   │   │   ├── dialog_create_success.xml
+    │   │   │   │   │   │   ├── dialog_edit_category.xml
+    │   │   │   │   │   │   ├── dialog_edit_product.xml
+    │   │   │   │   │   │   ├── dialog_edit_stock.xml
+    │   │   │   │   │   │   ├── dialog_edit_threshold.xml
+    │   │   │   │   │   │   ├── dialog_import_review_bottom_sheet.xml
+    │   │   │   │   │   │   ├── dialog_important_notice.xml
+    │   │   │   │   │   │   ├── dialog_list_loading.xml
+    │   │   │   │   │   │   ├── dialog_logout_confirm.xml
+    │   │   │   │   │   │   ├── dialog_niimbot_actions.xml
+    │   │   │   │   │   │   ├── dialog_niimbot_bluetooth.xml
+    │   │   │   │   │   │   ├── dialog_niimbot_printing.xml
+    │   │   │   │   │   │   ├── dialog_permission_denied.xml
+    │   │   │   │   │   │   ├── dialog_register.xml
+    │   │   │   │   │   │   ├── dialog_system_status.xml
+    │   │   │   │   │   │   ├── fragment_alerts_list.xml
+    │   │   │   │   │   │   ├── fragment_import_form.xml
+    │   │   │   │   │   │   ├── fragment_import_reviews.xml
+    │   │   │   │   │   │   ├── fragment_offline_pending.xml
+    │   │   │   │   │   │   ├── item_alert_card.xml
+    │   │   │   │   │   │   ├── item_audit_log.xml
+    │   │   │   │   │   │   ├── item_category_card.xml
+    │   │   │   │   │   │   ├── item_event_row.xml
+    │   │   │   │   │   │   ├── item_import_error.xml
+    │   │   │   │   │   │   ├── item_import_review.xml
+    │   │   │   │   │   │   ├── item_movement_card.xml
+    │   │   │   │   │   │   ├── item_offline_error_card.xml
+    │   │   │   │   │   │   ├── item_offline_pending_card.xml
+    │   │   │   │   │   │   ├── item_product_card.xml
+    │   │   │   │   │   │   ├── item_product.xml
+    │   │   │   │   │   │   ├── item_rotation_row.xml
+    │   │   │   │   │   │   ├── item_stock_card.xml
+    │   │   │   │   │   │   ├── item_system_alert_card.xml
+    │   │   │   │   │   │   ├── item_threshold_card.xml
+    │   │   │   │   │   │   ├── item_top_consumed_row.xml
+    │   │   │   │   │   │   ├── item_turnover_row.xml
+    │   │   │   │   │   │   ├── nav_header_home.xml
+    │   │   │   │   │   ├── menu/
+    │   │   │   │   │   │   ├── drawer_menu_bottom.xml
+    │   │   │   │   │   │   ├── drawer_menu.xml
+    │   │   │   │   │   │   ├── home_menu.xml
+    │   │   │   │   │   ├── mipmap-anydpi-v26/
+    │   │   │   │   │   │   ├── ic_launcher_round.xml
+    │   │   │   │   │   │   ├── ic_launcher.xml
+    │   │   │   │   │   ├── mipmap-hdpi/
+    │   │   │   │   │   │   ├── ic_launcher_foreground.png
+    │   │   │   │   │   │   ├── ic_launcher_round.png
+    │   │   │   │   │   │   ├── ic_launcher.png
+    │   │   │   │   │   ├── mipmap-mdpi/
+    │   │   │   │   │   │   ├── ic_launcher_foreground.png
+    │   │   │   │   │   │   ├── ic_launcher_round.png
+    │   │   │   │   │   │   ├── ic_launcher.png
+    │   │   │   │   │   ├── mipmap-xhdpi/
+    │   │   │   │   │   │   ├── ic_launcher_foreground.png
+    │   │   │   │   │   │   ├── ic_launcher_round.png
+    │   │   │   │   │   │   ├── ic_launcher.png
+    │   │   │   │   │   ├── mipmap-xxhdpi/
+    │   │   │   │   │   │   ├── ic_launcher_foreground.png
+    │   │   │   │   │   │   ├── ic_launcher_round.png
+    │   │   │   │   │   │   ├── ic_launcher.png
+    │   │   │   │   │   ├── mipmap-xxxhdpi/
+    │   │   │   │   │   │   ├── ic_launcher_foreground.png
+    │   │   │   │   │   │   ├── ic_launcher_round.png
+    │   │   │   │   │   │   ├── ic_launcher.png
+    │   │   │   │   │   ├── raw/
+    │   │   │   │   │   │   ├── bluetooth.json
+    │   │   │   │   │   │   ├── camera.json
+    │   │   │   │   │   │   ├── connect_print.json
+    │   │   │   │   │   │   ├── correct_create.json
+    │   │   │   │   │   │   ├── error.json
+    │   │   │   │   │   │   ├── file.json
+    │   │   │   │   │   │   ├── loading_list.json
+    │   │   │   │   │   │   ├── loading.json
+    │   │   │   │   │   │   ├── locked.json
+    │   │   │   │   │   │   ├── logout.json
+    │   │   │   │   │   │   ├── notfound.json
+    │   │   │   │   │   │   ├── print_error.json
+    │   │   │   │   │   │   ├── printing.json
+    │   │   │   │   │   │   ├── question.json
+    │   │   │   │   │   │   ├── send.json
+    │   │   │   │   │   │   ├── sync.json
+    │   │   │   │   │   │   ├── wrong.json
+    │   │   │   │   │   ├── values/
+    │   │   │   │   │   │   ├── colors.xml
+    │   │   │   │   │   │   ├── strings.xml
+    │   │   │   │   │   │   ├── styles.xml
+    │   │   │   │   │   │   ├── themes.xml
+    │   │   │   │   │   ├── values-night/
+    │   │   │   │   │   │   ├── themes.xml
+    │   │   │   │   │   ├── xml/
+    │   │   │   │   │   │   ├── backup_rules.xml
+    │   │   │   │   │   │   ├── data_extraction_rules.xml
+    │   │   │   │   │   │   ├── file_paths.xml
+    │   │   │   │   ├── AndroidManifest.xml
+    │   │   │   │   ├── ic_launcher-playstore.png
+    │   │   │   ├── test/
+    │   │   │   │   ├── java/
+    │   │   │   │   │   ├── com/
+    │   │   │   │   │   │   └── example/
+    │   │   │   │   │   │       └── inventoryapp/
+    │   │   │   │   │   │           └── ExampleUnitTest.kt
+    │   │   ├── .gitignore
+    │   │   ├── build.gradle.kts
+    │   │   ├── google-services.json
+    │   │   ├── proguard-rules.pro
+    │   ├── gradle/
+    │   │   ├── wrapper/
+    │   │   │   ├── gradle-wrapper.jar
+    │   │   │   ├── gradle-wrapper.properties
+    │   │   ├── libs.versions.toml
+    │   ├── .gitignore
+    │   ├── build.gradle.kts
+    │   ├── Documentacion.md
+    │   ├── DocumentacionFront.md
+    │   ├── gradle.properties
+    │   ├── gradlew
+    │   ├── gradlew.bat
+    │   ├── settings.gradle.kts
+    ├── backend/
+    │   ├── alembic/
+    │   │   ├── versions/
+    │   │   │   ├── 2f4c1b7f1b0d_remove_alert_ack_at_default.py
+    │   │   │   ├── 3b2a1c9d7e10_add_import_tables.py
+    │   │   │   ├── 3f5d8b2a1e47_add_import_entity_to_audit_log.py
+    │   │   │   ├── 4f3c2a9b7e2c_add_transfer_id_to_movements.py
+    │   │   │   ├── 6a1d2c3e4f50_merge_import_heads.py
+    │   │   │   ├── 6f8657d8911f_merge_heads.py
+    │   │   │   ├── 7a4c9d2e1f10_merge_heads_audit_import.py
+    │   │   │   ├── 8ec94a38e7f4_add_alerts_notifications.py
+    │   │   │   ├── 9b8c7d6e5f40_add_alert_type.py
+    │   │   │   ├── 9e75fa04121a_add_stock_thresholds_and_alerts_add_.py
+    │   │   │   ├── 3373e6b81640_add_location_id_to_movements_and_.py
+    │   │   │   ├── a3b4c5d6e7f8_make_alert_stock_id_nullable.py
+    │   │   │   ├── b7a2c9d4e611_events_defaults_and_processed_at.py
+    │   │   │   ├── bc1a2d3e4f50_add_fcm_tokens.py
+    │   │   │   ├── c8ce14e1e339_add_indexes.py
+    │   │   │   ├── c51f9fca7313_add_locations.py
+    │   │   │   ├── d2b1c5f9a1a0_merge_event_defaults_and_locations.py
+    │   │   │   ├── ef8cae6fe367_merge_heads.py
+    │   │   │   ├── f1c2d3e4b5a6_add_delta_to_movements.py
+    │   │   ├── env.py
+    │   │   ├── README
+    │   │   ├── script.py.mako
+    │   ├── app/
+    │   │   ├── __pycache__/
+    │   │   │   ├── main.cpython-313.pyc
+    │   │   ├── api/
+    │   │   │   ├── routers/
+    │   │   │   │   ├── __pycache__/
+    │   │   │   │   │   ├── events.cpython-313.pyc
+    │   │   │   ├── routes/
+    │   │   │   │   ├── alerts.py
+    │   │   │   │   ├── audit.py
+    │   │   │   │   ├── auth.py
+    │   │   │   │   ├── categories.py
+    │   │   │   │   ├── events.py
+    │   │   │   │   ├── imports.py
+    │   │   │   │   ├── locations.py
+    │   │   │   │   ├── movements.py
+    │   │   │   │   ├── products.py
+    │   │   │   │   ├── reports.py
+    │   │   │   │   ├── stocks.py
+    │   │   │   │   ├── thresholds.py
+    │   │   │   │   ├── users.py
+    │   │   │   │   ├── ws_alerts.py
+    │   │   │   ├── deps.py
+    │   │   │   ├── security.py
+    │   │   ├── cache/
+    │   │   │   ├── redis_cache.py
+    │   │   ├── core/
+    │   │   │   ├── __init__.py
+    │   │   │   ├── config.py
+    │   │   │   ├── observability.py
+    │   │   │   ├── security.py
+    │   │   ├── db/
+    │   │   │   ├── __init__.py
+    │   │   │   ├── base.py
+    │   │   │   ├── deps.py
+    │   │   │   ├── session.py
+    │   │   ├── models/
+    │   │   │   ├── __init__.py
+    │   │   │   ├── alert.py
+    │   │   │   ├── audit_log.py
+    │   │   │   ├── category.py
+    │   │   │   ├── enums.py
+    │   │   │   ├── event.py
+    │   │   │   ├── fcm_token.py
+    │   │   │   ├── import_batch.py
+    │   │   │   ├── import_error.py
+    │   │   │   ├── import_review.py
+    │   │   │   ├── location.py
+    │   │   │   ├── movement.py
+    │   │   │   ├── product.py
+    │   │   │   ├── stock_threshold.py
+    │   │   │   ├── stock.py
+    │   │   │   ├── user.py
+    │   │   ├── repositories/
+    │   │   │   ├── __pycache__/
+    │   │   │   │   ├── memory_repo.cpython-313.pyc
+    │   │   │   ├── alert_repo.py
+    │   │   │   ├── audit_log_repo.py
+    │   │   │   ├── category_repo.py
+    │   │   │   ├── event_repo.py
+    │   │   │   ├── fcm_token_repo.py
+    │   │   │   ├── location_repo.py
+    │   │   │   ├── memory_repo.py
+    │   │   │   ├── movement_repo.py
+    │   │   │   ├── product_repo.py
+    │   │   │   ├── report_repo.py
+    │   │   │   ├── stock_repo.py
+    │   │   │   ├── threshold_repo.py
+    │   │   │   ├── user_repo.py
+    │   │   ├── schemas/
+    │   │   │   ├── __pycache__/
+    │   │   │   │   ├── event.cpython-313.pyc
+    │   │   │   ├── __init__.py
+    │   │   │   ├── alert.py
+    │   │   │   ├── audit_log.py
+    │   │   │   ├── auth.py
+    │   │   │   ├── category.py
+    │   │   │   ├── event.py
+    │   │   │   ├── fcm.py
+    │   │   │   ├── location.py
+    │   │   │   ├── movement.py
+    │   │   │   ├── product.py
+    │   │   │   ├── report.py
+    │   │   │   ├── stock.py
+    │   │   │   ├── threshold.py
+    │   │   │   ├── user.py
+    │   │   ├── services/
+    │   │   │   ├── __pycache__/
+    │   │   │   │   ├── event_service.cpython-313.pyc
+    │   │   │   ├── __init__.py
+    │   │   │   ├── auth_service.py
+    │   │   │   ├── event_service.py
+    │   │   │   ├── fcm_service.py
+    │   │   │   ├── inventory_service.py
+    │   │   │   ├── label_service.py
+    │   │   │   ├── notification_service.py
+    │   │   ├── ws/
+    │   │   │   ├── alerts_ws.py
+    │   │   ├── __init__.py
+    │   │   ├── celery_app.py
+    │   │   ├── main.py
+    │   │   ├── tasks.py
+    │   ├── context/
+    │   │   ├── import_samples/
+    │   │   │   ├── events_agresivo_mixto.csv
+    │   │   │   ├── events_bordes_espacios.csv
+    │   │   │   ├── events_lote_grande.csv
+    │   │   │   ├── events_sample_errors.csv
+    │   │   │   ├── events_sample_review.csv
+    │   │   │   ├── events_sample.csv
+    │   │   │   ├── README_stress_pack.md
+    │   │   │   ├── transfers_agresivo_mixto.csv
+    │   │   │   ├── transfers_lote_grande.csv
+    │   │   │   ├── transfers_sample_errors.csv
+    │   │   │   ├── transfers_sample.csv
+    │   │   ├── Propuestas de proyectos 2DAM.pdf
+    │   │   ├── readmeSprint3.md
+    │   │   ├── RECAP_GLOBAL_REQUISITOS_DEMO.md
+    │   ├── credentials/
+    │   │   ├── .gitignore
+    │   ├── observability/
+    │   │   ├── grafana/
+    │   │   │   ├── dashboards/
+    │   │   │   │   ├── inventory-observability.json
+    │   │   │   ├── provisioning/
+    │   │   │   │   ├── alerting/
+    │   │   │   │   │   ├── .gitkeep
+    │   │   │   │   ├── dashboards/
+    │   │   │   │   │   ├── dashboard.yml
+    │   │   │   │   ├── datasources/
+    │   │   │   │   │   ├── datasource.yml
+    │   │   │   │   └── plugins/
+    │   │   │   │       └── .gitkeep
+    │   │   ├── prometheus/
+    │   │   │   └── prometheus.yml
+    │   ├── openapi/
+    │   │   ├── openapi.json
+    │   │   ├── README.md
+    │   ├── scripts/
+    │   │   ├── __init__.py
+    │   │   ├── demo_grafana_errors.ps1
+    │   │   ├── demo_grafana_load.ps1
+    │   │   ├── export_openapi.py
+    │   │   ├── k6_grafana_load.js
+    │   │   ├── seed_db.py
+    │   │   ├── simulate_events.py
+    │   │   ├── test_db.py
+    │   ├── test-reports/
+    │   │   ├── contract-latest.log
+    │   │   ├── contract-latest.xml
+    │   ├── tests/
+    │   │   ├── conftest.py
+    │   │   ├── test_alerts.py
+    │   │   ├── test_auth.py
+    │   │   ├── test_contract.py
+    │   │   ├── test_events.py
+    │   │   ├── test_health.py
+    │   │   ├── test_imports_csv.py
+    │   │   ├── test_inventory_service_unit.py
+    │   │   ├── test_openapi_snapshot.py
+    │   │   ├── test_products.py
+    │   │   └── test_stock_movements.py
+    │   ├── .dockerignore
+    │   ├── .env.example
+    │   ├── alembic.ini
+    │   ├── docker-compose.yml
+    │   ├── Dockerfile
+    │   ├── entrypoint.sh
+    │   ├── requirements-dev.txt
+    │   └── requirements.txt
+    ├── .gitattributes
+    ├── .gitignore
+    ├── README_USUARIO.md
+    └── README.md
+
 ---
 
 ## 📄 Licencia
